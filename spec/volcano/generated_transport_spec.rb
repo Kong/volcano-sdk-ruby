@@ -1,0 +1,236 @@
+# frozen_string_literal: true
+
+require 'spec_helper'
+require 'tempfile'
+
+RSpec.describe Volcano::GeneratedTransport do
+  GeneratedApis = Data.define(:authentication, :database, :storage, :locks) unless const_defined?(:GeneratedApis)
+
+  class FakeGeneratedModel
+    def initialize(value)
+      @value = value
+    end
+
+    def to_hash
+      @value
+    end
+  end
+
+  class FakeAuthenticationApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def auth_signin_with_http_info(body)
+      @calls << body
+      [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+  end
+
+  class FakeDatabaseApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def query_database_select_with_http_info(name, body)
+      @calls << [name, body]
+      [FakeGeneratedModel.new(data: [{ slug: 'a' }]), 200, {}]
+    end
+  end
+
+  class FakeStorageApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def upload_storage_object_with_http_info(bucket, path, file, options = {})
+      file.rewind
+      @calls << [:upload, bucket, path, file.read, options]
+      [FakeGeneratedModel.new(name: path), 201, {}]
+    end
+
+    def download_storage_object_with_http_info(bucket, path)
+      @calls << [:download, bucket, path]
+      ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
+    end
+  end
+
+  class FakeLocksApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def acquire_project_lock_with_http_info(key, token, request_id, body)
+      @calls << [:acquire, key, token, request_id, body]
+      [FakeGeneratedModel.new(fencing_token: 7), 201, {}]
+    end
+
+    def release_project_lock_with_http_info(key, token, request_id)
+      @calls << [:release, key, token, request_id]
+      [nil, 204, {}]
+    end
+  end
+
+  it 'routes only the six POC operations through generated API classes' do
+    authentication = FakeAuthenticationApi.new
+    database = FakeDatabaseApi.new
+    storage = FakeStorageApi.new
+    locks = FakeLocksApi.new
+    authorizations = []
+    factory = lambda do |authorization|
+      authorizations << authorization
+      GeneratedApis.new(
+        authentication: authentication,
+        database: database,
+        storage: storage,
+        locks: locks
+      )
+    end
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+
+    auth_response = transport.auth_signin(
+      authorization: 'anon-key',
+      email: 'user@example.com',
+      password: 'secret'
+    )
+    database_response = transport.query_database_select(
+      authorization: 'access-token',
+      database_name: 'main',
+      body: {
+        'table' => 'items',
+        'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'a' }]
+      }
+    )
+    upload_response = transport.upload_storage_object(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      path: 'a.txt',
+      data: "hello\x00".b
+    )
+    download_response = transport.download_storage_object(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      path: 'a.txt'
+    )
+    acquire_response = transport.acquire_project_lock(
+      authorization: 'service-key',
+      key: 'build',
+      ttl: 30,
+      token: 'ownership-token'
+    )
+    release_response = transport.release_project_lock(
+      authorization: 'service-key',
+      key: 'build',
+      token: 'ownership-token'
+    )
+
+    expect(authorizations).to eq(
+      %w[anon-key access-token access-token access-token service-key service-key]
+    )
+    expect(authentication.calls.fetch(0)).to be_a(Volcano::Generated::AuthSigninRequest)
+    expect(authentication.calls.fetch(0).to_hash).to eq(
+      email: 'user@example.com',
+      password: 'secret'
+    )
+    expect(database.calls.fetch(0).fetch(0)).to eq('main')
+    expect(database.calls.fetch(0).fetch(1)).to be_a(Volcano::Generated::DatabaseSelectRequest)
+    expect(database.calls.fetch(0).fetch(1).to_hash).to eq(
+      table: 'items',
+      filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
+    )
+    expect(storage.calls).to eq(
+      [
+        [
+          :upload,
+          'assets',
+          'a.txt',
+          "hello\x00".b,
+          {}
+        ],
+        [:download, 'assets', 'a.txt']
+      ]
+    )
+    expect(locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])
+    expect(locks.calls[0][3]).to match(/\A[0-9a-f-]{36}\z/)
+    expect(locks.calls[0][4].to_hash).to eq(ttl_seconds: 30)
+    expect(locks.calls[1][0..2]).to eq([:release, 'build', 'ownership-token'])
+    expect(locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
+    expect(auth_response.body).to eq('access_token' => 'token')
+    expect(database_response.body).to eq('data' => [{ 'slug' => 'a' }])
+    expect(upload_response.body).to eq('name' => 'a.txt')
+    expect(download_response.data).to eq("hello\x00".b)
+    expect(acquire_response.body).to eq('fencing_token' => 7)
+    expect(release_response.status).to eq(204)
+  end
+
+  it 'selects the multipart representation for the generated dual-mode upload operation' do
+    configuration = Volcano::Generated::Configuration.new
+    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+
+    expect(
+      api_client.select_header_content_type(['multipart/form-data', 'application/json'])
+    ).to eq('multipart/form-data')
+    expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
+  end
+
+  it 'reads and removes a closed download tempfile returned by the generated client' do
+    tempfile = Tempfile.new('volcano-generated-download')
+    tempfile.binmode
+    tempfile.write("hello\x00".b)
+    path = tempfile.path
+    tempfile.close
+    storage = Object.new
+    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path|
+      [tempfile, 200, { 'content-type' => 'application/octet-stream' }]
+    end
+    empty = Object.new
+    factory = lambda do |_authorization|
+      GeneratedApis.new(authentication: empty, database: empty, storage: storage, locks: empty)
+    end
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+
+    response = transport.download_storage_object(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      path: 'a.txt'
+    )
+
+    expect(response.data).to eq("hello\x00".b)
+    expect(File.exist?(path)).to be(false)
+  ensure
+    tempfile&.close!
+  end
+
+  it 'returns generated HTTP failures for stable facade error mapping' do
+    error = Volcano::Generated::ApiError.new(
+      code: 409,
+      response_headers: { 'Retry-After' => '3' },
+      response_body: '{"error":"already held","code":"lock_conflict"}'
+    )
+    authentication = Object.new
+    authentication.define_singleton_method(:auth_signin_with_http_info) { |_| raise error }
+    empty = Object.new
+    factory = lambda do |_authorization|
+      GeneratedApis.new(authentication: authentication, database: empty, storage: empty, locks: empty)
+    end
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+
+    response = transport.auth_signin(
+      authorization: 'anon-key',
+      email: 'user@example.com',
+      password: 'secret'
+    )
+
+    expect(response.status).to eq(409)
+    expect(response.body).to eq('error' => 'already held', 'code' => 'lock_conflict')
+    expect(response.headers).to eq('Retry-After' => '3')
+  end
+end

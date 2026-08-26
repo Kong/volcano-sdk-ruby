@@ -1,5 +1,7 @@
 /.bundle/
 /vendor/bundle/
 /.ruby-lsp/
+/node_modules/
+/reports/
 /pkg/
 *.gem

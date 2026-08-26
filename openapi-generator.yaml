@@ -1,0 +1,16 @@
+generatorName: ruby
+inputSpec: openapi/openapi.yaml
+additionalProperties:
+  gemName: volcano-generated
+  moduleName: Volcano::Generated
+  gemVersion: 0.1.0
+  gemLicense: Apache-2.0
+  gemHomepage: https://github.com/Kong/volcano-sdk-ruby
+  gemSummary: Generated internal HTTP boundary for the Volcano Ruby SDK
+  library: typhoeus
+  useAutoload: true
+globalProperties:
+  apiTests: false
+  modelTests: false
+  apiDocs: false
+  modelDocs: false

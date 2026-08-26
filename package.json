@@ -1,0 +1,11 @@
+{
+  "name": "volcano-sdk-ruby-openapi-generator",
+  "private": true,
+  "scripts": {
+    "generate:openapi": "bin/generate-openapi",
+    "check:openapi": "bin/check-openapi"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "2.41.0"
+  }
+}

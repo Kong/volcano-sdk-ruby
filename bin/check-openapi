@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "$0")/.." && pwd)
+expected="$repo_root/lib/volcano/generated"
+temporary=$(mktemp -d "${TMPDIR:-/tmp}/volcano-ruby-openapi.XXXXXX")
+trap 'rm -rf "$temporary"' EXIT
+
+"$repo_root/bin/generate-openapi" "$temporary/generated" >/dev/null
+
+if ! diff -qr "$expected" "$temporary/generated"; then
+  echo "generated OpenAPI boundary is out of date" >&2
+  exit 1
+fi
+
+echo "generated OpenAPI boundary is up to date"

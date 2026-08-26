@@ -1,0 +1,19 @@
+{
+  "api_url": "http://127.0.0.1:8000",
+  "project_id": "dry-run-project",
+  "anon_key": "dry-run-anon-key",
+  "service_key": "dry-run-service-key",
+  "user_id": "dry-run-user",
+  "user_email": "dry-run@example.com",
+  "user_password": "dry-run-password",
+  "database_name": "dry_run",
+  "table_name": "contract_rows",
+  "fixture_row": {
+    "slug": "dry-run",
+    "value": "dry-run"
+  },
+  "bucket_name": "dry-run",
+  "storage_path": "dry-run/payload.txt",
+  "realtime_channel": "dry-run",
+  "lock_key": "dry-run"
+}

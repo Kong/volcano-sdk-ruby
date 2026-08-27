@@ -119,6 +119,30 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'preserves the API base path in the realtime endpoint' do
+    socket = FacadeSocket.new
+    addresses = []
+    client = Volcano::Client.new(
+      api_url: 'https://api.test.volcano.dev/volcano/',
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: lambda do |address|
+        addresses << address
+        socket
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      client.realtime.channel('contract').subscribe
+      client.realtime.disconnect
+    end.wait
+
+    expect(addresses).to eq(
+      ['wss://api.test.volcano.dev/volcano/realtime/v1/websocket?apikey=anon-key']
+    )
+  end
+
   it 'rejects duplicate subscriptions' do
     socket = FacadeSocket.new
     client = Volcano::Client.new(

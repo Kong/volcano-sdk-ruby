@@ -209,6 +209,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
   end
 
+  it 'converts the public timeout in seconds to Typhoeus milliseconds' do
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
+    configuration = transport.send(:generated_configuration, 'access-token')
+    request = described_class::ApiClient.new(configuration).build_request(
+      :get,
+      '/health',
+      auth_names: []
+    )
+
+    expect(request.options.fetch(:timeout)).to eq(1_500)
+  end
+
   it 'preserves object path segments and percent-encodes spaces' do
     configuration = InternalGenerated::Configuration.new
     api_client = described_class::ApiClient.new(configuration)

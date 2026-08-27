@@ -140,8 +140,12 @@ module Volcano
           configuration.base_path = uri.path == '/' ? '' : uri.path
           configuration.ignore_operation_servers = true
           configuration.access_token = authorization
-          configuration.timeout = @timeout
+          configuration.timeout = timeout_milliseconds
         end
+      end
+
+      def timeout_milliseconds
+        (@timeout * 1_000).round
       end
 
       def generated_apis(api_client)

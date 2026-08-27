@@ -89,7 +89,7 @@ module Volcano
     def address
       uri = URI(@api_url)
       uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-      uri.path = '/realtime/v1/websocket'
+      uri.path = "#{uri.path.delete_suffix('/')}/realtime/v1/websocket"
       encoded_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
       uri.query = "apikey=#{encoded_key}"
       uri.to_s

@@ -153,7 +153,7 @@ RSpec.describe Volcano::Realtime do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
     Async do |task|
-      connecting = task.async { client.realtime.protocol }
+      connecting = task.async { client.realtime.send(:protocol) }
       connect_id = connect_written.dequeue
       subscribe_finished = false
       subscribing = task.async do
@@ -329,9 +329,9 @@ RSpec.describe Volcano::Realtime do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
     Async do |task|
-      first = task.async { client.realtime.protocol }
+      first = task.async { client.realtime.send(:protocol) }
       entered.dequeue
-      second = task.async { client.realtime.protocol }
+      second = task.async { client.realtime.send(:protocol) }
       task.yield
       release.enqueue(true)
 
@@ -360,7 +360,7 @@ RSpec.describe Volcano::Realtime do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
     Async do |task|
-      opening = task.async { client.realtime.protocol }
+      opening = task.async { client.realtime.send(:protocol) }
       entered.dequeue
       closing = task.async { client.realtime.disconnect }
       task.yield

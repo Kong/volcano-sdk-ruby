@@ -5,14 +5,15 @@ require 'time'
 
 module Volcano
   class Locks
-    def initialize(client)
+    def initialize(client, transport)
       @client = client
+      @transport = transport
     end
 
     def acquire(key, ttl:)
       token = SecureRandom.uuid
       response = Transport.invoke do
-        @client.transport.acquire_project_lock(
+        @transport.acquire_project_lock(
           authorization: @client.service_token,
           key: key,
           ttl: ttl,
@@ -32,7 +33,7 @@ module Volcano
 
     def release(key, lease)
       response = Transport.invoke do
-        @client.transport.release_project_lock(
+        @transport.release_project_lock(
           authorization: @client.service_token,
           key: key,
           token: lease.token

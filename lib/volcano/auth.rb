@@ -2,13 +2,14 @@
 
 module Volcano
   class Auth
-    def initialize(client)
+    def initialize(client, transport)
       @client = client
+      @transport = transport
     end
 
     def sign_in(email:, password:)
       response = Transport.invoke do
-        @client.transport.auth_signin(
+        @transport.auth_signin(
           authorization: @client.anon_token,
           email: email,
           password: password

@@ -13,6 +13,16 @@ RSpec.describe Volcano do
     expect { Volcano::Generated }.to raise_error(NameError, /private constant/)
   end
 
+  it 'keeps generated transport and realtime protocol details outside the public API' do
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: Object.new)
+
+    expect(client.public_methods).not_to include(:transport)
+    expect(client.realtime.public_methods).not_to include(:protocol)
+    expect { Volcano::GeneratedTransport }.to raise_error(NameError, /private constant/)
+    expect { Volcano::Realtime::Protocol }.to raise_error(NameError, /private constant/)
+    expect { Volcano::Realtime::ProtocolDispatch }.to raise_error(NameError, /private constant/)
+  end
+
   it 'does not load the Async runtime for a REST-only require' do
     root = File.expand_path('..', __dir__)
     stdout, stderr, status = Open3.capture3(

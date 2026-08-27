@@ -3,7 +3,7 @@
 require 'spec_helper'
 require 'tempfile'
 
-RSpec.describe Volcano::GeneratedTransport do
+RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   GeneratedApis = Data.define(:authentication, :database, :storage, :locks) unless const_defined?(:GeneratedApis)
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
@@ -174,7 +174,7 @@ RSpec.describe Volcano::GeneratedTransport do
 
   it 'selects the multipart representation for the generated dual-mode upload operation' do
     configuration = InternalGenerated::Configuration.new
-    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+    api_client = described_class::ApiClient.new(configuration)
 
     expect(
       api_client.select_header_content_type(['multipart/form-data', 'application/json'])
@@ -184,13 +184,13 @@ RSpec.describe Volcano::GeneratedTransport do
 
   it 'preserves object path segments and percent-encodes spaces' do
     configuration = InternalGenerated::Configuration.new
-    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+    api_client = described_class::ApiClient.new(configuration)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, method == :POST ? 201 : 200, {}]
     end
-    storage = Volcano::GeneratedTransport::StorageApi.new(api_client)
+    storage = described_class::StorageApi.new(api_client)
     file = Tempfile.new('volcano-storage-path')
 
     storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
@@ -205,7 +205,7 @@ RSpec.describe Volcano::GeneratedTransport do
 
   it 'deserializes internal models while the generated namespace is private' do
     configuration = InternalGenerated::Configuration.new
-    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+    api_client = described_class::ApiClient.new(configuration)
     response = Typhoeus::Response.new(
       code: 200,
       body: JSON.generate(email: 'user@example.com', password: 'secret'),

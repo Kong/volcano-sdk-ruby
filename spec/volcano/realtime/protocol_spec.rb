@@ -6,7 +6,7 @@ require 'async/queue'
 require 'json'
 require 'spec_helper'
 
-RSpec.describe Volcano::Realtime::Protocol do
+RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
   class FakeSocket
     attr_accessor :on_write
     attr_reader :writes

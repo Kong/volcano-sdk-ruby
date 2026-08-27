@@ -15,5 +15,7 @@ require_relative 'volcano/realtime'
 require_relative 'volcano/client'
 
 module Volcano
-  private_constant :Redaction
+  private_constant :GeneratedTransport, :Redaction
+
+  Realtime.private_constant :Protocol, :ProtocolDispatch
 end

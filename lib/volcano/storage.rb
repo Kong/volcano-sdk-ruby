@@ -2,18 +2,20 @@
 
 module Volcano
   class Storage
-    def initialize(client)
+    def initialize(client, transport)
       @client = client
+      @transport = transport
     end
 
     def from(bucket)
-      StorageBucket.new(@client, bucket)
+      StorageBucket.new(@client, @transport, bucket)
     end
   end
 
   class StorageBucket
-    def initialize(client, name)
+    def initialize(client, transport, name)
       @client = client
+      @transport = transport
       @name = name
       freeze
     end
@@ -23,7 +25,7 @@ module Volcano
       raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
 
       response = Transport.invoke do
-        @client.transport.upload_storage_object(
+        @transport.upload_storage_object(
           authorization: @client.session_token,
           bucket_name: @name,
           path: path,
@@ -35,7 +37,7 @@ module Volcano
 
     def download(path)
       response = Transport.invoke do
-        @client.transport.download_storage_object(
+        @transport.download_storage_object(
           authorization: @client.session_token,
           bucket_name: @name,
           path: path

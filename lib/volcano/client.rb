@@ -2,7 +2,7 @@
 
 module Volcano
   class Client
-    attr_reader :auth, :storage, :locks, :realtime, :current_session, :transport
+    attr_reader :auth, :storage, :locks, :realtime, :current_session
 
     def initialize(
       anon_key:,
@@ -20,9 +20,9 @@ module Volcano
       @service_key = service_key
       @current_session = nil
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
-      @auth = Auth.new(self)
-      @storage = Storage.new(self)
-      @locks = Locks.new(self)
+      @auth = Auth.new(self, @transport)
+      @storage = Storage.new(self, @transport)
+      @locks = Locks.new(self, @transport)
       @realtime = Realtime.new(
         self,
         api_url: @api_url,
@@ -31,7 +31,7 @@ module Volcano
     end
 
     def database(name)
-      Database.new(self, name)
+      Database.new(self, @transport, name)
     end
 
     def anon_token

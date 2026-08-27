@@ -14,7 +14,14 @@ module Volcano
       @closed = false
     end
 
-    def channel(name) = ensure_open!.then { @channels["broadcast:#{name}"] ||= Channel.new(self, "broadcast:#{name}") }
+    def channel(name)
+      ensure_open!
+      @channels["broadcast:#{name}"] ||= Channel.new(
+        self,
+        method(:protocol),
+        "broadcast:#{name}"
+      )
+    end
 
     def protocol
       ensure_open!
@@ -39,6 +46,7 @@ module Volcano
         raise public_error(e), cause: nil
       end
     end
+    private :protocol
 
     def disconnect
       @protocol_lock ? @protocol_lock.acquire { close_protocol } : close_protocol
@@ -95,8 +103,9 @@ module Volcano
     end
 
     class Channel
-      def initialize(realtime, name)
+      def initialize(realtime, protocol_provider, name)
         @realtime = realtime
+        @protocol_provider = protocol_provider
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
@@ -115,7 +124,7 @@ module Volcano
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
 
-          protocol = @realtime.protocol
+          protocol = @protocol_provider.call
           register_handler(protocol)
           protocol.subscribe(channel: @name)
           @subscribed = true
@@ -129,7 +138,7 @@ module Volcano
           raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
 
           data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
-          @realtime.protocol.publish(channel: @name, data: data)
+          @protocol_provider.call.publish(channel: @name, data: data)
         end
         nil
       end
@@ -139,7 +148,7 @@ module Volcano
           ensure_open!
           next unless @subscribed
 
-          @realtime.protocol.unsubscribe(channel: @name)
+          @protocol_provider.call.unsubscribe(channel: @name)
           @subscribed = false
         end
         nil

@@ -2,19 +2,21 @@
 
 module Volcano
   class Database
-    def initialize(client, name)
+    def initialize(client, transport, name)
       @client = client
+      @transport = transport
       @name = name
     end
 
     def from(table)
-      QueryBuilder.new(@client, @name, table)
+      QueryBuilder.new(@client, @transport, @name, table)
     end
   end
 
   class QueryBuilder
-    def initialize(client, database_name, table, columns: [], filters: [])
+    def initialize(client, transport, database_name, table, columns: [], filters: [])
       @client = client
+      @transport = transport
       @database_name = database_name
       @table = table
       @columns = columns.freeze
@@ -25,6 +27,7 @@ module Volcano
     def select(*columns)
       self.class.new(
         @client,
+        @transport,
         @database_name,
         @table,
         columns: columns,
@@ -36,6 +39,7 @@ module Volcano
       condition = { 'column' => column, 'operator' => 'eq', 'value' => value }.freeze
       self.class.new(
         @client,
+        @transport,
         @database_name,
         @table,
         columns: @columns,
@@ -48,7 +52,7 @@ module Volcano
       body['select'] = @columns unless @columns.empty? || @columns == ['*']
       body['filters'] = @filters unless @filters.empty?
       response = Transport.invoke do
-        @client.transport.query_database_select(
+        @transport.query_database_select(
           authorization: @client.session_token,
           database_name: @database_name,
           body: body

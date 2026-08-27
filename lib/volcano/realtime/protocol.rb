@@ -5,6 +5,7 @@ require_relative 'protocol_dispatch'
 
 module Volcano
   class Realtime
+    # Error returned by the realtime server for a command.
     class ServerError < StandardError
       attr_reader :code
 
@@ -16,6 +17,7 @@ module Volcano
     class PendingLimitError < StandardError; end
     class RequestTimeoutError < StandardError; end
 
+    # Implements the Centrifuge request and publication protocol.
     class Protocol
       include ProtocolDispatch
 
@@ -23,6 +25,7 @@ module Volcano
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
       DEFAULT_MAX_CALLBACK_QUEUE = 128
+      LIMIT_KEYS = %i[request_timeout max_pending max_callback_queue].freeze
 
       def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
@@ -36,30 +39,14 @@ module Volcano
         socket:,
         task: nil,
         secrets: [],
-        request_timeout: DEFAULT_REQUEST_TIMEOUT,
-        max_pending: DEFAULT_MAX_PENDING,
-        max_callback_queue: DEFAULT_MAX_CALLBACK_QUEUE
+        **limits
       )
-        require 'async'
-        require 'async/queue'
-        require 'async/semaphore'
-        task ||= Async::Task.current
+        load_async
         @socket = socket
         @secrets = secrets.freeze
-        @request_timeout = request_timeout
-        @max_pending = max_pending
-        @next_id = 0
-        @pending = {}
-        @write_lock = Async::Semaphore.new(1)
-        @subscription_lock = Async::Semaphore.new(1)
-        @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
-        @callback_queue = Async::Queue.new
-        @max_callback_queue = max_callback_queue
-        @callback_stopping = @closed = false
-        @subscriptions = Set.new
-        @closed_error = nil
-        @callback_task = task.async { dispatch_callbacks }
-        @reader_task = task.async { read_loop }
+        configure_limits(limits)
+        initialize_state
+        start_tasks(task || Async::Task.current)
       end
 
       def connect(token:) = request { |id| self.class.connect(id: id, token: token) }
@@ -97,52 +84,36 @@ module Volcano
 
       private
 
-      def request
-        ensure_open!
-        if @pending.length >= @max_pending
-          raise PendingLimitError, "realtime pending command limit #{@max_pending} reached"
-        end
-
-        @next_id += 1
-        id = @next_id
-        reply_queue = Async::Queue.new
-        @pending[id] = reply_queue
-        write_frame(yield(id))
-        reply = Async::Task.current.with_timeout(
-          @request_timeout,
-          RequestTimeoutError,
-          "realtime command timed out after #{@request_timeout} seconds"
-        ) { reply_queue.dequeue }
-        raise reply.error if reply.is_a?(Failure)
-
-        reply
-      rescue StandardError => e
-        raise Redaction.exception(e, secrets: @secrets), cause: nil
-      ensure
-        @pending.delete(id) if defined?(id)
+      def load_async
+        require 'async'
+        require 'async/queue'
+        require 'async/semaphore'
       end
 
-      def read_loop
-        loop do
-          Async::Task.current.yield
-          message = @socket.read
-          break unless message
+      def configure_limits(limits)
+        unknown = limits.keys - LIMIT_KEYS
+        raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
 
-          message.to_str.each_line do |line|
-            next if line.strip.empty?
+        @request_timeout = limits.fetch(:request_timeout, DEFAULT_REQUEST_TIMEOUT)
+        @max_pending = limits.fetch(:max_pending, DEFAULT_MAX_PENDING)
+        @max_callback_queue = limits.fetch(:max_callback_queue, DEFAULT_MAX_CALLBACK_QUEUE)
+      end
 
-            process(JSON.parse(line))
-          end
-        end
-      rescue JSON::ParserError => e
-        message = Redaction.message("invalid realtime frame: #{e.message}", secrets: @secrets)
-        close_with(ClosedError.new(message))
-      rescue StandardError => e
-        closed_error = ClosedError.new(Redaction.message(e.message, secrets: @secrets))
-        closed_error.set_backtrace(e.backtrace)
-        close_with(closed_error)
-      ensure
-        close_with(ClosedError.new('realtime connection closed'))
+      def initialize_state
+        @next_id = 0
+        @pending = {}
+        @write_lock = Async::Semaphore.new(1)
+        @subscription_lock = Async::Semaphore.new(1)
+        @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
+        @callback_queue = Async::Queue.new
+        @callback_stopping = @closed = false
+        @subscriptions = Set.new
+        @closed_error = nil
+      end
+
+      def start_tasks(task)
+        @callback_task = task.async { dispatch_callbacks }
+        @reader_task = task.async { read_loop }
       end
 
       def ensure_open!
@@ -179,3 +150,5 @@ module Volcano
     end
   end
 end
+
+require_relative 'protocol_io'

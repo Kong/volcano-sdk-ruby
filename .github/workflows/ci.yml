@@ -28,7 +28,7 @@ jobs:
           bundler-cache: true
       - run: npm ci
       - run: bin/check-openapi
-      - run: bundle exec rubocop
+      - run: bundle exec rubocop --parallel
       - run: bundle exec rspec
       - name: Validate Cucumber phrases
         env:

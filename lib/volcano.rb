@@ -14,6 +14,7 @@ require_relative 'volcano/realtime/protocol'
 require_relative 'volcano/realtime'
 require_relative 'volcano/client'
 
+# Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :GeneratedTransport, :Redaction
 

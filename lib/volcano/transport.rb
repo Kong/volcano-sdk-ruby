@@ -4,6 +4,7 @@ require 'timeout'
 require 'socket'
 
 module Volcano
+  # Normalizes transport responses and maps failures to public SDK errors.
   module Transport
     Response = Data.define(:status, :body, :headers, :data)
 
@@ -30,12 +31,13 @@ module Volcano
     def body(response, expected_status)
       return response.body if response.status == expected_status
 
+      raise response_error(response)
+    end
+
+    def response_error(response)
       payload = response.body.is_a?(Hash) ? response.body : {}
-      error_type = ERROR_TYPES.fetch(response.status) do
-        response.status.between?(500, 599) ? Error::ServerError : Error::VolcanoError
-      end
       retry_after = integer_header(response.headers, 'Retry-After') if response.status == 429
-      raise error_type.new(
+      error_type(response.status).new(
         payload['error'] || payload['message'] || 'Volcano request failed',
         status: response.status,
         code: payload['code']&.to_s,
@@ -43,10 +45,16 @@ module Volcano
       )
     end
 
+    def error_type(status)
+      ERROR_TYPES.fetch(status) do
+        status.between?(500, 599) ? Error::ServerError : Error::VolcanoError
+      end
+    end
+
     def integer_header(headers, name)
       value = headers&.find { |key, _| key.casecmp?(name) }&.last
       Integer(value, exception: false)
     end
-    private_class_method :integer_header
+    private_class_method :error_type, :integer_header, :response_error
   end
 end

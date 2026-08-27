@@ -2,6 +2,7 @@
 
 module Volcano
   module Error
+    # Base error containing structured Volcano response details.
     class VolcanoError < StandardError
       attr_reader :status, :code, :retry_after
 

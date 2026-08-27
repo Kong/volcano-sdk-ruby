@@ -25,24 +25,26 @@ module VolcanoContract
     Volcano::Error::ServerError => 'server error',
     Volcano::Error::TransportError => 'transport error'
   }.freeze
+  STATUS_CATEGORIES = {
+    400 => 'validation error',
+    401 => 'authentication error',
+    403 => 'authentication error',
+    404 => 'not found',
+    409 => 'conflict',
+    422 => 'validation error',
+    429 => 'rate limited'
+  }.freeze
 
   CREDENTIAL_KEYS = %w[anon_key service_key user_password].freeze
 
   def self.classify_error(error)
-    ERROR_CATEGORIES.each do |error_type, category|
-      return category if error.is_a?(error_type)
-    end
+    category = ERROR_CATEGORIES.find { |error_type, _| error.is_a?(error_type) }&.last
+    return category if category
     return 'transport error' unless error.is_a?(Volcano::Error::VolcanoError)
 
-    case error.status
-    when 401, 403 then 'authentication error'
-    when 400, 422 then 'validation error'
-    when 404 then 'not found'
-    when 409 then 'conflict'
-    when 429 then 'rate limited'
-    when 500..599 then 'server error'
-    else 'transport error'
-    end
+    return 'server error' if (500..599).cover?(error.status)
+
+    STATUS_CATEGORIES.fetch(error.status, 'transport error')
   end
 
   def self.redact_error(error, fixture)
@@ -58,18 +60,8 @@ module VolcanoContract
 
     def initialize(fixture)
       @fixture = fixture
-      @client = Volcano::Client.new(api_url: fixture.fetch('api_url'), anon_key: fixture.fetch('anon_key'))
-      @service_client = Volcano::Client.new(
-        api_url: fixture.fetch('api_url'),
-        anon_key: fixture.fetch('anon_key'),
-        service_key: fixture.fetch('service_key')
-      )
-      suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
-      @storage_path = "#{fixture.fetch('storage_path')}.#{suffix}"
-      @storage_bytes = "volcano-sdk-contract-#{suffix}".b
-      @realtime_channel = "#{fixture.fetch('realtime_channel')}-#{suffix}"
-      @realtime_message = { 'event' => 'message', 'value' => "volcano-sdk-contract-#{suffix}" }.freeze
-      @lock_key = "#{fixture.fetch('lock_key')}-#{suffix}"
+      initialize_clients
+      initialize_resource_names
       @last_outcome = nil
       @realtime_clients = []
       @cleanup_callbacks = []
@@ -117,6 +109,21 @@ module VolcanoContract
     end
 
     private
+
+    def initialize_clients
+      client_options = { api_url: fixture.fetch('api_url'), anon_key: fixture.fetch('anon_key') }
+      @client = Volcano::Client.new(**client_options)
+      @service_client = Volcano::Client.new(**client_options, service_key: fixture.fetch('service_key'))
+    end
+
+    def initialize_resource_names
+      suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
+      @storage_path = "#{fixture.fetch('storage_path')}.#{suffix}"
+      @storage_bytes = "volcano-sdk-contract-#{suffix}".b
+      @realtime_channel = "#{fixture.fetch('realtime_channel')}-#{suffix}"
+      @realtime_message = { 'event' => 'message', 'value' => "volcano-sdk-contract-#{suffix}" }.freeze
+      @lock_key = "#{fixture.fetch('lock_key')}-#{suffix}"
+    end
 
     def safely(failures)
       yield

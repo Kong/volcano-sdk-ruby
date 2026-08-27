@@ -4,6 +4,7 @@ require 'securerandom'
 require 'time'
 
 module Volcano
+  # Acquires and releases project-scoped distributed locks.
   class Locks
     def initialize(client, transport)
       @client = client
@@ -12,21 +13,11 @@ module Volcano
 
     def acquire(key, ttl:)
       token = SecureRandom.uuid
-      response = Transport.invoke do
-        @transport.acquire_project_lock(
-          authorization: @client.service_token,
-          key: key,
-          ttl: ttl,
-          token: token
-        )
-      end
-      payload = Transport.body(response, 201)
-      expires_at = payload['expires_at']
-      expires_at = Time.iso8601(expires_at) if expires_at.is_a?(String)
+      payload = Transport.body(acquire_response(key, ttl, token), 201)
       LockLease.new(
         key: key,
         token: token,
-        expires_at: expires_at,
+        expires_at: parse_time(payload['expires_at']),
         fencing_token: payload['fencing_token']
       )
     end
@@ -41,6 +32,23 @@ module Volcano
       end
       Transport.body(response, 204)
       nil
+    end
+
+    private
+
+    def acquire_response(key, ttl, token)
+      Transport.invoke do
+        @transport.acquire_project_lock(
+          authorization: @client.service_token,
+          key: key,
+          ttl: ttl,
+          token: token
+        )
+      end
+    end
+
+    def parse_time(value)
+      value.is_a?(String) ? Time.iso8601(value) : value
     end
   end
 end

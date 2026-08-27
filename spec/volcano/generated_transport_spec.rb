@@ -80,74 +80,98 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
-  it 'routes only the six POC operations through generated API classes' do
-    authentication = FakeAuthenticationApi.new
-    database = FakeDatabaseApi.new
-    storage = FakeStorageApi.new
-    locks = FakeLocksApi.new
-    authorizations = []
-    factory = lambda do |authorization|
+  let(:apis) do
+    GeneratedApis.new(
+      authentication: FakeAuthenticationApi.new,
+      database: FakeDatabaseApi.new,
+      storage: FakeStorageApi.new,
+      locks: FakeLocksApi.new
+    )
+  end
+  let(:authorizations) { [] }
+  let(:factory) do
+    lambda do |authorization|
       authorizations << authorization
+      apis
+    end
+  end
+  let(:transport) do
+    described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+  end
+  let(:responses) do
+    {
+      auth: transport.auth_signin(
+        authorization: 'anon-key',
+        email: 'user@example.com',
+        password: 'secret'
+      ),
+      database: transport.query_database_select(
+        authorization: 'access-token',
+        database_name: 'main',
+        body: {
+          'table' => 'items',
+          'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'a' }]
+        }
+      ),
+      upload: transport.upload_storage_object(
+        authorization: 'access-token',
+        bucket_name: 'assets',
+        path: 'a.txt',
+        data: "hello\x00".b
+      ),
+      download: transport.download_storage_object(
+        authorization: 'access-token',
+        bucket_name: 'assets',
+        path: 'a.txt'
+      ),
+      acquire: transport.acquire_project_lock(
+        authorization: 'service-key',
+        key: 'build',
+        ttl: 30,
+        token: 'ownership-token'
+      ),
+      release: transport.release_project_lock(
+        authorization: 'service-key',
+        key: 'build',
+        token: 'ownership-token'
+      )
+    }
+  end
+
+  def download_transport(tempfile)
+    storage = Object.new
+    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path|
+      [tempfile, 200, { 'content-type' => 'application/octet-stream' }]
+    end
+    empty = Object.new
+    factory = lambda do |_authorization|
       GeneratedApis.new(
-        authentication: authentication,
-        database: database,
+        authentication: empty,
+        database: empty,
         storage: storage,
-        locks: locks
+        locks: empty
       )
     end
-    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+  end
 
-    auth_response = transport.auth_signin(
-      authorization: 'anon-key',
-      email: 'user@example.com',
-      password: 'secret'
-    )
-    database_response = transport.query_database_select(
-      authorization: 'access-token',
-      database_name: 'main',
-      body: {
-        'table' => 'items',
-        'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'a' }]
-      }
-    )
-    upload_response = transport.upload_storage_object(
-      authorization: 'access-token',
-      bucket_name: 'assets',
-      path: 'a.txt',
-      data: "hello\x00".b
-    )
-    download_response = transport.download_storage_object(
-      authorization: 'access-token',
-      bucket_name: 'assets',
-      path: 'a.txt'
-    )
-    acquire_response = transport.acquire_project_lock(
-      authorization: 'service-key',
-      key: 'build',
-      ttl: 30,
-      token: 'ownership-token'
-    )
-    release_response = transport.release_project_lock(
-      authorization: 'service-key',
-      key: 'build',
-      token: 'ownership-token'
-    )
-
+  it 'routes only the six POC operations through generated API classes', :aggregate_failures do
+    responses
     expect(authorizations).to eq(
       %w[anon-key access-token access-token access-token service-key service-key]
     )
-    expect(authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
-    expect(authentication.calls.fetch(0).to_hash).to eq(
+    expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
+    expect(apis.authentication.calls.fetch(0).to_hash).to eq(
       email: 'user@example.com',
       password: 'secret'
     )
-    expect(database.calls.fetch(0).fetch(0)).to eq('main')
-    expect(database.calls.fetch(0).fetch(1)).to be_a(InternalGenerated::DatabaseSelectRequest)
-    expect(database.calls.fetch(0).fetch(1).to_hash).to eq(
+    expect(apis.database.calls.fetch(0).fetch(0)).to eq('main')
+    expect(apis.database.calls.fetch(0).fetch(1)).to be_a(InternalGenerated::DatabaseSelectRequest)
+    expect(apis.database.calls.fetch(0).fetch(1).to_hash).to eq(
       table: 'items',
       filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
     )
-    expect(storage.calls).to eq(
+    expect(apis.storage.calls).to eq(
       [
         [
           :upload,
@@ -159,17 +183,20 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         [:download, 'assets', 'a.txt']
       ]
     )
-    expect(locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])
-    expect(locks.calls[0][3]).to match(/\A[0-9a-f-]{36}\z/)
-    expect(locks.calls[0][4].to_hash).to eq(ttl_seconds: 30)
-    expect(locks.calls[1][0..2]).to eq([:release, 'build', 'ownership-token'])
-    expect(locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
-    expect(auth_response.body).to eq('access_token' => 'token')
-    expect(database_response.body).to eq('data' => [{ 'slug' => 'a' }])
-    expect(upload_response.body).to eq('name' => 'a.txt')
-    expect(download_response.data).to eq("hello\x00".b)
-    expect(acquire_response.body).to eq('fencing_token' => 7)
-    expect(release_response.status).to eq(204)
+    expect(apis.locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])
+    expect(apis.locks.calls[0][3]).to match(/\A[0-9a-f-]{36}\z/)
+    expect(apis.locks.calls[0][4].to_hash).to eq(ttl_seconds: 30)
+    expect(apis.locks.calls[1][0..2]).to eq([:release, 'build', 'ownership-token'])
+    expect(apis.locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
+  end
+
+  it 'normalizes generated responses for the facade', :aggregate_failures do
+    expect(responses.fetch(:auth).body).to eq('access_token' => 'token')
+    expect(responses.fetch(:database).body).to eq('data' => [{ 'slug' => 'a' }])
+    expect(responses.fetch(:upload).body).to eq('name' => 'a.txt')
+    expect(responses.fetch(:download).data).to eq("hello\x00".b)
+    expect(responses.fetch(:acquire).body).to eq('fencing_token' => 7)
+    expect(responses.fetch(:release).status).to eq(204)
   end
 
   it 'selects the multipart representation for the generated dual-mode upload operation' do
@@ -235,15 +262,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     tempfile.write("hello\x00".b)
     path = tempfile.path
     tempfile.close
-    storage = Object.new
-    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path|
-      [tempfile, 200, { 'content-type' => 'application/octet-stream' }]
-    end
-    empty = Object.new
-    factory = lambda do |_authorization|
-      GeneratedApis.new(authentication: empty, database: empty, storage: storage, locks: empty)
-    end
-    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    transport = download_transport(tempfile)
 
     response = transport.download_storage_object(
       authorization: 'access-token',

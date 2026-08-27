@@ -1,5 +1,11 @@
+plugins:
+  - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+
 AllCops:
   NewCops: enable
+  SuggestExtensions: false
   TargetRubyVersion: 3.2
   Exclude:
     - "lib/volcano/generated/**/*"
@@ -10,27 +16,73 @@ Metrics/BlockLength:
     - "features/step_definitions/**/*"
     - "spec/**/*"
 
+Metrics/MethodLength:
+  Max: 10
+  CountAsOne:
+    - array
+    - hash
+    - heredoc
+    - method_call
+
+RSpec/ExampleLength:
+  Max: 15
+  CountAsOne:
+    - array
+    - hash
+    - heredoc
+    - method_call
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+# Script/contract specs have no single class; two private implementation
+# constants are resolved dynamically and cannot be recognized by this cop.
+RSpec/DescribeClass:
+  Exclude:
+    - "spec/contract_structure_spec.rb"
+    - "spec/volcano/errors_spec.rb"
+    - "spec/volcano/generated_transport_spec.rb"
+    - "spec/volcano/generation_spec.rb"
+    - "spec/volcano/realtime/protocol_spec.rb"
+
+# These files define stateful transport/socket fakes inside their example groups;
+# their instance variables belong to the fakes, not to RSpec example state.
+RSpec/InstanceVariable:
+  Exclude:
+    - "spec/volcano/errors_spec.rb"
+    - "spec/volcano/facade_spec.rb"
+    - "spec/volcano/generated_transport_spec.rb"
+    - "spec/volcano/realtime/protocol_spec.rb"
+    - "spec/volcano/realtime_spec.rb"
+
+# These same fake classes intentionally keep their helper constants scoped to
+# the example group; the files are isolated processes under RSpec.
+RSpec/LeakyConstantDeclaration:
+  Exclude:
+    - "spec/volcano/errors_spec.rb"
+    - "spec/volcano/facade_spec.rb"
+    - "spec/volcano/generated_transport_spec.rb"
+    - "spec/volcano/generation_spec.rb"
+    - "spec/volcano/realtime/protocol_spec.rb"
+    - "spec/volcano/realtime_spec.rb"
+
+# Cross-cutting contract/facade specs intentionally cover more than one class.
+RSpec/SpecFilePathFormat:
+  Exclude:
+    - "spec/volcano/contract_world_spec.rb"
+    - "spec/volcano/facade_spec.rb"
+
 Lint/ConstantDefinitionInBlock:
   Exclude:
-    - "spec/**/*"
-
-Metrics/AbcSize:
-  Max: 30
-
-Metrics/ClassLength:
-  Max: 160
-
-Metrics/CyclomaticComplexity:
-  Max: 10
-
-Metrics/MethodLength:
-  Max: 20
-
-Metrics/ParameterLists:
-  Max: 6
-
-Metrics/PerceivedComplexity:
-  Max: 10
+    - "spec/volcano/errors_spec.rb"
+    - "spec/volcano/facade_spec.rb"
+    - "spec/volcano/generated_transport_spec.rb"
+    - "spec/volcano/generation_spec.rb"
+    - "spec/volcano/realtime/protocol_spec.rb"
+    - "spec/volcano/realtime_spec.rb"
 
 Style/Documentation:
-  Enabled: false
+  Enabled: true
+  Exclude:
+    - "features/**/*"
+    - "spec/**/*"

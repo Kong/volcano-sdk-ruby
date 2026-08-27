@@ -72,7 +72,7 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
-  it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics' do
+  it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do
     socket = FacadeSocket.new
     addresses = []
     factory = lambda do |address|

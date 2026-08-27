@@ -76,37 +76,49 @@ RSpec.describe Volcano::Client do
       _transport: transport
     )
   end
-
-  it 'routes the five public calls through the six contract operations' do
+  let(:results) do
     session = client.auth.sign_in(email: 'user@example.com', password: 'secret')
     rows = client.database('main').from('items').select('*').eq('slug', 'a').execute
     uploaded = client.storage.from('assets').upload('a.txt', StringIO.new("hello\x00".b))
     downloaded = client.storage.from('assets').download('a.txt')
     lease = client.locks.acquire('build', ttl: 30)
     released = client.locks.release('build', lease)
+    {
+      session: session,
+      rows: rows,
+      uploaded: uploaded,
+      downloaded: downloaded,
+      lease: lease,
+      released: released
+    }
+  end
 
-    expect(session).to eq(
+  it 'returns stable public values from the five facade calls', :aggregate_failures do
+    expect(results.fetch(:session)).to eq(
       Volcano::Session.new(
         access_token: 'access-token',
         refresh_token: 'refresh-token',
         user_id: 'user-123'
       )
     )
-    expect(client.current_session).to be(session)
-    expect(rows).to eq([{ 'slug' => 'a' }])
-    expect(uploaded).to eq({ 'name' => 'a.txt', 'size' => 5 })
-    expect(downloaded).to eq("hello\x00".b)
-    expect(downloaded.encoding).to eq(Encoding::BINARY)
-    expect(lease).to eq(
+    expect(client.current_session).to be(results.fetch(:session))
+    expect(results.fetch(:rows)).to eq([{ 'slug' => 'a' }])
+    expect(results.fetch(:uploaded)).to eq({ 'name' => 'a.txt', 'size' => 5 })
+    expect(results.fetch(:downloaded)).to eq("hello\x00".b)
+    expect(results.fetch(:downloaded).encoding).to eq(Encoding::BINARY)
+    expect(results.fetch(:lease)).to eq(
       Volcano::LockLease.new(
         key: 'build',
-        token: lease.token,
+        token: results.fetch(:lease).token,
         expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
         fencing_token: 7
       )
     )
-    expect(released).to be_nil
+    expect(results.fetch(:released)).to be_nil
+  end
 
+  it 'routes the facade calls through the six contract operations', :aggregate_failures do
+    lease = results.fetch(:lease)
     expect(transport.calls.map(&:first)).to eq(
       %i[
         auth_signin

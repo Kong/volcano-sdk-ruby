@@ -3,6 +3,7 @@
 require 'uri'
 
 module Volcano
+  # Removes credentials from exception messages before they cross the SDK boundary.
   module Redaction
     MARKER = '[REDACTED]'
 
@@ -15,20 +16,33 @@ module Volcano
     end
 
     def exception(error, secrets:)
-      redacted = if defined?(Error::VolcanoError) && error.is_a?(Error::VolcanoError)
-                   error.class.new(
-                     message(error.message, secrets: secrets),
-                     status: error.status,
-                     code: error.code,
-                     retry_after: error.retry_after
-                   )
-                 elsif defined?(Realtime::ServerError) && error.is_a?(Realtime::ServerError)
-                   error.class.new(message(error.message, secrets: secrets), code: error.code)
-                 else
-                   error.exception(message(error.message, secrets: secrets))
-                 end
+      redacted = copy_exception(error, message(error.message, secrets: secrets))
       redacted.set_backtrace(error.backtrace)
       redacted
+    end
+
+    def copy_exception(error, redacted_message)
+      return copy_volcano_error(error, redacted_message) if volcano_error?(error)
+      return error.class.new(redacted_message, code: error.code) if realtime_server_error?(error)
+
+      error.exception(redacted_message)
+    end
+
+    def copy_volcano_error(error, redacted_message)
+      error.class.new(
+        redacted_message,
+        status: error.status,
+        code: error.code,
+        retry_after: error.retry_after
+      )
+    end
+
+    def volcano_error?(error)
+      defined?(Error::VolcanoError) && error.is_a?(Error::VolcanoError)
+    end
+
+    def realtime_server_error?(error)
+      defined?(Realtime::ServerError) && error.is_a?(Realtime::ServerError)
     end
 
     def variants(secrets)
@@ -41,6 +55,6 @@ module Volcano
       end
       values.uniq.sort_by { |value| -value.length }
     end
-    private_class_method :variants
+    private_class_method :copy_exception, :copy_volcano_error, :realtime_server_error?, :variants, :volcano_error?
   end
 end

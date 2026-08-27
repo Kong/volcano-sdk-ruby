@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Volcano
+  # Entry point for project object storage.
   class Storage
     def initialize(client, transport)
       @client = client
@@ -12,6 +13,7 @@ module Volcano
     end
   end
 
+  # Uploads and downloads objects in one storage bucket.
   class StorageBucket
     def initialize(client, transport, name)
       @client = client
@@ -21,15 +23,12 @@ module Volcano
     end
 
     def upload(path, value)
-      bytes = value.respond_to?(:read) ? value.read : value
-      raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
-
       response = Transport.invoke do
         @transport.upload_storage_object(
           authorization: @client.session_token,
           bucket_name: @name,
           path: path,
-          data: bytes.b
+          data: upload_bytes(value)
         )
       end
       Transport.body(response, 201)
@@ -45,6 +44,15 @@ module Volcano
       end
       Transport.body(response, 200)
       response.data.b
+    end
+
+    private
+
+    def upload_bytes(value)
+      bytes = value.respond_to?(:read) ? value.read : value
+      raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
+
+      bytes.b
     end
   end
 end

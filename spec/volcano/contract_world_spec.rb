@@ -8,6 +8,15 @@ require 'tmpdir'
 
 RSpec.describe VolcanoContract::World do
   def with_rate_limit_server(message, request_count: 1)
+    server, server_thread = start_rate_limit_server(message, request_count)
+
+    yield "http://127.0.0.1:#{server.local_address.ip_port}"
+  ensure
+    server&.close
+    server_thread&.join(2)
+  end
+
+  def start_rate_limit_server(message, request_count)
     server = TCPServer.new('127.0.0.1', 0)
     response_body = JSON.generate(error: message, code: 'contract_rate_limit')
     server_thread = Thread.new do
@@ -16,11 +25,7 @@ RSpec.describe VolcanoContract::World do
       nil
     end
     server_thread.report_on_exception = false
-
-    yield "http://127.0.0.1:#{server.local_address.ip_port}"
-  ensure
-    server&.close
-    server_thread&.join(2)
+    [server, server_thread]
   end
 
   def serve_rate_limit_response(server, response_body)
@@ -99,7 +104,10 @@ RSpec.describe VolcanoContract::World do
       'password%20fixture%2Fsecret'
     ]
   end
-  let(:rate_limit_message) { "rate limit while signing in #{binding_credential_leaks.join(' ')}" }
+
+  def rate_limit_message
+    "rate limit while signing in #{binding_credential_leaks.join(' ')}"
+  end
 
   it 'redacts fixture credentials from recorded report failures' do
     world.record do
@@ -187,7 +195,7 @@ RSpec.describe VolcanoContract::World do
     }
   end
 
-  it 'redacts direct authentication failures without losing typed metadata' do
+  it 'redacts direct authentication failures without losing typed metadata', :aggregate_failures do
     with_rate_limit_server(rate_limit_message) do |api_url|
       contract_world = described_class.new(complete_fixture(api_url, binding_credentials))
 
@@ -204,8 +212,6 @@ RSpec.describe VolcanoContract::World do
   end
 
   it 'redacts credentials from the actual authenticated-client Cucumber binding' do
-    root = File.expand_path('../..', __dir__)
-
     Dir.mktmpdir('volcano-ruby-cucumber-binding') do |directory|
       fixture_path = File.join(directory, 'fixture.json')
       report_directory = File.join(directory, 'reports')
@@ -220,7 +226,7 @@ RSpec.describe VolcanoContract::World do
           'bundle', 'exec', 'cucumber',
           'features/contract/database.feature', 'features/contract/realtime.feature',
           '--format', 'junit', '--out', report_directory,
-          chdir: root
+          chdir: File.expand_path('../..', __dir__)
         )
         report = Dir.glob(File.join(report_directory, '**/*')).select { |path| File.file?(path) }
                     .map { |path| File.binread(path) }.join

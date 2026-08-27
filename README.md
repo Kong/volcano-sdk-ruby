@@ -78,6 +78,7 @@ Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.
 
-Run `npm ci && bin/check-openapi` to verify generated provenance. Run
-`bundle exec rspec`, `bundle exec rubocop`, and the shared Cucumber contract
-suite before changing the facade.
+Run `npm ci && bin/check-openapi` to verify generated provenance. Use
+`bundle exec rubocop -A` to apply safe formatting and lint fixes. Before
+changing the facade, run `bundle exec rubocop --parallel`, `bundle exec rspec`,
+and the shared Cucumber contract suite.

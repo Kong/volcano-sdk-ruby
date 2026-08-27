@@ -3,6 +3,7 @@
 require 'uri'
 
 module Volcano
+  # Manages a project's realtime connection and broadcast channels.
   class Realtime
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
@@ -27,24 +28,12 @@ module Volcano
       ensure_open!
       return @protocol if @protocol
 
-      require 'async/semaphore'
-      @protocol_lock ||= Async::Semaphore.new(1)
-      @protocol_lock.acquire do
+      protocol_lock.acquire do
         ensure_open!
-        return @protocol if @protocol
-
-        socket = @socket_factory.call(address)
-        protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
-        protocol.connect(token: @client.session_token)
-        @protocol = protocol
-      rescue StandardError => e
-        begin
-          socket&.close
-        rescue StandardError
-          nil
-        end
-        raise public_error(e), cause: nil
+        @protocol ||= connect_protocol
       end
+    rescue StandardError => e
+      raise public_error(e), cause: nil
     end
     private :protocol
 
@@ -76,6 +65,27 @@ module Volcano
 
     private
 
+    def protocol_lock
+      require 'async/semaphore'
+      @protocol_lock ||= Async::Semaphore.new(1)
+    end
+
+    def connect_protocol
+      socket = @socket_factory.call(address)
+      Protocol.new(socket: socket, secrets: realtime_secrets).tap do |protocol|
+        protocol.connect(token: @client.session_token)
+      end
+    rescue StandardError
+      close_socket(socket)
+      raise
+    end
+
+    def close_socket(socket)
+      socket&.close
+    rescue StandardError
+      nil
+    end
+
     def address
       uri = URI(@api_url)
       uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
@@ -102,6 +112,7 @@ module Volcano
       transport_error
     end
 
+    # Represents one realtime broadcast channel.
     class Channel
       def initialize(realtime, protocol_provider, name)
         @realtime = realtime

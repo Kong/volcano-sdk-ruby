@@ -2,6 +2,7 @@
 
 module Volcano
   class Realtime
+    # Dispatches protocol replies and publications to their waiting consumers.
     module ProtocolDispatch
       private
 
@@ -19,15 +20,15 @@ module Volcano
         reply_queue = @pending[frame.fetch('id')]
         return unless reply_queue
 
-        if (error = frame['error'])
-          reply_queue.enqueue(
-            Protocol::Failure.new(
-              error: ServerError.new(error['message'] || 'realtime command failed', code: error['code'])
-            )
-          )
-        else
-          reply_queue.enqueue(frame['result'] || frame.except('id'))
-        end
+        reply_queue.enqueue(reply_value(frame))
+      end
+
+      def reply_value(frame)
+        error = frame['error']
+        return frame['result'] || frame.except('id') unless error
+
+        message = error['message'] || 'realtime command failed'
+        Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
       def dispatch_publication(push)

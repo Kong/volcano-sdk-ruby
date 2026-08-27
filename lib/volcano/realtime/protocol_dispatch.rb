@@ -36,12 +36,13 @@ module Volcano
         return unless data.is_a?(Hash)
 
         event = data['event']
-        @publication_handlers.each do |registered_channel, handlers|
-          next unless channel == registered_channel || channel.end_with?(":#{registered_channel}")
-          next if @callback_queue.size >= @max_callback_queue
+        registered_channel = @publication_handlers.each_key.select do |candidate|
+          channel == candidate || channel.end_with?(":#{candidate}")
+        end.max_by(&:length)
+        return unless registered_channel
+        return if @callback_queue.size >= @max_callback_queue
 
-          @callback_queue.enqueue([handlers.dup, event, data])
-        end
+        @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
       end
 
       def dispatch_callbacks

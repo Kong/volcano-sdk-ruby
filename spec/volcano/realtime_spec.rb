@@ -24,6 +24,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   class FacadeSocket
+    attr_accessor :on_write
     attr_reader :commands
 
     def initialize
@@ -35,7 +36,9 @@ RSpec.describe Volcano::Realtime do
     def write(frame)
       command = JSON.parse(frame.to_str)
       @commands << command
-      @incoming.enqueue(JSON.generate('id' => command.fetch('id'), 'result' => {}))
+      return if on_write&.call(command) == :defer
+
+      respond(command.fetch('id'))
     end
 
     def read
@@ -51,6 +54,10 @@ RSpec.describe Volcano::Realtime do
           }
         )
       )
+    end
+
+    def respond(id)
+      @incoming.enqueue(JSON.generate('id' => id, 'result' => {}))
     end
 
     def close
@@ -125,6 +132,157 @@ RSpec.describe Volcano::Realtime do
       channel = client.realtime.channel('contract')
       channel.subscribe
       expect { channel.subscribe }.to raise_error(Volcano::Realtime::DuplicateSubscriptionError)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not expose a protocol before its connect response completes' do
+    socket = FacadeSocket.new
+    connect_written = Async::Queue.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('connect')
+
+      connect_written.enqueue(command.fetch('id'))
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      connecting = task.async { client.realtime.protocol }
+      connect_id = connect_written.dequeue
+      subscribe_finished = false
+      subscribing = task.async do
+        client.realtime.channel('contract').subscribe
+        subscribe_finished = true
+      end
+      task.yield
+      finished_before_connect = subscribe_finished
+      commands_before_connect = socket.commands.map { |command| command.keys.fetch(1) }
+      socket.respond(connect_id)
+
+      task.with_timeout(0.2) { connecting.wait }
+      task.with_timeout(0.2) { subscribing.wait }
+      expect(finished_before_connect).to be(false)
+      expect(commands_before_connect).to eq(%w[connect])
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'serializes concurrent subscriptions on one channel' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    blocked = false
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe') && !blocked
+
+      blocked = true
+      entered.enqueue(true)
+      release.dequeue
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      first = task.async { channel.subscribe }
+      entered.dequeue
+      second = task.async do
+        channel.subscribe
+      rescue StandardError => e
+        e
+      end
+      task.yield
+      release.enqueue(true)
+
+      expect(task.with_timeout(0.2) { first.wait }).to be_nil
+      expect(task.with_timeout(0.2) { second.wait }).to be_a(
+        Volcano::Realtime::DuplicateSubscriptionError
+      )
+      expect(socket.commands.count { |command| command.key?('subscribe') }).to eq(1)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'waits for an in-flight subscription before unsubscribing' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      entered.enqueue(true)
+      release.dequeue
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      subscribing = task.async { channel.subscribe }
+      entered.dequeue
+      unsubscribe_finished = false
+      unsubscribing = task.async do
+        channel.unsubscribe
+        unsubscribe_finished = true
+      end
+      task.yield
+      finished_before_subscribe = unsubscribe_finished
+      release.enqueue(true)
+
+      task.with_timeout(0.2) { subscribing.wait }
+      task.with_timeout(0.2) { unsubscribing.wait }
+      expect(finished_before_subscribe).to be(false)
+      expect(socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+        %w[connect subscribe unsubscribe]
+      )
+      expect { channel.send(event: 'message') }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        'realtime channel is not subscribed'
+      )
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'routes an overlapping project-prefixed publication only to the longest channel' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    short_received = []
+    long_received = []
+
+    Async do |task|
+      short_channel = client.realtime.channel('foo')
+      long_channel = client.realtime.channel('x:broadcast:foo')
+      short_channel.on('message') { |message| short_received << message }
+      long_channel.on('message') { |message| long_received << message }
+      short_channel.subscribe
+      long_channel.subscribe
+      socket.publication(
+        channel: 'project-id:broadcast:x:broadcast:foo',
+        data: { 'event' => 'message', 'value' => 'long' }
+      )
+      task.with_timeout(0.2) { task.yield until long_received.any? }
+
+      expect(short_received).to be_empty
+      expect(long_received).to eq([{ 'event' => 'message', 'value' => 'long' }])
       client.realtime.disconnect
     end.wait
   end

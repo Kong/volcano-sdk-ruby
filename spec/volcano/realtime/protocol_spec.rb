@@ -107,6 +107,74 @@ RSpec.describe Volcano::Realtime::Protocol do
     end.wait
   end
 
+  it 'serializes concurrent subscription state changes for one channel' do
+    Async do |task|
+      socket = FakeSocket.new
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      blocked = false
+      socket.on_write = lambda do |command|
+        if command.key?('subscribe') && !blocked
+          blocked = true
+          entered.enqueue(true)
+          release.dequeue
+        end
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      first = task.async { protocol.subscribe(channel: 'broadcast:contract') }
+      entered.dequeue
+      second = task.async do
+        protocol.subscribe(channel: 'broadcast:contract')
+      rescue StandardError => e
+        e
+      end
+      task.yield
+      release.enqueue(true)
+
+      expect(task.with_timeout(0.2) { first.wait }).to eq({})
+      expect(task.with_timeout(0.2) { second.wait }).to be_a(
+        Volcano::Realtime::DuplicateSubscriptionError
+      )
+      expect(socket.writes.count { |frame| JSON.parse(frame).key?('subscribe') }).to eq(1)
+      protocol.close
+    end.wait
+  end
+
+  it 'waits for an in-flight protocol subscription before unsubscribing' do
+    Async do |task|
+      socket = FakeSocket.new
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      socket.on_write = lambda do |command|
+        if command.key?('subscribe')
+          entered.enqueue(true)
+          release.dequeue
+        end
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      subscribing = task.async { protocol.subscribe(channel: 'broadcast:contract') }
+      entered.dequeue
+      unsubscribe_finished = false
+      unsubscribing = task.async do
+        protocol.unsubscribe(channel: 'broadcast:contract')
+        unsubscribe_finished = true
+      end
+      task.yield
+      finished_before_subscribe = unsubscribe_finished
+      release.enqueue(true)
+
+      task.with_timeout(0.2) { subscribing.wait }
+      task.with_timeout(0.2) { unsubscribing.wait }
+      expect(finished_before_subscribe).to be(false)
+      expect(socket.writes.map { |frame| JSON.parse(frame).keys.fetch(1) }).to eq(
+        %w[subscribe unsubscribe]
+      )
+      protocol.close
+    end.wait
+  end
+
   it 'dispatches project-prefixed raw publications by data event' do
     Async do |task|
       socket = FakeSocket.new

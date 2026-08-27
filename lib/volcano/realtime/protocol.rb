@@ -51,6 +51,7 @@ module Volcano
         @next_id = 0
         @pending = {}
         @write_lock = Async::Semaphore.new(1)
+        @subscription_lock = Async::Semaphore.new(1)
         @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
         @callback_queue = Async::Queue.new
         @max_callback_queue = max_callback_queue
@@ -64,23 +65,27 @@ module Volcano
       def connect(token:) = request { |id| self.class.connect(id: id, token: token) }
 
       def subscribe(channel:)
-        ensure_open!
-        raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
+        @subscription_lock.acquire do
+          ensure_open!
+          raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-        result = request { |id| self.class.subscribe(id: id, channel: channel) }
-        @subscriptions.add(channel)
-        result
+          result = request { |id| self.class.subscribe(id: id, channel: channel) }
+          @subscriptions.add(channel)
+          result
+        end
       end
 
       def publish(channel:, data:) = request { |id| self.class.publish(id: id, channel: channel, data: data) }
 
       def unsubscribe(channel:)
-        ensure_open!
-        return {} unless @subscriptions.include?(channel)
+        @subscription_lock.acquire do
+          ensure_open!
+          next {} unless @subscriptions.include?(channel)
 
-        result = request { |id| self.class.unsubscribe(id: id, channel: channel) }
-        @subscriptions.delete(channel)
-        result
+          result = request { |id| self.class.unsubscribe(id: id, channel: channel) }
+          @subscriptions.delete(channel)
+          result
+        end
       end
 
       def on_publication(channel, &block) = ensure_open!.tap { @publication_handlers[channel] << block }

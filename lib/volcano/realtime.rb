@@ -27,16 +27,15 @@ module Volcano
         return @protocol if @protocol
 
         socket = @socket_factory.call(address)
-        @protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
-        @protocol.connect(token: @client.session_token)
-        @protocol
+        protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
+        protocol.connect(token: @client.session_token)
+        @protocol = protocol
       rescue StandardError => e
         begin
           socket&.close
         rescue StandardError
           nil
         end
-        @protocol = nil
         raise public_error(e), cause: nil
       end
     end
@@ -101,6 +100,7 @@ module Volcano
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
+        @lifecycle_lock = nil
       end
 
       def on(event, callback = nil, &block)
@@ -111,35 +111,44 @@ module Volcano
       end
 
       def subscribe
-        ensure_open!
-        raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
+        with_lifecycle_lock do
+          ensure_open!
+          raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
 
-        protocol = @realtime.protocol
-        register_handler(protocol)
-        protocol.subscribe(channel: @name)
-        @subscribed = true
+          protocol = @realtime.protocol
+          register_handler(protocol)
+          protocol.subscribe(channel: @name)
+          @subscribed = true
+        end
         nil
       end
 
       def send(event:, **payload)
-        ensure_open!
-        raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
+        with_lifecycle_lock do
+          ensure_open!
+          raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
 
-        data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
-        @realtime.protocol.publish(channel: @name, data: data)
+          data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
+          @realtime.protocol.publish(channel: @name, data: data)
+        end
         nil
       end
 
       def unsubscribe
-        ensure_open!
-        return nil unless @subscribed
+        with_lifecycle_lock do
+          ensure_open!
+          next unless @subscribed
 
-        @realtime.protocol.unsubscribe(channel: @name)
-        @subscribed = false
+          @realtime.protocol.unsubscribe(channel: @name)
+          @subscribed = false
+        end
         nil
       end
 
-      def mark_closed = (@closed = true).tap { @subscribed = false }
+      def mark_closed
+        @closed = true
+        @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
+      end
 
       private
 
@@ -150,6 +159,12 @@ module Volcano
           @callbacks.each { |callback| callback.call(data) } if event == 'message'
         end
         @handler_registered = true
+      end
+
+      def with_lifecycle_lock(&)
+        require 'async/semaphore'
+        @lifecycle_lock ||= Async::Semaphore.new(1)
+        @lifecycle_lock.acquire(&)
       end
 
       def ensure_open!

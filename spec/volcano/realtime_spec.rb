@@ -124,4 +124,27 @@ RSpec.describe Volcano::Realtime do
       client.realtime.disconnect
     end.wait
   end
+
+  it 'redacts the anonymous key from connection exceptions' do
+    anon_key = 'anon key/fixture-secret'
+    encoded_key = 'anon%20key%2Ffixture-secret'
+    factory = lambda do |address|
+      raise IOError, "connection failed for #{address}"
+    end
+    client = Volcano::Client.new(
+      api_url: 'https://api.test.volcano.dev',
+      anon_key: anon_key,
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect do
+      client.realtime.channel('contract').subscribe
+    end.to raise_error(Volcano::Error::TransportError) { |error|
+      expect(error.message).to include('connection failed for')
+      expect(error.message).to include('apikey=[REDACTED]')
+      expect(error.message).not_to include(anon_key, encoded_key)
+    }
+  end
 end

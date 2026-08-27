@@ -3,22 +3,24 @@
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
-output=${1:-"$repo_root/lib/volcano/generated"}
+committed_output="$repo_root/lib/volcano/generated"
+output=${1:-"$committed_output"}
 
 if ! command -v java >/dev/null 2>&1 || ! java -version >/dev/null 2>&1; then
   echo "OpenAPI generation requires a working Java runtime on PATH" >&2
   exit 1
 fi
 
-case "$output" in
-  /|""|"$repo_root"|"$repo_root/lib"|"$repo_root/lib/volcano")
-    echo "refusing unsafe generated output path: $output" >&2
+if [[ "$output" == "$committed_output" ]]; then
+  mkdir -p "$output"
+  find "$output" -mindepth 1 -delete
+else
+  if [[ -e "$output" || -L "$output" ]]; then
+    echo "refusing existing custom generated output path: $output" >&2
     exit 1
-    ;;
-esac
-
-mkdir -p "$output"
-find "$output" -mindepth 1 -delete
+  fi
+  mkdir -p "$output"
+fi
 
 cd "$repo_root"
 npx --no-install openapi-generator-cli generate \

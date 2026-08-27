@@ -2,8 +2,10 @@
 
 require 'digest'
 require 'json'
+require 'open3'
 require 'spec_helper'
 require 'tmpdir'
+require 'rubygems/package'
 
 RSpec.describe 'shared SDK contract bindings' do
   expected_hashes = {
@@ -44,5 +46,27 @@ RSpec.describe 'shared SDK contract bindings' do
     )
   ensure
     File.unlink(path) if path && File.exist?(path)
+  end
+
+  it 'packages the facade and generated runtime without generator scaffolding' do
+    root = File.expand_path('..', __dir__)
+    Dir.mktmpdir('volcano-ruby-gem') do |directory|
+      gem_path = File.join(directory, 'volcano-sdk.gem')
+      stdout, stderr, status = Open3.capture3(
+        'gem', 'build', 'volcano-sdk.gemspec', '--output', gem_path,
+        chdir: root
+      )
+      expect(status).to be_success, "#{stdout}\n#{stderr}"
+
+      files = Gem::Package.new(gem_path).spec.files
+      expect(files).to include(
+        'LICENSE',
+        'README.md',
+        'lib/volcano.rb',
+        'lib/volcano/generated/lib/volcano-generated.rb',
+        'lib/volcano/generated/lib/volcano-generated/api_client.rb'
+      )
+      expect(files.grep(%r{\Alib/volcano/generated/(?!lib/)})).to be_empty
+    end
   end
 end

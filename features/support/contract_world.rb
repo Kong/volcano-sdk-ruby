@@ -26,6 +26,8 @@ module VolcanoContract
     Volcano::Error::TransportError => 'transport error'
   }.freeze
 
+  CREDENTIAL_KEYS = %w[anon_key service_key user_password].freeze
+
   def self.classify_error(error)
     ERROR_CATEGORIES.each do |error_type, category|
       return category if error.is_a?(error_type)
@@ -41,6 +43,12 @@ module VolcanoContract
     when 500..599 then 'server error'
     else 'transport error'
     end
+  end
+
+  def self.redact_error(error, fixture)
+    redaction = Volcano.const_get(:Redaction, false)
+    secrets = CREDENTIAL_KEYS.filter_map { |key| fixture[key] }
+    redaction.exception(error, secrets: secrets)
   end
 
   class World
@@ -81,7 +89,7 @@ module VolcanoContract
         ok: false,
         value: nil,
         category: VolcanoContract.classify_error(e),
-        error: e
+        error: VolcanoContract.redact_error(e, fixture)
       )
     end
 
@@ -111,7 +119,7 @@ module VolcanoContract
     def safely(failures)
       yield
     rescue StandardError => e
-      failures << e
+      failures << VolcanoContract.redact_error(e, fixture)
     end
   end
 end

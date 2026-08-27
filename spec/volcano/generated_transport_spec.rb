@@ -5,6 +5,7 @@ require 'tempfile'
 
 RSpec.describe Volcano::GeneratedTransport do
   GeneratedApis = Data.define(:authentication, :database, :storage, :locks) unless const_defined?(:GeneratedApis)
+  InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
   class FakeGeneratedModel
     def initialize(value)
@@ -135,13 +136,13 @@ RSpec.describe Volcano::GeneratedTransport do
     expect(authorizations).to eq(
       %w[anon-key access-token access-token access-token service-key service-key]
     )
-    expect(authentication.calls.fetch(0)).to be_a(Volcano::Generated::AuthSigninRequest)
+    expect(authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(authentication.calls.fetch(0).to_hash).to eq(
       email: 'user@example.com',
       password: 'secret'
     )
     expect(database.calls.fetch(0).fetch(0)).to eq('main')
-    expect(database.calls.fetch(0).fetch(1)).to be_a(Volcano::Generated::DatabaseSelectRequest)
+    expect(database.calls.fetch(0).fetch(1)).to be_a(InternalGenerated::DatabaseSelectRequest)
     expect(database.calls.fetch(0).fetch(1).to_hash).to eq(
       table: 'items',
       filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
@@ -172,13 +173,38 @@ RSpec.describe Volcano::GeneratedTransport do
   end
 
   it 'selects the multipart representation for the generated dual-mode upload operation' do
-    configuration = Volcano::Generated::Configuration.new
+    configuration = InternalGenerated::Configuration.new
     api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
 
     expect(
       api_client.select_header_content_type(['multipart/form-data', 'application/json'])
     ).to eq('multipart/form-data')
     expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
+  end
+
+  it 'deserializes internal models while the generated namespace is private' do
+    configuration = InternalGenerated::Configuration.new
+    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+    response = Typhoeus::Response.new(
+      code: 200,
+      body: JSON.generate(email: 'user@example.com', password: 'secret'),
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    model = api_client.deserialize(response, 'AuthSigninRequest')
+
+    expect(model).to be_a(InternalGenerated::AuthSigninRequest)
+    expect(model.to_hash).to eq(email: 'user@example.com', password: 'secret')
+  end
+
+  it 'deserializes nested internal models while the generated namespace is private' do
+    model = InternalGenerated::ApiModelBase._deserialize(
+      'AuthUser',
+      id: 'user-id', email: 'user@example.com', status: 'active'
+    )
+
+    expect(model).to be_a(InternalGenerated::AuthUser)
+    expect(model.email).to eq('user@example.com')
   end
 
   it 'reads and removes a closed download tempfile returned by the generated client' do
@@ -210,7 +236,7 @@ RSpec.describe Volcano::GeneratedTransport do
   end
 
   it 'returns generated HTTP failures for stable facade error mapping' do
-    error = Volcano::Generated::ApiError.new(
+    error = InternalGenerated::ApiError.new(
       code: 409,
       response_headers: { 'Retry-After' => '3' },
       response_body: '{"error":"already held","code":"lock_conflict"}'

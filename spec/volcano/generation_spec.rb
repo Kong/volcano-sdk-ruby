@@ -31,4 +31,23 @@ RSpec.describe 'OpenAPI generation' do
       )
     end
   end
+
+  it 'refuses a nonempty custom output without deleting its contents' do
+    Dir.mktmpdir('volcano-ruby-openapi-safety') do |directory|
+      output = File.join(directory, 'existing')
+      sentinel = File.join(output, 'preserve.txt')
+      FileUtils.mkdir_p(output)
+      File.binwrite(sentinel, 'preserve')
+
+      _stdout, stderr, status = Open3.capture3(
+        File.join(ROOT, 'bin/generate-openapi'),
+        output,
+        chdir: ROOT
+      )
+
+      expect(status).not_to be_success
+      expect(stderr).to include('refusing existing custom generated output path')
+      expect(File.binread(sentinel)).to eq('preserve')
+    end
+  end
 end

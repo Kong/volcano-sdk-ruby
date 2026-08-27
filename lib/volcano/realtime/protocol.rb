@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'async/queue'
 require 'json'
 
 module Volcano
@@ -36,8 +35,12 @@ module Volcano
         { 'id' => id, 'unsubscribe' => { 'channel' => channel } }
       end
 
-      def initialize(socket:, task: Async::Task.current)
+      def initialize(socket:, task: nil, secrets: [])
+        require 'async'
+        require 'async/queue'
+        task ||= Async::Task.current
         @socket = socket
+        @secrets = secrets.freeze
         @next_id = 0
         @pending = {}
         @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
@@ -102,6 +105,8 @@ module Volcano
         raise reply.error if reply.is_a?(Failure)
 
         reply
+      rescue StandardError => e
+        raise Redaction.exception(e, secrets: @secrets), cause: nil
       ensure
         @pending.delete(id) if defined?(id)
       end
@@ -119,9 +124,10 @@ module Volcano
           end
         end
       rescue JSON::ParserError => e
-        close_with(ClosedError.new("invalid realtime frame: #{e.message}"))
+        message = Redaction.message("invalid realtime frame: #{e.message}", secrets: @secrets)
+        close_with(ClosedError.new(message))
       rescue StandardError => e
-        closed_error = ClosedError.new(e.message)
+        closed_error = ClosedError.new(Redaction.message(e.message, secrets: @secrets))
         closed_error.set_backtrace(e.backtrace)
         close_with(closed_error)
       ensure

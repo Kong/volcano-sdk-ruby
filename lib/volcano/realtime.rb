@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'async/http/endpoint'
-require 'async/websocket/client'
 require 'uri'
 
 module Volcano
@@ -26,22 +24,31 @@ module Volcano
       return @protocol if @protocol
 
       socket = @socket_factory.call(address)
-      @protocol = Protocol.new(socket: socket)
+      @protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
       @protocol.connect(token: @client.session_token)
       @protocol
-    rescue StandardError
-      socket&.close
+    rescue StandardError => e
+      begin
+        socket&.close
+      rescue StandardError
+        nil
+      end
       @protocol = nil
-      raise
+      raise public_error(e), cause: nil
     end
 
     def disconnect
       return nil if @closed
 
       @closed = true
-      @protocol&.close
-      @channels.each_value(&:mark_closed)
+      begin
+        @protocol&.close
+      ensure
+        @channels.each_value(&:mark_closed)
+      end
       nil
+    rescue StandardError => e
+      raise public_error(e), cause: nil
     end
 
     def ensure_open!
@@ -60,8 +67,23 @@ module Volcano
     end
 
     def open_socket(address)
+      require 'async/http/endpoint'
+      require 'async/websocket/client'
       endpoint = Async::HTTP::Endpoint.parse(address)
       Async::WebSocket::Client.connect(endpoint)
+    end
+
+    def realtime_secrets
+      [@client.anon_token, @client.current_session&.access_token]
+    end
+
+    def public_error(error)
+      redacted = Redaction.exception(error, secrets: realtime_secrets)
+      return redacted unless Transport::NETWORK_ERRORS.any? { |type| error.is_a?(type) }
+
+      transport_error = Error::TransportError.new(redacted.message)
+      transport_error.set_backtrace(redacted.backtrace)
+      transport_error
     end
 
     class Channel

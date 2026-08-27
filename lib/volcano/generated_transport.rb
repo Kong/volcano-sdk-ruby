@@ -9,9 +9,34 @@ generated_load_path = File.expand_path('generated/lib', __dir__)
 $LOAD_PATH.unshift(generated_load_path) unless $LOAD_PATH.include?(generated_load_path)
 require 'volcano-generated'
 
+generated_namespace = Volcano.const_get(:Generated, false)
+generated_namespace.constants(false).each do |name|
+  generated_namespace.const_get(name, false)
+end
+
 module Volcano
+  private_constant :Generated
+
   class GeneratedTransport
     GeneratedApis = Data.define(:authentication, :database, :storage, :locks)
+
+    module ModelDeserialization
+      def _deserialize(type, value)
+        super
+      rescue NameError => e
+        raise unless e.name == :Generated && e.message.include?('private constant Volcano::Generated')
+
+        klass = Generated.const_get(type)
+        if klass.respond_to?(:openapi_any_of) || klass.respond_to?(:openapi_one_of)
+          klass.build(value)
+        else
+          klass.build_from_hash(value)
+        end
+      end
+    end
+    private_constant :ModelDeserialization
+
+    Generated::ApiModelBase.singleton_class.prepend(ModelDeserialization)
 
     class ApiClient < Generated::ApiClient
       def select_header_content_type(content_types)
@@ -20,6 +45,15 @@ module Volcano
         end
 
         super
+      end
+
+      def convert_to_type(data, return_type)
+        super
+      rescue NameError => e
+        raise unless e.name == :Generated && e.message.include?('private constant Volcano::Generated')
+
+        klass = Generated.const_get(return_type)
+        klass.respond_to?(:openapi_one_of) ? klass.build(data) : klass.build_from_hash(data)
       end
     end
 

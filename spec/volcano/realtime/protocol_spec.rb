@@ -71,27 +71,30 @@ RSpec.describe Volcano::Realtime::Protocol do
     )
   end
 
-  it 'writes newline-delimited frames with monotonic IDs and correlates replies' do
+  it 'correlates distinct concurrent replies that arrive in reverse ID order' do
     Async do |task|
       socket = FakeSocket.new
-      socket.on_write = lambda do |command|
-        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => { 'accepted' => true }))
-      end
+      written = Async::Queue.new
+      socket.on_write = ->(command) { written.enqueue(command) }
       protocol = described_class.new(socket: socket, task: task)
 
-      results = [
-        protocol.connect(token: 'access'),
-        protocol.subscribe(channel: 'broadcast:contract'),
+      first = task.async { protocol.connect(token: 'access') }
+      second = task.async do
         protocol.publish(
           channel: 'broadcast:contract',
-          data: { 'event' => 'message', 'value' => 'contract' }
-        ),
-        protocol.unsubscribe(channel: 'broadcast:contract')
-      ]
+          data: { 'event' => 'message', 'value' => 'second' }
+        )
+      end
+      commands = [written.dequeue, written.dequeue]
+      socket.receive(
+        JSON.generate('id' => commands.fetch(1).fetch('id'), 'result' => { 'caller' => 'second' }),
+        JSON.generate('id' => commands.fetch(0).fetch('id'), 'result' => { 'caller' => 'first' })
+      )
 
-      expect(results).to all(eq('accepted' => true))
+      expect(task.with_timeout(0.2) { first.wait }).to eq('caller' => 'first')
+      expect(task.with_timeout(0.2) { second.wait }).to eq('caller' => 'second')
       expect(socket.writes).to all(end_with("\n"))
-      expect(socket.writes.map { |frame| JSON.parse(frame).fetch('id') }).to eq([1, 2, 3, 4])
+      expect(socket.writes.map { |frame| JSON.parse(frame).fetch('id') }).to eq([1, 2])
       protocol.close
     end.wait
   end

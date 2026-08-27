@@ -199,6 +199,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(calls.map { |call| call.fetch(1) }).to eq(
       Array.new(2, '/storage/assets/folder/payload%20with%20space.txt')
     )
+    expect(calls.fetch(0).fetch(2).fetch(:return_type)).to eq('StorageObject')
   ensure
     file&.close!
   end

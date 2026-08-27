@@ -68,7 +68,7 @@ module Volcano
             header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' },
             form_params: { 'file' => file },
             auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey],
-            return_type: 'CompleteUploadSessionResponse'
+            return_type: 'StorageObject'
           )
         )
       end

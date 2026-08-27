@@ -99,7 +99,7 @@ Given('two authenticated realtime clients') do
 end
 
 When('one client subscribes and the other publishes the contract message') do
-  return if contract.last_outcome && !contract.last_outcome.ok
+  raise contract.last_outcome.error if contract.last_outcome && !contract.last_outcome.ok
 
   contract.record do
     Async do |task|

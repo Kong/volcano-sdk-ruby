@@ -80,6 +80,8 @@ module VolcanoContract
         email: fixture.fetch('user_email'),
         password: fixture.fetch('user_password')
       )
+    rescue StandardError => e
+      raise VolcanoContract.redact_error(e, fixture), cause: nil
     end
 
     def record

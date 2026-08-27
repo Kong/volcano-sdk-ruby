@@ -26,6 +26,12 @@ Then('the current session belongs to the contract user') do
   raise 'current session has the wrong user' unless contract.client.current_session.user_id == expected_user_id
 end
 
+Then('the current session exposes access and refresh tokens') do
+  session = contract.client.current_session
+  raise 'current session is missing an access token' if session.access_token.to_s.empty?
+  raise 'current session is missing a refresh token' if session.refresh_token.to_s.empty?
+end
+
 Given('an authenticated client') do
   contract.authenticate
 end
@@ -49,13 +55,17 @@ end
 When('the client uploads and downloads the contract object') do
   contract.record do
     bucket = contract.client.storage.from(contract.fixture.fetch('bucket_name'))
-    bucket.upload(contract.storage_path, contract.storage_bytes)
-    bucket.download(contract.storage_path)
+    uploaded = bucket.upload(contract.storage_path, contract.storage_bytes)
+    { 'bytes' => bucket.download(contract.storage_path), 'path' => uploaded.fetch('name') }
   end
 end
 
 Then('the downloaded bytes equal the uploaded bytes') do
-  raise 'downloaded bytes changed' unless contract.last_outcome.value == contract.storage_bytes
+  raise 'downloaded bytes changed' unless contract.last_outcome.value.fetch('bytes') == contract.storage_bytes
+end
+
+Then('the stored object path equals the contract path') do
+  raise 'stored object path changed' unless contract.last_outcome.value.fetch('path') == contract.storage_path
 end
 
 Given('a service-role client') do

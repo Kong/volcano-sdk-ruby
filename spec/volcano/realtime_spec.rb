@@ -59,6 +59,10 @@ RSpec.describe Volcano::Realtime do
       @closed = true
       @incoming.enqueue(nil)
     end
+
+    def closed?
+      @closed
+    end
   end
 
   it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics' do
@@ -146,5 +150,67 @@ RSpec.describe Volcano::Realtime do
       expect(error.message).to include('apikey=[REDACTED]')
       expect(error.message).not_to include(anon_key, encoded_key)
     }
+  end
+
+  it 'opens one socket when the protocol is first used concurrently' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    opened = 0
+    factory = lambda do |_address|
+      opened += 1
+      entered.enqueue(true)
+      release.dequeue
+      socket
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      first = task.async { client.realtime.protocol }
+      entered.dequeue
+      second = task.async { client.realtime.protocol }
+      task.yield
+      release.enqueue(true)
+
+      expect(task.with_timeout(0.2) { first.wait }).to equal(
+        task.with_timeout(0.2) { second.wait }
+      )
+      expect(opened).to eq(1)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'waits for an opening protocol before disconnecting it' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    factory = lambda do |_address|
+      entered.enqueue(true)
+      release.dequeue
+      socket
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      opening = task.async { client.realtime.protocol }
+      entered.dequeue
+      closing = task.async { client.realtime.disconnect }
+      task.yield
+      release.enqueue(true)
+
+      task.with_timeout(0.2) { opening.wait }
+      task.with_timeout(0.2) { closing.wait }
+      expect(socket).to be_closed
+    end.wait
   end
 end

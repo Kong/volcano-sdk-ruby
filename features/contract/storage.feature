@@ -6,3 +6,4 @@ Feature: SDK storage contract
     When the client uploads and downloads the contract object
     Then the SDK operation succeeds
     And the downloaded bytes equal the uploaded bytes
+    And the stored object path equals the contract path

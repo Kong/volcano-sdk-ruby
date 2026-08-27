@@ -57,6 +57,48 @@ module Volcano
       end
     end
 
+    class StorageApi < Generated::StorageObjectsApi
+      def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
+        call_storage_api(
+          :POST,
+          bucket_name,
+          path,
+          opts.merge(
+            operation: :'StorageObjectsApi.upload_storage_object',
+            header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' },
+            form_params: { 'file' => file },
+            auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey],
+            return_type: 'CompleteUploadSessionResponse'
+          )
+        )
+      end
+
+      def download_storage_object_with_http_info(bucket_name, path, opts = {})
+        call_storage_api(
+          :GET,
+          bucket_name,
+          path,
+          opts.merge(
+            operation: :'StorageObjectsApi.download_storage_object',
+            header_params: { 'Accept' => 'application/octet-stream, application/json' },
+            auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey],
+            return_type: 'File'
+          )
+        )
+      end
+
+      private
+
+      def call_storage_api(method, bucket_name, path, options)
+        raise ArgumentError, 'bucket_name is required' if bucket_name.nil?
+        raise ArgumentError, 'path is required' if path.nil?
+
+        bucket = CGI.escapeURIComponent(bucket_name.to_s)
+        object_path = CGI.escapeURIComponent(path.to_s).gsub('%2F', '/')
+        api_client.call_api(method, "/storage/#{bucket}/#{object_path}", options)
+      end
+    end
+
     def initialize(api_url:, timeout: 60, api_factory: nil)
       @api_url = api_url
       @timeout = timeout
@@ -151,7 +193,7 @@ module Volcano
       GeneratedApis.new(
         authentication: Generated::AuthenticationApi.new(api_client),
         database: Generated::DatabaseQueriesApi.new(api_client),
-        storage: Generated::StorageObjectsApi.new(api_client),
+        storage: StorageApi.new(api_client),
         locks: Generated::LocksApi.new(api_client)
       )
     end

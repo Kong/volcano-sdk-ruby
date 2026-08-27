@@ -9,35 +9,45 @@ module Volcano
       @api_url = api_url
       @socket_factory = socket_factory || method(:open_socket)
       @protocol = nil
+      @protocol_lock = nil
       @channels = {}
       @closed = false
     end
 
-    def channel(name)
-      ensure_open!
-      wire_name = "broadcast:#{name}"
-      @channels[wire_name] ||= Channel.new(self, wire_name)
-    end
+    def channel(name) = ensure_open!.then { @channels["broadcast:#{name}"] ||= Channel.new(self, "broadcast:#{name}") }
 
     def protocol
       ensure_open!
       return @protocol if @protocol
 
-      socket = @socket_factory.call(address)
-      @protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
-      @protocol.connect(token: @client.session_token)
-      @protocol
-    rescue StandardError => e
-      begin
-        socket&.close
-      rescue StandardError
-        nil
+      require 'async/semaphore'
+      @protocol_lock ||= Async::Semaphore.new(1)
+      @protocol_lock.acquire do
+        ensure_open!
+        return @protocol if @protocol
+
+        socket = @socket_factory.call(address)
+        @protocol = Protocol.new(socket: socket, secrets: realtime_secrets)
+        @protocol.connect(token: @client.session_token)
+        @protocol
+      rescue StandardError => e
+        begin
+          socket&.close
+        rescue StandardError
+          nil
+        end
+        @protocol = nil
+        raise public_error(e), cause: nil
       end
-      @protocol = nil
-      raise public_error(e), cause: nil
     end
 
     def disconnect
+      @protocol_lock ? @protocol_lock.acquire { close_protocol } : close_protocol
+    rescue StandardError => e
+      raise public_error(e), cause: nil
+    end
+
+    def close_protocol
       return nil if @closed
 
       @closed = true
@@ -47,13 +57,15 @@ module Volcano
         @channels.each_value(&:mark_closed)
       end
       nil
-    rescue StandardError => e
-      raise public_error(e), cause: nil
     end
 
     def ensure_open!
       raise ClosedError, 'realtime connection closed' if @closed
+
+      self
     end
+
+    private :close_protocol
 
     private
 
@@ -69,13 +81,10 @@ module Volcano
     def open_socket(address)
       require 'async/http/endpoint'
       require 'async/websocket/client'
-      endpoint = Async::HTTP::Endpoint.parse(address)
-      Async::WebSocket::Client.connect(endpoint)
+      Async::WebSocket::Client.connect(Async::HTTP::Endpoint.parse(address))
     end
 
-    def realtime_secrets
-      [@client.anon_token, @client.current_session&.access_token]
-    end
+    def realtime_secrets = [@client.anon_token, @client.current_session&.access_token]
 
     def public_error(error)
       redacted = Redaction.exception(error, secrets: realtime_secrets)
@@ -91,9 +100,7 @@ module Volcano
         @realtime = realtime
         @name = name
         @callbacks = []
-        @handler_registered = false
-        @subscribed = false
-        @closed = false
+        @handler_registered = @subscribed = @closed = false
       end
 
       def on(event, callback = nil, &block)
@@ -132,10 +139,7 @@ module Volcano
         nil
       end
 
-      def mark_closed
-        @closed = true
-        @subscribed = false
-      end
+      def mark_closed = (@closed = true).tap { @subscribed = false }
 
       private
 

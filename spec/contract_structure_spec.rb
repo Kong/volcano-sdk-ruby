@@ -9,11 +9,11 @@ require 'rubygems/package'
 
 RSpec.describe 'shared SDK contract bindings' do
   expected_hashes = {
-    'auth.feature' => '8e1b399dfc5062b59aca5c74f4ef17dcfd9442047ba6f14d0af95a3f44eb152b',
+    'auth.feature' => '6e6bcc6244bbdb9b1c141a3f0d8f1256d2be0057429457084a094ed98cbcbd07',
     'database.feature' => '4685b29357a621068b25984ff0de29cd4c504eebe5cfb597f0b999e29878a668',
     'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
     'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',
-    'storage.feature' => 'a40db75b59dbd975185a3755345111a32c1e2b216ee5f5dd958c33dd3ef31457'
+    'storage.feature' => '0772d46691d2a158e752d19cea995ff79db960fc3774c799ebdf081e19424d82'
   }.freeze
 
   it 'vendors all five shared feature files byte-for-byte' do

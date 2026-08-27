@@ -6,3 +6,4 @@ Feature: SDK authentication contract
     When the client signs in with the contract user's credentials
     Then the SDK operation succeeds
     And the current session belongs to the contract user
+    And the current session exposes access and refresh tokens

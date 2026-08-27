@@ -182,6 +182,27 @@ RSpec.describe Volcano::GeneratedTransport do
     expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
   end
 
+  it 'preserves object path segments and percent-encodes spaces' do
+    configuration = InternalGenerated::Configuration.new
+    api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, method == :POST ? 201 : 200, {}]
+    end
+    storage = Volcano::GeneratedTransport::StorageApi.new(api_client)
+    file = Tempfile.new('volcano-storage-path')
+
+    storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
+    storage.download_storage_object_with_http_info('assets', 'folder/payload with space.txt')
+
+    expect(calls.map { |call| call.fetch(1) }).to eq(
+      Array.new(2, '/storage/assets/folder/payload%20with%20space.txt')
+    )
+  ensure
+    file&.close!
+  end
+
   it 'deserializes internal models while the generated namespace is private' do
     configuration = InternalGenerated::Configuration.new
     api_client = Volcano::GeneratedTransport::ApiClient.new(configuration)

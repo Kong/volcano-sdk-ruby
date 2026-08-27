@@ -31,6 +31,10 @@ RSpec.describe Volcano::Realtime::Protocol do
       @incoming.enqueue(frames.join("\n"))
     end
 
+    def receive_raw(frame)
+      @incoming.enqueue(frame)
+    end
+
     def finish
       @incoming.enqueue(nil)
     end
@@ -40,6 +44,10 @@ RSpec.describe Volcano::Realtime::Protocol do
 
       @closed = true
       finish
+    end
+
+    def closed?
+      @closed
     end
   end
 
@@ -180,6 +188,162 @@ RSpec.describe Volcano::Realtime::Protocol do
       expect { protocol.publish(channel: 'broadcast:contract', data: {}) }.to raise_error(
         Volcano::Realtime::ClosedError
       )
+    end.wait
+  end
+
+  it 'answers Centrifuge application pings' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task)
+
+      socket.receive('{}')
+      task.with_timeout(0.2) { task.yield until socket.writes.any? }
+
+      expect(socket.writes).to eq(["{}\n"])
+      protocol.close
+    end.wait
+  end
+
+  it 'lets publication callbacks issue commands without blocking the reader' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      completed = Async::Condition.new
+      protocol.on_publication('broadcast:contract') do
+        protocol.publish(channel: 'broadcast:contract', data: { 'event' => 'reply' })
+        completed.signal(true)
+      end
+
+      socket.receive(
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => { 'data' => { 'event' => 'message' } }
+          }
+        )
+      )
+
+      expect(task.with_timeout(0.2) { completed.wait }).to be(true)
+      protocol.close
+    end.wait
+  end
+
+  it 'bounds callback work and survives callback failures' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      started = Async::Queue.new
+      release = Async::Queue.new
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        value = data.fetch('value')
+        if value == 'error'
+          started.enqueue(:error)
+          raise 'callback failed'
+        end
+
+        started.enqueue(true) if value == 'first'
+        release.dequeue if value == 'first'
+        received.enqueue(value)
+      end
+
+      publication = lambda do |value|
+        socket.receive(
+          JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => { 'data' => { 'event' => 'message', 'value' => value } }
+            }
+          )
+        )
+      end
+      publication.call('first')
+      started.dequeue
+      socket.receive(
+        %w[second dropped].map do |value|
+          JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => { 'data' => { 'event' => 'message', 'value' => value } }
+            }
+          )
+        end.join("\n")
+      )
+      release.enqueue(true)
+
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq('first')
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq('second')
+      publication.call('error')
+      expect(task.with_timeout(0.2) { started.dequeue }).to eq(:error)
+      publication.call('after-error')
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq('after-error')
+      protocol.close
+    end.wait
+  end
+
+  it 'closes the reader and socket when a callback closes the protocol' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task)
+      completed = Async::Condition.new
+      protocol.on_publication('broadcast:contract') do
+        protocol.close
+        completed.signal(true)
+      end
+
+      socket.receive(
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => { 'data' => { 'event' => 'message' } }
+          }
+        )
+      )
+
+      expect(task.with_timeout(0.2) { completed.wait }).to be(true)
+      expect(socket).to be_closed
+    end.wait
+  end
+
+  it 'bounds pending commands and times out missing replies' do
+    Async do |task|
+      socket = FakeSocket.new
+      written = Async::Queue.new
+      socket.on_write = ->(_command) { written.enqueue(true) }
+      protocol = described_class.new(
+        socket: socket,
+        task: task,
+        request_timeout: 0.02,
+        max_pending: 1
+      )
+      pending = task.async { protocol.connect(token: 'access') }
+      written.dequeue
+
+      expect do
+        protocol.publish(channel: 'broadcast:contract', data: {})
+      end.to raise_error(Volcano::Realtime::PendingLimitError)
+      expect { pending.wait }.to raise_error(Volcano::Realtime::RequestTimeoutError)
+      protocol.close
+    end.wait
+  end
+
+  it 'closes the socket after an abnormal reader failure' do
+    broken_frame = Object.new
+    broken_frame.define_singleton_method(:to_str) { raise IOError, 'read failed' }
+
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task)
+      socket.receive_raw(broken_frame)
+      task.with_timeout(0.2) { task.yield until socket.closed? }
+
+      expect(socket).to be_closed
+      expect do
+        protocol.publish(channel: 'broadcast:contract', data: {})
+      end.to raise_error(Volcano::Realtime::ClosedError, 'read failed')
     end.wait
   end
 end

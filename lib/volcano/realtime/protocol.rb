@@ -1,57 +1,67 @@
 # frozen_string_literal: true
 
 require 'json'
+require_relative 'protocol_dispatch'
 
 module Volcano
   class Realtime
     class ServerError < StandardError
       attr_reader :code
 
-      def initialize(message, code: nil)
-        super(message)
-        @code = code
-      end
+      def initialize(message, code: nil) = super(message).tap { @code = code }
     end
 
     class ClosedError < StandardError; end
     class DuplicateSubscriptionError < StandardError; end
+    class PendingLimitError < StandardError; end
+    class RequestTimeoutError < StandardError; end
 
     class Protocol
+      include ProtocolDispatch
+
       Failure = Data.define(:error)
+      DEFAULT_REQUEST_TIMEOUT = 10
+      DEFAULT_MAX_PENDING = 128
+      DEFAULT_MAX_CALLBACK_QUEUE = 128
 
-      def self.connect(id:, token:)
-        { 'id' => id, 'connect' => { 'token' => token } }
-      end
+      def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
-      def self.subscribe(id:, channel:)
-        { 'id' => id, 'subscribe' => { 'channel' => channel } }
-      end
+      def self.subscribe(id:, channel:) = { 'id' => id, 'subscribe' => { 'channel' => channel } }
 
-      def self.publish(id:, channel:, data:)
-        { 'id' => id, 'publish' => { 'channel' => channel, 'data' => data } }
-      end
+      def self.publish(id:, channel:, data:) = { 'id' => id, 'publish' => { 'channel' => channel, 'data' => data } }
 
-      def self.unsubscribe(id:, channel:)
-        { 'id' => id, 'unsubscribe' => { 'channel' => channel } }
-      end
+      def self.unsubscribe(id:, channel:) = { 'id' => id, 'unsubscribe' => { 'channel' => channel } }
 
-      def initialize(socket:, task: nil, secrets: [])
+      def initialize(
+        socket:,
+        task: nil,
+        secrets: [],
+        request_timeout: DEFAULT_REQUEST_TIMEOUT,
+        max_pending: DEFAULT_MAX_PENDING,
+        max_callback_queue: DEFAULT_MAX_CALLBACK_QUEUE
+      )
         require 'async'
         require 'async/queue'
+        require 'async/semaphore'
         task ||= Async::Task.current
         @socket = socket
         @secrets = secrets.freeze
+        @request_timeout = request_timeout
+        @max_pending = max_pending
         @next_id = 0
         @pending = {}
+        @write_lock = Async::Semaphore.new(1)
         @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
+        @callback_queue = Async::Queue.new
+        @max_callback_queue = max_callback_queue
+        @callback_stopping = @closed = false
         @subscriptions = Set.new
-        @closed = false
+        @closed_error = nil
+        @callback_task = task.async { dispatch_callbacks }
         @reader_task = task.async { read_loop }
       end
 
-      def connect(token:)
-        request { |id| self.class.connect(id: id, token: token) }
-      end
+      def connect(token:) = request { |id| self.class.connect(id: id, token: token) }
 
       def subscribe(channel:)
         ensure_open!
@@ -62,9 +72,7 @@ module Volcano
         result
       end
 
-      def publish(channel:, data:)
-        request { |id| self.class.publish(id: id, channel: channel, data: data) }
-      end
+      def publish(channel:, data:) = request { |id| self.class.publish(id: id, channel: channel, data: data) }
 
       def unsubscribe(channel:)
         ensure_open!
@@ -75,33 +83,31 @@ module Volcano
         result
       end
 
-      def on_publication(channel, &block)
-        ensure_open!
-        @publication_handlers[channel] << block
-        self
-      end
+      def on_publication(channel, &block) = ensure_open!.tap { @publication_handlers[channel] << block }
 
       def close
-        return if @closed
-
-        @closed = true
-        reject_pending(ClosedError.new('realtime connection closed'))
-        @subscriptions.clear
-        @reader_task.stop
-        @socket.close
-        nil
+        close_with(ClosedError.new('realtime connection closed'))
+        @reader_task.stop && nil
       end
 
       private
 
       def request
         ensure_open!
+        if @pending.length >= @max_pending
+          raise PendingLimitError, "realtime pending command limit #{@max_pending} reached"
+        end
+
         @next_id += 1
         id = @next_id
         reply_queue = Async::Queue.new
         @pending[id] = reply_queue
-        @socket.write("#{JSON.generate(yield(id))}\n")
-        reply = reply_queue.dequeue
+        write_frame(yield(id))
+        reply = Async::Task.current.with_timeout(
+          @request_timeout,
+          RequestTimeoutError,
+          "realtime command timed out after #{@request_timeout} seconds"
+        ) { reply_queue.dequeue }
         raise reply.error if reply.is_a?(Failure)
 
         reply
@@ -134,56 +140,36 @@ module Volcano
         close_with(ClosedError.new('realtime connection closed'))
       end
 
-      def process(frame)
-        if frame.key?('id')
-          dispatch_reply(frame)
-        elsif frame.key?('push')
-          dispatch_publication(frame.fetch('push'))
-        end
-      end
-
-      def dispatch_reply(frame)
-        reply_queue = @pending[frame.fetch('id')]
-        return unless reply_queue
-
-        if (error = frame['error'])
-          reply_queue.enqueue(
-            Failure.new(
-              error: ServerError.new(error['message'] || 'realtime command failed', code: error['code'])
-            )
-          )
-        else
-          reply_queue.enqueue(frame['result'] || frame.except('id'))
-        end
-      end
-
-      def dispatch_publication(push)
-        channel = push['channel'].to_s
-        data = push.dig('pub', 'data')
-        return unless data.is_a?(Hash)
-
-        event = data['event']
-        @publication_handlers.each do |registered_channel, handlers|
-          next unless channel == registered_channel || channel.end_with?(":#{registered_channel}")
-
-          handlers.each { |handler| handler.call(event, data) }
-        end
-      end
-
       def ensure_open!
-        raise ClosedError, 'realtime connection closed' if @closed
+        raise @closed_error if @closed
+
+        self
       end
 
       def close_with(error)
         return if @closed
 
         @closed = true
+        @closed_error = error
         @subscriptions.clear
         reject_pending(error)
+        stop_callback_task
+        close_socket
       end
 
-      def reject_pending(error)
-        @pending.each_value { |reply_queue| reply_queue.enqueue(Failure.new(error: error)) }
+      def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
+
+      def write_frame(frame) = @write_lock.acquire { @socket.write("#{JSON.generate(frame)}\n") }
+
+      def close_socket
+        @socket.close
+      rescue StandardError
+        nil
+      end
+
+      def stop_callback_task
+        @callback_stopping = true
+        @callback_task.stop unless @callback_task == Async::Task.current
       end
     end
   end

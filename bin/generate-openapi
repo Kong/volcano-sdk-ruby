@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "$0")/.." && pwd)
+committed_output="$repo_root/lib/volcano/generated"
+if (( $# == 0 )); then
+  output="$committed_output"
+else
+  output=$1
+fi
+
+if ! command -v java >/dev/null 2>&1 || ! java -version >/dev/null 2>&1; then
+  echo "OpenAPI generation requires a working Java runtime on PATH" >&2
+  exit 1
+fi
+
+if [[ "$output" == "$committed_output" ]]; then
+  mkdir -p "$output"
+  find "$output" -mindepth 1 -delete
+else
+  output_parent=${output%/*}
+  output_name=${output##*/}
+  if [[ "$output_parent" == "$output" ]]; then
+    output_parent=.
+  elif [[ -z "$output_parent" ]]; then
+    output_parent=/
+  fi
+
+  if [[ -z "$output_name" || "$output_name" == "." || "$output_name" == ".." || ! -d "$output_parent" ]]; then
+    echo "refusing custom generated output; path must be a new direct child of an existing directory: $output" >&2
+    exit 1
+  fi
+  if ! mkdir -- "$output"; then
+    echo "refusing existing custom generated output path: $output" >&2
+    exit 1
+  fi
+fi
+
+cd "$repo_root"
+npx --no-install openapi-generator-cli generate \
+  -i openapi/openapi.yaml \
+  -g ruby \
+  -c openapi-generator.yaml \
+  -o "$output" \
+  --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false

@@ -14,10 +14,27 @@ jobs:
         ruby-version: ["3.2", "3.4"]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
-      - run: bundle exec rubocop
+      - run: npm ci
+      - run: bin/check-openapi
+      - run: bundle exec rubocop --parallel
       - run: bundle exec rspec
-      - run: bundle exec rake build
+      - name: Validate Cucumber phrases
+        env:
+          CUCUMBER_PUBLISH_QUIET: "true"
+          VOLCANO_SDK_CONTRACT_FIXTURE: ${{ github.workspace }}/tests/fixtures/sdk-contract-dry-run.json
+        run: |
+          chmod 600 "$VOLCANO_SDK_CONTRACT_FIXTURE"
+          bundle exec cucumber features/contract --dry-run --strict --format progress
+      - run: gem build volcano-sdk.gemspec

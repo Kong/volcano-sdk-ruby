@@ -3,6 +3,7 @@ AllCops:
   TargetRubyVersion: 3.2
   Exclude:
     - "lib/volcano/generated/**/*"
+    - "vendor/**/*"
 
 Metrics/BlockLength:
   Exclude:

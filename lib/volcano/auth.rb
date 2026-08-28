@@ -43,6 +43,7 @@ module Volcano
     end
 
     def store_session(session)
+      validate_stored_session(session)
       synchronize_auth_operation do
         @current_device_session_ids = [].freeze
         @client.commit_auth(session, nil)
@@ -50,6 +51,24 @@ module Volcano
     end
 
     private
+
+    def validate_stored_session(session)
+      raise Error::ValidationError, 'Invalid session' unless valid_stored_session?(session)
+    end
+
+    def valid_stored_session?(session)
+      return false unless session.is_a?(Session)
+
+      valid_token?(session.access_token) && valid_optional_token?(session.refresh_token)
+    end
+
+    def valid_token?(token)
+      token.is_a?(String) && !token.empty?
+    end
+
+    def valid_optional_token?(token)
+      token.nil? || valid_token?(token)
+    end
 
     def synchronize_auth_operation(&)
       @client.defer_auth_notifications(@operation_monitor, &)

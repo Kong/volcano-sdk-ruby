@@ -498,6 +498,12 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session).to be_nil
     end
 
+    it 'accepts acknowledgement responses without a message' do
+      transport.queue(:auth_reset_password, 200, {})
+
+      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to be_nil
+    end
+
     it 'rejects users without a valid status' do
       invalid_user = AUTH_SPEC_USER_PAYLOAD.merge('status' => 'unknown')
       transport.queue(:auth_signin, 200, token_payload.merge('user' => invalid_user))
@@ -833,6 +839,23 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session).to be_nil
     end
 
+    it 'hydrates an anonymous conversion whose response omits the user' do
+      transport.queue(:auth_convert_anonymous, 200, {})
+      transport.queue(:auth_refresh, 200, token_payload(access: 'converted-access'))
+
+      expect(client.auth.convert_anonymous(email: 'user@example.com', password: 'password').id).to eq('user-id')
+      expect(client.current_session.access_token).to eq('converted-access')
+    end
+
+    it 'invalidates unresolved conversion state when user hydration fails' do
+      client.store_user(Volcano::User.new(id: 'anonymous-id', email: 'anonymous@volcano.local'))
+      transport.queue(:auth_convert_anonymous, 200, {})
+      transport.queue(:auth_refresh, 503, 'error' => 'temporarily unavailable')
+
+      expect(client.auth.convert_anonymous(email: 'user@example.com', password: 'password')).to be_nil
+      expect([client.current_session, client.current_user]).to eq([nil, nil])
+    end
+
     it 'serializes anonymous conversion with replacement sign-in' do
       serial = blocking_auth_transport(:auth_convert_anonymous, 'user' => AUTH_SPEC_USER_PAYLOAD)
       serial.queue(:auth_refresh, 200, token_payload(access: 'converted-access'))
@@ -934,6 +957,16 @@ RSpec.describe Volcano::Auth do
         client.auth.store_hosted_session(session: replacement, state: request.state, expected_state: request.state)
       ).to be_nil
       expect(client.current_session).to equal(replacement)
+    end
+
+    it 'rejects hosted callback sessions without usable credentials' do
+      request = client.auth.get_hosted_auth_url(project_id: 'project-id')
+      invalid = Volcano::Session.new(access_token: nil, refresh_token: 'refresh-token')
+
+      expect do
+        client.auth.store_hosted_session(session: invalid, state: request.state, expected_state: request.state)
+      end.to raise_error(Volcano::Error::ValidationError, 'Invalid session')
+      expect(client.current_session.access_token).to eq('access-token')
     end
 
     it 'links providers and exposes provider API results' do

@@ -13,12 +13,9 @@ module Volcano
         payload = authenticated_body(
           :auth_convert_anonymous, 200, secrets: [password], email:, password:, user_metadata:
         )
-        converted_user = build_payload_user(payload)
-        begin
-          refresh_session
-        rescue Error::VolcanoError
-          nil
-        end
+        converted_user = optional_payload_user(payload)
+        @client.clear_user unless converted_user
+        refresh_after_conversion
         @client.current_user || converted_user
       end
     end
@@ -108,6 +105,16 @@ module Volcano
       build_user(mapping(mapping(payload).fetch('user')))
     rescue KeyError
       raise auth_response_error
+    end
+
+    def optional_payload_user(payload)
+      build_payload_user(payload) if mapping(payload).key?('user')
+    end
+
+    def refresh_after_conversion
+      refresh_session
+    rescue Error::VolcanoError
+      nil
     end
 
     def refresh_user_best_effort

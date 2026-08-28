@@ -11,9 +11,10 @@ module Volcano
     private
 
     def build_message(payload)
-      MessageResult.new(message: payload.fetch('message'))
-    rescue KeyError, TypeError
-      raise auth_response_error
+      message = payload['message']
+      raise auth_response_error unless message.nil? || message.is_a?(String)
+
+      MessageResult.new(message:)
     end
 
     def build_oauth_token(payload, provider)

@@ -65,6 +65,13 @@ reused. `sign_out` also clears local state if the remote revoke fails.
 page = client.auth.get_sessions(page: 1, limit: 20)
 page.sessions.each { |device_session| puts device_session.id }
 
+cursor_page = client.auth.get_sessions(
+  sort: "created_at",
+  status: "active",
+  cursor: page.next_cursor,
+  limit: 20
+)
+
 client.auth.delete_session(session_id: "session-id")
 client.auth.delete_all_other_sessions
 ```

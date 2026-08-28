@@ -77,8 +77,8 @@ module Volcano
       auth_call(authorization, :auth_cancel_email_change_with_http_info)
     end
 
-    def auth_get_my_sessions(authorization:, page: 1, limit: 20)
-      auth_call(authorization, :auth_get_my_sessions_with_http_info, page:, limit:)
+    def auth_get_my_sessions(authorization:, **)
+      auth_call(authorization, :auth_get_my_sessions_with_http_info, **)
     end
 
     def auth_delete_my_session(authorization:, session_id:)

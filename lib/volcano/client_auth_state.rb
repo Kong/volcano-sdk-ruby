@@ -7,41 +7,43 @@ module Volcano
   # Owns one client's in-memory auth state and listener registry.
   module ClientAuthState
     def commit_auth(session, user)
-      listeners = @auth_state_monitor.synchronize do
+      dispatch = @auth_state_monitor.synchronize do
         @current_session = session
         @current_user = user
         reset_realtime_authentication
-        @auth_listeners.values
+        enqueue_auth_notification(@auth_listeners.values, user)
       end
-      notify_auth_listeners(listeners, user)
+      drain_auth_notifications if dispatch
     end
 
     def store_user(user)
-      listeners = @auth_state_monitor.synchronize do
+      dispatch = @auth_state_monitor.synchronize do
         @current_user = user
-        @auth_listeners.values
+        enqueue_auth_notification(@auth_listeners.values, user)
       end
-      notify_auth_listeners(listeners, user)
+      drain_auth_notifications if dispatch
     end
 
     def clear_auth
-      listeners = @auth_state_monitor.synchronize do
+      dispatch = @auth_state_monitor.synchronize do
         @current_session = nil
         @current_user = nil
         reset_realtime_authentication
-        @auth_listeners.values
+        enqueue_auth_notification(@auth_listeners.values, nil)
       end
-      notify_auth_listeners(listeners, nil)
+      drain_auth_notifications if dispatch
     end
 
     def subscribe_auth(listener)
-      listener_id, immediate_user, notify_immediately = @auth_state_monitor.synchronize do
+      listener_id, dispatch = @auth_state_monitor.synchronize do
         listener_id = @next_auth_listener_id
         @next_auth_listener_id += 1
         @auth_listeners[listener_id] = listener
-        [listener_id, @current_user, !(@current_session && @current_user.nil?)]
+        notify = !(@current_session && @current_user.nil?)
+        dispatch = enqueue_auth_notification([listener], @current_user) if notify
+        [listener_id, dispatch]
       end
-      notify_auth_listener(listener, immediate_user) if notify_immediately
+      drain_auth_notifications if dispatch
       build_unsubscribe(listener_id)
     end
 
@@ -53,6 +55,8 @@ module Volcano
       @current_user = nil
       @auth_listeners = {}
       @next_auth_listener_id = 0
+      @auth_notifications = []
+      @dispatching_auth_notifications = false
     end
 
     def build_unsubscribe(listener_id)
@@ -67,8 +71,24 @@ module Volcano
       end
     end
 
-    def notify_auth_listeners(listeners, user)
-      listeners.each { |listener| notify_auth_listener(listener, user) }
+    def enqueue_auth_notification(listeners, user)
+      @auth_notifications << [listeners, user]
+      return false if @dispatching_auth_notifications
+
+      @dispatching_auth_notifications = true
+    end
+
+    def drain_auth_notifications
+      loop do
+        notification = @auth_state_monitor.synchronize do
+          @dispatching_auth_notifications = false if @auth_notifications.empty?
+          @auth_notifications.shift
+        end
+        break unless notification
+
+        listeners, user = notification
+        listeners.each { |listener| notify_auth_listener(listener, user) }
+      end
       nil
     end
 

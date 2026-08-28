@@ -4,6 +4,14 @@ require_relative 'immutable_value'
 
 # Public namespace for Volcano SDK values.
 module Volcano
+  # Uses a class's redacted inspection for pretty-printer output.
+  module RedactedInspection
+    def pretty_print(printer)
+      printer.text(inspect)
+    end
+  end
+  private_constant :RedactedInspection
+
   # Authenticated Volcano user.
   User = Data.define(
     :id, :email, :project_id, :email_confirmed, :user_metadata, :app_metadata,
@@ -23,6 +31,8 @@ module Volcano
 
   # Authenticated user session.
   Session = Data.define(:access_token, :refresh_token, :expires_in, :user_id) do
+    include RedactedInspection
+
     def initialize(access_token:, refresh_token: nil, expires_in: nil, user_id: nil)
       super(
         access_token: ImmutableValue.copy(access_token),
@@ -57,6 +67,8 @@ module Volcano
 
   # Result of an email-change request.
   EmailChangeResult = Data.define(:message, :new_email, :email_change_token) do
+    include RedactedInspection
+
     def initialize(message:, new_email:, email_change_token: nil)
       super(
         message: ImmutableValue.copy(message), new_email: ImmutableValue.copy(new_email),
@@ -72,6 +84,8 @@ module Volcano
 
   # Authorization URL and caller-owned state for an authentication flow.
   AuthorizationRequest = Data.define(:authorization_url, :state) do
+    include RedactedInspection
+
     def initialize(authorization_url:, state:)
       super(
         authorization_url: ImmutableValue.copy(authorization_url),

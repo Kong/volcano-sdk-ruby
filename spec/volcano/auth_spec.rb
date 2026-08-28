@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'pp'
 require 'spec_helper'
 
 AuthSpecResponse = Volcano::Transport::Response
@@ -237,6 +238,9 @@ RSpec.describe Volcano::Auth do
       user = Volcano::User.new(id: 'user-id', email: 'user@example.com', user_metadata: metadata)
       values = [
         client.current_session,
+        Volcano::SignUpResult.new(
+          confirmation_required: false, message: 'created', session: client.current_session
+        ),
         Volcano::EmailChangeResult.new(
           message: 'sent', new_email: 'next@example.com', email_change_token: 'email-secret'
         ),
@@ -245,7 +249,8 @@ RSpec.describe Volcano::Auth do
 
       expect { user.user_metadata['nested'][0]['value'] = 'changed' }.to raise_error(FrozenError)
       secrets = /access-token|refresh-token|email-secret|secret\.example|state-secret/
-      expect(values.map(&:inspect).join).not_to match(secrets)
+      rendered = values.flat_map { |value| [value.inspect, value.pretty_inspect] }.join
+      expect(rendered).not_to match(secrets)
     end
 
     it 'exports immutable public authentication values' do
@@ -318,6 +323,22 @@ RSpec.describe Volcano::Auth do
       expect(observations.last).to eq([session, client.current_user, client.current_user])
     end
 
+    it 'preserves auth event order across reentrant transitions' do
+      events = []
+      client.auth.on_auth_state_change do |user|
+        events << [:first, user&.id]
+        client.clear_auth if user
+      end
+      client.auth.on_auth_state_change { |user| events << [:second, user&.id] }
+      events.clear
+      transport.queue(:auth_signin, 200, token_payload)
+
+      client.auth.sign_in(email: 'user@example.com', password: 'password')
+
+      expect(events).to eq([[:first, 'user-id'], [:second, 'user-id'], [:first, nil], [:second, nil]])
+      expect(client.current_session).to be_nil
+    end
+
     it 'retrieves and updates the user without replacing the session' do
       session_client = Volcano::Client.new(
         anon_key: 'anon-key', access_token: 'access-token', refresh_token: 'refresh-token', _transport: transport
@@ -367,10 +388,15 @@ RSpec.describe Volcano::Auth do
     it 'clears rotated auth when the post-refresh retry is unauthorized' do
       session_client = authenticated_client(transport)
       transport.queue(:auth_get_user, 401, 'error' => 'expired')
-      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
-      transport.queue(:auth_get_user, 401, 'error' => 'revoked')
+      transport.queue(
+        :auth_refresh, 200,
+        token_payload(access: 'rotated-access', refresh: 'rotated-refresh')
+      )
+      transport.queue(:auth_get_user, 401, 'error' => 'revoked rotated-access rotated-refresh')
 
-      expect { session_client.auth.get_user }.to raise_error(Volcano::Error::AuthenticationError)
+      expect { session_client.auth.get_user }.to raise_error(
+        Volcano::Error::AuthenticationError, 'revoked [REDACTED] [REDACTED]'
+      )
       expect(session_client.current_session).to be_nil
     end
 
@@ -636,16 +662,16 @@ RSpec.describe Volcano::Auth do
       )
     end
 
-    it 'preserves access-only auth for provider-level unauthorized responses' do
-      access_client = Volcano::Client.new(
-        anon_key: 'anon-key', access_token: 'access-token', _transport: transport
+    it 'preserves auth for structured provider-level unauthorized responses' do
+      transport.queue(
+        :call_oauth_provider_api, 401,
+        'error' => 'provider unavailable', 'code' => 'provider_not_linked'
       )
-      transport.queue(:call_oauth_provider_api, 401, 'error' => 'provider is not linked')
 
       expect do
-        access_client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
-      end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
-      expect(access_client.current_session.access_token).to eq('access-token')
+        client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'provider unavailable')
+      expect(client.current_session.access_token).to eq('access-token')
     end
 
     it 'refreshes an expired session before retrying a provider API call' do
@@ -673,11 +699,14 @@ RSpec.describe Volcano::Auth do
     it 'preserves refreshed auth for a provider-not-linked retry response' do
       transport.queue(:call_oauth_provider_api, 401, 'error' => 'not authenticated')
       transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
-      transport.queue(:call_oauth_provider_api, 401, 'error' => 'provider is not linked')
+      transport.queue(
+        :call_oauth_provider_api, 401,
+        'error' => 'provider unavailable', 'code' => 'provider_not_linked'
+      )
 
       expect do
         client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
-      end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'provider unavailable')
       expect(client.current_session.access_token).to eq('rotated-access')
     end
 
@@ -700,6 +729,24 @@ RSpec.describe Volcano::Auth do
         client.current_session
       ]
       expect(results).to eq(['session-id', 1, nil, nil, nil])
+    end
+
+    it 'exposes session filters and cursor navigation' do
+      payload = {
+        'data' => [current_auth_session], 'total' => 3, 'limit' => 1,
+        'has_more' => true, 'next_cursor' => 'next', 'prev_cursor' => 'previous'
+      }
+      transport.queue(:auth_get_my_sessions, 200, payload)
+
+      page = client.auth.get_sessions(
+        sort: 'created_at', status: 'active', cursor: 'cursor', offset: 1, limit: 1
+      )
+
+      expect(page.sessions.map(&:id)).to eq(['session-id'])
+      expect([page.has_more, page.next_cursor, page.prev_cursor]).to eq([true, 'next', 'previous'])
+      expect(transport.calls.last.last).to include(
+        sort: 'created_at', status: 'active', cursor: 'cursor', offset: 1, limit: 1
+      )
     end
 
     it 'forgets cached device identity when a legacy session is replaced' do

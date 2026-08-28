@@ -2,6 +2,8 @@
 
 # Public namespace for Volcano SDK authentication.
 module Volcano
+  PROVIDER_NOT_LINKED_CODE = 'provider_not_linked'
+
   # Implements hosted auth, OAuth provider, and device-session operations.
   module AuthOAuth
     def get_hosted_auth_url(project_id:, action: nil)
@@ -100,7 +102,7 @@ module Volcano
 
     def refresh_provider_request?(error)
       session = @client.current_session
-      error.status == 401 && session&.refresh_token && !error.message.downcase.include?('not linked')
+      error.status == 401 && session&.refresh_token && error.code != PROVIDER_NOT_LINKED_CODE
     end
 
     def build_oauth_provider(provider)
@@ -121,5 +123,6 @@ module Volcano
       response
     end
   end
+  private_constant :PROVIDER_NOT_LINKED_CODE
   private_constant :AuthOAuth
 end

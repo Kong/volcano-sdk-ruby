@@ -2,18 +2,30 @@
 
 # Public namespace for Volcano SDK authentication.
 module Volcano
+  SESSION_PAGE_FIELDS = %i[
+    total page limit total_pages has_more next_cursor prev_cursor
+  ].freeze
+
   # Page of device sessions associated with the current user.
-  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages) do
-    def initialize(sessions: [], total: nil, page: nil, limit: nil, total_pages: nil)
-      super(**ImmutableValue.copy_attributes(sessions:, total:, page:, limit:, total_pages:))
+  SessionPage = Data.define(:sessions, *SESSION_PAGE_FIELDS) do
+    def initialize(sessions: [], **attributes)
+      unknown = attributes.keys - SESSION_PAGE_FIELDS
+      raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
+
+      values = SESSION_PAGE_FIELDS.to_h { |field| [field, attributes[field]] }
+      super(**ImmutableValue.copy_attributes(sessions:, **values))
     end
   end
+  private_constant :SESSION_PAGE_FIELDS
 
   # Implements current-user device-session operations.
   module AuthSessions
-    def get_sessions(page: 1, limit: 20)
+    SESSION_OPTIONS = %i[sort status cursor ending_before offset].freeze
+
+    def get_sessions(page: nil, limit: 20, **options)
       synchronize_auth_operation do
-        payload = mapping(authenticated_body(:auth_get_my_sessions, 200, page:, limit:))
+        query = session_query(page:, limit:, options:)
+        payload = mapping(authenticated_body(:auth_get_my_sessions, 200, **query))
         sessions = auth_sessions(payload)
         record_current_sessions(sessions)
         SessionPage.new(**session_page_attributes(payload, sessions))
@@ -39,10 +51,19 @@ module Volcano
 
     private
 
+    def session_query(page:, limit:, options:)
+      unknown = options.keys - SESSION_OPTIONS
+      raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
+
+      { page:, limit:, **options }.compact
+    end
+
     def session_page_attributes(payload, sessions)
       {
         sessions:, total: payload['total'], page: payload['page'],
-        limit: payload['limit'], total_pages: payload['total_pages']
+        limit: payload['limit'], total_pages: payload['total_pages'],
+        has_more: payload['has_more'], next_cursor: payload['next_cursor'],
+        prev_cursor: payload['prev_cursor']
       }
     end
 

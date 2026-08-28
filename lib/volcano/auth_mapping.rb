@@ -1,0 +1,107 @@
+# frozen_string_literal: true
+
+# Public namespace for Volcano SDK authentication.
+module Volcano
+  # Converts normalized response hashes into public immutable values.
+  module AuthMapping
+    USER_FIELDS = %w[
+      project_id email_confirmed user_metadata app_metadata avatar_url status
+      banned_until last_sign_in_at created_at updated_at
+    ].freeze
+    USER_TIME_FIELDS = %i[banned_until last_sign_in_at created_at updated_at].freeze
+    SESSION_TIME_FIELDS = %i[
+      expires_at last_activity_at session_started_at created_at updated_at
+    ].freeze
+
+    private
+
+    def build_user(payload)
+      values = USER_FIELDS.to_h { |field| [field.to_sym, payload[field]] }
+      USER_TIME_FIELDS.each { |field| values[field] = optional_time(values[field]) }
+      User.new(id: payload.fetch('id'), email: payload.fetch('email'), **values)
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def build_session(payload)
+      user = build_user(mapping(payload.fetch('user')))
+      session = Session.new(
+        access_token: payload.fetch('access_token'),
+        refresh_token: payload['refresh_token'],
+        expires_in: payload['expires_in'],
+        user_id: user.id
+      )
+      [session, user]
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def build_message(payload)
+      MessageResult.new(message: payload.fetch('message'))
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def build_oauth_token(payload)
+      OAuthTokenResult.new(
+        provider: validate_provider(payload.fetch('provider')),
+        expires_in: payload['expires_in'],
+        message: payload['message']
+      )
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def build_auth_session(payload)
+      values = SESSION_TIME_FIELDS.to_h do |field|
+        [field, optional_time(payload[field.to_s])]
+      end
+      AuthSession.new(
+        id: payload.fetch('id'), user_id: payload.fetch('user_id'),
+        provider: payload.fetch('provider'), expires_at: values.delete(:expires_at),
+        is_active: payload.fetch('is_active'), is_current: payload.fetch('is_current'),
+        user_agent: payload['user_agent'], ip_address: payload['ip_address'],
+        last_ip_address: payload['last_ip_address'], **values
+      )
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def mapping(value)
+      return value if value.is_a?(Hash)
+
+      raise auth_response_error
+    end
+
+    def array(value)
+      return value if value.is_a?(Array)
+
+      raise auth_response_error
+    end
+
+    def optional_time(value)
+      value && Time.iso8601(value.to_s)
+    rescue ArgumentError
+      raise auth_response_error
+    end
+
+    def validate_provider(provider)
+      value = provider.to_s
+      return value if %w[google github microsoft apple].include?(value)
+
+      raise Error::ValidationError, 'Unsupported OAuth provider'
+    end
+
+    def response_header(response, name)
+      value = response.headers&.find { |key, _| key.casecmp?(name) }&.last
+      raise auth_response_error('Missing authorization URL') unless value
+
+      value
+    end
+
+    def secure_state?(state, expected_state)
+      state.bytesize == expected_state.bytesize && OpenSSL.secure_compare(state, expected_state)
+    end
+  end
+  private_constant :AuthMapping
+end

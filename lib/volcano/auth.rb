@@ -1,38 +1,28 @@
 # frozen_string_literal: true
 
+require 'openssl'
+require 'securerandom'
+require 'time'
+require 'uri'
+
+require_relative 'auth_mapping'
+require_relative 'auth_invocation'
+require_relative 'auth_lifecycle'
+require_relative 'auth_account'
+require_relative 'auth_oauth'
+
 module Volcano
-  # Authenticates users and updates the client session.
+  # Authenticates users and updates client-owned auth state.
   class Auth
+    include AuthMapping
+    include AuthInvocation
+    include AuthLifecycle
+    include AuthAccount
+    include AuthOAuth
+
     def initialize(client, transport)
       @client = client
       @transport = transport
-    end
-
-    def sign_in(email:, password:)
-      payload = Transport.body(sign_in_response(email:, password:), 200)
-      session = build_session(payload)
-      @client.store_session(session)
-      session
-    end
-
-    private
-
-    def sign_in_response(email:, password:)
-      Transport.invoke do
-        @transport.auth_signin(
-          authorization: @client.anon_token,
-          email: email,
-          password: password
-        )
-      end
-    end
-
-    def build_session(payload)
-      Session.new(
-        access_token: payload.fetch('access_token'),
-        refresh_token: payload.fetch('refresh_token'),
-        user_id: payload.fetch('user').fetch('id')
-      )
     end
   end
 end

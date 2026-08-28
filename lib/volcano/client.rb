@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
+require_relative 'client_auth_state'
+
 module Volcano
   # Entry point for Volcano API, storage, lock, and realtime operations.
   class Client
-    attr_reader :auth, :storage, :locks, :realtime, :current_session, :current_user
+    include ClientAuthState
+
+    attr_reader :api_url, :auth, :storage, :locks, :realtime, :current_session, :current_user
 
     def initialize(
       anon_key:,
@@ -18,8 +22,7 @@ module Volcano
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
-      @current_session = initial_session(access_token, refresh_token)
-      @current_user = nil
+      initialize_auth_state(access_token, refresh_token)
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
       initialize_facades(socket_factory)
     end
@@ -46,20 +49,6 @@ module Volcano
 
     def store_session(session)
       @current_session = session
-    end
-
-    def commit_auth(session, user)
-      @current_session = session
-      @current_user = user
-    end
-
-    def store_user(user)
-      @current_user = user
-    end
-
-    def clear_auth
-      @current_session = nil
-      @current_user = nil
     end
 
     private

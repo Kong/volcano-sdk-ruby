@@ -2,7 +2,52 @@
 
 require 'spec_helper'
 
+AuthSpecResponse = Volcano::Transport::Response
+AUTH_SPEC_USER_PAYLOAD = {
+  'id' => 'user-id',
+  'email' => 'user@example.com',
+  'project_id' => 'project-id',
+  'email_confirmed' => true,
+  'user_metadata' => { 'plan' => 'starter' },
+  'app_metadata' => { 'role' => 'developer' },
+  'status' => 'active',
+  'created_at' => '2026-08-28T12:00:00Z'
+}.freeze
+
+class AuthSpecTransport
+  attr_reader :calls
+
+  def initialize
+    @calls = []
+    @responses = Hash.new { |responses, operation| responses[operation] = [] }
+  end
+
+  def queue(operation, status, body = nil, headers = {})
+    @responses[operation] << AuthSpecResponse.new(status:, body:, headers:, data: nil)
+  end
+
+  def method_missing(operation, **arguments)
+    return super unless operation.to_s.match?(/\A(?:auth_|refresh_oauth|get_oauth|call_oauth)/)
+
+    @calls << [operation, arguments]
+    @responses.fetch(operation).shift || raise("no response queued for #{operation}")
+  end
+
+  def respond_to_missing?(operation, include_private = false)
+    operation.to_s.match?(/\A(?:auth_|refresh_oauth|get_oauth|call_oauth)/) || super
+  end
+end
+
 RSpec.describe Volcano::Auth do
+  def token_payload(access: 'access-token', refresh: 'refresh-token')
+    {
+      'access_token' => access,
+      'refresh_token' => refresh,
+      'expires_in' => 3600,
+      'user' => AUTH_SPEC_USER_PAYLOAD
+    }
+  end
+
   describe 'public auth values and client state' do
     let(:client) do
       Volcano::Client.new(
@@ -83,6 +128,199 @@ RSpec.describe Volcano::Auth do
       ]
 
       expect(values).to all(be_frozen)
+    end
+  end
+
+  describe 'session lifecycle' do
+    let(:transport) { AuthSpecTransport.new }
+    let(:client) { Volcano::Client.new(anon_key: 'anon-key', _transport: transport) }
+
+    it 'signs up without inventing a session and can opt into immediate sign-in' do
+      transport.queue(:auth_signup, 201, 'confirmation_required' => true, 'message' => 'Check email')
+      result = client.auth.sign_up(email: 'user@example.com', password: 'password')
+
+      expect(result).to eq(Volcano::SignUpResult.new(confirmation_required: true, message: 'Check email'))
+      expect(client.current_session).to be_nil
+
+      transport.queue(:auth_signup, 201, 'confirmation_required' => false, 'message' => 'Created')
+      transport.queue(:auth_signin, 200, token_payload)
+      signed_in = client.auth.sign_up(email: 'user@example.com', password: 'password', sign_in: true)
+      expect([signed_in.user, signed_in.session]).to eq([client.current_user, client.current_session])
+    end
+
+    it 'commits sign-in state before listeners observe it' do
+      observations = []
+      client.auth.on_auth_state_change do |user|
+        observations << [client.current_session, client.current_user, user]
+      end
+      transport.queue(:auth_signin, 200, token_payload)
+
+      session = client.auth.sign_in(email: 'user@example.com', password: 'password')
+
+      expect(session.user_id).to eq('user-id')
+      expect(client.current_user.email).to eq('user@example.com')
+      expect(observations.first).to eq([nil, nil, nil])
+      expect(observations.last).to eq([session, client.current_user, client.current_user])
+    end
+
+    it 'retrieves and updates the user without replacing the session' do
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'access-token', refresh_token: 'refresh-token', _transport: transport
+      )
+      session = session_client.current_session
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+      updated_payload = AUTH_SPEC_USER_PAYLOAD.merge('email' => 'updated@example.com')
+      transport.queue(:auth_update_user, 200, 'user' => updated_payload)
+
+      expect(session_client.auth.get_user.email).to eq('user@example.com')
+      expect(session_client.auth.update_user(user_metadata: { 'plan' => 'pro' }).email).to eq('updated@example.com')
+      expect(session_client.current_session).to be(session)
+    end
+
+    it 'rotates tokens and refreshes an authenticated request once after 401' do
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'old-access', refresh_token: 'old-refresh', _transport: transport
+      )
+      transport.queue(:auth_get_user, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'new-access', refresh: 'new-refresh'))
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+
+      expect(session_client.auth.get_user.id).to eq('user-id')
+      expect(session_client.current_session.access_token).to eq('new-access')
+      expect(transport.calls.map(&:first)).to eq(%i[auth_get_user auth_refresh auth_get_user])
+    end
+
+    it 'clears stale state when refresh fails' do
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'old-access', refresh_token: 'old-refresh', _transport: transport
+      )
+      transport.queue(:auth_refresh, 401, 'error' => 'refresh expired')
+
+      expect { session_client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError)
+      expect([session_client.current_session, session_client.current_user]).to eq([nil, nil])
+    end
+
+    it 'always clears sign-out state and isolates listener failures' do
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'access', refresh_token: 'refresh', _transport: transport
+      )
+      events = []
+      session_client.auth.on_auth_state_change { raise 'listener secret' }
+      unsubscribe = session_client.auth.on_auth_state_change { |user| events << user }
+      transport.queue(:auth_logout, 500, 'error' => 'failed')
+
+      expect { session_client.auth.sign_out }.to raise_error(Volcano::Error::ServerError)
+      expect(session_client.current_session).to be_nil
+      expect(events.last).to be_nil
+      unsubscribe.call
+      expect { unsubscribe.call }.not_to raise_error
+    end
+  end
+
+  describe 'account, OAuth, and device-session flows' do
+    let(:transport) { AuthSpecTransport.new }
+    let(:client) do
+      Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'access-token', refresh_token: 'refresh-token', _transport: transport
+      )
+    end
+
+    it 'supports anonymous conversion and email workflows' do
+      transport.queue(:auth_signup_anonymous, 201, token_payload)
+      transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+      transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
+      transport.queue(:auth_resend_confirmation, 200, 'message' => 'resent')
+      transport.queue(:auth_forgot_password, 200, 'message' => 'sent')
+      transport.queue(:auth_reset_password, 200, 'message' => 'reset')
+
+      results = [
+        client.auth.sign_up_anonymous.user_id,
+        client.auth.convert_anonymous(email: 'user@example.com', password: 'password').id,
+        client.auth.confirm_email(token: 'token').message,
+        client.auth.resend_confirmation(email: 'user@example.com').message,
+        client.auth.forgot_password(email: 'user@example.com').message,
+        client.auth.reset_password(token: 'token', new_password: 'next').message
+      ]
+      expect(results).to eq(%w[user-id user-id confirmed resent sent reset])
+    end
+
+    it 'supports the complete email-change lifecycle' do
+      transport.queue(
+        :auth_request_email_change, 200,
+        'message' => 'sent', 'new_email' => 'next@example.com', 'email_change_token' => 'development-token'
+      )
+      transport.queue(:auth_confirm_email_change, 200, 'message' => 'changed')
+      transport.queue(:auth_cancel_email_change, 200, 'message' => 'cancelled')
+
+      result = client.auth.request_email_change(new_email: 'next@example.com')
+      expect(result.new_email).to eq('next@example.com')
+      expect(result.inspect).not_to include('development-token')
+      expect(client.auth.confirm_email_change(token: 'token').message).to eq('changed')
+      expect(client.auth.cancel_email_change.message).to eq('cancelled')
+    end
+
+    it 'builds hosted and OAuth authorization requests and validates callback state' do
+      allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
+      transport.queue(:auth_oauth_authorize, 302, nil, 'Location' => 'https://github.test/authorize')
+      transport.queue(:auth_oauth_exchange, 200, token_payload)
+
+      hosted = client.auth.get_hosted_auth_url(project_id: 'project/id', action: 'login')
+      oauth = client.auth.get_oauth_authorization_url(provider: 'github', redirect_url: 'https://app.test/callback')
+      expect(hosted.authorization_url).to include('/projects/project%2Fid/auth/hosted')
+      expect(oauth.state).to eq('generated-state')
+      expect do
+        client.auth.exchange_oauth_code(
+          code: 'code', redirect_url: 'https://app.test/callback', state: 'wrong', expected_state: oauth.state
+        )
+      end.to raise_error(Volcano::Error::ValidationError)
+      expect(client.auth.exchange_oauth_code(
+               code: 'code', redirect_url: 'https://app.test/callback', state: oauth.state, expected_state: oauth.state
+             )).to eq(client.current_session)
+    end
+
+    it 'links providers and exposes provider API results' do
+      allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
+      transport.queue(:auth_link_oauth_provider, 200, 'authorization_url' => 'https://github.test/link')
+      transport.queue(:auth_list_oauth_providers, 200, 'providers' => [{ 'provider' => 'github' }])
+      transport.queue(:refresh_oauth_provider_token, 200, 'provider' => 'github', 'message' => 'refreshed')
+      transport.queue(:get_oauth_provider_token, 200, 'provider' => 'github', 'expires_in' => 3600)
+      transport.queue(:call_oauth_provider_api, 200, 'login' => 'volcano')
+      transport.queue(:auth_unlink_oauth_provider, 204)
+
+      results = [
+        client.auth.link_oauth_provider(provider: 'github', redirect_url: 'https://app.test/link').state,
+        client.auth.get_linked_oauth_providers.map(&:provider),
+        client.auth.refresh_oauth_token(provider: 'github').message,
+        client.auth.get_oauth_provider_token(provider: 'github').expires_in,
+        client.auth.call_oauth_api(provider: 'github', endpoint: '/user'),
+        client.auth.unlink_oauth_provider(provider: 'github')
+      ]
+      expect(results).to eq(
+        ['generated-state', ['github'], 'refreshed', 3600, { 'login' => 'volcano' }, nil]
+      )
+    end
+
+    it 'lists and deletes current-user device sessions' do
+      session = {
+        'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
+        'expires_at' => '2026-08-29T12:00:00Z', 'is_active' => true, 'is_current' => true
+      }
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session], 'total' => 1, 'page' => 1, 'limit' => 20)
+      transport.queue(:auth_delete_my_session, 204)
+      transport.queue(:auth_delete_all_my_sessions, 204)
+
+      page = client.auth.get_sessions
+      expect(page.sessions.first.id).to eq('session-id')
+      expect(page.total).to eq(1)
+      expect(client.auth.delete_session(session_id: 'session-id')).to be_nil
+      expect(client.auth.delete_all_other_sessions).to be_nil
+    end
+
+    it 'rejects unsupported providers before transport invocation' do
+      expect do
+        client.auth.get_oauth_authorization_url(provider: 'unknown', redirect_url: 'https://app.test')
+      end.to raise_error(Volcano::Error::ValidationError)
+      expect(transport.calls).to be_empty
     end
   end
 end

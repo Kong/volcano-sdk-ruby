@@ -102,11 +102,13 @@ session = device_client.auth.poll_device_token(
 )
 ```
 
-Signed-in clients can also exchange their session for a short-lived platform
-token. Treat `token.token` as a secret:
+After the device client commits its approved device-flow session, it can
+exchange that verified session for a short-lived platform token. Ordinary
+email/password and OAuth sessions are not eligible. Treat `token.token` as a
+secret:
 
 ```ruby
-token = client.auth.exchange_platform_token(client_id: "volcano-cli")
+token = device_client.auth.exchange_platform_token(client_id: "volcano-cli")
 ```
 
 ## Create and update accounts

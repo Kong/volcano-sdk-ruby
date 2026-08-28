@@ -11,11 +11,10 @@ module Volcano
       result = signup_result(mapping(payload))
       return result unless sign_in && !result.confirmation_required
 
-      session = sign_in(email:, password:)
-      SignUpResult.new(
-        confirmation_required: result.confirmation_required, message: result.message,
-        user: @client.current_user, session:
-      )
+      synchronize_auth_operation do
+        session = sign_in(email:, password:)
+        SignUpResult.new(**result.to_h, user: @client.current_user, session:)
+      end
     end
 
     def sign_in(email:, password:)
@@ -79,7 +78,7 @@ module Volcano
       session = refreshable_session
       commit_session(mapping(refresh_payload(session)), preserve_device_sessions: true)
     rescue StandardError
-      @client.clear_auth if @client.current_session.equal?(session)
+      @client.clear_auth if session && @client.current_session.equal?(session)
       raise
     end
 
@@ -87,7 +86,7 @@ module Volcano
       session = @client.current_session
       return session if session&.refresh_token
 
-      missing_refresh
+      missing_refresh(session)
     end
 
     def refresh_payload(session)
@@ -118,8 +117,8 @@ module Volcano
       )
     end
 
-    def missing_refresh
-      @client.clear_auth
+    def missing_refresh(session)
+      @client.clear_auth if session
       raise Error::AuthenticationError, 'No refresh token available'
     end
   end

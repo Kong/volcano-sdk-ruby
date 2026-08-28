@@ -12,13 +12,12 @@ module Volcano
   # Implements current-user device-session operations.
   module AuthSessions
     def get_sessions(page: 1, limit: 20)
-      payload = mapping(authenticated_body(:auth_get_my_sessions, 200, page:, limit:))
-      sessions = auth_sessions(payload)
-      current_ids = sessions.filter_map do |session|
-        session.id if session.is_current
+      synchronize_auth_operation do
+        payload = mapping(authenticated_body(:auth_get_my_sessions, 200, page:, limit:))
+        sessions = auth_sessions(payload)
+        record_current_sessions(sessions)
+        SessionPage.new(**session_page_attributes(payload, sessions))
       end
-      @current_device_session_ids = (@current_device_session_ids | current_ids).freeze
-      SessionPage.new(**session_page_attributes(payload, sessions))
     end
 
     def delete_session(session_id:)
@@ -45,6 +44,11 @@ module Volcano
         sessions:, total: payload['total'], page: payload['page'],
         limit: payload['limit'], total_pages: payload['total_pages']
       }
+    end
+
+    def record_current_sessions(sessions)
+      current_ids = sessions.filter_map { |session| session.id if session.is_current }
+      @current_device_session_ids = (@current_device_session_ids | current_ids).freeze
     end
 
     def auth_sessions(payload)

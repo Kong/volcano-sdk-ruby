@@ -16,14 +16,13 @@ module Volcano
     def authenticated_body(operation, expected_status, secrets: [], retry_unauthorized: true, **arguments)
       synchronize_auth_operation do
         rejected_session = @client.current_session
-        response = securely(*auth_credentials, *secrets) do
-          authenticated_response(operation, **arguments)
-        end
+        response = securely(*auth_credentials, *secrets) { authenticated_response(operation, **arguments) }
         if retry_unauthorized && refreshable_unauthorized?(response)
           response = retry_authenticated(
             operation, rejected_session:, secrets:, **arguments
           )
         end
+        invalidate_unauthorized(response, rejected_session) if retry_unauthorized
         securely(*auth_credentials, *secrets) { Transport.body(response, expected_status) }
       end
     end
@@ -41,6 +40,13 @@ module Volcano
 
     def refreshable_unauthorized?(response)
       response.status == 401 && @client.current_session&.refresh_token
+    end
+
+    def invalidate_unauthorized(response, rejected_session)
+      return unless response.status == 401
+      return unless rejected_session.refresh_token || @client.current_session.equal?(rejected_session)
+
+      @client.clear_auth
     end
 
     def auth_credentials

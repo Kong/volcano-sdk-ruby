@@ -305,6 +305,25 @@ RSpec.describe Volcano::Auth do
       expect([session_client.current_session, session_client.current_user]).to eq([nil, nil])
     end
 
+    it 'does not repeat signed-out notification without local auth' do
+      events = []
+      client.auth.on_auth_state_change { |user| events << user }
+      events.clear
+
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError)
+      expect(events).to be_empty
+    end
+
+    it 'clears rotated auth when the post-refresh retry is unauthorized' do
+      session_client = authenticated_client(transport)
+      transport.queue(:auth_get_user, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:auth_get_user, 401, 'error' => 'revoked')
+
+      expect { session_client.auth.get_user }.to raise_error(Volcano::Error::AuthenticationError)
+      expect(session_client.current_session).to be_nil
+    end
+
     it 'serializes concurrent refresh-token rotation' do
       serial_transport = SerialRefreshTransport.new
       session_client = Volcano::Client.new(

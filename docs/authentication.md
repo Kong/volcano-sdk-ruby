@@ -78,6 +78,37 @@ client.auth.delete_session(session_id: "session-id")
 client.auth.delete_all_other_sessions
 ```
 
+## Use password policy and device authorization
+
+Read the server-enforced policy instead of duplicating password rules:
+
+```ruby
+policy = client.auth.password_policy
+puts [policy.effective_min_length, policy.compromised_passwords_rejected]
+```
+
+An RFC 8628 device client starts authorization and polls at the returned
+interval. A successful poll commits the returned user and session to that
+client. The signed-in verifier approves the code on a separate client:
+
+```ruby
+authorization = device_client.auth.start_device_authorization(client_id: "volcano-cli")
+puts [authorization.verification_uri, authorization.user_code]
+
+verifier.auth.verify_device(user_code: authorization.user_code, action: "approve")
+session = device_client.auth.poll_device_token(
+  client_id: "volcano-cli",
+  device_code: authorization.device_code
+)
+```
+
+Signed-in clients can also exchange their session for a short-lived platform
+token. Treat `token.token` as a secret:
+
+```ruby
+token = client.auth.exchange_platform_token(client_id: "volcano-cli")
+```
+
 ## Create and update accounts
 
 Sign-up can return without a session when email confirmation is required.

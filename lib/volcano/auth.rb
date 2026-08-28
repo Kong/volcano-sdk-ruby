@@ -16,6 +16,7 @@ require_relative 'auth_provider_errors'
 require_relative 'auth_provider_requests'
 require_relative 'auth_oauth'
 require_relative 'auth_methods'
+require_relative 'auth_device'
 require_relative 'auth_sessions'
 
 module Volcano
@@ -30,6 +31,7 @@ module Volcano
     include AuthProviderRequests
     include AuthOAuth
     include AuthMethods
+    include AuthDevice
     include AuthSessions
 
     def initialize(client, transport)

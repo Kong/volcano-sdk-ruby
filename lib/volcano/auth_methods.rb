@@ -22,11 +22,19 @@ module Volcano
 
     def promote_method(method_id:)
       method = build_auth_method(mapping(authenticated_body(:auth_promote_method, 200, method_id:)))
+      store_promoted_email(method)
       refresh_user_best_effort
       method
     end
 
     private
+
+    def store_promoted_email(method)
+      current_user = @client.current_user
+      return unless current_user
+
+      @client.store_user(User.new(**current_user.to_h, email: method.email))
+    end
 
     def build_auth_identity(payload)
       AuthIdentity.new(

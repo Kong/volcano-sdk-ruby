@@ -142,7 +142,7 @@ RSpec.describe Volcano::Auth do
   def method_payload(identity)
     {
       'id' => '7f518a4b-407b-4121-907b-d72a2c7c1ac6', 'type' => 'oauth', 'provider' => 'github',
-      'identity_id' => identity.fetch('id'), 'email' => identity.fetch('email'), 'is_primary' => true,
+      'identity_id' => identity.fetch('id'), 'email' => 'primary@example.com', 'is_primary' => true,
       'last_used_at' => '2026-08-28T12:00:00Z', 'created_at' => '2026-08-27T12:00:00Z',
       'updated_at' => '2026-08-28T12:00:00Z'
     }
@@ -158,7 +158,7 @@ RSpec.describe Volcano::Auth do
   def public_method(method)
     Volcano::AuthMethod.new(
       id: method.fetch('id'), type: 'oauth', provider: 'github', identity_id: method.fetch('identity_id'),
-      email: 'user@example.com', is_primary: true, last_used_at: Time.utc(2026, 8, 28, 12),
+      email: 'primary@example.com', is_primary: true, last_used_at: Time.utc(2026, 8, 28, 12),
       created_at: Time.utc(2026, 8, 27, 12), updated_at: Time.utc(2026, 8, 28, 12)
     )
   end
@@ -167,8 +167,41 @@ RSpec.describe Volcano::Auth do
     transport.queue(:auth_list_identities, 200, 'identities' => [identity])
     transport.queue(:auth_list_methods, 200, 'methods' => [method])
     transport.queue(:auth_promote_method, 200, method)
-    transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD.merge('email' => 'primary@example.com'))
+    transport.queue(:auth_get_user, 503, 'error' => 'Temporarily unavailable')
     transport.queue(:auth_unlink_identity, 204)
+  end
+
+  def queue_extended_auth(transport)
+    transport.queue(:auth_get_password_policy, 200, password_policy_payload)
+    transport.queue(:auth_device_authorize, 200, device_authorization_payload)
+    transport.queue(:auth_device_token, 200, token_payload(access: 'device-access', refresh: 'device-refresh'))
+    transport.queue(:auth_device_verify, 200, 'success' => true, 'status' => 'approved')
+    transport.queue(:auth_platform_exchange, 200, platform_token_payload)
+  end
+
+  def password_policy_payload
+    {
+      'effective_min_length' => 12, 'min_configurable_length' => 8, 'max_length' => 128,
+      'require_uppercase' => true, 'require_lowercase' => true, 'require_numbers' => true,
+      'require_special_chars' => true, 'compromised_passwords_rejected' => true
+    }
+  end
+
+  def device_authorization_payload
+    {
+      'device_code' => 'device-secret', 'user_code' => 'ABCD-EFGH',
+      'verification_uri' => 'https://verify.example',
+      'verification_uri_complete' => 'https://verify.example?code=ABCD-EFGH',
+      'expires_in' => 600, 'interval' => 5
+    }
+  end
+
+  def platform_token_payload
+    {
+      'token' => 'platform-secret', 'user_id' => 'user-id',
+      'token_id' => '00000000-0000-4000-8000-000000000001',
+      'expires_at' => '2026-08-28T13:00:00Z'
+    }
   end
 
   def listener_outcomes(client)
@@ -871,6 +904,7 @@ RSpec.describe Volcano::Auth do
       identity = identity_payload
       method = method_payload(identity)
       queue_identity_management(transport, identity, method)
+      client.store_user(Volcano::User.new(id: 'user-id', email: 'previous@example.com'))
       results = [client.auth.list_identities, client.auth.list_methods]
       results << client.auth.promote_method(method_id: method.fetch('id'))
       results << client.auth.unlink_identity(identity_id: identity.fetch('id'))
@@ -878,6 +912,29 @@ RSpec.describe Volcano::Auth do
       expect(results).to eq([[public_identity(identity)], [public_method(method)], public_method(method), nil])
       expect([results.first.frozen?, results[2].frozen?]).to all(be(true))
       expect(client.current_user.email).to eq('primary@example.com')
+    end
+
+    it 'exposes password policy, device authorization, and platform exchange' do
+      queue_extended_auth(transport)
+
+      policy = client.auth.password_policy
+      authorization = client.auth.start_device_authorization(client_id: 'volcano-cli')
+      session = client.auth.poll_device_token(client_id: 'volcano-cli', device_code: 'device-secret')
+      verification = client.auth.verify_device(user_code: 'ABCD-EFGH')
+      platform = client.auth.exchange_platform_token(client_id: 'volcano-cli')
+
+      expect([policy.effective_min_length, authorization.user_code]).to eq([12, 'ABCD-EFGH'])
+      expect([session, verification.status]).to eq([client.current_session, 'approved'])
+      expect(platform.token_id).to eq('00000000-0000-4000-8000-000000000001')
+      rendered = [authorization, platform].flat_map { |value| [value.inspect, value.pretty_inspect] }.join
+      expect(rendered).not_to match(/device-secret|platform-secret/)
+    end
+
+    it 'rejects an unknown device action before transport invocation' do
+      expect do
+        client.auth.verify_device(user_code: 'ABCD-EFGH', action: 'ignore')
+      end.to raise_error(Volcano::Error::ValidationError, /approve or deny/)
+      expect(transport.calls).to be_empty
     end
 
     it 'exposes session filters and cursor navigation' do

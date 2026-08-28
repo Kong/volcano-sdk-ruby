@@ -373,6 +373,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     common = { authorization: 'credential' }
 
     [
+      -> { transport.auth_get_password_policy(**common) },
       lambda {
         transport.auth_signup(**common, email: 'user@example.com', password: 'password', user_metadata: { 'a' => 1 })
       },
@@ -398,6 +399,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       -> { transport.auth_promote_method(**common, method_id: 'method-id') }
     ].each(&:call)
     [
+      -> { transport.auth_device_authorize(**common, client_id: 'volcano-cli') },
+      -> { transport.auth_device_token(**common, client_id: 'volcano-cli', device_code: 'device-secret') },
+      -> { transport.auth_device_verify(**common, user_code: 'ABCD-EFGH', action: 'approve') },
+      -> { transport.auth_platform_exchange(**common, client_id: 'volcano-cli') },
       lambda {
         transport.auth_oauth_authorize(**common, provider: 'github', redirect_url: 'https://app.test/callback',
                                                  state: 'state')
@@ -419,7 +424,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     expect(authentication.calls.map(&:first)).to eq(
       %i[
-        auth_signup_with_http_info auth_refresh_with_http_info auth_logout_with_http_info
+        auth_get_password_policy_with_http_info auth_signup_with_http_info
+        auth_refresh_with_http_info auth_logout_with_http_info
         auth_get_user_with_http_info auth_update_user_with_http_info
         auth_signup_anonymous_with_http_info auth_convert_anonymous_with_http_info
         auth_confirm_email_with_http_info auth_resend_confirmation_with_http_info
@@ -433,14 +439,22 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
     expect(oauth.calls.map(&:first)).to eq(
       %i[
+        auth_device_authorize_with_http_info auth_device_token_with_http_info
+        auth_device_verify_with_http_info auth_platform_exchange_with_http_info
         auth_o_auth_authorize_with_http_info auth_o_auth_exchange_with_http_info
         auth_link_o_auth_provider_with_http_info auth_unlink_o_auth_provider_with_http_info
         auth_list_o_auth_providers_with_http_info refresh_o_auth_provider_token_with_http_info
         get_o_auth_provider_token_with_http_info call_o_auth_provider_api_with_http_info
       ]
     )
-    expect(authentication.calls[0][1][0]).to be_a(InternalGenerated::AuthSignupRequest)
-    expect(oauth.calls[-1][1][1]).to be_a(InternalGenerated::CallOAuthProviderAPIRequest)
+    models = [authentication.calls[1][1][0], oauth.calls[1][1][0], oauth.calls[-1][1][1]]
+    expect(models).to match(
+      [
+        an_instance_of(InternalGenerated::AuthSignupRequest),
+        an_instance_of(InternalGenerated::AuthDeviceTokenRequest),
+        an_instance_of(InternalGenerated::CallOAuthProviderAPIRequest)
+      ]
+    )
   end
 
   it 'disables redirects for OAuth authorization' do

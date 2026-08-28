@@ -4,6 +4,10 @@
 module Volcano
   # Generated authentication operations exposed through the stable transport.
   module GeneratedAuthenticationTransport
+    def auth_get_password_policy(authorization:)
+      auth_call(authorization, :auth_get_password_policy_with_http_info)
+    end
+
     def auth_signin(authorization:, email:, password:)
       body = generated_model(:AuthSigninRequest, email:, password:)
       auth_call(authorization, :auth_signin_with_http_info, body)
@@ -108,6 +112,30 @@ module Volcano
 
   # Generated OAuth operations exposed through the stable transport.
   module GeneratedOAuthTransport
+    DEVICE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
+
+    def auth_device_authorize(authorization:, client_id:)
+      body = generated_model(:AuthDeviceAuthorizeRequest, client_id:)
+      oauth_call(authorization, :auth_device_authorize_with_http_info, body)
+    end
+
+    def auth_device_token(authorization:, client_id:, device_code:)
+      body = generated_model(
+        :AuthDeviceTokenRequest, grant_type: DEVICE_GRANT_TYPE, client_id:, device_code:
+      )
+      oauth_call(authorization, :auth_device_token_with_http_info, body)
+    end
+
+    def auth_device_verify(authorization:, user_code:, action:)
+      body = generated_model(:AuthDeviceVerifyRequest, user_code:, action:)
+      oauth_call(authorization, :auth_device_verify_with_http_info, body)
+    end
+
+    def auth_platform_exchange(authorization:, client_id:)
+      body = generated_model(:AuthPlatformExchangeRequest, client_id:)
+      oauth_call(authorization, :auth_platform_exchange_with_http_info, body)
+    end
+
     def auth_oauth_authorize(authorization:, provider:, redirect_url:, state:)
       options = {
         redirect_url:, client_state: state, response_mode: 'code', follow_location: false

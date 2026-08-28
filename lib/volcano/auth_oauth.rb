@@ -76,32 +76,11 @@ module Volcano
         arguments = { provider: validate_provider(provider), endpoint:, method:, body: }
         provider_api_body(arguments)
       rescue Error::AuthenticationError => e
-        raise unless refresh_provider_request?(e)
-
-        refresh_session
-        retry_provider_api_body(arguments)
+        recover_provider_api(arguments, e)
       end
     end
 
     private
-
-    def provider_api_body(arguments)
-      authenticated_body(
-        :call_oauth_provider_api, 200, retry_unauthorized: false, **arguments
-      )
-    end
-
-    def retry_provider_api_body(arguments)
-      provider_api_body(arguments)
-    rescue Error::AuthenticationError => e
-      @client.clear_auth if refresh_provider_request?(e)
-      raise
-    end
-
-    def refresh_provider_request?(error)
-      session = @client.current_session
-      error.status == 401 && session&.refresh_token && !AuthProviderErrors.provider_not_linked?(error)
-    end
 
     def build_oauth_provider(provider)
       value = mapping(provider)

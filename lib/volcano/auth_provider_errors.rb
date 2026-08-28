@@ -7,6 +7,10 @@ module Volcano
 
     module_function
 
+    def session_failure?(error)
+      error.status == 401 && !provider_not_linked?(error)
+    end
+
     def provider_not_linked?(error)
       error.code == PROVIDER_NOT_LINKED_CODE ||
         (!error.code && error.message.downcase.include?('not linked'))

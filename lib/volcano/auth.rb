@@ -6,23 +6,27 @@ require 'securerandom'
 require 'time'
 require 'uri'
 
+require_relative 'auth_identity_mapping'
 require_relative 'auth_mapping'
 require_relative 'auth_signup_mapping'
 require_relative 'auth_invocation'
 require_relative 'auth_lifecycle'
 require_relative 'auth_account'
 require_relative 'auth_provider_errors'
+require_relative 'auth_provider_requests'
 require_relative 'auth_oauth'
 require_relative 'auth_sessions'
 
 module Volcano
   # Authenticates users and updates client-owned auth state.
   class Auth
+    include AuthIdentityMapping
     include AuthMapping
     include AuthSignupMapping
     include AuthInvocation
     include AuthLifecycle
     include AuthAccount
+    include AuthProviderRequests
     include AuthOAuth
     include AuthSessions
 

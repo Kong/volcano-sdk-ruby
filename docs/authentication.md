@@ -62,15 +62,17 @@ A failed refresh clears local authentication so stale credentials are not
 reused. `sign_out` also clears local state if the remote revoke fails.
 
 ```ruby
-page = client.auth.get_sessions(page: 1, limit: 20)
+page = client.auth.get_sessions(sort: "created_at", status: "active", limit: 20)
 page.sessions.each { |device_session| puts device_session.id }
 
-cursor_page = client.auth.get_sessions(
-  sort: "created_at",
-  status: "active",
-  cursor: page.next_cursor,
-  limit: 20
-)
+if page.next_cursor
+  cursor_page = client.auth.get_sessions(
+    sort: "created_at",
+    status: "active",
+    cursor: page.next_cursor,
+    limit: 20
+  )
+end
 
 client.auth.delete_session(session_id: "session-id")
 client.auth.delete_all_other_sessions

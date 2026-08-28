@@ -323,6 +323,35 @@ RSpec.describe Volcano::Auth do
       expect(observations.last).to eq([session, client.current_user, client.current_user])
     end
 
+    it 'rejects token responses without an expiry' do
+      transport.queue(:auth_signin, 200, token_payload.tap { |payload| payload.delete('expires_in') })
+
+      expect do
+        client.auth.sign_in(email: 'user@example.com', password: 'password')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Invalid authentication response')
+      expect(client.current_session).to be_nil
+    end
+
+    it 'rejects users without a valid status' do
+      invalid_user = AUTH_SPEC_USER_PAYLOAD.merge('status' => 'unknown')
+      transport.queue(:auth_signin, 200, token_payload.merge('user' => invalid_user))
+
+      expect do
+        client.auth.sign_in(email: 'user@example.com', password: 'password')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Invalid authentication response')
+      expect(client.current_session).to be_nil
+    end
+
+    it 'rejects users without a status' do
+      missing_status = AUTH_SPEC_USER_PAYLOAD.except('status')
+      transport.queue(:auth_signin, 200, token_payload.merge('user' => missing_status))
+
+      expect do
+        client.auth.sign_in(email: 'user@example.com', password: 'password')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Invalid authentication response')
+      expect(client.current_session).to be_nil
+    end
+
     it 'preserves auth event order across reentrant transitions' do
       events = []
       client.auth.on_auth_state_change do |user|
@@ -685,6 +714,18 @@ RSpec.describe Volcano::Auth do
       end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
       expect(client.current_session.access_token).to eq('access-token')
       expect(transport.calls.map(&:first)).to eq([:call_oauth_provider_api])
+    end
+
+    it 'clears an access-only session after an auth-level provider rejection' do
+      access_only = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'access-token', _transport: transport
+      )
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'session expired')
+
+      expect do
+        access_only.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'session expired')
+      expect(access_only.current_session).to be_nil
     end
 
     it 'refreshes an expired session before retrying a provider API call' do

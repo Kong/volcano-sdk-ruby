@@ -4,47 +4,11 @@
 module Volcano
   # Converts normalized response hashes into public immutable values.
   module AuthMapping
-    USER_FIELDS = %w[
-      project_id email_confirmed user_metadata app_metadata avatar_url status
-      banned_until last_sign_in_at created_at updated_at
-    ].freeze
-    USER_TIME_FIELDS = %i[banned_until last_sign_in_at created_at updated_at].freeze
     SESSION_TIME_FIELDS = %i[
       expires_at last_activity_at session_started_at created_at updated_at
     ].freeze
 
     private
-
-    def build_user(payload)
-      User.new(
-        id: payload.fetch('id'),
-        email: payload.fetch('email'),
-        **user_attributes(payload)
-      )
-    rescue KeyError, TypeError
-      raise auth_response_error
-    end
-
-    def user_attributes(payload)
-      USER_FIELDS.to_h do |field|
-        key = field.to_sym
-        value = payload[field]
-        [key, USER_TIME_FIELDS.include?(key) ? optional_time(value) : value]
-      end
-    end
-
-    def build_session(payload)
-      user = build_user(mapping(payload.fetch('user')))
-      session = Session.new(
-        access_token: payload.fetch('access_token'),
-        refresh_token: payload['refresh_token'],
-        expires_in: payload['expires_in'],
-        user_id: user.id
-      )
-      [session, user]
-    rescue KeyError, TypeError
-      raise auth_response_error
-    end
 
     def build_message(payload)
       MessageResult.new(message: payload.fetch('message'))

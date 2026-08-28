@@ -214,7 +214,14 @@ end
 
 When('the client deletes all current-user sessions') do
   contract.record do
+    contract.authenticate(contract.secondary_client)
     contract.client.auth.delete_all_other_sessions
+    begin
+      contract.secondary_client.auth.get_user
+      raise 'deleted secondary session remains authenticated'
+    rescue Volcano::Error::AuthenticationError
+      nil
+    end
     contract.client.auth.sign_out
   end
 end

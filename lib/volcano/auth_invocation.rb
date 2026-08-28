@@ -50,6 +50,7 @@ module Volcano
 
     def invalidate_unauthorized(response, rejected_session)
       return unless response.status == 401
+      return unless rejected_session
       return unless rejected_session.refresh_token || @client.current_session.equal?(rejected_session)
 
       @client.clear_auth

@@ -799,6 +799,32 @@ RSpec.describe Volcano::Auth do
       expect(client.current_user).to be_nil
     end
 
+    it 'serializes confirmation reconciliation before a later sign-in' do
+      serial = blocking_auth_transport(:auth_confirm_email, 'message' => 'confirmed')
+      serial.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
+      serial.queue(:auth_signin, 200, token_payload.merge('user' => AUTH_SPEC_USER_PAYLOAD))
+      session_client = authenticated_client(serial)
+      confirming = Thread.new { session_client.auth.confirm_email(token: 'token') }
+      serial.entered.pop
+      signing_in = Thread.new { session_client.auth.sign_in(email: 'next@example.com', password: 'password') }
+      Timeout.timeout(1) { Thread.pass until signing_in.status == 'sleep' }
+      serial.release
+
+      expect([confirming.value.message, signing_in.value.user_id, session_client.current_user.email]).to eq(
+        ['confirmed', 'user-id', 'user@example.com']
+      )
+    end
+
+    it 'preserves authentication errors when a rejected request has no captured session' do
+      missing = Volcano::Client.new(anon_key: 'anon-key', _transport: transport)
+      allow(missing).to receive(:session_token).and_return(nil)
+      transport.queue(:auth_get_user, 401, 'error' => 'not authenticated')
+
+      expect { missing.auth.get_user }.to raise_error(
+        Volcano::Error::AuthenticationError, 'not authenticated'
+      )
+    end
+
     it 'clears a current session revoked by password reset' do
       transport.queue(:auth_reset_password, 200, 'message' => 'reset')
       transport.queue(:auth_get_user, 401, 'error' => 'expired')

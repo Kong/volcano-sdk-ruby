@@ -21,10 +21,12 @@ module Volcano
     end
 
     def confirm_email(token:)
-      payload = anonymous_body(:auth_confirm_email, 200, secrets: [token], token:)
-      result = build_message(mapping(payload))
-      refresh_user_or_clear if @client.current_session
-      result
+      synchronize_auth_operation do
+        payload = anonymous_body(:auth_confirm_email, 200, secrets: [token], token:)
+        result = build_message(mapping(payload))
+        refresh_user_or_clear if @client.current_session
+        result
+      end
     end
 
     def resend_confirmation(email:)

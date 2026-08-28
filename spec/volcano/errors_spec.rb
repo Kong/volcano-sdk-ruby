@@ -62,4 +62,19 @@ RSpec.describe 'Volcano SDK errors' do
       expect(error.cause).to be_nil
     }
   end
+
+  it 'redacts JSON-escaped credentials from transport failures' do
+    password = "p\"ass\\word\n"
+    serialized = JSON.generate({ password: })
+    client = Volcano::Client.new(
+      anon_key: 'anon-key', _transport: ErrorTransport.new(SocketError.new(serialized))
+    )
+
+    expect do
+      client.auth.sign_in(email: 'user@example.com', password:)
+    end.to raise_error(Volcano::Error::TransportError) { |error|
+      expect(error.message).not_to include(JSON.generate(password)[1...-1])
+      expect(error.message).to include('[REDACTED]')
+    }
+  end
 end

@@ -36,7 +36,7 @@ module Volcano
         listener_id = @next_auth_listener_id
         @next_auth_listener_id += 1
         @auth_listeners[listener_id] = listener
-        notify_auth_listener(listener)
+        notify_auth_listener(listener) unless @current_session && @current_user.nil?
         build_unsubscribe(listener_id)
       end
     end

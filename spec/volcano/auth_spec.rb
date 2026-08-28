@@ -335,7 +335,6 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_resend_confirmation, 200, 'message' => 'resent')
       transport.queue(:auth_forgot_password, 200, 'message' => 'sent')
-      transport.queue(:auth_reset_password, 200, 'message' => 'reset')
 
       results = [
         client.auth.sign_up_anonymous.user_id,
@@ -345,7 +344,6 @@ RSpec.describe Volcano::Auth do
         client.auth.forgot_password(email: 'user@example.com').message
       ]
       expect(results).to eq(%w[user-id user-id confirmed resent sent])
-      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
       expect(client.current_session.access_token).to eq('converted-access')
     end
 
@@ -354,6 +352,43 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
 
       expect(client.auth.confirm_email(token: 'token').message).to eq('confirmed')
+    end
+
+    it 'clears a current session revoked by password reset' do
+      transport.queue(:auth_reset_password, 200, 'message' => 'reset')
+      transport.queue(:auth_get_user, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 401, 'error' => 'refresh expired')
+
+      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
+      expect(client.current_session).to be_nil
+    end
+
+    it 'preserves an unrelated current session after password reset' do
+      transport.queue(:auth_reset_password, 200, 'message' => 'reset')
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+
+      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
+      expect(client.current_session.access_token).to eq('access-token')
+    end
+
+    it 'defers the restored-session listener until user hydration' do
+      observations = []
+      client.auth.on_auth_state_change { |user| observations << user }
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+
+      expect(observations).to be_empty
+      user = client.auth.get_user
+      expect(observations).to eq([user])
+    end
+
+    it 'preserves anonymous conversion success when session refresh fails' do
+      transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+      transport.queue(:auth_refresh, 503, 'error' => 'temporarily unavailable')
+
+      converted = client.auth.convert_anonymous(email: 'user@example.com', password: 'password')
+
+      expect(converted.id).to eq('user-id')
+      expect(client.current_session).to be_nil
     end
 
     it 'supports the complete email-change lifecycle' do
@@ -421,6 +456,18 @@ RSpec.describe Volcano::Auth do
       )
     end
 
+    it 'preserves access-only auth for provider-level unauthorized responses' do
+      access_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'access-token', _transport: transport
+      )
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'provider is not linked')
+
+      expect do
+        access_client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
+      expect(access_client.current_session.access_token).to eq('access-token')
+    end
+
     it 'lists and deletes current-user device sessions' do
       session = {
         'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
@@ -440,6 +487,22 @@ RSpec.describe Volcano::Auth do
         client.current_session
       ]
       expect(results).to eq(['session-id', 1, nil, nil, nil])
+    end
+
+    it 'deletes the current session after an automatic token refresh' do
+      session = {
+        'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
+        'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
+      }
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session])
+      transport.queue(:auth_delete_my_session, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:auth_delete_my_session, 204)
+
+      client.auth.get_sessions
+      client.auth.delete_session(session_id: 'session-id')
+
+      expect(client.current_session).to be_nil
     end
 
     it 'rejects unsupported providers before transport invocation' do

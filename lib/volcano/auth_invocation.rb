@@ -13,17 +13,19 @@ module Volcano
       end
     end
 
-    def authenticated_body(operation, expected_status, secrets: [], **arguments)
-      rejected_session = @client.current_session
-      response = securely(*auth_credentials, *secrets) do
-        authenticated_response(operation, **arguments)
+    def authenticated_body(operation, expected_status, secrets: [], retry_unauthorized: true, **arguments)
+      synchronize_auth_operation do
+        rejected_session = @client.current_session
+        response = securely(*auth_credentials, *secrets) do
+          authenticated_response(operation, **arguments)
+        end
+        if retry_unauthorized && refreshable_unauthorized?(response)
+          response = retry_authenticated(
+            operation, rejected_session:, secrets:, **arguments
+          )
+        end
+        securely(*auth_credentials, *secrets) { Transport.body(response, expected_status) }
       end
-      if refreshable_unauthorized?(response)
-        response = retry_authenticated(
-          operation, rejected_session:, secrets:, **arguments
-        )
-      end
-      securely(*auth_credentials, *secrets) { Transport.body(response, expected_status) }
     end
 
     def authenticated_response(operation, **arguments)

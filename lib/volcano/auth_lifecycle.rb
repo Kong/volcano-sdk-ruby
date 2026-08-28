@@ -24,15 +24,21 @@ module Volcano
     end
 
     def sign_out
-      session = @client.current_session
-      revoke_session(session) if session&.refresh_token
-    ensure
-      @client.clear_auth
+      synchronize_auth_operation do
+        session = @client.current_session
+        begin
+          revoke_session(session) if session&.refresh_token
+        ensure
+          @client.clear_auth
+        end
+      end
     end
 
     def fetch_user
-      payload = authenticated_body(:auth_get_user, 200)
-      build_user(mapping(mapping(payload).fetch('user'))).tap { |user| @client.store_user(user) }
+      synchronize_auth_operation do
+        payload = authenticated_body(:auth_get_user, 200)
+        build_user(mapping(mapping(payload).fetch('user'))).tap { |user| @client.store_user(user) }
+      end
     rescue KeyError
       raise auth_response_error
     end
@@ -40,16 +46,18 @@ module Volcano
     private :fetch_user
 
     def update_user(password: nil, user_metadata: nil)
-      payload = authenticated_body(
-        :auth_update_user, 200, secrets: [password], password:, user_metadata:
-      )
-      build_user(mapping(mapping(payload).fetch('user'))).tap { |user| @client.store_user(user) }
+      synchronize_auth_operation do
+        payload = authenticated_body(
+          :auth_update_user, 200, secrets: [password], password:, user_metadata:
+        )
+        build_user(mapping(mapping(payload).fetch('user'))).tap { |user| @client.store_user(user) }
+      end
     rescue KeyError
       raise auth_response_error
     end
 
     def refresh_session
-      @refresh_mutex.synchronize { refresh_current_session }
+      synchronize_auth_operation { @refresh_mutex.synchronize { refresh_current_session } }
     end
 
     def on_auth_state_change(listener = nil, &block)
@@ -96,10 +104,12 @@ module Volcano
     end
 
     def commit_session(payload)
-      session, user = build_session(payload)
-      @current_device_session_ids = [].freeze
-      @client.commit_auth(session, user)
-      session
+      synchronize_auth_operation do
+        session, user = build_session(payload)
+        @current_device_session_ids = [].freeze
+        @client.commit_auth(session, user)
+        session
+      end
     end
 
     def revoke_session(session)

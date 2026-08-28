@@ -16,7 +16,9 @@ module Volcano
     def get_oauth_authorization_url(provider:, redirect_url:)
       provider = validate_provider(provider)
       state = SecureRandom.urlsafe_base64(32)
-      response = securely(state) { oauth_authorization_response(provider, redirect_url, state) }
+      response = securely(@client.anon_token, state) do
+        oauth_authorization_response(provider, redirect_url, state)
+      end
       AuthorizationRequest.new(authorization_url: response_header(response, 'Location'), state:)
     end
 
@@ -71,7 +73,8 @@ module Volcano
 
     def call_oauth_api(provider:, endpoint:, method: 'GET', body: nil)
       authenticated_body(
-        :call_oauth_provider_api, 200, provider: validate_provider(provider),
+        :call_oauth_provider_api, 200, retry_unauthorized: false,
+                                       provider: validate_provider(provider),
                                        endpoint:, method:, body:
       )
     end

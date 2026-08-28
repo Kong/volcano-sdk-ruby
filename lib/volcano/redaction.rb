@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'json'
 require 'uri'
 
 module Volcano
@@ -55,7 +56,8 @@ module Volcano
       return [] if secret.empty?
 
       encoded = URI.encode_www_form_component(secret)
-      [secret, encoded, encoded.gsub('+', '%20')]
+      json_escaped = JSON.generate(secret)[1...-1]
+      [secret, encoded, encoded.gsub('+', '%20'), json_escaped]
     end
     private_class_method :copy_exception, :copy_volcano_error, :realtime_server_error?, :secret_variants, :variants,
                          :volcano_error?

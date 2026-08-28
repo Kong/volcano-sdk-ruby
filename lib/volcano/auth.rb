@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'openssl'
+require 'monitor'
 require 'securerandom'
 require 'time'
 require 'uri'
@@ -26,7 +27,14 @@ module Volcano
       @client = client
       @transport = transport
       @refresh_mutex = Mutex.new
+      @operation_monitor = Monitor.new
       @current_device_session_ids = [].freeze
+    end
+
+    private
+
+    def synchronize_auth_operation(&)
+      @operation_monitor.synchronize(&)
     end
   end
 end

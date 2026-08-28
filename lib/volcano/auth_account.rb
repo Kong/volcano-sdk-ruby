@@ -14,7 +14,11 @@ module Volcano
         :auth_convert_anonymous, 200, secrets: [password], email:, password:, user_metadata:
       )
       converted_user = build_payload_user(payload)
-      refresh_session
+      begin
+        refresh_session
+      rescue Error::VolcanoError
+        nil
+      end
       @client.current_user || converted_user
     end
 
@@ -39,7 +43,7 @@ module Volcano
       payload = anonymous_body(
         :auth_reset_password, 200, secrets: [token, new_password], token:, new_password:
       )
-      build_message(mapping(payload))
+      build_message(mapping(payload)).tap { validate_session_after_password_reset }
     end
 
     def request_email_change(new_email:)
@@ -66,6 +70,14 @@ module Volcano
     end
 
     private
+
+    def validate_session_after_password_reset
+      return unless @client.current_session
+
+      fetch_user
+    rescue Error::VolcanoError => e
+      @client.clear_auth if e.status == 401 && @client.current_session
+    end
 
     def store_payload_user(payload)
       user = build_payload_user(payload)

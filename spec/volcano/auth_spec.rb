@@ -937,6 +937,12 @@ RSpec.describe Volcano::Auth do
       expect(transport.calls).to be_empty
     end
 
+    it 'accepts omitted device verification metadata' do
+      transport.queue(:auth_device_verify, 200, {})
+
+      expect(client.auth.verify_device(user_code: 'ABCD-EFGH')).to eq(Volcano::DeviceVerification.new)
+    end
+
     it 'exposes session filters and cursor navigation' do
       payload = {
         'data' => [current_auth_session], 'total' => 3, 'limit' => 1,

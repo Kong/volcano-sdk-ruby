@@ -23,13 +23,8 @@ module Volcano
 
     def verify_device(user_code:, action: 'approve')
       validate_device_action(action)
-      payload = authenticated_body(:auth_device_verify, 200, user_code:, action:)
-      DeviceVerification.new(
-        success: required_boolean(mapping(payload), 'success'),
-        status: mapping(payload).fetch('status')
-      )
-    rescue KeyError, TypeError
-      raise auth_response_error
+      payload = mapping(authenticated_body(:auth_device_verify, 200, user_code:, action:))
+      build_device_verification(payload)
     end
 
     def exchange_platform_token(client_id:)
@@ -66,6 +61,15 @@ module Volcano
       DeviceAuthorization.new(**DeviceAuthorization.members.to_h { |field| [field, payload.fetch(field.to_s)] })
     rescue KeyError, TypeError
       raise auth_response_error
+    end
+
+    def build_device_verification(payload)
+      success = payload['success']
+      status = payload['status']
+      raise auth_response_error unless success.nil? || [true, false].include?(success)
+      raise auth_response_error unless status.nil? || status.is_a?(String)
+
+      DeviceVerification.new(success:, status:)
     end
 
     def validate_device_action(action)

@@ -32,8 +32,8 @@ module Volcano
 
   # Result of approving or denying a device authorization.
   DeviceVerification = Data.define(:success, :status) do
-    def initialize(**attributes)
-      super(**ImmutableValue.copy_attributes(**attributes))
+    def initialize(success: nil, status: nil)
+      super(**ImmutableValue.copy_attributes(success:, status:))
     end
   end
 

@@ -77,7 +77,7 @@ module Volcano
 
     def refresh_current_session
       session = refreshable_session
-      commit_session(mapping(refresh_payload(session)))
+      commit_session(mapping(refresh_payload(session)), preserve_device_sessions: true)
     rescue StandardError
       @client.clear_auth if @client.current_session.equal?(session)
       raise
@@ -103,10 +103,10 @@ module Volcano
       )
     end
 
-    def commit_session(payload)
+    def commit_session(payload, preserve_device_sessions: false)
       synchronize_auth_operation do
         session, user = build_session(payload)
-        @current_device_session_ids = [].freeze
+        @current_device_session_ids = [].freeze unless preserve_device_sessions
         @client.commit_auth(session, user)
         session
       end

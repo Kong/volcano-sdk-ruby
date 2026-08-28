@@ -10,16 +10,18 @@ module Volcano
     end
 
     def convert_anonymous(email:, password:, user_metadata: nil)
-      payload = authenticated_body(
-        :auth_convert_anonymous, 200, secrets: [password], email:, password:, user_metadata:
-      )
-      converted_user = build_payload_user(payload)
-      begin
-        refresh_session
-      rescue Error::VolcanoError
-        nil
+      synchronize_auth_operation do
+        payload = authenticated_body(
+          :auth_convert_anonymous, 200, secrets: [password], email:, password:, user_metadata:
+        )
+        converted_user = build_payload_user(payload)
+        begin
+          refresh_session
+        rescue Error::VolcanoError
+          nil
+        end
+        @client.current_user || converted_user
       end
-      @client.current_user || converted_user
     end
 
     def confirm_email(token:)
@@ -74,11 +76,16 @@ module Volcano
     private
 
     def validate_session_after_password_reset
-      return unless @client.current_session
+      synchronize_auth_operation do
+        session = @client.current_session
+        return unless session
 
-      fetch_user
-    rescue Error::VolcanoError => e
-      @client.clear_auth if e.status == 401 && @client.current_session
+        begin
+          fetch_user
+        rescue Error::VolcanoError => e
+          @client.clear_auth if e.status == 401 && @client.current_session.equal?(session)
+        end
+      end
     end
 
     def store_payload_user(payload)

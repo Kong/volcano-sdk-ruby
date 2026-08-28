@@ -124,6 +124,11 @@ RSpec.describe Volcano::Auth do
     }
   end
 
+  def blocking_auth_transport(operation, body)
+    response = AuthSpecResponse.new(status: 200, body:, headers: {}, data: nil)
+    BlockingAuthTransport.new(operation, response)
+  end
+
   describe 'public auth values and client state' do
     let(:client) do
       Volcano::Client.new(
@@ -354,6 +359,14 @@ RSpec.describe Volcano::Auth do
       unsubscribe.call
       expect { unsubscribe.call }.not_to raise_error
     end
+
+    it 'returns nil after a successful sign-out' do
+      session_client = authenticated_client(transport)
+      transport.queue(:auth_logout, 204)
+
+      expect(session_client.auth.sign_out).to be_nil
+      expect(session_client.current_session).to be_nil
+    end
   end
 
   describe 'account, OAuth, and device-session flows' do
@@ -421,6 +434,19 @@ RSpec.describe Volcano::Auth do
       expect(observations).to eq([user])
     end
 
+    it 'allows a listener to register another listener during notification' do
+      nested_unsubscribers = []
+      client.auth.on_auth_state_change do
+        nested_unsubscribers << client.auth.on_auth_state_change { nil }
+      end
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+
+      client.auth.get_user
+
+      expect(nested_unsubscribers.length).to eq(1)
+      expect { nested_unsubscribers.first.call }.not_to raise_error
+    end
+
     it 'preserves anonymous conversion success when session refresh fails' do
       transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_refresh, 503, 'error' => 'temporarily unavailable')
@@ -429,6 +455,24 @@ RSpec.describe Volcano::Auth do
 
       expect(converted.id).to eq('user-id')
       expect(client.current_session).to be_nil
+    end
+
+    it 'serializes anonymous conversion with replacement sign-in' do
+      serial = blocking_auth_transport(:auth_convert_anonymous, 'user' => AUTH_SPEC_USER_PAYLOAD)
+      serial.queue(:auth_refresh, 200, token_payload(access: 'converted-access'))
+      serial.queue(:auth_signin, 200, token_payload(access: 'replacement-access'))
+      session_client = authenticated_client(serial)
+      conversion = Thread.new do
+        session_client.auth.convert_anonymous(email: 'converted@example.com', password: 'password')
+      end
+      serial.entered.pop
+      sign_in = Thread.new { session_client.auth.sign_in(email: 'next@example.com', password: 'password') }
+      Timeout.timeout(1) { Thread.pass until sign_in.status == 'sleep' }
+      serial.release
+
+      expect(
+        [conversion.value.id, sign_in.value.access_token, session_client.current_session.access_token]
+      ).to eq(%w[user-id replacement-access replacement-access])
     end
 
     it 'supports the complete email-change lifecycle' do
@@ -569,6 +613,18 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_delete_my_session, 204)
 
       client.auth.get_sessions
+      client.auth.delete_session(session_id: 'session-id')
+
+      expect(client.current_session).to be_nil
+    end
+
+    it 'preserves current-session identity across explicit token refresh' do
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [current_auth_session])
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:auth_delete_my_session, 204)
+
+      client.auth.get_sessions
+      client.auth.refresh_session
       client.auth.delete_session(session_id: 'session-id')
 
       expect(client.current_session).to be_nil

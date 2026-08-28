@@ -28,6 +28,7 @@ module Volcano
         @current_user = nil
         reset_realtime_authentication
         notify_auth_listeners
+        nil
       end
     end
 
@@ -64,7 +65,9 @@ module Volcano
     end
 
     def notify_auth_listeners
-      @auth_listeners.each_value { |listener| notify_auth_listener(listener) }
+      listeners = @auth_listeners.values
+      listeners.each { |listener| notify_auth_listener(listener) }
+      nil
     end
 
     def notify_auth_listener(listener)

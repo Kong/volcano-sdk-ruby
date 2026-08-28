@@ -72,14 +72,29 @@ module Volcano
     end
 
     def call_oauth_api(provider:, endpoint:, method: 'GET', body: nil)
-      authenticated_body(
-        :call_oauth_provider_api, 200, retry_unauthorized: false,
-                                       provider: validate_provider(provider),
-                                       endpoint:, method:, body:
-      )
+      synchronize_auth_operation do
+        arguments = { provider: validate_provider(provider), endpoint:, method:, body: }
+        provider_api_body(arguments)
+      rescue Error::AuthenticationError => e
+        raise unless refresh_provider_request?(e)
+
+        refresh_session
+        provider_api_body(arguments)
+      end
     end
 
     private
+
+    def provider_api_body(arguments)
+      authenticated_body(
+        :call_oauth_provider_api, 200, retry_unauthorized: false, **arguments
+      )
+    end
+
+    def refresh_provider_request?(error)
+      session = @client.current_session
+      error.status == 401 && session&.refresh_token && !error.message.downcase.include?('not linked')
+    end
 
     def build_oauth_provider(provider)
       value = mapping(provider)

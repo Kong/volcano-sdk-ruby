@@ -468,6 +468,17 @@ RSpec.describe Volcano::Auth do
       expect(access_client.current_session.access_token).to eq('access-token')
     end
 
+    it 'refreshes an expired session before retrying a provider API call' do
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'not authenticated')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:call_oauth_provider_api, 200, 'login' => 'octocat')
+
+      result = client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+
+      expect(result).to eq('login' => 'octocat')
+      expect(client.current_session.access_token).to eq('rotated-access')
+    end
+
     it 'lists and deletes current-user device sessions' do
       session = {
         'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',

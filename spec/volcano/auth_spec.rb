@@ -163,6 +163,14 @@ RSpec.describe Volcano::Auth do
     )
   end
 
+  def queue_identity_management(transport, identity, method)
+    transport.queue(:auth_list_identities, 200, 'identities' => [identity])
+    transport.queue(:auth_list_methods, 200, 'methods' => [method])
+    transport.queue(:auth_promote_method, 200, method)
+    transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD.merge('email' => 'primary@example.com'))
+    transport.queue(:auth_unlink_identity, 204)
+  end
+
   def listener_outcomes(client)
     outcomes = Queue.new
     started = false
@@ -862,16 +870,14 @@ RSpec.describe Volcano::Auth do
     it 'exposes immutable identity and sign-in method values' do
       identity = identity_payload
       method = method_payload(identity)
-      transport.queue(:auth_list_identities, 200, 'identities' => [identity])
-      transport.queue(:auth_list_methods, 200, 'methods' => [method])
-      transport.queue(:auth_promote_method, 200, method)
-      transport.queue(:auth_unlink_identity, 204)
+      queue_identity_management(transport, identity, method)
       results = [client.auth.list_identities, client.auth.list_methods]
       results << client.auth.promote_method(method_id: method.fetch('id'))
       results << client.auth.unlink_identity(identity_id: identity.fetch('id'))
 
       expect(results).to eq([[public_identity(identity)], [public_method(method)], public_method(method), nil])
       expect([results.first.frozen?, results[2].frozen?]).to all(be(true))
+      expect(client.current_user.email).to eq('primary@example.com')
     end
 
     it 'exposes session filters and cursor navigation' do

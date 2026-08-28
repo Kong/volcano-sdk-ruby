@@ -4,7 +4,13 @@ require 'spec_helper'
 require 'tempfile'
 
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
-  GeneratedApis = Data.define(:authentication, :database, :storage, :locks) unless const_defined?(:GeneratedApis)
+  unless const_defined?(:GeneratedApis)
+    GeneratedApis = Data.define(:authentication, :database, :storage, :locks, :oauth) do
+      def initialize(authentication:, database:, storage:, locks:, oauth: nil)
+        super
+      end
+    end
+  end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
   class FakeGeneratedModel
@@ -14,6 +20,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     def to_hash
       @value
+    end
+  end
+
+  class RecordingAuthApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def method_missing(name, *arguments)
+      return super unless name.end_with?('_with_http_info')
+
+      @calls << [name, arguments]
+      [FakeGeneratedModel.new(ok: true), name.to_s.include?('delete') ? 204 : 200, {}]
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      name.end_with?('_with_http_info') || super
     end
   end
 
@@ -311,5 +336,82 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(response.status).to eq(409)
     expect(response.body).to eq('error' => 'already held', 'code' => 'lock_conflict')
     expect(response.headers).to eq('Retry-After' => '3')
+  end
+
+  it 'routes the complete authentication surface through generated APIs' do
+    authentication = RecordingAuthApi.new
+    oauth = RecordingAuthApi.new
+    empty = Object.new
+    factory = lambda do |_authorization|
+      GeneratedApis.new(
+        authentication:, oauth:, database: empty, storage: empty, locks: empty
+      )
+    end
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    common = { authorization: 'credential' }
+
+    [
+      lambda {
+        transport.auth_signup(**common, email: 'user@example.com', password: 'password', user_metadata: { 'a' => 1 })
+      },
+      -> { transport.auth_refresh(**common, refresh_token: 'refresh') },
+      -> { transport.auth_logout(**common, refresh_token: 'refresh') },
+      -> { transport.auth_get_user(**common) },
+      -> { transport.auth_update_user(**common, password: 'next', user_metadata: { 'a' => 2 }) },
+      -> { transport.auth_signup_anonymous(**common, user_metadata: { 'guest' => true }) },
+      -> { transport.auth_convert_anonymous(**common, email: 'user@example.com', password: 'password') },
+      -> { transport.auth_confirm_email(**common, token: 'confirmation') },
+      -> { transport.auth_resend_confirmation(**common, email: 'user@example.com') },
+      -> { transport.auth_forgot_password(**common, email: 'user@example.com') },
+      -> { transport.auth_reset_password(**common, token: 'recovery', new_password: 'next') },
+      -> { transport.auth_request_email_change(**common, new_email: 'next@example.com') },
+      -> { transport.auth_confirm_email_change(**common, email_change_token: 'change') },
+      -> { transport.auth_cancel_email_change(**common) },
+      -> { transport.auth_get_my_sessions(**common, page: 2, limit: 10) },
+      -> { transport.auth_delete_my_session(**common, session_id: 'session-id') },
+      -> { transport.auth_delete_all_my_sessions(**common) }
+    ].each(&:call)
+    [
+      lambda {
+        transport.auth_oauth_authorize(**common, provider: 'github', redirect_url: 'https://app.test/callback',
+                                                 state: 'state')
+      },
+      -> { transport.auth_oauth_exchange(**common, code: 'code', redirect_url: 'https://app.test/callback') },
+      lambda {
+        transport.auth_link_oauth_provider(**common, provider: 'github', redirect_url: 'https://app.test/link',
+                                                     state: 'state')
+      },
+      -> { transport.auth_unlink_oauth_provider(**common, provider: 'github') },
+      -> { transport.auth_list_oauth_providers(**common) },
+      -> { transport.refresh_oauth_provider_token(**common, provider: 'github') },
+      -> { transport.get_oauth_provider_token(**common, provider: 'github') },
+      lambda {
+        transport.call_oauth_provider_api(**common, provider: 'github', endpoint: '/user', method: 'POST',
+                                                    body: { 'a' => 1 })
+      }
+    ].each(&:call)
+
+    expect(authentication.calls.map(&:first)).to eq(
+      %i[
+        auth_signup_with_http_info auth_refresh_with_http_info auth_logout_with_http_info
+        auth_get_user_with_http_info auth_update_user_with_http_info
+        auth_signup_anonymous_with_http_info auth_convert_anonymous_with_http_info
+        auth_confirm_email_with_http_info auth_resend_confirmation_with_http_info
+        auth_forgot_password_with_http_info auth_reset_password_with_http_info
+        auth_request_email_change_with_http_info auth_confirm_email_change_with_http_info
+        auth_cancel_email_change_with_http_info auth_get_my_sessions_with_http_info
+        auth_delete_my_session_with_http_info auth_delete_all_my_sessions_with_http_info
+      ]
+    )
+    expect(oauth.calls.map(&:first)).to eq(
+      %i[
+        auth_o_auth_authorize_with_http_info auth_o_auth_exchange_with_http_info
+        auth_link_o_auth_provider_with_http_info auth_unlink_o_auth_provider_with_http_info
+        auth_list_o_auth_providers_with_http_info refresh_o_auth_provider_token_with_http_info
+        get_o_auth_provider_token_with_http_info call_o_auth_provider_api_with_http_info
+      ]
+    )
+    expect(authentication.calls[0][1][0]).to be_a(InternalGenerated::AuthSignupRequest)
+    expect(oauth.calls[-1][1][1]).to be_a(InternalGenerated::CallOAuthProviderAPIRequest)
   end
 end

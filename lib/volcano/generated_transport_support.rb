@@ -151,6 +151,7 @@ module Volcano
       def generated_apis(api_client)
         GeneratedApis.new(
           authentication: Generated::AuthenticationApi.new(api_client),
+          oauth: Generated::OAuthAuthenticationApi.new(api_client),
           database: Generated::DatabaseQueriesApi.new(api_client),
           storage: StorageApi.new(api_client),
           locks: Generated::LocksApi.new(api_client)

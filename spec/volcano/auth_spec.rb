@@ -4,6 +4,7 @@ require 'pp'
 require 'base64'
 require 'json'
 require 'spec_helper'
+require 'timeout'
 
 AuthSpecResponse = Volcano::Transport::Response
 AUTH_SPEC_USER_PAYLOAD = {
@@ -222,6 +223,55 @@ RSpec.describe Volcano::Auth do
     outcomes << (finished ? :completed : :timed_out)
     worker.kill unless finished
     worker.join
+  end
+
+  def operation_blocked?(completed)
+    Timeout.timeout(0.1) { completed.pop }
+    false
+  rescue Timeout::Error
+    true
+  end
+
+  def queue_promotion_race(transport, method)
+    transport.queue(:auth_promote_method, 200, method)
+    transport.queue(:auth_get_user, 503, 'error' => 'Temporarily unavailable')
+    transport.queue(:auth_signin, 200, token_payload)
+  end
+
+  def stub_promoted_email_barrier(client, queues)
+    allow(client.auth).to receive(:store_promoted_email).and_wrap_original do |original, value|
+      queues.fetch(:entered) << true
+      queues.fetch(:release).pop
+      original.call(value)
+    end
+  end
+
+  def start_concurrent_sign_in(client, queues)
+    Thread.new do
+      queues.fetch(:sign_in_started) << true
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      queues.fetch(:sign_in_completed) << true
+    end
+  end
+
+  def run_promotion_race(client, method, queues)
+    promotion, sign_in = start_promotion_race(client, method, queues)
+    blocked = operation_blocked?(queues.fetch(:sign_in_completed))
+    finish_promotion_race(client, promotion, sign_in, queues.fetch(:release), blocked)
+  end
+
+  def start_promotion_race(client, method, queues)
+    promotion = Thread.new { client.auth.promote_method(method_id: method.fetch('id')) }
+    queues.fetch(:entered).pop
+    sign_in = start_concurrent_sign_in(client, queues)
+    queues.fetch(:sign_in_started).pop
+    [promotion, sign_in]
+  end
+
+  def finish_promotion_race(client, promotion, sign_in, release, blocked)
+    release << true
+    [promotion, sign_in].each(&:join)
+    [blocked, client.current_user.email]
   end
 
   def blocking_auth_transport(operation, body)
@@ -914,6 +964,15 @@ RSpec.describe Volcano::Auth do
       expect(client.current_user.email).to eq('primary@example.com')
     end
 
+    it 'serializes promotion cache updates with concurrent sign-in' do
+      method = method_payload(identity_payload)
+      queues = %i[entered release sign_in_started sign_in_completed].to_h { |key| [key, Queue.new] }
+      queue_promotion_race(transport, method)
+      stub_promoted_email_barrier(client, queues)
+
+      expect(run_promotion_race(client, method, queues)).to eq([true, 'user@example.com'])
+    end
+
     it 'exposes password policy, device authorization, and platform exchange' do
       queue_extended_auth(transport)
 
@@ -926,7 +985,9 @@ RSpec.describe Volcano::Auth do
       expect([policy.effective_min_length, authorization.user_code]).to eq([12, 'ABCD-EFGH'])
       expect([session, verification.status]).to eq([client.current_session, 'approved'])
       expect(platform.token_id).to eq('00000000-0000-4000-8000-000000000001')
-      rendered = [authorization, platform].flat_map { |value| [value.inspect, value.pretty_inspect] }.join
+      rendered = [authorization, platform].flat_map do |value|
+        [value.inspect, value.pretty_inspect, value.to_s]
+      end.join
       expect(rendered).not_to match(/device-secret|platform-secret/)
     end
 

@@ -21,10 +21,12 @@ module Volcano
     end
 
     def promote_method(method_id:)
-      method = build_auth_method(mapping(authenticated_body(:auth_promote_method, 200, method_id:)))
-      store_promoted_email(method)
-      refresh_user_best_effort
-      method
+      synchronize_auth_operation do
+        method = build_auth_method(mapping(authenticated_body(:auth_promote_method, 200, method_id:)))
+        store_promoted_email(method)
+        refresh_user_best_effort
+        method
+      end
     end
 
     private

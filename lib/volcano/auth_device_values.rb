@@ -28,6 +28,7 @@ module Volcano
     def inspect
       "#<#{self.class} user_code=#{user_code.inspect} expires_in=#{expires_in.inspect}>"
     end
+    alias_method :to_s, :inspect
   end
 
   # Result of approving or denying a device authorization.
@@ -48,5 +49,6 @@ module Volcano
     def inspect
       "#<#{self.class} user_id=#{user_id.inspect} token_id=#{token_id.inspect}>"
     end
+    alias_method :to_s, :inspect
   end
 end

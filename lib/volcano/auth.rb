@@ -34,7 +34,10 @@ module Volcano
     end
 
     def store_session(session)
-      synchronize_auth_operation { @client.commit_auth(session, nil) }
+      synchronize_auth_operation do
+        @current_device_session_ids = [].freeze
+        @client.commit_auth(session, nil)
+      end
     end
 
     private

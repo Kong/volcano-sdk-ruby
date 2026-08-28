@@ -659,6 +659,28 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session.access_token).to eq('rotated-access')
     end
 
+    it 'clears a refreshed session after another auth-level provider rejection' do
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'not authenticated')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'session revoked')
+
+      expect do
+        client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'session revoked')
+      expect(client.current_session).to be_nil
+    end
+
+    it 'preserves refreshed auth for a provider-not-linked retry response' do
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'not authenticated')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))
+      transport.queue(:call_oauth_provider_api, 401, 'error' => 'provider is not linked')
+
+      expect do
+        client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
+      expect(client.current_session.access_token).to eq('rotated-access')
+    end
+
     it 'lists and deletes current-user device sessions' do
       session = {
         'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
@@ -678,6 +700,22 @@ RSpec.describe Volcano::Auth do
         client.current_session
       ]
       expect(results).to eq(['session-id', 1, nil, nil, nil])
+    end
+
+    it 'forgets cached device identity when a legacy session is replaced' do
+      session = {
+        'id' => 'old-session', 'user_id' => 'user-id', 'provider' => 'password',
+        'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
+      }
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session])
+      transport.queue(:auth_delete_my_session, 204)
+      replacement = Volcano::Session.new(access_token: 'replacement-access')
+
+      client.auth.get_sessions
+      client.store_session(replacement)
+      client.auth.delete_session(session_id: 'old-session')
+
+      expect(client.current_session).to be(replacement)
     end
 
     it 'deletes the current session after an automatic token refresh' do

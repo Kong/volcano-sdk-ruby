@@ -79,7 +79,7 @@ module Volcano
         raise unless refresh_provider_request?(e)
 
         refresh_session
-        provider_api_body(arguments)
+        retry_provider_api_body(arguments)
       end
     end
 
@@ -89,6 +89,13 @@ module Volcano
       authenticated_body(
         :call_oauth_provider_api, 200, retry_unauthorized: false, **arguments
       )
+    end
+
+    def retry_provider_api_body(arguments)
+      provider_api_body(arguments)
+    rescue Error::AuthenticationError => e
+      @client.clear_auth if refresh_provider_request?(e)
+      raise
     end
 
     def refresh_provider_request?(error)

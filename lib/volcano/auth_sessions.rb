@@ -22,11 +22,13 @@ module Volcano
     end
 
     def delete_session(session_id:)
-      deletes_current_session = @current_device_session_ids.include?(session_id)
-      authenticated_body(:auth_delete_my_session, 204, session_id:)
-      if deletes_current_session
-        @current_device_session_ids = [].freeze
-        @client.clear_auth
+      synchronize_auth_operation do
+        deletes_current_session = @current_device_session_ids.include?(session_id)
+        authenticated_body(:auth_delete_my_session, 204, session_id:)
+        if deletes_current_session
+          @current_device_session_ids = [].freeze
+          @client.clear_auth
+        end
       end
       nil
     end

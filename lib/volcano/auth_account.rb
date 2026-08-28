@@ -57,12 +57,14 @@ module Volcano
     end
 
     def confirm_email_change(token:)
-      payload = authenticated_body(
-        :auth_confirm_email_change, 200, secrets: [token], email_change_token: token
-      )
-      response = mapping(payload)
-      store_payload_user(response)
-      build_message(response)
+      synchronize_auth_operation do
+        payload = authenticated_body(
+          :auth_confirm_email_change, 200, secrets: [token], email_change_token: token
+        )
+        response = mapping(payload)
+        store_payload_user(response)
+        build_message(response)
+      end
     end
 
     def cancel_email_change

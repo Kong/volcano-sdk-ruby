@@ -74,6 +74,33 @@ class SerialRefreshTransport
   end
 end
 
+class BlockingAuthTransport < AuthSpecTransport
+  attr_reader :entered
+
+  def initialize(operation, response)
+    super()
+    @operation = operation
+    @response = response
+    @entered = Queue.new
+    @release = Queue.new
+  end
+
+  def method_missing(operation, **arguments)
+    return super unless operation == @operation
+
+    @calls << [operation, arguments]
+    @entered << true
+    @release.pop
+    @response
+  end
+
+  def respond_to_missing?(operation, include_private = false)
+    operation == @operation || super
+  end
+
+  def release = @release << true
+end
+
 RSpec.describe Volcano::Auth do
   def token_payload(access: 'access-token', refresh: 'refresh-token')
     {
@@ -81,6 +108,19 @@ RSpec.describe Volcano::Auth do
       'refresh_token' => refresh,
       'expires_in' => 3600,
       'user' => AUTH_SPEC_USER_PAYLOAD
+    }
+  end
+
+  def authenticated_client(transport)
+    Volcano::Client.new(
+      anon_key: 'anon-key', access_token: 'access-token', refresh_token: 'refresh-token', _transport: transport
+    )
+  end
+
+  def current_auth_session
+    {
+      'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
+      'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
     }
   end
 
@@ -411,6 +451,24 @@ RSpec.describe Volcano::Auth do
       ).to eq(%w[next@example.com changed next@example.com cancelled])
     end
 
+    it 'serializes email-change confirmation with replacement sign-in' do
+      response = AuthSpecResponse.new(
+        status: 200, body: { 'message' => 'changed', 'user' => AUTH_SPEC_USER_PAYLOAD }, headers: {}, data: nil
+      )
+      serial = BlockingAuthTransport.new(:auth_confirm_email_change, response)
+      serial.queue(:auth_signin, 200, token_payload(access: 'replacement-access'))
+      session_client = Volcano::Client.new(anon_key: 'anon-key', access_token: 'old-access', _transport: serial)
+      confirmation = Thread.new { session_client.auth.confirm_email_change(token: 'token') }
+      serial.entered.pop
+      sign_in = Thread.new { session_client.auth.sign_in(email: 'next@example.com', password: 'password') }
+      Timeout.timeout(1) { Thread.pass until sign_in.status == 'sleep' }
+      serial.release
+
+      expect(confirmation.value.message).to eq('changed')
+      expect(sign_in.value.access_token).to eq('replacement-access')
+      expect(session_client.current_user.email).to eq('user@example.com')
+    end
+
     it 'builds hosted and OAuth authorization requests and validates callback state' do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
       transport.queue(:auth_oauth_authorize, 307, nil, 'Location' => 'https://github.test/authorize')
@@ -514,6 +572,24 @@ RSpec.describe Volcano::Auth do
       client.auth.delete_session(session_id: 'session-id')
 
       expect(client.current_session).to be_nil
+    end
+
+    it 'serializes current-session deletion with replacement sign-in' do
+      response = AuthSpecResponse.new(status: 204, body: nil, headers: {}, data: nil)
+      serial = BlockingAuthTransport.new(:auth_delete_my_session, response)
+      serial.queue(:auth_get_my_sessions, 200, 'sessions' => [current_auth_session])
+      serial.queue(:auth_signin, 200, token_payload(access: 'replacement-access'))
+      session_client = authenticated_client(serial)
+      session_client.auth.get_sessions
+      deletion = Thread.new { session_client.auth.delete_session(session_id: 'session-id') }
+      serial.entered.pop
+      sign_in = Thread.new { session_client.auth.sign_in(email: 'next@example.com', password: 'password') }
+      Timeout.timeout(1) { Thread.pass until sign_in.status == 'sleep' }
+      serial.release
+
+      expect(
+        [deletion.value, sign_in.value.access_token, session_client.current_session.access_token]
+      ).to eq([nil, 'replacement-access', 'replacement-access'])
     end
 
     it 'rejects unsupported providers before transport invocation' do

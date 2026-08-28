@@ -455,6 +455,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         an_instance_of(InternalGenerated::CallOAuthProviderAPIRequest)
       ]
     )
+    expect(oauth.calls.last[1].last).to include(debug_return_type: 'Object')
   end
 
   it 'disables redirects for OAuth authorization' do

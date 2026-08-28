@@ -799,6 +799,20 @@ RSpec.describe Volcano::Auth do
       expect(client.current_user).to be_nil
     end
 
+    it 'emits one sign-out when confirmation hydration invalidates the session' do
+      client.store_user(Volcano::User.new(id: 'user-id', email: 'stale@example.com'))
+      events = []
+      client.auth.on_auth_state_change { |user| events << user }
+      events.clear
+      transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
+      transport.queue(:auth_get_user, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 401, 'error' => 'refresh expired')
+
+      client.auth.confirm_email(token: 'token')
+
+      expect(events).to eq([nil])
+    end
+
     it 'serializes confirmation reconciliation before a later sign-in' do
       serial = blocking_auth_transport(:auth_confirm_email, 'message' => 'confirmed')
       serial.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
@@ -1050,6 +1064,17 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session.access_token).to eq('access-token')
     end
 
+    it 'rejects empty callback state values' do
+      session = Volcano::Session.new(access_token: 'hosted-access')
+
+      expect { client.auth.store_hosted_session(session:, state: '', expected_state: '') }.to raise_error(
+        Volcano::Error::ValidationError, 'Hosted auth state mismatch'
+      )
+      expect do
+        client.auth.exchange_oauth_code(code: 'code', redirect_url: 'https://app.test', state: '', expected_state: '')
+      end.to raise_error(Volcano::Error::ValidationError, 'OAuth state mismatch')
+    end
+
     it 'links providers and exposes provider API results' do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
       transport.queue(:auth_link_oauth_provider, 200, 'authorization_url' => 'https://github.test/link')
@@ -1237,6 +1262,16 @@ RSpec.describe Volcano::Auth do
         expect { client.auth.exchange_platform_token(client_id: 'volcano-cli') }.to raise_error(
           Volcano::Error::AuthenticationError, 'Invalid authentication response'
         )
+      end
+    end
+
+    it 'preserves RFC 8628 device polling error codes' do
+      transport.queue(:auth_device_token, 400, 'error' => 'authorization_pending')
+
+      poll = -> { client.auth.poll_device_token(client_id: 'volcano-cli', device_code: 'secret') }
+
+      expect(&poll).to raise_error do |error|
+        expect([error.message, error.code]).to eq(%w[authorization_pending authorization_pending])
       end
     end
 

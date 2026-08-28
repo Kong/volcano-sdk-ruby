@@ -106,6 +106,7 @@ module Volcano
 
     def secure_state?(state, expected_state)
       return false unless state.is_a?(String) && expected_state.is_a?(String)
+      return false if state.empty? || expected_state.empty?
 
       state.bytesize == expected_state.bytesize && OpenSSL.secure_compare(state, expected_state)
     end

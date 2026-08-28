@@ -4,6 +4,7 @@ module Volcano
   # Implements password-policy, device authorization, and platform exchange.
   module AuthDevice
     DEVICE_ACTIONS = %w[approve deny].freeze
+    DEVICE_POLL_ERRORS = %w[authorization_pending slow_down access_denied expired_token].freeze
 
     def password_policy
       build_password_policy(mapping(anonymous_body(:auth_get_password_policy, 200)))
@@ -16,9 +17,7 @@ module Volcano
 
     def poll_device_token(client_id:, device_code:)
       commit_session do
-        mapping(anonymous_body(
-                  :auth_device_token, 200, secrets: [device_code], client_id:, device_code:
-                ))
+        mapping(device_token_body(client_id, device_code))
       end
     end
 
@@ -39,6 +38,14 @@ module Volcano
     end
 
     private
+
+    def device_token_body(client_id, device_code)
+      anonymous_body(:auth_device_token, 200, secrets: [device_code], client_id:, device_code:)
+    rescue Error::VolcanoError => e
+      raise unless DEVICE_POLL_ERRORS.include?(e.message)
+
+      raise e.class.new(e.message, status: e.status, code: e.message, retry_after: e.retry_after), cause: nil
+    end
 
     def build_password_policy(payload)
       fields = PasswordPolicy.members.to_h do |field|

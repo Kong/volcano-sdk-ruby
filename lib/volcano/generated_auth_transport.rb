@@ -171,7 +171,10 @@ module Volcano
 
     def call_oauth_provider_api(authorization:, provider:, **attributes)
       body = generated_model(:CallOAuthProviderAPIRequest, **attributes)
-      oauth_call(authorization, :call_o_auth_provider_api_with_http_info, provider, body)
+      oauth_call(
+        authorization, :call_o_auth_provider_api_with_http_info, provider, body,
+        debug_return_type: 'Object'
+      )
     end
   end
 

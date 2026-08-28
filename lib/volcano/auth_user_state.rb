@@ -37,7 +37,7 @@ module Volcano
     def refresh_user_or_clear
       get_user
     rescue Error::VolcanoError
-      @client.clear_user
+      @client.clear_user if @client.current_session
       nil
     end
   end

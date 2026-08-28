@@ -508,6 +508,16 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session).to be_nil
     end
 
+    it 'rejects token responses with an unusable refresh token' do
+      ['', 7].each do |refresh_token|
+        transport.queue(:auth_signin, 200, token_payload(refresh: refresh_token))
+        expect { client.auth.sign_in(email: 'user@example.com', password: 'password') }.to raise_error(
+          Volcano::Error::AuthenticationError, 'Invalid authentication response'
+        )
+      end
+      expect(client.current_session).to be_nil
+    end
+
     it 'accepts acknowledgement responses without a message' do
       transport.queue(:auth_reset_password, 200, {})
 
@@ -616,6 +626,17 @@ RSpec.describe Volcano::Auth do
       expect(session_client.auth.get_user.email).to eq('user@example.com')
       expect(session_client.auth.update_user(user_metadata: { 'plan' => 'pro' }).email).to eq('updated@example.com')
       expect(session_client.current_session).to be(session)
+    end
+
+    it 'hydrates an updated user omitted from the mutation response' do
+      session_client = authenticated_client(transport)
+      updated_payload = AUTH_SPEC_USER_PAYLOAD.merge('email' => 'updated@example.com')
+      transport.queue(:auth_update_user, 200, {})
+      transport.queue(:auth_get_user, 200, 'user' => updated_payload)
+
+      user = session_client.auth.update_user(user_metadata: { 'plan' => 'pro' })
+
+      expect([user.email, session_client.current_user]).to eq(['updated@example.com', user])
     end
 
     it 'rotates tokens and refreshes an authenticated request once after 401' do
@@ -770,10 +791,12 @@ RSpec.describe Volcano::Auth do
     end
 
     it 'preserves confirmation success when the profile refresh fails' do
+      client.store_user(Volcano::User.new(id: 'user-id', email: 'stale@example.com'))
       transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
       transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
 
       expect(client.auth.confirm_email(token: 'token').message).to eq('confirmed')
+      expect(client.current_user).to be_nil
     end
 
     it 'clears a current session revoked by password reset' do
@@ -1029,6 +1052,15 @@ RSpec.describe Volcano::Auth do
       expect(client.auth.get_linked_oauth_providers).to eq([])
     end
 
+    it 'reconciles the cached user after unlinking a provider' do
+      client.store_user(Volcano::User.new(id: 'user-id', email: 'previous@example.com'))
+      transport.queue(:auth_unlink_oauth_provider, 204)
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+
+      expect(client.auth.unlink_oauth_provider(provider: 'github')).to be_nil
+      expect(client.current_user.email).to eq('user@example.com')
+    end
+
     it 'preserves auth for structured provider-level unauthorized responses' do
       transport.queue(
         :call_oauth_provider_api, 401,
@@ -1171,6 +1203,15 @@ RSpec.describe Volcano::Auth do
         [value.inspect, value.pretty_inspect, value.to_s]
       end.join
       expect(rendered).not_to match(/device-secret|platform-secret/)
+    end
+
+    it 'rejects platform responses without usable required text fields' do
+      %w[token user_id token_id].each do |field|
+        transport.queue(:auth_platform_exchange, 200, platform_token_payload.merge(field => ''))
+        expect { client.auth.exchange_platform_token(client_id: 'volcano-cli') }.to raise_error(
+          Volcano::Error::AuthenticationError, 'Invalid authentication response'
+        )
+      end
     end
 
     it 'rejects an unknown device action before transport invocation' do

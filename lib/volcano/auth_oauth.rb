@@ -51,8 +51,11 @@ module Volcano
     end
 
     def unlink_oauth_provider(provider:)
-      authenticated_body(:auth_unlink_oauth_provider, 204, provider: validate_provider(provider))
-      nil
+      synchronize_auth_operation do
+        authenticated_body(:auth_unlink_oauth_provider, 204, provider: validate_provider(provider))
+        refresh_user_or_clear if @client.current_user
+        nil
+      end
     end
 
     def linked_oauth_providers

@@ -15,18 +15,11 @@ module Volcano
 
     def build_user(payload)
       User.new(
-        id: required_identity_field(payload, 'id'),
-        email: required_identity_field(payload, 'email'),
+        id: required_text(payload, 'id'),
+        email: required_text(payload, 'email'),
         **user_attributes(payload)
       )
     rescue KeyError, TypeError
-      raise auth_response_error
-    end
-
-    def required_identity_field(payload, field)
-      value = payload.fetch(field)
-      return value if value.is_a?(String) && !value.empty?
-
       raise auth_response_error
     end
 
@@ -48,14 +41,24 @@ module Volcano
 
     def build_session(payload)
       user = build_user(mapping(payload.fetch('user')))
-      session = Session.new(
+      [token_session(payload, user), user]
+    rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def token_session(payload, user)
+      Session.new(
         access_token: required_access_token(payload),
-        refresh_token: payload['refresh_token'],
+        refresh_token: optional_refresh_token(payload),
         expires_in: required_expires_in(payload),
         user_id: user.id
       )
-      [session, user]
-    rescue KeyError, TypeError
+    end
+
+    def optional_refresh_token(payload)
+      token = payload['refresh_token']
+      return token if valid_optional_token?(token)
+
       raise auth_response_error
     end
 

@@ -11,6 +11,7 @@ require_relative 'auth_mapping'
 require_relative 'auth_signup_mapping'
 require_relative 'auth_invocation'
 require_relative 'auth_lifecycle'
+require_relative 'auth_user_state'
 require_relative 'auth_account'
 require_relative 'auth_provider_errors'
 require_relative 'auth_provider_requests'
@@ -27,6 +28,7 @@ module Volcano
     include AuthSignupMapping
     include AuthInvocation
     include AuthLifecycle
+    include AuthUserState
     include AuthAccount
     include AuthProviderRequests
     include AuthOAuth

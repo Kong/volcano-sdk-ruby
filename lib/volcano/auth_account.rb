@@ -23,7 +23,7 @@ module Volcano
     def confirm_email(token:)
       payload = anonymous_body(:auth_confirm_email, 200, secrets: [token], token:)
       result = build_message(mapping(payload))
-      refresh_user_best_effort if @client.current_session
+      refresh_user_or_clear if @client.current_session
       result
     end
 
@@ -94,29 +94,11 @@ module Volcano
     end
 
     def update_user_after_email_change(payload)
-      return store_payload_user(payload) if payload.key?('user')
-
-      @client.clear_user unless refresh_user_best_effort
-    end
-
-    def build_payload_user(payload)
-      build_user(mapping(mapping(payload).fetch('user')))
-    rescue KeyError
-      raise auth_response_error
-    end
-
-    def optional_payload_user(payload)
-      build_payload_user(payload) if mapping(payload).key?('user')
+      reconcile_payload_user(payload)
     end
 
     def refresh_after_conversion
       refresh_session
-    rescue Error::VolcanoError
-      nil
-    end
-
-    def refresh_user_best_effort
-      get_user
     rescue Error::VolcanoError
       nil
     end

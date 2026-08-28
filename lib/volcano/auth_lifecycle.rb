@@ -50,10 +50,8 @@ module Volcano
         payload = authenticated_body(
           :auth_update_user, 200, secrets: [password], password:, user_metadata:
         )
-        build_user(mapping(mapping(payload).fetch('user'))).tap { |user| @client.store_user(user) }
+        reconcile_payload_user(mapping(payload))
       end
-    rescue KeyError
-      raise auth_response_error
     end
 
     def refresh_session

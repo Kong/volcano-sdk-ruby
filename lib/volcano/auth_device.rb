@@ -31,8 +31,8 @@ module Volcano
     def exchange_platform_token(client_id:)
       payload = mapping(authenticated_body(:auth_platform_exchange, 200, client_id:))
       PlatformToken.new(
-        token: payload.fetch('token'), user_id: payload.fetch('user_id'),
-        token_id: payload.fetch('token_id'), expires_at: required_time(payload, 'expires_at')
+        token: required_text(payload, 'token'), user_id: required_text(payload, 'user_id'),
+        token_id: required_text(payload, 'token_id'), expires_at: required_time(payload, 'expires_at')
       )
     rescue KeyError, TypeError
       raise auth_response_error

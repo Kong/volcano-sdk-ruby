@@ -72,6 +72,20 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  class BlockingCloseSocket < FacadeSocket
+    def initialize(close_entered, close_release)
+      super()
+      @close_entered = close_entered
+      @close_release = close_release
+    end
+
+    def close
+      @close_entered.enqueue(true)
+      @close_release.dequeue
+      super
+    end
+  end
+
   def signed_in_client(socket_factory, api_url: 'https://api.test.volcano.dev', anon_key: 'anon-key')
     Volcano::Client.new(
       api_url:, anon_key:,
@@ -170,6 +184,28 @@ RSpec.describe Volcano::Realtime do
     end.wait
 
     expect(second).to be_closed
+  end
+
+  it 'blocks new subscriptions until an authentication reset finishes' do
+    close_entered = Async::Queue.new
+    close_release = Async::Queue.new
+    first = BlockingCloseSocket.new(close_entered, close_release)
+    second = FacadeSocket.new
+    client = signed_in_client(->(_address) { [first, second].find { |socket| !socket.closed? } })
+
+    Async do |task|
+      client.realtime.channel('anchor').subscribe
+      target = client.realtime.channel('target')
+      replacing = task.async { client.auth.sign_in(email: 'next@example.com', password: 'secret') }
+      close_entered.dequeue
+      subscribing = task.async { target.subscribe }
+      task.yield
+      close_release.enqueue(true)
+      task.with_timeout(0.2) { replacing.wait }
+      task.with_timeout(0.2) { subscribing.wait }
+      expect(target.send(event: 'message', value: 'after-reset')).to be_nil
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'rejects duplicate subscriptions' do

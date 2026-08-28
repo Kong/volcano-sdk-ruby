@@ -48,7 +48,7 @@ module Volcano
     end
 
     def store_session(session)
-      @current_session = session
+      @auth.store_session(session)
     end
 
     private

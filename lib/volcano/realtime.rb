@@ -14,6 +14,8 @@ module Volcano
       @socket_factory = socket_factory || method(:open_socket)
       @protocol = nil
       @protocol_lock = nil
+      @authentication_lock = nil
+      @authentication_lock_creation = Mutex.new
       @channels = {}
       @closed = false
     end
@@ -23,6 +25,7 @@ module Volcano
       @channels["broadcast:#{name}"] ||= Channel.new(
         self,
         method(:protocol),
+        method(:with_authentication_lock),
         "broadcast:#{name}"
       )
     end
@@ -41,7 +44,9 @@ module Volcano
     private :protocol
 
     def disconnect
-      @protocol_lock ? @protocol_lock.acquire { close_protocol } : close_protocol
+      with_authentication_lock do
+        @protocol_lock ? @protocol_lock.acquire { close_protocol } : close_protocol
+      end
     rescue StandardError => e
       raise public_error(e), cause: nil
     end
@@ -123,9 +128,10 @@ module Volcano
 
     # Represents one realtime broadcast channel.
     class Channel
-      def initialize(realtime, protocol_provider, name)
+      def initialize(realtime, protocol_provider, authentication_lock_provider, name)
         @realtime = realtime
         @protocol_provider = protocol_provider
+        @authentication_lock_provider = authentication_lock_provider
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
@@ -141,37 +147,17 @@ module Volcano
       end
 
       def subscribe
-        with_lifecycle_lock do
-          ensure_open!
-          raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
-
-          protocol = @protocol_provider.call
-          register_handler(protocol)
-          protocol.subscribe(channel: @name)
-          @subscribed = true
-        end
+        with_authentication_lock { with_lifecycle_lock { subscribe_locked } }
         nil
       end
 
       def send(event:, **payload)
-        with_lifecycle_lock do
-          ensure_open!
-          raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
-
-          data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
-          @protocol_provider.call.publish(channel: @name, data: data)
-        end
+        with_authentication_lock { with_lifecycle_lock { send_locked(event, payload) } }
         nil
       end
 
       def unsubscribe
-        with_lifecycle_lock do
-          ensure_open!
-          next unless @subscribed
-
-          @protocol_provider.call.unsubscribe(channel: @name)
-          @subscribed = false
-        end
+        with_authentication_lock { with_lifecycle_lock { unsubscribe_locked } }
         nil
       end
 
@@ -187,6 +173,32 @@ module Volcano
       end
 
       private
+
+      def subscribe_locked
+        ensure_open!
+        raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
+
+        protocol = @protocol_provider.call
+        register_handler(protocol)
+        protocol.subscribe(channel: @name)
+        @subscribed = true
+      end
+
+      def send_locked(event, payload)
+        ensure_open!
+        raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
+
+        data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
+        @protocol_provider.call.publish(channel: @name, data: data)
+      end
+
+      def unsubscribe_locked
+        ensure_open!
+        return unless @subscribed
+
+        @protocol_provider.call.unsubscribe(channel: @name)
+        @subscribed = false
+      end
 
       def register_handler(protocol)
         return if @handler_registered
@@ -204,6 +216,10 @@ module Volcano
         require 'async/semaphore'
         @lifecycle_lock ||= Async::Semaphore.new(1)
         @lifecycle_lock.acquire(&)
+      end
+
+      def with_authentication_lock(&)
+        @authentication_lock_provider.call(&)
       end
 
       def ensure_open!

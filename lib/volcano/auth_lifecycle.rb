@@ -96,13 +96,6 @@ module Volcano
       )
     end
 
-    def signup_result(payload)
-      SignUpResult.new(
-        confirmation_required: payload['confirmation_required'] == true,
-        message: payload['message'].to_s
-      )
-    end
-
     def commit_session(payload, preserve_device_sessions: false)
       synchronize_auth_operation do
         session, user = build_session(payload)

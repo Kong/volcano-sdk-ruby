@@ -203,6 +203,35 @@ RSpec.describe Volcano::Auth do
       expect(client.current_user).to be(user)
     end
 
+    it 'replaces legacy session state through the coordinated auth transition' do
+      user = Volcano::User.new(id: 'user-id', email: 'user@example.com')
+      replacement = Volcano::Session.new(access_token: 'replacement-access')
+      client.commit_auth(client.current_session, user)
+      events = []
+      client.auth.on_auth_state_change { |current_user| events << current_user }
+
+      client.store_session(replacement)
+
+      expect([client.current_session, client.current_user]).to eq([replacement, nil])
+      expect(events).to eq([user, nil])
+    end
+
+    it 'invokes initial auth listeners without holding the state monitor' do
+      client.commit_auth(client.current_session, Volcano::User.new(id: 'user-id', email: 'user@example.com'))
+      outcome = Queue.new
+      first_notification = true
+
+      client.auth.on_auth_state_change do
+        next unless first_notification
+
+        first_notification = false
+        worker = Thread.new { client.commit_auth(client.current_session, client.current_user) }
+        outcome << (worker.join(0.2) ? :completed : :blocked)
+      end
+
+      expect(outcome.pop).to eq(:completed)
+    end
+
     it 'freezes nested metadata and redacts secret-bearing values' do
       metadata = { 'nested' => [{ 'value' => 'kept' }] }
       user = Volcano::User.new(id: 'user-id', email: 'user@example.com', user_metadata: metadata)
@@ -256,6 +285,22 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_signin, 200, token_payload)
       signed_in = client.auth.sign_up(email: 'user@example.com', password: 'password', sign_in: true)
       expect([signed_in.user, signed_in.session]).to eq([client.current_user, client.current_session])
+    end
+
+    it 'rejects malformed signup acknowledgements' do
+      malformed = [
+        {},
+        { 'confirmation_required' => false },
+        { 'confirmation_required' => 'false', 'message' => 'Created' },
+        { 'confirmation_required' => false, 'message' => nil }
+      ]
+
+      malformed.each do |payload|
+        transport.queue(:auth_signup, 201, payload)
+        expect { client.auth.sign_up(email: 'user@example.com', password: 'password') }.to raise_error(
+          Volcano::Error::AuthenticationError, 'Invalid authentication response'
+        )
+      end
     end
 
     it 'commits sign-in state before listeners observe it' do

@@ -7,39 +7,42 @@ module Volcano
   # Owns one client's in-memory auth state and listener registry.
   module ClientAuthState
     def commit_auth(session, user)
-      @auth_state_monitor.synchronize do
+      listeners = @auth_state_monitor.synchronize do
         @current_session = session
         @current_user = user
         reset_realtime_authentication
-        notify_auth_listeners
+        @auth_listeners.values
       end
+      notify_auth_listeners(listeners, user)
     end
 
     def store_user(user)
-      @auth_state_monitor.synchronize do
+      listeners = @auth_state_monitor.synchronize do
         @current_user = user
-        notify_auth_listeners
+        @auth_listeners.values
       end
+      notify_auth_listeners(listeners, user)
     end
 
     def clear_auth
-      @auth_state_monitor.synchronize do
+      listeners = @auth_state_monitor.synchronize do
         @current_session = nil
         @current_user = nil
         reset_realtime_authentication
-        notify_auth_listeners
-        nil
+        @auth_listeners.values
       end
+      notify_auth_listeners(listeners, nil)
     end
 
     def subscribe_auth(listener)
-      @auth_state_monitor.synchronize do
+      listener_id, immediate_user, notify_immediately = @auth_state_monitor.synchronize do
         listener_id = @next_auth_listener_id
         @next_auth_listener_id += 1
         @auth_listeners[listener_id] = listener
-        notify_auth_listener(listener) unless @current_session && @current_user.nil?
-        build_unsubscribe(listener_id)
+        [listener_id, @current_user, !(@current_session && @current_user.nil?)]
       end
+      notify_auth_listener(listener, immediate_user) if notify_immediately
+      build_unsubscribe(listener_id)
     end
 
     private
@@ -64,14 +67,13 @@ module Volcano
       end
     end
 
-    def notify_auth_listeners
-      listeners = @auth_listeners.values
-      listeners.each { |listener| notify_auth_listener(listener) }
+    def notify_auth_listeners(listeners, user)
+      listeners.each { |listener| notify_auth_listener(listener, user) }
       nil
     end
 
-    def notify_auth_listener(listener)
-      listener.call(@current_user)
+    def notify_auth_listener(listener, user)
+      listener.call(user)
     rescue StandardError
       warn('Volcano auth-state listener failed')
     end

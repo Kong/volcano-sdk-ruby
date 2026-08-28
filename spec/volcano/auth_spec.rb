@@ -889,6 +889,16 @@ RSpec.describe Volcano::Auth do
       expect(session_client.current_user.email).to eq('user@example.com')
     end
 
+    it 'invalidates a cached user when email-change confirmation omits it' do
+      client.store_user(Volcano::User.new(id: 'user-id', email: 'previous@example.com'))
+      transport.queue(:auth_confirm_email_change, 200, 'message' => 'changed')
+      transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
+
+      expect(client.auth.confirm_email_change(token: 'token').message).to eq('changed')
+      expect(client.current_user).to be_nil
+      expect(client.current_session.access_token).to eq('access-token')
+    end
+
     it 'builds hosted and OAuth authorization requests and validates callback state' do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
       transport.queue(:auth_oauth_authorize, 307, nil, 'Location' => 'https://github.test/authorize')
@@ -910,6 +920,20 @@ RSpec.describe Volcano::Auth do
       expect(client.auth.exchange_oauth_code(
                code: 'code', redirect_url: 'https://app.test/callback', state: oauth.state, expected_state: oauth.state
              )).to eq(client.current_session)
+    end
+
+    it 'validates hosted callback state before storing its session' do
+      request = client.auth.get_hosted_auth_url(project_id: 'project-id')
+      replacement = Volcano::Session.new(access_token: 'hosted-access', refresh_token: 'hosted-refresh')
+
+      expect do
+        client.auth.store_hosted_session(session: replacement, state: 'wrong', expected_state: request.state)
+      end.to raise_error(Volcano::Error::ValidationError, 'Hosted auth state mismatch')
+      expect(client.current_session.access_token).to eq('access-token')
+      expect(
+        client.auth.store_hosted_session(session: replacement, state: request.state, expected_state: request.state)
+      ).to be_nil
+      expect(client.current_session).to equal(replacement)
     end
 
     it 'links providers and exposes provider API results' do

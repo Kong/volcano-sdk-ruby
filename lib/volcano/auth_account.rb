@@ -65,7 +65,7 @@ module Volcano
           :auth_confirm_email_change, 200, secrets: [token], email_change_token: token
         )
         response = mapping(payload)
-        store_payload_user(response)
+        update_user_after_email_change(response)
         build_message(response)
       end
     end
@@ -95,6 +95,13 @@ module Volcano
       user
     rescue KeyError
       raise auth_response_error
+    end
+
+    def update_user_after_email_change(payload)
+      return store_payload_user(payload) if payload.key?('user')
+
+      @client.clear_user
+      refresh_user_best_effort
     end
 
     def build_payload_user(payload)

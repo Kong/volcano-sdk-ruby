@@ -27,6 +27,14 @@ module Volcano
       drain_auth_notifications if dispatch
     end
 
+    def clear_user
+      dispatch = @auth_state_monitor.synchronize do
+        @current_user = nil
+        enqueue_auth_notification(@auth_listeners.values, nil)
+      end
+      drain_auth_notifications if dispatch
+    end
+
     def clear_auth
       dispatch = @auth_state_monitor.synchronize do
         @current_session = nil

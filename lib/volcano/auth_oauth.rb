@@ -13,6 +13,12 @@ module Volcano
       AuthorizationRequest.new(authorization_url: url, state:)
     end
 
+    def store_hosted_session(session:, state:, expected_state:)
+      raise Error::ValidationError, 'Hosted auth state mismatch' unless secure_state?(state, expected_state)
+
+      store_session(session)
+    end
+
     def get_oauth_authorization_url(provider:, redirect_url:)
       provider = validate_provider(provider)
       state = SecureRandom.urlsafe_base64(32)

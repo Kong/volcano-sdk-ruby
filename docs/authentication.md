@@ -177,6 +177,25 @@ request = client.auth.get_hosted_auth_url(
 puts request.authorization_url
 ```
 
+When the hosted page returns fragment tokens, validate the echoed state before
+installing the session:
+
+```ruby
+session = Volcano::Session.new(
+  access_token: callback_access_token,
+  refresh_token: callback_refresh_token
+)
+client.auth.store_hosted_session(
+  session: session,
+  state: callback_state,
+  expected_state: request.state
+)
+```
+
+Never pass hosted callback tokens directly to `client.store_session`; that
+method is for trusted session restoration and does not validate a callback
+nonce.
+
 OAuth authorization follows the same pattern. Preserve `request.state` and
 pass it as `expected_state` during exchange; the SDK rejects a mismatch before
 calling the API.

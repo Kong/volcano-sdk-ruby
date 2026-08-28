@@ -18,7 +18,9 @@ module Volcano
 
     def confirm_email(token:)
       payload = anonymous_body(:auth_confirm_email, 200, secrets: [token], token:)
-      build_message(mapping(payload))
+      result = build_message(mapping(payload))
+      get_user if @client.current_session
+      result
     end
 
     def resend_confirmation(email:)

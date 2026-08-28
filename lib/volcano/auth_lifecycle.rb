@@ -49,16 +49,7 @@ module Volcano
     end
 
     def refresh_session
-      session = @client.current_session
-      return missing_refresh unless session&.refresh_token
-
-      payload = anonymous_body(
-        :auth_refresh, 200, secrets: [session.refresh_token], refresh_token: session.refresh_token
-      )
-      commit_session(mapping(payload))
-    rescue StandardError
-      @client.clear_auth
-      raise
+      @refresh_mutex.synchronize { refresh_current_session }
     end
 
     def on_auth_state_change(listener = nil, &block)
@@ -69,6 +60,33 @@ module Volcano
     end
 
     private
+
+    def refresh_session_for(rejected_session)
+      @refresh_mutex.synchronize do
+        refresh_current_session if @client.current_session.equal?(rejected_session)
+      end
+    end
+
+    def refresh_current_session
+      session = refreshable_session
+      commit_session(mapping(refresh_payload(session)))
+    rescue StandardError
+      @client.clear_auth if @client.current_session.equal?(session)
+      raise
+    end
+
+    def refreshable_session
+      session = @client.current_session
+      return session if session&.refresh_token
+
+      missing_refresh
+    end
+
+    def refresh_payload(session)
+      anonymous_body(
+        :auth_refresh, 200, secrets: [session.refresh_token], refresh_token: session.refresh_token
+      )
+    end
 
     def signup_result(payload)
       SignUpResult.new(

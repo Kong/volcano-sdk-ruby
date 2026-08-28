@@ -26,15 +26,51 @@ class AuthSpecTransport
     @responses[operation] << AuthSpecResponse.new(status:, body:, headers:, data: nil)
   end
 
+  def queue_error(operation, error)
+    @responses[operation] << error
+  end
+
   def method_missing(operation, **arguments)
     return super unless operation.to_s.match?(/\A(?:auth_|refresh_oauth|get_oauth|call_oauth)/)
 
     @calls << [operation, arguments]
-    @responses.fetch(operation).shift || raise("no response queued for #{operation}")
+    response = @responses.fetch(operation).shift || raise("no response queued for #{operation}")
+    raise response if response.is_a?(Exception)
+
+    response
   end
 
   def respond_to_missing?(operation, include_private = false)
     operation.to_s.match?(/\A(?:auth_|refresh_oauth|get_oauth|call_oauth)/) || super
+  end
+end
+
+class SerialRefreshTransport
+  attr_reader :calls
+
+  def initialize
+    @calls = Queue.new
+    @release = Queue.new
+  end
+
+  def auth_refresh(authorization:, refresh_token:)
+    @calls << [authorization, refresh_token]
+    @release.pop if refresh_token == 'old-refresh'
+    suffix = refresh_token == 'old-refresh' ? 'next' : 'final'
+    AuthSpecResponse.new(
+      status: 200,
+      body: {
+        'access_token' => "#{suffix}-access",
+        'refresh_token' => "#{suffix}-refresh",
+        'expires_in' => 3600,
+        'user' => AUTH_SPEC_USER_PAYLOAD
+      },
+      headers: {}, data: nil
+    )
+  end
+
+  def release
+    @release << true
   end
 end
 
@@ -219,6 +255,36 @@ RSpec.describe Volcano::Auth do
       expect([session_client.current_session, session_client.current_user]).to eq([nil, nil])
     end
 
+    it 'serializes concurrent refresh-token rotation' do
+      serial_transport = SerialRefreshTransport.new
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'old-access', refresh_token: 'old-refresh',
+        _transport: serial_transport
+      )
+      first = Thread.new { session_client.auth.refresh_session }
+      expect(serial_transport.calls.pop).to eq(%w[anon-key old-refresh])
+      second = Thread.new { session_client.auth.refresh_session }
+      Timeout.timeout(1) { Thread.pass until second.status == 'sleep' }
+
+      expect(serial_transport.calls).to be_empty
+      serial_transport.release
+      expect([first.value.refresh_token, second.value.refresh_token]).to eq(%w[next-refresh final-refresh])
+    end
+
+    it 'redacts transport causes and credentials rotated during retry' do
+      session_client = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: 'old-access', refresh_token: 'old-refresh', _transport: transport
+      )
+      transport.queue(:auth_get_user, 401, 'error' => 'expired')
+      transport.queue(:auth_refresh, 200, token_payload(access: 'new-access', refresh: 'new-refresh'))
+      transport.queue_error(:auth_get_user, IOError.new('new-access new-refresh'))
+
+      expect { session_client.auth.get_user }.to raise_error do |error|
+        expect(error.message).to eq('[REDACTED] [REDACTED]')
+        expect(error.cause).to be_nil
+      end
+    end
+
     it 'always clears sign-out state and isolates listener failures' do
       session_client = Volcano::Client.new(
         anon_key: 'anon-key', access_token: 'access', refresh_token: 'refresh', _transport: transport
@@ -248,6 +314,7 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_signup_anonymous, 201, token_payload)
       transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_resend_confirmation, 200, 'message' => 'resent')
       transport.queue(:auth_forgot_password, 200, 'message' => 'sent')
       transport.queue(:auth_reset_password, 200, 'message' => 'reset')
@@ -339,10 +406,13 @@ RSpec.describe Volcano::Auth do
       transport.queue(:auth_delete_all_my_sessions, 204)
 
       page = client.auth.get_sessions
-      expect(page.sessions.first.id).to eq('session-id')
-      expect(page.total).to eq(1)
-      expect(client.auth.delete_session(session_id: 'session-id')).to be_nil
-      expect(client.auth.delete_all_other_sessions).to be_nil
+      results = [
+        page.sessions.first.id, page.total,
+        client.auth.delete_all_other_sessions,
+        client.auth.delete_session(session_id: 'session-id'),
+        client.current_session
+      ]
+      expect(results).to eq(['session-id', 1, nil, nil, nil])
     end
 
     it 'rejects unsupported providers before transport invocation' do

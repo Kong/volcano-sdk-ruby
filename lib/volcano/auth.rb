@@ -25,6 +25,8 @@ module Volcano
     def initialize(client, transport)
       @client = client
       @transport = transport
+      @refresh_mutex = Mutex.new
+      @current_device_session_ids = [].freeze
     end
   end
 end

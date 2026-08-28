@@ -49,7 +49,7 @@ RSpec.describe 'Volcano SDK errors' do
     end
   end
 
-  it 'maps a no-status network failure to a transport error with its cause', :aggregate_failures do
+  it 'maps a no-status network failure without exposing its raw cause', :aggregate_failures do
     failure = SocketError.new('connection failed')
     client = Volcano::Client.new(anon_key: 'anon-key', _transport: ErrorTransport.new(failure))
 
@@ -59,7 +59,7 @@ RSpec.describe 'Volcano SDK errors' do
       expect(error.status).to be_nil
       expect(error.code).to be_nil
       expect(error.retry_after).to be_nil
-      expect(error.cause).to be(failure)
+      expect(error.cause).to be_nil
     }
   end
 end

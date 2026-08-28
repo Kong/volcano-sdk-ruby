@@ -47,13 +47,12 @@ module Volcano
     end
 
     def request_email_change(new_email:)
+      new_email = validate_email(new_email)
       payload = mapping(authenticated_body(:auth_request_email_change, 200, new_email:))
       EmailChangeResult.new(
-        message: payload.fetch('message'), new_email: payload.fetch('new_email'),
+        message: payload['message'], new_email: payload.fetch('new_email', new_email),
         email_change_token: payload['email_change_token']
       )
-    rescue KeyError
-      raise auth_response_error
     end
 
     def confirm_email_change(token:)
@@ -97,8 +96,7 @@ module Volcano
     def update_user_after_email_change(payload)
       return store_payload_user(payload) if payload.key?('user')
 
-      @client.clear_user
-      refresh_user_best_effort
+      @client.clear_user unless refresh_user_best_effort
     end
 
     def build_payload_user(payload)

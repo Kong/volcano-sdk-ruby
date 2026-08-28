@@ -58,9 +58,22 @@ module Volcano
     end
 
     def validate_auth_bootstrap(access_token, refresh_token)
-      return unless access_token.nil? && refresh_token
+      if access_token.nil?
+        raise ArgumentError, 'refresh token requires an access token' if refresh_token
 
-      raise ArgumentError, 'refresh token requires an access token'
+        return
+      end
+      return if valid_token?(access_token) && valid_optional_token?(refresh_token)
+
+      raise ArgumentError, 'invalid session token'
+    end
+
+    def valid_token?(token)
+      token.is_a?(String) && !token.empty?
+    end
+
+    def valid_optional_token?(token)
+      token.nil? || valid_token?(token)
     end
 
     def initial_session(access_token, refresh_token)

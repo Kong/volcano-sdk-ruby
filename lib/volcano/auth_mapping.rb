@@ -84,6 +84,12 @@ module Volcano
       raise Error::ValidationError, 'Unsupported OAuth provider'
     end
 
+    def validate_email(email)
+      return email if email.is_a?(String) && !email.empty?
+
+      raise Error::ValidationError, 'Email is required'
+    end
+
     def response_header(response, name)
       value = response.headers&.find { |key, _| key.casecmp?(name) }&.last
       raise auth_response_error('Missing authorization URL') unless value

@@ -57,7 +57,7 @@ module Volcano
 
     def linked_oauth_providers
       payload = mapping(authenticated_body(:auth_list_oauth_providers, 200))
-      array(payload.fetch('providers')).map { |provider| build_oauth_provider(provider) }.freeze
+      array(payload.fetch('providers', [])).map { |provider| build_oauth_provider(provider) }.freeze
     rescue KeyError, TypeError
       raise auth_response_error
     end

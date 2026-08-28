@@ -360,6 +360,16 @@ RSpec.describe Volcano::Auth do
       expect(client.current_user).to be(user)
     end
 
+    it 'rejects invalid bootstrap session tokens' do
+      invalid = [{ access_token: '' }, { access_token: 7 }, { access_token: 'access', refresh_token: '' }]
+
+      invalid.each do |tokens|
+        expect { Volcano::Client.new(anon_key: 'anon-key', _transport: Object.new, **tokens) }.to raise_error(
+          ArgumentError, 'invalid session token'
+        )
+      end
+    end
+
     it 'replaces legacy session state through the coordinated auth transition' do
       user = Volcano::User.new(id: 'user-id', email: 'user@example.com')
       replacement = Volcano::Session.new(access_token: 'replacement-access')
@@ -922,6 +932,28 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session.access_token).to eq('access-token')
     end
 
+    it 'hydrates an omitted email-change user without a transient sign-out' do
+      previous = Volcano::User.new(id: 'user-id', email: 'previous@example.com')
+      client.store_user(previous)
+      events = []
+      client.auth.on_auth_state_change { |user| events << user }
+      events.clear
+      transport.queue(:auth_confirm_email_change, 200, {})
+      transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD.merge('email' => 'next@example.com'))
+
+      client.auth.confirm_email_change(token: 'token')
+
+      expect(events.map(&:email)).to eq(['next@example.com'])
+    end
+
+    it 'derives omitted email-change acknowledgement fields from the request' do
+      transport.queue(:auth_request_email_change, 200, {})
+
+      result = client.auth.request_email_change(new_email: 'next@example.com')
+
+      expect([result.message, result.new_email]).to eq([nil, 'next@example.com'])
+    end
+
     it 'builds hosted and OAuth authorization requests and validates callback state' do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
       transport.queue(:auth_oauth_authorize, 307, nil, 'Location' => 'https://github.test/authorize')
@@ -989,6 +1021,12 @@ RSpec.describe Volcano::Auth do
       expect(results).to eq(
         ['generated-state', ['github'], 'refreshed', 3600, { 'login' => 'volcano' }, nil]
       )
+    end
+
+    it 'treats an omitted linked-provider collection as empty' do
+      transport.queue(:auth_list_oauth_providers, 200, {})
+
+      expect(client.auth.get_linked_oauth_providers).to eq([])
     end
 
     it 'preserves auth for structured provider-level unauthorized responses' do

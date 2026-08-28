@@ -59,17 +59,19 @@ module Volcano
     private :linked_oauth_providers
 
     def refresh_oauth_token(provider:)
+      provider = validate_provider(provider)
       payload = authenticated_body(
-        :refresh_oauth_provider_token, 200, provider: validate_provider(provider)
+        :refresh_oauth_provider_token, 200, provider:
       )
-      build_oauth_token(mapping(payload))
+      build_oauth_token(mapping(payload), provider)
     end
 
     def get_oauth_provider_token(provider:)
+      provider = validate_provider(provider)
       payload = authenticated_body(
-        :get_oauth_provider_token, 200, provider: validate_provider(provider)
+        :get_oauth_provider_token, 200, provider:
       )
-      build_oauth_token(mapping(payload))
+      build_oauth_token(mapping(payload), provider)
     end
 
     def call_oauth_api(provider:, endpoint:, method: 'GET', body: nil)

@@ -5,13 +5,12 @@ module Volcano
   # Implements sign-up, sign-in, refresh, user, and listener lifecycle.
   module AuthLifecycle
     def sign_up(email:, password:, user_metadata: nil, sign_in: false)
-      payload = anonymous_body(
-        :auth_signup, 201, secrets: [password], email:, password:, user_metadata:
-      )
-      result = signup_result(mapping(payload))
-      return result unless sign_in && !result.confirmation_required
+      return signup_acknowledgement(email, password, user_metadata) unless sign_in
 
       synchronize_auth_operation do
+        result = signup_acknowledgement(email, password, user_metadata)
+        next result if result.confirmation_required
+
         session = sign_in(email:, password:)
         SignUpResult.new(**result.to_h, user: @client.current_user, session:)
       end
@@ -69,6 +68,13 @@ module Volcano
     end
 
     private
+
+    def signup_acknowledgement(email, password, user_metadata)
+      payload = anonymous_body(
+        :auth_signup, 201, secrets: [password], email:, password:, user_metadata:
+      )
+      signup_result(mapping(payload))
+    end
 
     def refresh_session_for(rejected_session)
       @refresh_mutex.synchronize do

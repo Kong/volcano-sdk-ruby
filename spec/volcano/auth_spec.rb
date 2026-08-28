@@ -274,8 +274,9 @@ RSpec.describe Volcano::Auth do
     [blocked, client.current_user.email]
   end
 
-  def blocking_auth_transport(operation, body)
-    response = AuthSpecResponse.new(status: 200, body:, headers: {}, data: nil)
+  def blocking_auth_transport(operation, body = nil, status: 200, **payload)
+    body ||= payload
+    response = AuthSpecResponse.new(status:, body:, headers: {}, data: nil)
     BlockingAuthTransport.new(operation, response)
   end
 
@@ -565,6 +566,26 @@ RSpec.describe Volcano::Auth do
       serial.release
 
       expect([signing_in.value.user_id, signing_out.value, session_client.current_session]).to eq(['user-id', nil, nil])
+    end
+
+    it 'serializes opt-in signup before a later sign-out' do
+      serial = blocking_auth_transport(
+        :auth_signup, { 'confirmation_required' => false, 'message' => 'created' }, status: 201
+      )
+      serial.queue(:auth_signin, 200, token_payload)
+      serial.queue(:auth_logout, 204)
+      session_client = Volcano::Client.new(anon_key: 'anon-key', _transport: serial)
+      signing_up = Thread.new do
+        session_client.auth.sign_up(email: 'user@example.com', password: 'password', sign_in: true)
+      end
+      serial.entered.pop
+      signing_out = Thread.new { session_client.auth.sign_out }
+      Timeout.timeout(1) { Thread.pass until signing_out.status == 'sleep' }
+      serial.release
+
+      expect([signing_up.value.session.user_id, signing_out.value, session_client.current_session]).to eq(
+        ['user-id', nil, nil]
+      )
     end
 
     it 'retrieves and updates the user without replacing the session' do
@@ -895,8 +916,8 @@ RSpec.describe Volcano::Auth do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
       transport.queue(:auth_link_oauth_provider, 200, 'authorization_url' => 'https://github.test/link')
       transport.queue(:auth_list_oauth_providers, 200, 'providers' => [{ 'provider' => 'github' }])
-      transport.queue(:refresh_oauth_provider_token, 200, 'provider' => 'github', 'message' => 'refreshed')
-      transport.queue(:get_oauth_provider_token, 200, 'provider' => 'github', 'expires_in' => 3600)
+      transport.queue(:refresh_oauth_provider_token, 200, 'message' => 'refreshed')
+      transport.queue(:get_oauth_provider_token, 200, 'expires_in' => 3600)
       transport.queue(:call_oauth_provider_api, 200, 'login' => 'volcano')
       transport.queue(:auth_unlink_oauth_provider, 204)
 

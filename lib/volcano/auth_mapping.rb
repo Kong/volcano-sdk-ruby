@@ -16,9 +16,9 @@ module Volcano
       raise auth_response_error
     end
 
-    def build_oauth_token(payload)
+    def build_oauth_token(payload, provider)
       OAuthTokenResult.new(
-        provider: validate_provider(payload.fetch('provider')),
+        provider:,
         expires_in: payload['expires_in'],
         message: payload['message']
       )

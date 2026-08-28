@@ -25,10 +25,11 @@ module Volcano
     def sign_out
       synchronize_auth_operation do
         session = @client.current_session
+        had_auth = session || @client.current_user
         begin
           revoke_session(session) if session&.refresh_token
         ensure
-          @client.clear_auth
+          @client.clear_auth if had_auth
         end
       end
     end

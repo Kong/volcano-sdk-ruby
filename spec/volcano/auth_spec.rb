@@ -152,6 +152,11 @@ RSpec.describe Volcano::Auth do
       expect(partial.current_session.refresh_token).to be_nil
     end
 
+    it 'exposes an immutable API URL' do
+      expect(client.api_url).to be_frozen
+      expect { client.api_url << '/v2' }.to raise_error(FrozenError)
+    end
+
     it 'rejects a refresh token without an access token' do
       expect do
         Volcano::Client.new(anon_key: 'anon-key', refresh_token: 'refresh-token', _transport: Object.new)
@@ -305,7 +310,7 @@ RSpec.describe Volcano::Auth do
       expect([session_client.current_session, session_client.current_user]).to eq([nil, nil])
     end
 
-    it 'does not repeat signed-out notification without local auth' do
+    it 'does not repeat signed-out notification on refresh without local auth' do
       events = []
       client.auth.on_auth_state_change { |user| events << user }
       events.clear
@@ -385,6 +390,15 @@ RSpec.describe Volcano::Auth do
 
       expect(session_client.auth.sign_out).to be_nil
       expect(session_client.current_session).to be_nil
+    end
+
+    it 'does not repeat signed-out notification on sign-out without local auth' do
+      events = []
+      client.auth.on_auth_state_change { |user| events << user }
+      events.clear
+
+      expect(client.auth.sign_out).to be_nil
+      expect(events).to be_empty
     end
   end
 

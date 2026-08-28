@@ -19,7 +19,7 @@ module Volcano
       access_token, refresh_token = extract_auth_bootstrap(options)
       validate_auth_bootstrap(access_token, refresh_token)
       transport, socket_factory = extract_adapters(options)
-      @api_url = api_url.delete_suffix('/')
+      @api_url = api_url.delete_suffix('/').freeze
       @anon_key = anon_key
       @service_key = service_key
       initialize_auth_state(access_token, refresh_token)

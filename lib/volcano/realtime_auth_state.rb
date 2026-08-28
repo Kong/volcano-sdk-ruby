@@ -5,10 +5,11 @@ module Volcano
   module RealtimeAuthState
     def reset_authentication
       protocol = @protocol_lock ? @protocol_lock.acquire { detach_protocol } : detach_protocol
+      channels = @channels.values
       begin
         protocol&.close
       ensure
-        @channels.each_value(&:reset_authentication)
+        channels.each(&:reset_authentication)
       end
     rescue StandardError => e
       warn(public_error(e).message)

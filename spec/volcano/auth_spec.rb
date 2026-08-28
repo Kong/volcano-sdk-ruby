@@ -674,6 +674,19 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session.access_token).to eq('access-token')
     end
 
+    it 'preserves schema-valid provider errors without the optional code' do
+      transport.queue(
+        :call_oauth_provider_api, 401,
+        'error' => 'provider is not linked'
+      )
+
+      expect do
+        client.auth.call_oauth_api(provider: 'github', endpoint: '/user')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'provider is not linked')
+      expect(client.current_session.access_token).to eq('access-token')
+      expect(transport.calls.map(&:first)).to eq([:call_oauth_provider_api])
+    end
+
     it 'refreshes an expired session before retrying a provider API call' do
       transport.queue(:call_oauth_provider_api, 401, 'error' => 'not authenticated')
       transport.queue(:auth_refresh, 200, token_payload(access: 'rotated-access'))

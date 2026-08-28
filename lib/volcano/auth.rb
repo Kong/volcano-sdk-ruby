@@ -52,7 +52,7 @@ module Volcano
     private
 
     def synchronize_auth_operation(&)
-      @client.defer_auth_notifications { @operation_monitor.synchronize(&) }
+      @client.defer_auth_notifications(@operation_monitor, &)
     end
   end
 end

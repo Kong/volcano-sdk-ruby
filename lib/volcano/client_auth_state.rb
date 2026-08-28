@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require 'monitor'
+require_relative 'client_auth_notifications'
 
 # Public namespace for Volcano SDK client state.
 module Volcano
   # Owns one client's in-memory auth state and listener registry.
   module ClientAuthState
+    include ClientAuthNotifications
+
     def commit_auth(session, user)
       dispatch = @auth_state_monitor.synchronize do
         @current_session = session
@@ -47,17 +50,6 @@ module Volcano
       build_unsubscribe(listener_id)
     end
 
-    def defer_auth_notifications
-      @auth_state_monitor.synchronize { @auth_notification_deferral_depth += 1 }
-      yield
-    ensure
-      dispatch = @auth_state_monitor.synchronize do
-        @auth_notification_deferral_depth -= 1
-        begin_deferred_auth_dispatch
-      end
-      drain_auth_notifications if dispatch
-    end
-
     private
 
     def initialize_auth_state(access_token, refresh_token)
@@ -81,40 +73,6 @@ module Volcano
           removed = true
         end
       end
-    end
-
-    def enqueue_auth_notification(listeners, user)
-      @auth_notifications << [listeners, user]
-      return false if @dispatching_auth_notifications || @auth_notification_deferral_depth.positive?
-
-      @dispatching_auth_notifications = true
-    end
-
-    def begin_deferred_auth_dispatch
-      return false if @auth_notification_deferral_depth.positive?
-      return false if @dispatching_auth_notifications || @auth_notifications.empty?
-
-      @dispatching_auth_notifications = true
-    end
-
-    def drain_auth_notifications
-      loop do
-        notification = @auth_state_monitor.synchronize do
-          @dispatching_auth_notifications = false if @auth_notifications.empty?
-          @auth_notifications.shift
-        end
-        break unless notification
-
-        listeners, user = notification
-        listeners.each { |listener| notify_auth_listener(listener, user) }
-      end
-      nil
-    end
-
-    def notify_auth_listener(listener, user)
-      listener.call(user)
-    rescue StandardError
-      warn('Volcano auth-state listener failed')
     end
 
     def reset_realtime_authentication

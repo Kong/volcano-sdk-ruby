@@ -4,8 +4,8 @@
 module Volcano
   # Converts normalized response hashes into public immutable values.
   module AuthMapping
-    SESSION_TIME_FIELDS = %i[
-      expires_at last_activity_at session_started_at created_at updated_at
+    OPTIONAL_SESSION_TIME_FIELDS = %i[
+      last_activity_at session_started_at created_at updated_at
     ].freeze
 
     private
@@ -38,14 +38,22 @@ module Volcano
         provider: payload.fetch('provider'), is_active: payload.fetch('is_active'),
         is_current: payload.fetch('is_current'), user_agent: payload['user_agent'],
         ip_address: payload['ip_address'], last_ip_address: payload['last_ip_address'],
+        expires_at: required_time(payload, 'expires_at'),
         **session_time_attributes(payload)
       }
     end
 
     def session_time_attributes(payload)
-      SESSION_TIME_FIELDS.to_h do |field|
+      OPTIONAL_SESSION_TIME_FIELDS.to_h do |field|
         [field, optional_time(payload[field.to_s])]
       end
+    end
+
+    def required_time(payload, field)
+      value = optional_time(payload.fetch(field))
+      return value if value
+
+      raise auth_response_error
     end
 
     def mapping(value)

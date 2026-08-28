@@ -487,6 +487,16 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session).to be_nil
     end
 
+    it 'rejects token responses without a usable access token' do
+      [nil, ''].each do |access_token|
+        transport.queue(:auth_signin, 200, token_payload(access: access_token))
+        expect { client.auth.sign_in(email: 'user@example.com', password: 'password') }.to raise_error(
+          Volcano::Error::AuthenticationError, 'Invalid authentication response'
+        )
+      end
+      expect(client.current_session).to be_nil
+    end
+
     it 'rejects users without a valid status' do
       invalid_user = AUTH_SPEC_USER_PAYLOAD.merge('status' => 'unknown')
       transport.queue(:auth_signin, 200, token_payload.merge('user' => invalid_user))
@@ -745,6 +755,21 @@ RSpec.describe Volcano::Auth do
       expect { nested_unsubscribers.first.call }.not_to raise_error
     end
 
+    it 'does not let a waiting operation defer the active operation listener' do
+      serial = blocking_auth_transport(:auth_signin, token_payload)
+      session_client = Volcano::Client.new(anon_key: 'anon-key', _transport: serial)
+      observed = Queue.new.tap { |events| session_client.auth.on_auth_state_change { |user| events << user if user } }
+      first = Thread.new { session_client.auth.sign_in(email: 'first@example.com', password: 'password') }
+      serial.entered.pop
+      second = Thread.new { session_client.auth.sign_in(email: 'second@example.com', password: 'password') }
+      Timeout.timeout(1) { Thread.pass until second.status == 'sleep' }
+      serial.release
+      expect(Timeout.timeout(1) { observed.pop }.id).to eq('user-id')
+      serial.entered.pop
+      serial.release
+      expect([first.value.user_id, second.value.user_id]).to eq(%w[user-id user-id])
+    end
+
     it 'preserves anonymous conversion success when session refresh fails' do
       transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_refresh, 503, 'error' => 'temporarily unavailable')
@@ -948,6 +973,15 @@ RSpec.describe Volcano::Auth do
         client.current_session
       ]
       expect(results).to eq(['session-id', 1, nil, nil, nil])
+    end
+
+    it 'rejects listed sessions without an expiry' do
+      session = current_auth_session.except('expires_at')
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session], 'total' => 1, 'page' => 1, 'limit' => 20)
+
+      expect { client.auth.get_sessions }.to raise_error(
+        Volcano::Error::AuthenticationError, 'Invalid authentication response'
+      )
     end
 
     it 'exposes immutable identity and sign-in method values' do

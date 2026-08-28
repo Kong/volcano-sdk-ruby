@@ -42,13 +42,20 @@ module Volcano
     def build_session(payload)
       user = build_user(mapping(payload.fetch('user')))
       session = Session.new(
-        access_token: payload.fetch('access_token'),
+        access_token: required_access_token(payload),
         refresh_token: payload['refresh_token'],
         expires_in: required_expires_in(payload),
         user_id: user.id
       )
       [session, user]
     rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def required_access_token(payload)
+      access_token = payload.fetch('access_token')
+      return access_token if access_token.is_a?(String) && !access_token.empty?
+
       raise auth_response_error
     end
 

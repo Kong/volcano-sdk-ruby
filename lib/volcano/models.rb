@@ -14,25 +14,31 @@ module Volcano
 
     def copy(value)
       case value
-      when Hash then value.to_h { |key, item| [key.to_s.freeze, copy(item)] }.freeze
+      when Hash then copy_hash(value)
       when Array then value.map { |item| copy(item) }.freeze
-      else value&.freeze
+      else copy_scalar(value)
       end
+    end
+
+    def copy_hash(value)
+      value.to_h { |key, item| [key.to_s.dup.freeze, copy(item)] }.freeze
+    end
+
+    def copy_scalar(value)
+      return if value.nil?
+
+      copied = value.is_a?(String) || value.is_a?(Time) ? value.dup : value
+      copied.freeze
     end
 
     def user_attributes(attributes)
       validate_user_attributes(attributes)
-      USER_DEFAULTS.merge(attributes).tap { |values| copy_user_metadata(values) }
+      USER_DEFAULTS.merge(attributes).transform_values { |value| copy(value) }
     end
 
     def validate_user_attributes(attributes)
       unknown = attributes.keys - USER_DEFAULTS.keys
       raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
-    end
-
-    def copy_user_metadata(values)
-      values[:user_metadata] = copy(values[:user_metadata])
-      values[:app_metadata] = copy(values[:app_metadata])
     end
   end
   private_constant :ImmutableValue
@@ -43,7 +49,10 @@ module Volcano
     :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at
   ) do
     def initialize(id:, email:, **attributes)
-      super(id:, email:, **ImmutableValue.user_attributes(attributes))
+      super(
+        id: ImmutableValue.copy(id), email: ImmutableValue.copy(email),
+        **ImmutableValue.user_attributes(attributes)
+      )
     end
 
     def inspect
@@ -54,12 +63,17 @@ module Volcano
   # Authenticated user session.
   Session = Data.define(:access_token, :refresh_token, :expires_in, :user_id) do
     def initialize(access_token:, refresh_token: nil, expires_in: nil, user_id: nil)
-      super
+      super(
+        access_token: ImmutableValue.copy(access_token),
+        refresh_token: ImmutableValue.copy(refresh_token),
+        expires_in:, user_id: ImmutableValue.copy(user_id)
+      )
     end
 
     def inspect
       "#<#{self.class} expires_in=#{expires_in.inspect} user_id=#{user_id.inspect}>"
     end
+    alias_method :to_s, :inspect
   end
 
   # Result of an email-and-password sign-up request.
@@ -72,24 +86,40 @@ module Volcano
   end
 
   # Acknowledgement returned by an authentication operation.
-  MessageResult = Data.define(:message)
+  MessageResult = Data.define(:message) do
+    def initialize(message:)
+      super(message: ImmutableValue.copy(message))
+    end
+  end
 
   # Result of an email-change request.
   EmailChangeResult = Data.define(:message, :new_email, :email_change_token) do
     def initialize(message:, new_email:, email_change_token: nil)
-      super
+      super(
+        message: ImmutableValue.copy(message), new_email: ImmutableValue.copy(new_email),
+        email_change_token: ImmutableValue.copy(email_change_token)
+      )
     end
 
     def inspect
       "#<#{self.class} message=#{message.inspect} new_email=#{new_email.inspect}>"
     end
+    alias_method :to_s, :inspect
   end
 
   # Authorization URL and caller-owned state for an authentication flow.
   AuthorizationRequest = Data.define(:authorization_url, :state) do
+    def initialize(authorization_url:, state:)
+      super(
+        authorization_url: ImmutableValue.copy(authorization_url),
+        state: ImmutableValue.copy(state)
+      )
+    end
+
     def inspect
       "#<#{self.class} authorization_url=[REDACTED] state=[REDACTED]>"
     end
+    alias_method :to_s, :inspect
   end
 
   # OAuth provider linked to the current user.

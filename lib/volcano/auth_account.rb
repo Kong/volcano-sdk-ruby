@@ -35,7 +35,9 @@ module Volcano
       payload = anonymous_body(
         :auth_reset_password, 200, secrets: [token, new_password], token:, new_password:
       )
-      build_message(mapping(payload))
+      result = build_message(mapping(payload))
+      @client.clear_auth
+      result
     end
 
     def request_email_change(new_email:)
@@ -52,7 +54,9 @@ module Volcano
       payload = authenticated_body(
         :auth_confirm_email_change, 200, secrets: [token], email_change_token: token
       )
-      build_message(mapping(payload))
+      response = mapping(payload)
+      store_payload_user(response)
+      build_message(response)
     end
 
     def cancel_email_change

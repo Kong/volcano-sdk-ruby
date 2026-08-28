@@ -274,6 +274,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request.options.fetch(:timeout)).to eq(1_500)
   end
 
+  it 'preserves an explicit no-redirect request option' do
+    configuration = InternalGenerated::Configuration.new
+    request = described_class::ApiClient.new(configuration).build_request(
+      :get, '/auth/oauth/github/authorize', auth_names: [], follow_location: false
+    )
+
+    expect(request.options.fetch(:followlocation)).to be(false)
+  end
+
   it 'preserves object path segments and percent-encodes spaces' do
     storage, calls = recording_storage_api
     file = Tempfile.new('volcano-storage-path')
@@ -426,5 +435,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
     expect(authentication.calls[0][1][0]).to be_a(InternalGenerated::AuthSignupRequest)
     expect(oauth.calls[-1][1][1]).to be_a(InternalGenerated::CallOAuthProviderAPIRequest)
+  end
+
+  it 'disables redirects for OAuth authorization' do
+    transport, _, oauth = auth_surface_transport
+    transport.auth_oauth_authorize(
+      authorization: 'credential', provider: 'github', redirect_url: 'https://app.test/callback', state: 'state'
+    )
+
+    expect(oauth.calls.first[1].last.fetch(:follow_location)).to be(false)
   end
 end

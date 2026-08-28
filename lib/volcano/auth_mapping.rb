@@ -97,6 +97,8 @@ module Volcano
     end
 
     def optional_time(value)
+      return value if value.is_a?(Time)
+
       value && Time.iso8601(value.to_s)
     rescue ArgumentError
       raise auth_response_error
@@ -117,6 +119,8 @@ module Volcano
     end
 
     def secure_state?(state, expected_state)
+      return false unless state.is_a?(String) && expected_state.is_a?(String)
+
       state.bytesize == expected_state.bytesize && OpenSSL.secure_compare(state, expected_state)
     end
   end

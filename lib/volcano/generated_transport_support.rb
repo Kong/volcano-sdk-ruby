@@ -30,6 +30,12 @@ module Volcano
 
     # Corrects generated content negotiation and private model lookup.
     class ApiClient < Generated::ApiClient
+      def build_request(http_method, path, options = {})
+        request = super
+        request.options[:followlocation] = options[:follow_location] if options.key?(:follow_location)
+        request
+      end
+
       def select_header_content_type(content_types)
         if content_types.include?('multipart/form-data') && content_types.include?('application/json')
           return 'multipart/form-data'

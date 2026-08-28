@@ -77,6 +77,25 @@ RSpec.describe Volcano::Auth do
       end.to raise_error(ArgumentError, /refresh token requires an access token/i)
     end
 
+    it 'redacts secrets from inspect and string conversion' do
+      session = Volcano::Session.new(access_token: 'access', refresh_token: 'refresh')
+      authorization = Volcano::AuthorizationRequest.new(
+        authorization_url: 'https://secret', state: 'generated-state'
+      )
+
+      expect([session.inspect, session.to_s].join).not_to include('access', 'refresh')
+      expect([authorization.inspect, authorization.to_s].join).not_to include('https://secret', 'generated-state')
+    end
+
+    it 'copies and freezes caller-owned session strings' do
+      access_token = +'access-token'
+      session = Volcano::Session.new(access_token:)
+      access_token.clear
+
+      expect(session.access_token).to eq('access-token')
+      expect(session.access_token).to be_frozen
+    end
+
     it 'commits and clears user and session state atomically' do
       user = Volcano::User.new(id: 'user-id', email: 'user@example.com')
       session = Volcano::Session.new(access_token: 'next-access', refresh_token: 'next-refresh', user_id: 'user-id')
@@ -238,10 +257,11 @@ RSpec.describe Volcano::Auth do
         client.auth.convert_anonymous(email: 'user@example.com', password: 'password').id,
         client.auth.confirm_email(token: 'token').message,
         client.auth.resend_confirmation(email: 'user@example.com').message,
-        client.auth.forgot_password(email: 'user@example.com').message,
-        client.auth.reset_password(token: 'token', new_password: 'next').message
+        client.auth.forgot_password(email: 'user@example.com').message
       ]
-      expect(results).to eq(%w[user-id user-id confirmed resent sent reset])
+      expect(results).to eq(%w[user-id user-id confirmed resent sent])
+      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
+      expect(client.current_session).to be_nil
     end
 
     it 'supports the complete email-change lifecycle' do
@@ -249,28 +269,37 @@ RSpec.describe Volcano::Auth do
         :auth_request_email_change, 200,
         'message' => 'sent', 'new_email' => 'next@example.com', 'email_change_token' => 'development-token'
       )
-      transport.queue(:auth_confirm_email_change, 200, 'message' => 'changed')
+      transport.queue(
+        :auth_confirm_email_change, 200,
+        'message' => 'changed', 'user' => AUTH_SPEC_USER_PAYLOAD.merge('email' => 'next@example.com')
+      )
       transport.queue(:auth_cancel_email_change, 200, 'message' => 'cancelled')
 
       result = client.auth.request_email_change(new_email: 'next@example.com')
-      expect(result.new_email).to eq('next@example.com')
       expect(result.inspect).not_to include('development-token')
-      expect(client.auth.confirm_email_change(token: 'token').message).to eq('changed')
-      expect(client.auth.cancel_email_change.message).to eq('cancelled')
+      confirmation = client.auth.confirm_email_change(token: 'token')
+      cancellation = client.auth.cancel_email_change
+      expect(
+        [result.new_email, confirmation.message, client.current_user.email, cancellation.message]
+      ).to eq(%w[next@example.com changed next@example.com cancelled])
     end
 
     it 'builds hosted and OAuth authorization requests and validates callback state' do
       allow(SecureRandom).to receive(:urlsafe_base64).and_return('generated-state')
-      transport.queue(:auth_oauth_authorize, 302, nil, 'Location' => 'https://github.test/authorize')
+      transport.queue(:auth_oauth_authorize, 307, nil, 'Location' => 'https://github.test/authorize')
       transport.queue(:auth_oauth_exchange, 200, token_payload)
 
       hosted = client.auth.get_hosted_auth_url(project_id: 'project/id', action: 'login')
       oauth = client.auth.get_oauth_authorization_url(provider: 'github', redirect_url: 'https://app.test/callback')
       expect(hosted.authorization_url).to include('/projects/project%2Fid/auth/hosted')
-      expect(oauth.state).to eq('generated-state')
       expect do
         client.auth.exchange_oauth_code(
           code: 'code', redirect_url: 'https://app.test/callback', state: 'wrong', expected_state: oauth.state
+        )
+      end.to raise_error(Volcano::Error::ValidationError)
+      expect do
+        client.auth.exchange_oauth_code(
+          code: 'code', redirect_url: 'https://app.test/callback', state: nil, expected_state: oauth.state
         )
       end.to raise_error(Volcano::Error::ValidationError)
       expect(client.auth.exchange_oauth_code(
@@ -303,7 +332,7 @@ RSpec.describe Volcano::Auth do
     it 'lists and deletes current-user device sessions' do
       session = {
         'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
-        'expires_at' => '2026-08-29T12:00:00Z', 'is_active' => true, 'is_current' => true
+        'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
       }
       transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session], 'total' => 1, 'page' => 1, 'limit' => 20)
       transport.queue(:auth_delete_my_session, 204)

@@ -92,7 +92,7 @@ module Volcano
         :auth_oauth_authorize, authorization: @client.anon_token,
                                provider:, redirect_url:, state:
       )
-      Transport.body(response, 302)
+      Transport.body(response, 307)
       response
     end
   end

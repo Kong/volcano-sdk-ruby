@@ -93,7 +93,9 @@ module Volcano
   # Generated OAuth operations exposed through the stable transport.
   module GeneratedOAuthTransport
     def auth_oauth_authorize(authorization:, provider:, redirect_url:, state:)
-      options = { redirect_url:, client_state: state, response_mode: 'code' }
+      options = {
+        redirect_url:, client_state: state, response_mode: 'code', follow_location: false
+      }
       oauth_call(authorization, :auth_o_auth_authorize_with_http_info, provider, authorization, options)
     end
 

@@ -149,6 +149,29 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'invalidates an authenticated socket when client auth is cleared' do
+    first = FacadeSocket.new
+    second = FacadeSocket.new
+    sockets = [first, second]
+    client = signed_in_client(->(_address) { sockets.shift })
+
+    Async do
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      client.clear_auth
+      expect(first).to be_closed
+      expect { channel.send(event: 'message') }.to raise_error(
+        Volcano::Realtime::ClosedError, /not subscribed/
+      )
+
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      channel.subscribe
+      client.realtime.disconnect
+    end.wait
+
+    expect(second).to be_closed
+  end
+
   it 'rejects duplicate subscriptions' do
     socket = FacadeSocket.new
     client = Volcano::Client.new(

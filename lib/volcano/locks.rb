@@ -4,6 +4,13 @@ require 'securerandom'
 require 'time'
 
 module Volcano
+  # Lease returned for an acquired distributed lock.
+  LockLease = Data.define(:key, :token, :expires_at, :fencing_token) do
+    def initialize(key:, token:, expires_at:, fencing_token:)
+      super(**ImmutableValue.copy_attributes(key:, token:, expires_at:, fencing_token:))
+    end
+  end
+
   # Acquires and releases project-scoped distributed locks.
   class Locks
     def initialize(client, transport)

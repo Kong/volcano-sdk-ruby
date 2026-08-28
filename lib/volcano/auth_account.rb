@@ -13,13 +13,15 @@ module Volcano
       payload = authenticated_body(
         :auth_convert_anonymous, 200, secrets: [password], email:, password:, user_metadata:
       )
-      store_payload_user(payload)
+      converted_user = build_payload_user(payload)
+      refresh_session
+      @client.current_user || converted_user
     end
 
     def confirm_email(token:)
       payload = anonymous_body(:auth_confirm_email, 200, secrets: [token], token:)
       result = build_message(mapping(payload))
-      get_user if @client.current_session
+      refresh_confirmed_user if @client.current_session
       result
     end
 
@@ -37,9 +39,7 @@ module Volcano
       payload = anonymous_body(
         :auth_reset_password, 200, secrets: [token, new_password], token:, new_password:
       )
-      result = build_message(mapping(payload))
-      @client.clear_auth
-      result
+      build_message(mapping(payload))
     end
 
     def request_email_change(new_email:)
@@ -68,11 +68,23 @@ module Volcano
     private
 
     def store_payload_user(payload)
-      user = build_user(mapping(mapping(payload).fetch('user')))
+      user = build_payload_user(payload)
       @client.store_user(user)
       user
     rescue KeyError
       raise auth_response_error
+    end
+
+    def build_payload_user(payload)
+      build_user(mapping(mapping(payload).fetch('user')))
+    rescue KeyError
+      raise auth_response_error
+    end
+
+    def refresh_confirmed_user
+      get_user
+    rescue Error::VolcanoError
+      nil
     end
   end
   private_constant :AuthAccount

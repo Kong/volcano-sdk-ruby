@@ -7,7 +7,7 @@ module Volcano
     private
 
     def anonymous_body(operation, expected_status, secrets: [], **arguments)
-      securely(*secrets) do
+      securely(@client.anon_token, *secrets) do
         response = transport_response(operation, authorization: @client.anon_token, **arguments)
         Transport.body(response, expected_status)
       end

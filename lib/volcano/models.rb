@@ -1,48 +1,9 @@
 # frozen_string_literal: true
 
+require_relative 'immutable_value'
+
 # Public namespace for Volcano SDK values.
 module Volcano
-  # Recursively copies JSON-like values into immutable public data.
-  module ImmutableValue
-    USER_DEFAULTS = {
-      project_id: nil, email_confirmed: nil, user_metadata: nil,
-      app_metadata: nil, avatar_url: nil, status: nil, banned_until: nil,
-      last_sign_in_at: nil, created_at: nil, updated_at: nil
-    }.freeze
-
-    module_function
-
-    def copy(value)
-      case value
-      when Hash then copy_hash(value)
-      when Array then value.map { |item| copy(item) }.freeze
-      else copy_scalar(value)
-      end
-    end
-
-    def copy_hash(value)
-      value.to_h { |key, item| [key.to_s.dup.freeze, copy(item)] }.freeze
-    end
-
-    def copy_scalar(value)
-      return if value.nil?
-
-      copied = value.is_a?(String) || value.is_a?(Time) ? value.dup : value
-      copied.freeze
-    end
-
-    def user_attributes(attributes)
-      validate_user_attributes(attributes)
-      USER_DEFAULTS.merge(attributes).transform_values { |value| copy(value) }
-    end
-
-    def validate_user_attributes(attributes)
-      unknown = attributes.keys - USER_DEFAULTS.keys
-      raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
-    end
-  end
-  private_constant :ImmutableValue
-
   # Authenticated Volcano user.
   User = Data.define(
     :id, :email, :project_id, :email_confirmed, :user_metadata, :app_metadata,
@@ -81,7 +42,9 @@ module Volcano
     :confirmation_required, :message, :user, :session
   ) do
     def initialize(confirmation_required:, message:, user: nil, session: nil)
-      super
+      super(
+        **ImmutableValue.copy_attributes(confirmation_required:, message:, user:, session:)
+      )
     end
   end
 
@@ -125,14 +88,14 @@ module Volcano
   # OAuth provider linked to the current user.
   OAuthProvider = Data.define(:provider, :linked_at, :updated_at) do
     def initialize(provider:, linked_at: nil, updated_at: nil)
-      super
+      super(**ImmutableValue.copy_attributes(provider:, linked_at:, updated_at:))
     end
   end
 
   # Acknowledgement for an OAuth provider-token operation.
   OAuthTokenResult = Data.define(:provider, :expires_in, :message) do
     def initialize(provider:, expires_in: nil, message: nil)
-      super
+      super(**ImmutableValue.copy_attributes(provider:, expires_in:, message:))
     end
   end
 
@@ -148,17 +111,13 @@ module Volcano
       last_activity_at: nil, session_started_at: nil, created_at: nil,
       updated_at: nil
     )
-      super
+      super(
+        **ImmutableValue.copy_attributes(
+          id:, user_id:, provider:, expires_at:, is_active:, is_current:,
+          user_agent:, ip_address:, last_ip_address:, last_activity_at:,
+          session_started_at:, created_at:, updated_at:
+        )
+      )
     end
   end
-
-  # Page of device sessions associated with the current user.
-  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages) do
-    def initialize(sessions: [], total: nil, page: nil, limit: nil, total_pages: nil)
-      super(sessions: sessions.dup.freeze, total:, page:, limit:, total_pages:)
-    end
-  end
-
-  # Lease returned for an acquired distributed lock.
-  LockLease = Data.define(:key, :token, :expires_at, :fencing_token)
 end

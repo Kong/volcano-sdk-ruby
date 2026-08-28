@@ -170,19 +170,24 @@ RSpec.describe Volcano::Auth do
     end
 
     it 'exports immutable public authentication values' do
+      session_id = +'session-id'
+      expires_at = Time.utc(2026)
+      auth_session = Volcano::AuthSession.new(
+        id: session_id, user_id: 'user-id', provider: 'password',
+        expires_at:, is_active: true, is_current: true
+      )
       values = [
         Volcano::SignUpResult.new(confirmation_required: true, message: 'sent'),
         Volcano::MessageResult.new(message: 'sent'),
         Volcano::OAuthProvider.new(provider: 'github'),
         Volcano::OAuthTokenResult.new(provider: 'github'),
-        Volcano::AuthSession.new(
-          id: 'session-id', user_id: 'user-id', provider: 'password',
-          expires_at: Time.utc(2026), is_active: true, is_current: true
-        ),
+        auth_session,
         Volcano::SessionPage.new
       ]
+      session_id.clear
 
       expect(values).to all(be_frozen)
+      expect([auth_session.id, auth_session.expires_at.frozen?]).to eq(['session-id', true])
     end
   end
 
@@ -285,6 +290,15 @@ RSpec.describe Volcano::Auth do
       end
     end
 
+    it 'redacts the anonymous key from authentication transport failures' do
+      transport.queue_error(:auth_signin, IOError.new('anon-key password'))
+
+      expect { client.auth.sign_in(email: 'user@example.com', password: 'password') }.to raise_error do |error|
+        expect(error.message).to eq('[REDACTED] [REDACTED]')
+        expect(error.cause).to be_nil
+      end
+    end
+
     it 'always clears sign-out state and isolates listener failures' do
       session_client = Volcano::Client.new(
         anon_key: 'anon-key', access_token: 'access', refresh_token: 'refresh', _transport: transport
@@ -313,6 +327,10 @@ RSpec.describe Volcano::Auth do
     it 'supports anonymous conversion and email workflows' do
       transport.queue(:auth_signup_anonymous, 201, token_payload)
       transport.queue(:auth_convert_anonymous, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
+      transport.queue(
+        :auth_refresh, 200,
+        token_payload(access: 'converted-access', refresh: 'converted-refresh')
+      )
       transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
       transport.queue(:auth_get_user, 200, 'user' => AUTH_SPEC_USER_PAYLOAD)
       transport.queue(:auth_resend_confirmation, 200, 'message' => 'resent')
@@ -328,7 +346,14 @@ RSpec.describe Volcano::Auth do
       ]
       expect(results).to eq(%w[user-id user-id confirmed resent sent])
       expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
-      expect(client.current_session).to be_nil
+      expect(client.current_session.access_token).to eq('converted-access')
+    end
+
+    it 'preserves confirmation success when the profile refresh fails' do
+      transport.queue(:auth_confirm_email, 200, 'message' => 'confirmed')
+      transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
+
+      expect(client.auth.confirm_email(token: 'token').message).to eq('confirmed')
     end
 
     it 'supports the complete email-change lifecycle' do
@@ -402,10 +427,12 @@ RSpec.describe Volcano::Auth do
         'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
       }
       transport.queue(:auth_get_my_sessions, 200, 'sessions' => [session], 'total' => 1, 'page' => 1, 'limit' => 20)
+      transport.queue(:auth_get_my_sessions, 200, 'sessions' => [], 'total' => 1, 'page' => 2, 'limit' => 20)
       transport.queue(:auth_delete_my_session, 204)
       transport.queue(:auth_delete_all_my_sessions, 204)
 
       page = client.auth.get_sessions
+      client.auth.get_sessions(page: 2)
       results = [
         page.sessions.first.id, page.total,
         client.auth.delete_all_other_sessions,

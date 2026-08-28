@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require 'uri'
+require_relative 'realtime_auth_state'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
   class Realtime
+    include RealtimeAuthState
+
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
       @api_url = api_url
@@ -126,6 +129,7 @@ module Volcano
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
+        @auth_generation = 0
         @lifecycle_lock = nil
       end
 
@@ -176,13 +180,22 @@ module Volcano
         @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
       end
 
+      def reset_authentication
+        @auth_generation += 1
+        @handler_registered = false
+        @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
+      end
+
       private
 
       def register_handler(protocol)
         return if @handler_registered
 
+        generation = @auth_generation
         protocol.on_publication(@name) do |event, data|
-          @callbacks.each { |callback| callback.call(data) } if event == 'message'
+          next unless generation == @auth_generation && event == 'message'
+
+          @callbacks.each { |callback| callback.call(data) }
         end
         @handler_registered = true
       end

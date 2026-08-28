@@ -97,6 +97,7 @@ module Volcano
 
     def commit_session(payload)
       session, user = build_session(payload)
+      @current_device_session_ids = [].freeze
       @client.commit_auth(session, user)
       session
     end

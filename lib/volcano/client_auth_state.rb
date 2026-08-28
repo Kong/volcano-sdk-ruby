@@ -47,6 +47,17 @@ module Volcano
       build_unsubscribe(listener_id)
     end
 
+    def defer_auth_notifications
+      @auth_state_monitor.synchronize { @auth_notification_deferral_depth += 1 }
+      yield
+    ensure
+      dispatch = @auth_state_monitor.synchronize do
+        @auth_notification_deferral_depth -= 1
+        begin_deferred_auth_dispatch
+      end
+      drain_auth_notifications if dispatch
+    end
+
     private
 
     def initialize_auth_state(access_token, refresh_token)
@@ -57,6 +68,7 @@ module Volcano
       @next_auth_listener_id = 0
       @auth_notifications = []
       @dispatching_auth_notifications = false
+      @auth_notification_deferral_depth = 0
     end
 
     def build_unsubscribe(listener_id)
@@ -73,7 +85,14 @@ module Volcano
 
     def enqueue_auth_notification(listeners, user)
       @auth_notifications << [listeners, user]
-      return false if @dispatching_auth_notifications
+      return false if @dispatching_auth_notifications || @auth_notification_deferral_depth.positive?
+
+      @dispatching_auth_notifications = true
+    end
+
+    def begin_deferred_auth_dispatch
+      return false if @auth_notification_deferral_depth.positive?
+      return false if @dispatching_auth_notifications || @auth_notifications.empty?
 
       @dispatching_auth_notifications = true
     end

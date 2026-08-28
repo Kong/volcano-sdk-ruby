@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'base64'
+require 'json'
+
 # Public namespace for Volcano SDK authentication.
 module Volcano
   SESSION_PAGE_FIELDS = %i[
@@ -34,7 +37,7 @@ module Volcano
 
     def delete_session(session_id:)
       synchronize_auth_operation do
-        deletes_current_session = @current_device_session_ids.include?(session_id)
+        deletes_current_session = deletes_current_session?(session_id)
         authenticated_body(:auth_delete_my_session, 204, session_id:)
         if deletes_current_session
           @current_device_session_ids = [].freeze
@@ -50,6 +53,24 @@ module Volcano
     end
 
     private
+
+    def deletes_current_session?(session_id)
+      @current_device_session_ids.include?(session_id) || token_session_id == session_id
+    end
+
+    def token_session_id
+      token = @client.current_session&.access_token
+      encoded_payload = token&.split('.', 3)&.at(1)
+      return unless encoded_payload
+
+      session_id_from_payload(JSON.parse(Base64.urlsafe_decode64(encoded_payload)))
+    rescue ArgumentError, JSON::ParserError
+      nil
+    end
+
+    def session_id_from_payload(payload)
+      payload['session_id'] if payload.is_a?(Hash)
+    end
 
     def session_query(page:, limit:, options:)
       unknown = options.keys - SESSION_OPTIONS

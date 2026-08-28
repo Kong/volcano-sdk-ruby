@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'pp'
+require 'base64'
+require 'json'
 require 'spec_helper'
 
 AuthSpecResponse = Volcano::Transport::Response
@@ -103,6 +105,11 @@ class BlockingAuthTransport < AuthSpecTransport
 end
 
 RSpec.describe Volcano::Auth do
+  def access_token_for_session(session_id)
+    payload = Base64.urlsafe_encode64(JSON.generate('session_id' => session_id), padding: false)
+    "header.#{payload}.signature"
+  end
+
   def token_payload(access: 'access-token', refresh: 'refresh-token')
     {
       'access_token' => access,
@@ -123,6 +130,57 @@ RSpec.describe Volcano::Auth do
       'id' => 'session-id', 'user_id' => 'user-id', 'provider' => 'password',
       'expires_at' => Time.utc(2026, 8, 29, 12), 'is_active' => true, 'is_current' => true
     }
+  end
+
+  def identity_payload
+    {
+      'id' => '3cd3e058-e3ff-42a5-ae4d-650ef9b45746', 'email' => 'user@example.com',
+      'email_verified' => true, 'is_primary' => true, 'created_at' => '2026-08-27T12:00:00Z'
+    }
+  end
+
+  def method_payload(identity)
+    {
+      'id' => '7f518a4b-407b-4121-907b-d72a2c7c1ac6', 'type' => 'oauth', 'provider' => 'github',
+      'identity_id' => identity.fetch('id'), 'email' => identity.fetch('email'), 'is_primary' => true,
+      'last_used_at' => '2026-08-28T12:00:00Z', 'created_at' => '2026-08-27T12:00:00Z',
+      'updated_at' => '2026-08-28T12:00:00Z'
+    }
+  end
+
+  def public_identity(identity)
+    Volcano::AuthIdentity.new(
+      id: identity.fetch('id'), email: 'user@example.com', email_verified: true, is_primary: true,
+      created_at: Time.utc(2026, 8, 27, 12)
+    )
+  end
+
+  def public_method(method)
+    Volcano::AuthMethod.new(
+      id: method.fetch('id'), type: 'oauth', provider: 'github', identity_id: method.fetch('identity_id'),
+      email: 'user@example.com', is_primary: true, last_used_at: Time.utc(2026, 8, 28, 12),
+      created_at: Time.utc(2026, 8, 27, 12), updated_at: Time.utc(2026, 8, 28, 12)
+    )
+  end
+
+  def listener_outcomes(client)
+    outcomes = Queue.new
+    started = false
+    client.auth.on_auth_state_change do |user|
+      next if !user || started
+
+      started = true
+      worker = Thread.new { client.auth.sign_out }
+      record_listener_worker(outcomes, worker)
+    end
+    outcomes
+  end
+
+  def record_listener_worker(outcomes, worker)
+    finished = worker.join(0.2)
+    outcomes << (finished ? :completed : :timed_out)
+    worker.kill unless finished
+    worker.join
   end
 
   def blocking_auth_transport(operation, body)
@@ -151,6 +209,12 @@ RSpec.describe Volcano::Auth do
       partial = Volcano::Client.new(anon_key: 'anon-key', access_token: 'access-token', _transport: Object.new)
 
       expect(partial.current_session.refresh_token).to be_nil
+    end
+
+    it 'preserves the legacy positional session member order' do
+      session = Volcano::Session.new('access-token', 'refresh-token', 'user-id')
+
+      expect([session.user_id, session.expires_in]).to eq(['user-id', nil])
     end
 
     it 'exposes an immutable API URL' do
@@ -366,6 +430,16 @@ RSpec.describe Volcano::Auth do
 
       expect(events).to eq([[:first, 'user-id'], [:second, 'user-id'], [:first, nil], [:second, nil]])
       expect(client.current_session).to be_nil
+    end
+
+    it 'dispatches listeners after releasing the auth operation monitor' do
+      transport.queue(:auth_signin, 200, token_payload)
+      transport.queue(:auth_logout, 204)
+      outcomes = listener_outcomes(client)
+
+      client.auth.sign_in(email: 'user@example.com', password: 'password')
+
+      expect(outcomes.pop).to eq(:completed)
     end
 
     it 'retrieves and updates the user without replacing the session' do
@@ -785,6 +859,21 @@ RSpec.describe Volcano::Auth do
       expect(results).to eq(['session-id', 1, nil, nil, nil])
     end
 
+    it 'exposes immutable identity and sign-in method values' do
+      identity = identity_payload
+      method = method_payload(identity)
+      transport.queue(:auth_list_identities, 200, 'identities' => [identity])
+      transport.queue(:auth_list_methods, 200, 'methods' => [method])
+      transport.queue(:auth_promote_method, 200, method)
+      transport.queue(:auth_unlink_identity, 204)
+      results = [client.auth.list_identities, client.auth.list_methods]
+      results << client.auth.promote_method(method_id: method.fetch('id'))
+      results << client.auth.unlink_identity(identity_id: identity.fetch('id'))
+
+      expect(results).to eq([[public_identity(identity)], [public_method(method)], public_method(method), nil])
+      expect([results.first.frozen?, results[2].frozen?]).to all(be(true))
+    end
+
     it 'exposes session filters and cursor navigation' do
       payload = {
         'data' => [current_auth_session], 'total' => 3, 'limit' => 1,
@@ -817,6 +906,19 @@ RSpec.describe Volcano::Auth do
       client.auth.delete_session(session_id: 'old-session')
 
       expect(client.current_session).to be(replacement)
+    end
+
+    it 'clears a restored current session deleted before listing sessions' do
+      session_id = '3cd3e058-e3ff-42a5-ae4d-650ef9b45746'
+      restored = Volcano::Client.new(
+        anon_key: 'anon-key', access_token: access_token_for_session(session_id),
+        refresh_token: 'refresh-token', _transport: transport
+      )
+      transport.queue(:auth_delete_my_session, 204)
+
+      restored.auth.delete_session(session_id:)
+
+      expect(restored.current_session).to be_nil
     end
 
     it 'deletes the current session after an automatic token refresh' do

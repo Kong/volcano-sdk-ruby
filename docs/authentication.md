@@ -179,5 +179,29 @@ profile = client.auth.call_oauth_api(provider: "github", endpoint: "/user")
 client.auth.unlink_oauth_provider(provider: "github")
 ```
 
+## Manage identities and sign-in methods
+
+List the email identities and sign-in methods owned by the current account:
+
+```ruby
+client.auth.list_identities.each do |identity|
+  puts [identity.email, identity.is_primary]
+end
+
+client.auth.list_methods.each do |method|
+  puts [method.type, method.provider, method.is_primary]
+end
+```
+
+Promote a sign-in method or unlink a non-primary identity by its ID:
+
+```ruby
+promoted = client.auth.promote_method(method_id: "method-uuid")
+client.auth.unlink_identity(identity_id: "identity-uuid")
+```
+
+The API refuses to unlink a primary or last identity, or an identity whose
+removal would leave the account without a sign-in method.
+
 Keep generated state values and provider tokens secret. Navigate to the returned
 authorization URL only after storing its matching state value.

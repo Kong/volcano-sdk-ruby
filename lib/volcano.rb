@@ -2,6 +2,7 @@
 
 require_relative 'volcano/version'
 require_relative 'volcano/models'
+require_relative 'volcano/auth_identity_values'
 require_relative 'volcano/errors'
 require_relative 'volcano/redaction'
 require_relative 'volcano/transport'

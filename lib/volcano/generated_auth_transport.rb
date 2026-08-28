@@ -88,6 +88,22 @@ module Volcano
     def auth_delete_all_my_sessions(authorization:)
       auth_call(authorization, :auth_delete_all_my_sessions_with_http_info)
     end
+
+    def auth_list_identities(authorization:)
+      auth_call(authorization, :auth_list_identities_with_http_info)
+    end
+
+    def auth_unlink_identity(authorization:, identity_id:)
+      auth_call(authorization, :auth_unlink_identity_with_http_info, identity_id)
+    end
+
+    def auth_list_methods(authorization:)
+      auth_call(authorization, :auth_list_methods_with_http_info)
+    end
+
+    def auth_promote_method(authorization:, method_id:)
+      auth_call(authorization, :auth_promote_method_with_http_info, method_id)
+    end
   end
 
   # Generated OAuth operations exposed through the stable transport.

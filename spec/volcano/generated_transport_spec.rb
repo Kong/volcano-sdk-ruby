@@ -391,7 +391,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       -> { transport.auth_cancel_email_change(**common) },
       -> { transport.auth_get_my_sessions(**common, page: 2, limit: 10) },
       -> { transport.auth_delete_my_session(**common, session_id: 'session-id') },
-      -> { transport.auth_delete_all_my_sessions(**common) }
+      -> { transport.auth_delete_all_my_sessions(**common) },
+      -> { transport.auth_list_identities(**common) },
+      -> { transport.auth_unlink_identity(**common, identity_id: 'identity-id') },
+      -> { transport.auth_list_methods(**common) },
+      -> { transport.auth_promote_method(**common, method_id: 'method-id') }
     ].each(&:call)
     [
       lambda {
@@ -423,6 +427,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         auth_request_email_change_with_http_info auth_confirm_email_change_with_http_info
         auth_cancel_email_change_with_http_info auth_get_my_sessions_with_http_info
         auth_delete_my_session_with_http_info auth_delete_all_my_sessions_with_http_info
+        auth_list_identities_with_http_info auth_unlink_identity_with_http_info
+        auth_list_methods_with_http_info auth_promote_method_with_http_info
       ]
     )
     expect(oauth.calls.map(&:first)).to eq(

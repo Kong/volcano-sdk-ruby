@@ -30,7 +30,7 @@ module Volcano
   end
 
   # Authenticated user session.
-  Session = Data.define(:access_token, :refresh_token, :expires_in, :user_id) do
+  Session = Data.define(:access_token, :refresh_token, :user_id, :expires_in) do
     include RedactedInspection
 
     def initialize(access_token:, refresh_token: nil, expires_in: nil, user_id: nil)

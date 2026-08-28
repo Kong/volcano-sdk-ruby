@@ -15,6 +15,7 @@ require_relative 'auth_account'
 require_relative 'auth_provider_errors'
 require_relative 'auth_provider_requests'
 require_relative 'auth_oauth'
+require_relative 'auth_methods'
 require_relative 'auth_sessions'
 
 module Volcano
@@ -28,6 +29,7 @@ module Volcano
     include AuthAccount
     include AuthProviderRequests
     include AuthOAuth
+    include AuthMethods
     include AuthSessions
 
     def initialize(client, transport)
@@ -48,7 +50,7 @@ module Volcano
     private
 
     def synchronize_auth_operation(&)
-      @operation_monitor.synchronize(&)
+      @client.defer_auth_notifications { @operation_monitor.synchronize(&) }
     end
   end
 end

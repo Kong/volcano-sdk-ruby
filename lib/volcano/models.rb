@@ -4,6 +4,12 @@
 module Volcano
   # Recursively copies JSON-like values into immutable public data.
   module ImmutableValue
+    USER_DEFAULTS = {
+      project_id: nil, email_confirmed: nil, user_metadata: nil,
+      app_metadata: nil, avatar_url: nil, status: nil, banned_until: nil,
+      last_sign_in_at: nil, created_at: nil, updated_at: nil
+    }.freeze
+
     module_function
 
     def copy(value)
@@ -13,28 +19,31 @@ module Volcano
       else value&.freeze
       end
     end
+
+    def user_attributes(attributes)
+      validate_user_attributes(attributes)
+      USER_DEFAULTS.merge(attributes).tap { |values| copy_user_metadata(values) }
+    end
+
+    def validate_user_attributes(attributes)
+      unknown = attributes.keys - USER_DEFAULTS.keys
+      raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
+    end
+
+    def copy_user_metadata(values)
+      values[:user_metadata] = copy(values[:user_metadata])
+      values[:app_metadata] = copy(values[:app_metadata])
+    end
   end
   private_constant :ImmutableValue
-
-  user_defaults = {
-    project_id: nil, email_confirmed: nil, user_metadata: nil,
-    app_metadata: nil, avatar_url: nil, status: nil, banned_until: nil,
-    last_sign_in_at: nil, created_at: nil, updated_at: nil
-  }.freeze
 
   # Authenticated Volcano user.
   User = Data.define(
     :id, :email, :project_id, :email_confirmed, :user_metadata, :app_metadata,
     :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at
   ) do
-    define_method(:initialize) do |id:, email:, **attributes|
-      unknown = attributes.keys - user_defaults.keys
-      raise ArgumentError, "unknown keyword: #{unknown.first}" unless unknown.empty?
-
-      values = user_defaults.merge(attributes)
-      values[:user_metadata] = ImmutableValue.copy(values[:user_metadata])
-      values[:app_metadata] = ImmutableValue.copy(values[:app_metadata])
-      super(id:, email:, **values)
+    def initialize(id:, email:, **attributes)
+      super(id:, email:, **ImmutableValue.user_attributes(attributes))
     end
 
     def inspect

@@ -10,6 +10,7 @@ require_relative 'auth_invocation'
 require_relative 'auth_lifecycle'
 require_relative 'auth_account'
 require_relative 'auth_oauth'
+require_relative 'auth_sessions'
 
 module Volcano
   # Authenticates users and updates client-owned auth state.
@@ -19,6 +20,7 @@ module Volcano
     include AuthLifecycle
     include AuthAccount
     include AuthOAuth
+    include AuthSessions
 
     def initialize(client, transport)
       @client = client

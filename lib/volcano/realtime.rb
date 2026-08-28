@@ -87,13 +87,19 @@ module Volcano
     end
 
     def address
+      uri = websocket_uri
+      uri.query = "apikey=#{encoded_anon_key}"
+      uri.to_s
+    end
+
+    def websocket_uri
       uri = URI(@api_url)
       uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
       uri.path = "#{uri.path.delete_suffix('/')}/realtime/v1/websocket"
-      encoded_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
-      uri.query = "apikey=#{encoded_key}"
-      uri.to_s
+      uri
     end
+
+    def encoded_anon_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
 
     def open_socket(address)
       require 'async/http/endpoint'

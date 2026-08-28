@@ -33,17 +33,29 @@ module Volcano
 
       def dispatch_publication(push)
         channel = push['channel'].to_s
-        data = push.dig('pub', 'data')
+        data = publication_data(push)
         return unless data.is_a?(Hash)
 
-        event = data['event']
-        registered_channel = @publication_handlers.each_key.select do |candidate|
-          channel == candidate || channel.end_with?(":#{candidate}")
-        end.max_by(&:length)
+        registered_channel = registered_channel(channel)
         return unless registered_channel
         return if @callback_queue.size >= @max_callback_queue
 
-        @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
+        enqueue_publication(registered_channel, data)
+      end
+
+      def publication_data(push)
+        push.dig('pub', 'data')
+      end
+
+      def registered_channel(channel)
+        @publication_handlers.each_key.select do |candidate|
+          channel == candidate || channel.end_with?(":#{candidate}")
+        end.max_by(&:length)
+      end
+
+      def enqueue_publication(channel, data)
+        handlers = @publication_handlers.fetch(channel).dup
+        @callback_queue.enqueue([handlers, data['event'], data])
       end
 
       def dispatch_callbacks

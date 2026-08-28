@@ -46,15 +46,18 @@ module Volcano
     end
 
     def variants(secrets)
-      values = Array(secrets).compact.flat_map do |value|
-        secret = value.to_s
-        next [] if secret.empty?
-
-        encoded = URI.encode_www_form_component(secret)
-        [secret, encoded, encoded.gsub('+', '%20')]
-      end
+      values = Array(secrets).compact.flat_map { |value| secret_variants(value) }
       values.uniq.sort_by { |value| -value.length }
     end
-    private_class_method :copy_exception, :copy_volcano_error, :realtime_server_error?, :variants, :volcano_error?
+
+    def secret_variants(value)
+      secret = value.to_s
+      return [] if secret.empty?
+
+      encoded = URI.encode_www_form_component(secret)
+      [secret, encoded, encoded.gsub('+', '%20')]
+    end
+    private_class_method :copy_exception, :copy_volcano_error, :realtime_server_error?, :secret_variants, :variants,
+                         :volcano_error?
   end
 end

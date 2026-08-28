@@ -36,13 +36,16 @@ module Volcano
 
     def response_error(response)
       payload = response.body.is_a?(Hash) ? response.body : {}
+      error_type(response.status).new(error_message(payload), **error_details(response, payload))
+    end
+
+    def error_message(payload)
+      payload['error'] || payload['message'] || 'Volcano request failed'
+    end
+
+    def error_details(response, payload)
       retry_after = integer_header(response.headers, 'Retry-After') if response.status == 429
-      error_type(response.status).new(
-        payload['error'] || payload['message'] || 'Volcano request failed',
-        status: response.status,
-        code: payload['code']&.to_s,
-        retry_after: retry_after
-      )
+      { status: response.status, code: payload['code']&.to_s, retry_after: }
     end
 
     def error_type(status)
@@ -55,6 +58,6 @@ module Volcano
       value = headers&.find { |key, _| key.casecmp?(name) }&.last
       Integer(value, exception: false)
     end
-    private_class_method :error_type, :integer_header, :response_error
+    private_class_method :error_details, :error_message, :error_type, :integer_header, :response_error
   end
 end

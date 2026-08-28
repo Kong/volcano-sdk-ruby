@@ -8,14 +8,20 @@ module Volcano
       def _deserialize(type, value)
         super
       rescue NameError => e
-        raise unless e.name == :Generated && e.message.include?('private constant Volcano::Generated')
+        raise unless private_generated_constant_error?(e)
 
-        klass = Generated.const_get(type)
-        if klass.respond_to?(:openapi_any_of) || klass.respond_to?(:openapi_one_of)
-          klass.build(value)
-        else
-          klass.build_from_hash(value)
-        end
+        build_generated_model(Generated.const_get(type), value)
+      end
+
+      private
+
+      def private_generated_constant_error?(error)
+        error.name == :Generated && error.message.include?('private constant Volcano::Generated')
+      end
+
+      def build_generated_model(model, value)
+        union = model.respond_to?(:openapi_any_of) || model.respond_to?(:openapi_one_of)
+        union ? model.build(value) : model.build_from_hash(value)
       end
     end
     private_constant :ModelDeserialization
@@ -135,13 +141,21 @@ module Volcano
       def generated_configuration(authorization)
         uri = URI(@api_url)
         Generated::Configuration.new.tap do |configuration|
-          configuration.scheme = uri.scheme
-          configuration.host = host_with_port(uri)
-          configuration.base_path = uri.path == '/' ? '' : uri.path
-          configuration.ignore_operation_servers = true
-          configuration.access_token = authorization
-          configuration.timeout = timeout_milliseconds
+          configure_endpoint(configuration, uri)
+          configure_request(configuration, authorization)
         end
+      end
+
+      def configure_endpoint(configuration, uri)
+        configuration.scheme = uri.scheme
+        configuration.host = host_with_port(uri)
+        configuration.base_path = uri.path == '/' ? '' : uri.path
+      end
+
+      def configure_request(configuration, authorization)
+        configuration.ignore_operation_servers = true
+        configuration.access_token = authorization
+        configuration.timeout = timeout_milliseconds
       end
 
       def timeout_milliseconds

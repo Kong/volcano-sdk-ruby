@@ -30,16 +30,17 @@ RSpec.describe VolcanoContract::World do
 
   def serve_rate_limit_response(server, response_body)
     socket = server.accept
-    content_length = 0
-    while (line = socket.gets)
-      break if line == "\r\n"
-
-      content_length = line.split(':', 2).last.to_i if line.match?(/\Acontent-length:/i)
-    end
+    content_length = request_content_length(socket)
     socket.read(content_length) if content_length.positive?
     socket.write(rate_limit_http_response(response_body))
   ensure
     socket&.close
+  end
+
+  def request_content_length(socket)
+    headers = socket.each_line.take_while { |line| line != "\r\n" }
+    content_length = headers.find { |line| line.match?(/\Acontent-length:/i) }
+    content_length.to_s.split(':', 2).last.to_i
   end
 
   def rate_limit_http_response(response_body)
@@ -109,6 +110,47 @@ RSpec.describe VolcanoContract::World do
     "rate limit while signing in #{binding_credential_leaks.join(' ')}"
   end
 
+  def read_reports(directory)
+    Dir.glob(File.join(directory, '**/*')).select { |path| File.file?(path) }
+       .map { |path| File.binread(path) }.join
+  end
+
+  def redaction_feature_report(root, feature_path, steps_path, report_directory)
+    _stdout, _stderr, status = Open3.capture3(
+      { 'CUCUMBER_PUBLISH_QUIET' => 'true' },
+      'bundle', 'exec', 'cucumber', feature_path,
+      '--require', steps_path,
+      '--format', 'junit', '--out', report_directory,
+      chdir: root
+    )
+    [status, read_reports(report_directory)]
+  end
+
+  def contract_binding_report(fixture_path, report_directory)
+    environment = {
+      'CUCUMBER_PUBLISH_QUIET' => 'true',
+      'VOLCANO_SDK_CONTRACT_FIXTURE' => fixture_path
+    }
+    _stdout, _stderr, status = Open3.capture3(
+      environment, 'bundle', 'exec', 'cucumber',
+      'features/contract/database.feature', 'features/contract/realtime.feature',
+      '--format', 'junit', '--out', report_directory,
+      chdir: File.expand_path('../..', __dir__)
+    )
+    [status, read_reports(report_directory)]
+  end
+
+  def redaction_report_paths(directory)
+    %w[redaction.feature redaction_steps.rb reports].map { |name| File.join(directory, name) }
+  end
+
+  def write_contract_fixture(directory, api_url)
+    path = File.join(directory, 'fixture.json')
+    File.write(path, JSON.generate(complete_fixture(api_url, binding_credentials)))
+    File.chmod(0o600, path)
+    path
+  end
+
   it 'redacts fixture credentials from recorded report failures' do
     world.record do
       raise "request failed: #{credentials.values.join(' ')}"
@@ -123,9 +165,7 @@ RSpec.describe VolcanoContract::World do
   it 'keeps fixture credentials out of a failing Cucumber JUnit report' do
     root = File.expand_path('../..', __dir__)
     Dir.mktmpdir('volcano-ruby-cucumber-redaction') do |directory|
-      feature_path = File.join(directory, 'redaction.feature')
-      steps_path = File.join(directory, 'redaction_steps.rb')
-      report_directory = File.join(directory, 'reports')
+      feature_path, steps_path, report_directory = redaction_report_paths(directory)
       File.write(feature_path, <<~FEATURE)
         Feature: Report redaction
           Scenario: A fixture failure reaches the report
@@ -143,15 +183,7 @@ RSpec.describe VolcanoContract::World do
         end
       RUBY
 
-      _stdout, _stderr, status = Open3.capture3(
-        { 'CUCUMBER_PUBLISH_QUIET' => 'true' },
-        'bundle', 'exec', 'cucumber', feature_path,
-        '--require', steps_path,
-        '--format', 'junit', '--out', report_directory,
-        chdir: root
-      )
-      report = Dir.glob(File.join(report_directory, '**/*')).select { |path| File.file?(path) }
-                  .map { |path| File.binread(path) }.join
+      status, report = redaction_feature_report(root, feature_path, steps_path, report_directory)
       matches = credentials.values.count { |secret| report.include?(secret) }
 
       expect(status).not_to be_success
@@ -160,7 +192,7 @@ RSpec.describe VolcanoContract::World do
     end
   end
 
-  it 'preserves typed error category and metadata while redacting its message' do
+  it 'preserves typed error category and metadata while redacting its message', :aggregate_failures do
     world.record do
       raise Volcano::Error::ValidationError.new(
         "invalid #{credentials.fetch('anon_key')}",
@@ -211,25 +243,12 @@ RSpec.describe VolcanoContract::World do
     end
   end
 
-  it 'redacts credentials from the actual authenticated-client Cucumber binding' do
+  it 'redacts credentials from the actual authenticated-client Cucumber binding', :aggregate_failures do
     Dir.mktmpdir('volcano-ruby-cucumber-binding') do |directory|
-      fixture_path = File.join(directory, 'fixture.json')
       report_directory = File.join(directory, 'reports')
       with_rate_limit_server(rate_limit_message, request_count: 2) do |api_url|
-        File.write(fixture_path, JSON.generate(complete_fixture(api_url, binding_credentials)))
-        File.chmod(0o600, fixture_path)
-        _stdout, _stderr, status = Open3.capture3(
-          {
-            'CUCUMBER_PUBLISH_QUIET' => 'true',
-            'VOLCANO_SDK_CONTRACT_FIXTURE' => fixture_path
-          },
-          'bundle', 'exec', 'cucumber',
-          'features/contract/database.feature', 'features/contract/realtime.feature',
-          '--format', 'junit', '--out', report_directory,
-          chdir: File.expand_path('../..', __dir__)
-        )
-        report = Dir.glob(File.join(report_directory, '**/*')).select { |path| File.file?(path) }
-                    .map { |path| File.binread(path) }.join
+        fixture_path = write_contract_fixture(directory, api_url)
+        status, report = contract_binding_report(fixture_path, report_directory)
 
         expect(status).not_to be_success
         expect(report).to include('rate limit while signing in', 'Volcano::Error::RateLimitedError')

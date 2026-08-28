@@ -12,14 +12,21 @@ module Volcano
           ensure_open!
           id, reply_queue = register_request
           write_frame(yield(id))
-          reply = await_reply(reply_queue)
-          raise reply.error if reply.is_a?(Failure)
-
-          reply
+          unwrap_reply(await_reply(reply_queue))
         rescue StandardError => e
           raise Redaction.exception(e, secrets: @secrets), cause: nil
         ensure
-          @pending.delete(id) if defined?(id)
+          unregister_request(id)
+        end
+
+        def unwrap_reply(reply)
+          raise reply.error if reply.is_a?(Failure)
+
+          reply
+        end
+
+        def unregister_request(id)
+          @pending.delete(id) if id
         end
 
         def register_request

@@ -72,20 +72,26 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
-  it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do
-    socket = FacadeSocket.new
-    addresses = []
-    factory = lambda do |address|
+  def signed_in_client(socket_factory, api_url: 'https://api.test.volcano.dev', anon_key: 'anon-key')
+    Volcano::Client.new(
+      api_url:, anon_key:,
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: socket_factory
+    ).tap { |client| client.auth.sign_in(email: 'user@example.com', password: 'secret') }
+  end
+
+  def recording_socket_factory(socket, addresses)
+    lambda do |address|
       addresses << address
       socket
     end
-    client = Volcano::Client.new(
-      api_url: 'https://api.test.volcano.dev',
-      anon_key: 'anon key',
-      _transport: RealtimeAuthTransport.new,
-      _realtime_socket_factory: factory
-    )
-    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+  end
+
+  it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do
+    socket = FacadeSocket.new
+    addresses = []
+    factory = recording_socket_factory(socket, addresses)
+    client = signed_in_client(factory, anon_key: 'anon key')
     received = []
 
     Async do
@@ -345,12 +351,7 @@ RSpec.describe Volcano::Realtime do
       release.dequeue
       socket
     end
-    client = Volcano::Client.new(
-      anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
-      _realtime_socket_factory: factory
-    )
-    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    client = signed_in_client(factory)
 
     Async do |task|
       first = task.async { client.realtime.send(:protocol) }

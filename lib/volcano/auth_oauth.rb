@@ -48,13 +48,7 @@ module Volcano
 
     def linked_oauth_providers
       payload = mapping(authenticated_body(:auth_list_oauth_providers, 200))
-      array(payload.fetch('providers')).map do |provider|
-        value = mapping(provider)
-        OAuthProvider.new(
-          provider: validate_provider(value.fetch('provider')),
-          linked_at: optional_time(value['linked_at']), updated_at: optional_time(value['updated_at'])
-        )
-      end.freeze
+      array(payload.fetch('providers')).map { |provider| build_oauth_provider(provider) }.freeze
     rescue KeyError, TypeError
       raise auth_response_error
     end
@@ -82,28 +76,16 @@ module Volcano
       )
     end
 
-    def get_sessions(page: 1, limit: 20)
-      payload = mapping(authenticated_body(:auth_get_my_sessions, 200, page:, limit:))
-      sessions = array(payload['sessions'] || payload['data']).map do |session|
-        build_auth_session(mapping(session))
-      end
-      SessionPage.new(
-        sessions:, total: payload['total'], page: payload['page'],
-        limit: payload['limit'], total_pages: payload['total_pages']
+    private
+
+    def build_oauth_provider(provider)
+      value = mapping(provider)
+      OAuthProvider.new(
+        provider: validate_provider(value.fetch('provider')),
+        linked_at: optional_time(value['linked_at']),
+        updated_at: optional_time(value['updated_at'])
       )
     end
-
-    def delete_session(session_id:)
-      authenticated_body(:auth_delete_my_session, 204, session_id:)
-      nil
-    end
-
-    def delete_all_other_sessions
-      authenticated_body(:auth_delete_all_my_sessions, 204)
-      nil
-    end
-
-    private
 
     def oauth_authorization_response(provider, redirect_url, state)
       response = transport_response(

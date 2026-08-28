@@ -180,6 +180,33 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
+  def normalized_lock_calls
+    apis.locks.calls.map do |operation, key, token, request_id, body|
+      [operation, key, token, request_id.match?(/\A[0-9a-f-]{36}\z/), body&.to_hash]
+    end
+  end
+
+  def recording_storage_api
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, method == :POST ? 201 : 200, {}]
+    end
+    [described_class::StorageApi.new(api_client), calls]
+  end
+
+  def auth_surface_transport
+    authentication = RecordingAuthApi.new
+    oauth = RecordingAuthApi.new
+    empty = Object.new
+    factory = lambda do |_authorization|
+      GeneratedApis.new(authentication:, oauth:, database: empty, storage: empty, locks: empty)
+    end
+    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    [transport, authentication, oauth]
+  end
+
   it 'routes only the six POC operations through generated API classes', :aggregate_failures do
     responses
     expect(authorizations).to eq(
@@ -208,11 +235,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         [:download, 'assets', 'a.txt']
       ]
     )
-    expect(apis.locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])
-    expect(apis.locks.calls[0][3]).to match(/\A[0-9a-f-]{36}\z/)
-    expect(apis.locks.calls[0][4].to_hash).to eq(ttl_seconds: 30)
-    expect(apis.locks.calls[1][0..2]).to eq([:release, 'build', 'ownership-token'])
-    expect(apis.locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
+    expect(normalized_lock_calls).to eq(
+      [
+        [:acquire, 'build', 'ownership-token', true, { ttl_seconds: 30 }],
+        [:release, 'build', 'ownership-token', true, nil]
+      ]
+    )
   end
 
   it 'normalizes generated responses for the facade', :aggregate_failures do
@@ -247,14 +275,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'preserves object path segments and percent-encodes spaces' do
-    configuration = InternalGenerated::Configuration.new
-    api_client = described_class::ApiClient.new(configuration)
-    calls = []
-    api_client.define_singleton_method(:call_api) do |method, path, options|
-      calls << [method, path, options]
-      [nil, method == :POST ? 201 : 200, {}]
-    end
-    storage = described_class::StorageApi.new(api_client)
+    storage, calls = recording_storage_api
     file = Tempfile.new('volcano-storage-path')
 
     storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
@@ -339,15 +360,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'routes the complete authentication surface through generated APIs' do
-    authentication = RecordingAuthApi.new
-    oauth = RecordingAuthApi.new
-    empty = Object.new
-    factory = lambda do |_authorization|
-      GeneratedApis.new(
-        authentication:, oauth:, database: empty, storage: empty, locks: empty
-      )
-    end
-    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    transport, authentication, oauth = auth_surface_transport
     common = { authorization: 'credential' }
 
     [

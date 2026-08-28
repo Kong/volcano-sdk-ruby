@@ -2,6 +2,7 @@
 
 require 'json'
 require_relative 'protocol_dispatch'
+require_relative 'protocol_state'
 
 module Volcano
   class Realtime
@@ -20,6 +21,7 @@ module Volcano
     # Implements the Centrifuge request and publication protocol.
     class Protocol
       include ProtocolDispatch
+      include ProtocolState
 
       Failure = Data.define(:error)
       DEFAULT_REQUEST_TIMEOUT = 10
@@ -97,18 +99,6 @@ module Volcano
         @request_timeout = limits.fetch(:request_timeout, DEFAULT_REQUEST_TIMEOUT)
         @max_pending = limits.fetch(:max_pending, DEFAULT_MAX_PENDING)
         @max_callback_queue = limits.fetch(:max_callback_queue, DEFAULT_MAX_CALLBACK_QUEUE)
-      end
-
-      def initialize_state
-        @next_id = 0
-        @pending = {}
-        @write_lock = Async::Semaphore.new(1)
-        @subscription_lock = Async::Semaphore.new(1)
-        @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
-        @callback_queue = Async::Queue.new
-        @callback_stopping = @closed = false
-        @subscriptions = Set.new
-        @closed_error = nil
       end
 
       def start_tasks(task)

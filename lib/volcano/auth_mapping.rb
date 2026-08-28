@@ -16,11 +16,21 @@ module Volcano
     private
 
     def build_user(payload)
-      values = USER_FIELDS.to_h { |field| [field.to_sym, payload[field]] }
-      USER_TIME_FIELDS.each { |field| values[field] = optional_time(values[field]) }
-      User.new(id: payload.fetch('id'), email: payload.fetch('email'), **values)
+      User.new(
+        id: payload.fetch('id'),
+        email: payload.fetch('email'),
+        **user_attributes(payload)
+      )
     rescue KeyError, TypeError
       raise auth_response_error
+    end
+
+    def user_attributes(payload)
+      USER_FIELDS.to_h do |field|
+        key = field.to_sym
+        value = payload[field]
+        [key, USER_TIME_FIELDS.include?(key) ? optional_time(value) : value]
+      end
     end
 
     def build_session(payload)
@@ -53,18 +63,25 @@ module Volcano
     end
 
     def build_auth_session(payload)
-      values = SESSION_TIME_FIELDS.to_h do |field|
-        [field, optional_time(payload[field.to_s])]
-      end
-      AuthSession.new(
-        id: payload.fetch('id'), user_id: payload.fetch('user_id'),
-        provider: payload.fetch('provider'), expires_at: values.delete(:expires_at),
-        is_active: payload.fetch('is_active'), is_current: payload.fetch('is_current'),
-        user_agent: payload['user_agent'], ip_address: payload['ip_address'],
-        last_ip_address: payload['last_ip_address'], **values
-      )
+      AuthSession.new(**auth_session_attributes(payload))
     rescue KeyError, TypeError
       raise auth_response_error
+    end
+
+    def auth_session_attributes(payload)
+      {
+        id: payload.fetch('id'), user_id: payload.fetch('user_id'),
+        provider: payload.fetch('provider'), is_active: payload.fetch('is_active'),
+        is_current: payload.fetch('is_current'), user_agent: payload['user_agent'],
+        ip_address: payload['ip_address'], last_ip_address: payload['last_ip_address'],
+        **session_time_attributes(payload)
+      }
+    end
+
+    def session_time_attributes(payload)
+      SESSION_TIME_FIELDS.to_h do |field|
+        [field, optional_time(payload[field.to_s])]
+      end
     end
 
     def mapping(value)

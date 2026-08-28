@@ -29,7 +29,7 @@ RSpec.describe 'Volcano SDK errors' do
     500 => 'Volcano::Error::ServerError',
     503 => 'Volcano::Error::ServerError'
   }.each do |status, error_name|
-    it "maps HTTP #{status} to #{error_name}" do
+    it "maps HTTP #{status} to #{error_name}", :aggregate_failures do
       response = ErrorResponse.new(
         status: status,
         body: { 'error' => 'contract failure', 'code' => 'contract_code' },
@@ -49,7 +49,7 @@ RSpec.describe 'Volcano SDK errors' do
     end
   end
 
-  it 'maps a no-status network failure to a transport error with its cause' do
+  it 'maps a no-status network failure to a transport error with its cause', :aggregate_failures do
     failure = SocketError.new('connection failed')
     client = Volcano::Client.new(anon_key: 'anon-key', _transport: ErrorTransport.new(failure))
 

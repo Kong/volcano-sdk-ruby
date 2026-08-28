@@ -133,9 +133,17 @@ module VolcanoContract
 
     def initialize_resource_names
       suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
+      initialize_identity_names(suffix)
+      initialize_resource_values(suffix)
+    end
+
+    def initialize_identity_names(suffix)
       @unique_email = "#{suffix}@example.com"
       @unique_password = "Sdk-#{suffix}!123"
       @metadata_marker = "updated-#{suffix}"
+    end
+
+    def initialize_resource_values(suffix)
       @storage_path = "#{fixture.fetch('storage_path')}.#{suffix}"
       @storage_bytes = "volcano-sdk-contract-#{suffix}".b
       @realtime_channel = "#{fixture.fetch('realtime_channel')}-#{suffix}"

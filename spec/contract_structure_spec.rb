@@ -10,7 +10,7 @@ require 'rubygems/package'
 RSpec.describe 'shared SDK contract bindings' do
   let(:expected_hashes) do
     {
-      'auth.feature' => '6e6bcc6244bbdb9b1c141a3f0d8f1256d2be0057429457084a094ed98cbcbd07',
+      'auth.feature' => '0f251b2b39d66a1bf35043b25fd7d4cf750b3e1b2790911c7d26364f82852f9b',
       'database.feature' => '4685b29357a621068b25984ff0de29cd4c504eebe5cfb597f0b999e29878a668',
       'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
       'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',
@@ -25,6 +25,19 @@ RSpec.describe 'shared SDK contract bindings' do
     end
 
     expect(actual).to eq(expected_hashes)
+  end
+
+  it 'binds every shared contract step phrase' do
+    feature_dir = File.expand_path('../features/contract', __dir__)
+    steps_path = File.expand_path('../features/step_definitions/sdk_contract_steps.rb', __dir__)
+    phrases = Dir[File.join(feature_dir, '*.feature')].flat_map do |path|
+      File.readlines(path).filter_map { |line| line[/^\s+(?:Given|When|Then|And) (.+)$/, 1] }
+    end.uniq
+    bound = File.readlines(steps_path).filter_map do |line|
+      line[/^(?:Given|When|Then)\((['"])(.*?)\1\)/, 2]
+    end
+
+    expect(bound).to include(*phrases)
   end
 
   it 'requires an absolute contract fixture path' do
@@ -64,6 +77,7 @@ RSpec.describe 'shared SDK contract bindings' do
       expect(files).to include(
         'LICENSE',
         'README.md',
+        'docs/authentication.md',
         'lib/volcano.rb',
         'lib/volcano/generated_transport_support.rb',
         'lib/volcano/generated/lib/volcano-generated.rb',

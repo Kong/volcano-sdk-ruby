@@ -16,6 +16,7 @@ Gem::Specification.new do |spec|
     'lib/volcano/*.rb',
     'lib/volcano/realtime/**/*.rb',
     'lib/volcano/generated/lib/**/*.rb',
+    'docs/*.md',
     'LICENSE',
     'README.md'
   ]

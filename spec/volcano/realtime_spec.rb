@@ -15,7 +15,7 @@ RSpec.describe Volcano::Realtime do
         body: {
           'access_token' => 'access-token',
           'refresh_token' => 'refresh-token',
-          'user' => { 'id' => 'user-123' }
+          'user' => { 'id' => 'user-123', 'email' => 'user@example.com' }
         },
         headers: {},
         data: nil

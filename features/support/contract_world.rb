@@ -47,25 +47,40 @@ module VolcanoContract
     STATUS_CATEGORIES.fetch(error.status, 'transport error')
   end
 
-  def self.redact_error(error, fixture)
+  def self.redact_error(error, fixture, extra_secrets: [])
     redaction = Volcano.const_get(:Redaction, false)
-    secrets = CREDENTIAL_KEYS.filter_map { |key| fixture[key] }
+    secrets = CREDENTIAL_KEYS.filter_map { |key| fixture[key] } + extra_secrets
     redaction.exception(error, secrets: secrets)
   end
 
   class World
-    attr_accessor :last_outcome, :subscriber, :publisher
-    attr_reader :fixture, :client, :service_client, :storage_path, :storage_bytes,
-                :realtime_channel, :realtime_message, :lock_key, :realtime_clients
+    attr_accessor :last_outcome, :subscriber, :publisher, :client, :secondary_client,
+                  :unsubscribe_auth, :listener_event_count, :previous_access_token,
+                  :previous_refresh_token, :anonymous_user_id, :deleted_session_id
+    attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
+                :realtime_channel, :realtime_message, :lock_key, :realtime_clients,
+                :unique_email, :unique_password, :metadata_marker, :listener_events
 
     def initialize(fixture)
       @fixture = fixture
       initialize_clients
       initialize_resource_names
+      initialize_contract_state
+    end
+
+    def initialize_contract_state
       @last_outcome = nil
       @realtime_clients = []
       @cleanup_callbacks = []
+      @listener_events = []
+      @listener_event_count = 0
+      @unsubscribe_auth = nil
+      @previous_access_token = nil
+      @previous_refresh_token = nil
+      @anonymous_user_id = nil
+      @deleted_session_id = nil
     end
+    private :initialize_contract_state
 
     def authenticate(client = @client)
       client.auth.sign_in(
@@ -83,7 +98,7 @@ module VolcanoContract
         ok: false,
         value: nil,
         category: VolcanoContract.classify_error(e),
-        error: VolcanoContract.redact_error(e, fixture)
+        error: VolcanoContract.redact_error(e, fixture, extra_secrets: contract_secrets)
       )
     end
 
@@ -118,6 +133,9 @@ module VolcanoContract
 
     def initialize_resource_names
       suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
+      @unique_email = "#{suffix}@example.com"
+      @unique_password = "Sdk-#{suffix}!123"
+      @metadata_marker = "updated-#{suffix}"
       @storage_path = "#{fixture.fetch('storage_path')}.#{suffix}"
       @storage_bytes = "volcano-sdk-contract-#{suffix}".b
       @realtime_channel = "#{fixture.fetch('realtime_channel')}-#{suffix}"
@@ -129,6 +147,10 @@ module VolcanoContract
       yield
     rescue StandardError => e
       failures << VolcanoContract.redact_error(e, fixture)
+    end
+
+    def contract_secrets
+      [unique_email, unique_password]
     end
   end
 end

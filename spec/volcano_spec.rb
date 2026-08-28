@@ -14,7 +14,7 @@ RSpec.describe Volcano do
       %i[
         AuthSession AuthorizationRequest EmailChangeResult MessageResult OAuthProvider
         OAuthTokenResult Session SessionPage SignUpResult User
-      ].map { |name| Volcano.const_get(name).name }
+      ].map { |name| described_class.const_get(name).name }
     ).to all(start_with('Volcano::'))
   end
 

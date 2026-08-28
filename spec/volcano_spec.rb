@@ -9,6 +9,15 @@ RSpec.describe Volcano do
     expect(Volcano::Client.name).to eq('Volcano::Client')
   end
 
+  it 'exports public authentication value objects' do
+    expect(
+      %i[
+        AuthSession AuthorizationRequest EmailChangeResult MessageResult OAuthProvider
+        OAuthTokenResult Session SessionPage SignUpResult User
+      ].map { |name| Volcano.const_get(name).name }
+    ).to all(start_with('Volcano::'))
+  end
+
   it 'keeps the generated namespace outside the public constant boundary' do
     expect { Volcano::Generated }.to raise_error(NameError, /private constant/)
   end

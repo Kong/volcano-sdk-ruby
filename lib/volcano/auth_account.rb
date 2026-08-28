@@ -66,7 +66,7 @@ module Volcano
         )
         response = mapping(payload)
         update_user_after_email_change(response)
-        build_message(response)
+        MessageResult.new(message: response['message'])
       end
     end
 

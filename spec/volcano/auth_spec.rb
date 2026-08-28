@@ -891,10 +891,10 @@ RSpec.describe Volcano::Auth do
 
     it 'invalidates a cached user when email-change confirmation omits it' do
       client.store_user(Volcano::User.new(id: 'user-id', email: 'previous@example.com'))
-      transport.queue(:auth_confirm_email_change, 200, 'message' => 'changed')
+      transport.queue(:auth_confirm_email_change, 200, {})
       transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
 
-      expect(client.auth.confirm_email_change(token: 'token').message).to eq('changed')
+      expect(client.auth.confirm_email_change(token: 'token').message).to be_nil
       expect(client.current_user).to be_nil
       expect(client.current_session.access_token).to eq('access-token')
     end

@@ -15,11 +15,18 @@ module Volcano
 
     def build_user(payload)
       User.new(
-        id: payload.fetch('id'),
-        email: payload.fetch('email'),
+        id: required_identity_field(payload, 'id'),
+        email: required_identity_field(payload, 'email'),
         **user_attributes(payload)
       )
     rescue KeyError, TypeError
+      raise auth_response_error
+    end
+
+    def required_identity_field(payload, field)
+      value = payload.fetch(field)
+      return value if value.is_a?(String) && !value.empty?
+
       raise auth_response_error
     end
 

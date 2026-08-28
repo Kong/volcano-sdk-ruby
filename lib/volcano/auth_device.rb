@@ -15,10 +15,11 @@ module Volcano
     end
 
     def poll_device_token(client_id:, device_code:)
-      payload = anonymous_body(
-        :auth_device_token, 200, secrets: [device_code], client_id:, device_code:
-      )
-      commit_session(mapping(payload))
+      commit_session do
+        mapping(anonymous_body(
+                  :auth_device_token, 200, secrets: [device_code], client_id:, device_code:
+                ))
+      end
     end
 
     def verify_device(user_code:, action: 'approve')

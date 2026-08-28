@@ -517,6 +517,17 @@ RSpec.describe Volcano::Auth do
       expect(client.current_session).to be_nil
     end
 
+    it 'rejects users without usable identity fields' do
+      %w[id email].product([nil, '', 7]).each do |field, value|
+        invalid_user = AUTH_SPEC_USER_PAYLOAD.merge(field => value)
+        transport.queue(:auth_signin, 200, token_payload.merge('user' => invalid_user))
+        expect { client.auth.sign_in(email: 'user@example.com', password: 'password') }.to raise_error(
+          Volcano::Error::AuthenticationError, 'Invalid authentication response'
+        )
+      end
+      expect(client.current_session).to be_nil
+    end
+
     it 'preserves auth event order across reentrant transitions' do
       events = []
       client.auth.on_auth_state_change do |user|
@@ -541,6 +552,19 @@ RSpec.describe Volcano::Auth do
       client.auth.sign_in(email: 'user@example.com', password: 'password')
 
       expect(outcomes.pop).to eq(:completed)
+    end
+
+    it 'serializes the sign-in request before a later sign-out' do
+      serial = blocking_auth_transport(:auth_signin, token_payload)
+      serial.queue(:auth_logout, 204)
+      session_client = Volcano::Client.new(anon_key: 'anon-key', _transport: serial)
+      signing_in = Thread.new { session_client.auth.sign_in(email: 'user@example.com', password: 'password') }
+      serial.entered.pop
+      signing_out = Thread.new { session_client.auth.sign_out }
+      Timeout.timeout(1) { Thread.pass until signing_out.status == 'sleep' }
+      serial.release
+
+      expect([signing_in.value.user_id, signing_out.value, session_client.current_session]).to eq(['user-id', nil, nil])
     end
 
     it 'retrieves and updates the user without replacing the session' do
@@ -730,6 +754,14 @@ RSpec.describe Volcano::Auth do
 
       expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
       expect(client.current_session.access_token).to eq('access-token')
+    end
+
+    it 'clears an indeterminate current session after password reset' do
+      transport.queue(:auth_reset_password, 200, 'message' => 'reset')
+      transport.queue(:auth_get_user, 503, 'error' => 'temporarily unavailable')
+
+      expect(client.auth.reset_password(token: 'token', new_password: 'next').message).to eq('reset')
+      expect(client.current_session).to be_nil
     end
 
     it 'defers the restored-session listener until user hydration' do

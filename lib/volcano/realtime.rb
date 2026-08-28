@@ -207,7 +207,11 @@ module Volcano
         protocol.on_publication(@name) do |event, data|
           next unless generation == @auth_generation && event == 'message'
 
-          @callbacks.each { |callback| callback.call(data) }
+          @callbacks.each do |callback|
+            break unless generation == @auth_generation
+
+            callback.call(data)
+          end
         end
         @handler_registered = true
       end

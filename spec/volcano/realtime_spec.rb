@@ -187,6 +187,24 @@ RSpec.describe Volcano::Realtime do
     expect(second).to be_closed
   end
 
+  it 'stops publication callbacks after authentication changes' do
+    socket = FacadeSocket.new
+    client = signed_in_client(->(_address) { socket })
+    received = []
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { client.clear_auth }
+      channel.on('message') { |message| received << message }
+      channel.subscribe
+      socket.publication(channel: 'project-id:broadcast:contract', data: { 'event' => 'message' })
+      task.yield
+      client.realtime.disconnect
+    end.wait
+
+    expect(received).to be_empty
+  end
+
   it 'blocks new subscriptions until an authentication reset finishes' do
     close_entered = Async::Queue.new
     close_release = Async::Queue.new

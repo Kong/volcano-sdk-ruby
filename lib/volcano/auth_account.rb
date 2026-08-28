@@ -5,8 +5,7 @@ module Volcano
   # Implements account conversion, confirmation, recovery, and email changes.
   module AuthAccount
     def sign_up_anonymous(user_metadata: nil)
-      payload = anonymous_body(:auth_signup_anonymous, 201, user_metadata:)
-      commit_session(mapping(payload))
+      commit_session { mapping(anonymous_body(:auth_signup_anonymous, 201, user_metadata:)) }
     end
 
     def convert_anonymous(email:, password:, user_metadata: nil)
@@ -42,10 +41,12 @@ module Volcano
     end
 
     def reset_password(token:, new_password:)
-      payload = anonymous_body(
-        :auth_reset_password, 200, secrets: [token, new_password], token:, new_password:
-      )
-      build_message(mapping(payload)).tap { validate_session_after_password_reset }
+      synchronize_auth_operation do
+        payload = anonymous_body(
+          :auth_reset_password, 200, secrets: [token, new_password], token:, new_password:
+        )
+        build_message(mapping(payload)).tap { validate_session_after_password_reset }
+      end
     end
 
     def request_email_change(new_email:)
@@ -82,8 +83,8 @@ module Volcano
 
         begin
           fetch_user
-        rescue Error::VolcanoError => e
-          @client.clear_auth if e.status == 401 && @client.current_session.equal?(session)
+        rescue Error::VolcanoError
+          @client.clear_auth if @client.current_session.equal?(session)
         end
       end
     end

@@ -25,10 +25,11 @@ module Volcano
     def exchange_oauth_code(code:, redirect_url:, state:, expected_state:)
       raise Error::ValidationError, 'OAuth state mismatch' unless secure_state?(state, expected_state)
 
-      payload = anonymous_body(
-        :auth_oauth_exchange, 200, secrets: [code, state, expected_state], code:, redirect_url:
-      )
-      commit_session(mapping(payload))
+      commit_session do
+        mapping(anonymous_body(
+                  :auth_oauth_exchange, 200, secrets: [code, state, expected_state], code:, redirect_url:
+                ))
+      end
     end
 
     def link_oauth_provider(provider:, redirect_url:)

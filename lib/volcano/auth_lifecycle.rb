@@ -18,8 +18,9 @@ module Volcano
     end
 
     def sign_in(email:, password:)
-      payload = anonymous_body(:auth_signin, 200, secrets: [password], email:, password:)
-      commit_session(mapping(payload))
+      commit_session do
+        mapping(anonymous_body(:auth_signin, 200, secrets: [password], email:, password:))
+      end
     end
 
     def sign_out
@@ -77,7 +78,7 @@ module Volcano
 
     def refresh_current_session
       session = refreshable_session
-      commit_session(mapping(refresh_payload(session)), preserve_device_sessions: true)
+      commit_session(preserve_device_sessions: true) { mapping(refresh_payload(session)) }
     rescue StandardError
       @client.clear_auth if session && @client.current_session.equal?(session)
       raise
@@ -96,9 +97,9 @@ module Volcano
       )
     end
 
-    def commit_session(payload, preserve_device_sessions: false)
+    def commit_session(preserve_device_sessions: false)
       synchronize_auth_operation do
-        session, user = build_session(payload)
+        session, user = build_session(yield)
         @current_device_session_ids = [].freeze unless preserve_device_sessions
         @client.commit_auth(session, user)
         session

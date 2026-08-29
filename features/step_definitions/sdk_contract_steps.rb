@@ -14,6 +14,10 @@ When("the client signs in with the contract user's credentials") do
   contract.record { contract.authenticate }
 end
 
+When('the client reads the current session') do
+  contract.record { contract.client.auth.current_session }
+end
+
 Then('the SDK operation succeeds') do
   outcome = contract.last_outcome
   raise 'SDK operation did not run' unless outcome

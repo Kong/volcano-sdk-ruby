@@ -24,7 +24,12 @@ failures raise typed errors under `Volcano::Error`.
 
 ```ruby
 session = client.auth.sign_in(email: "user@example.com", password: "secret")
+current_session = client.auth.current_session
+raise "session changed" unless current_session == session
 ```
+
+`current_session` reads immutable local state. It does not refresh or validate
+the token.
 
 ### Query a database
 

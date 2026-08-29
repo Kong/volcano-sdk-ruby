@@ -93,6 +93,24 @@ RSpec.describe Volcano::Client do
     }
   end
 
+  it 'returns nil without a current session or transport call' do
+    expect(client.auth.current_session).to be_nil
+    expect(transport.calls).to be_empty
+  end
+
+  it 'returns the established immutable session without a transport call' do
+    transport.access_token = +'access-token'
+    established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+
+    current = client.auth.current_session
+
+    expect(current).to be(established)
+    expect { current.access_token = 'changed' }.to raise_error(NoMethodError)
+    expect { current.access_token.replace('changed') }.to raise_error(FrozenError)
+    expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
   it 'returns stable public values from the five facade calls', :aggregate_failures do
     expect(results.fetch(:session)).to eq(
       Volcano::Session.new(

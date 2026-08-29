@@ -8,6 +8,10 @@ module Volcano
       @transport = transport
     end
 
+    def current_session
+      @client.current_session
+    end
+
     def sign_in(email:, password:)
       payload = Transport.body(sign_in_response(email:, password:), 200)
       session = build_session(payload)

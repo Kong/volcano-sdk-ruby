@@ -33,9 +33,9 @@ module Volcano
 
     def build_session(payload)
       Session.new(
-        access_token: payload.fetch('access_token'),
-        refresh_token: payload.fetch('refresh_token'),
-        user_id: payload.fetch('user').fetch('id')
+        access_token: payload.fetch('access_token').dup.freeze,
+        refresh_token: payload.fetch('refresh_token').dup.freeze,
+        user_id: payload.fetch('user').fetch('id').dup.freeze
       )
     end
   end

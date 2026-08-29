@@ -99,6 +99,7 @@ RSpec.describe Volcano::Client do
   end
 
   it 'returns the established immutable session without a transport call' do
+    transport.access_token = +'access-token'
     established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
     calls_after_sign_in = transport.calls.dup
 
@@ -106,6 +107,7 @@ RSpec.describe Volcano::Client do
 
     expect(current).to be(established)
     expect { current.access_token = 'changed' }.to raise_error(NoMethodError)
+    expect { current.access_token.replace('changed') }.to raise_error(FrozenError)
     expect(transport.calls).to eq(calls_after_sign_in)
   end
 

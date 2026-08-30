@@ -32,7 +32,7 @@ Feature: SDK authentication contract
     When the client signs in with the contract user's credentials
     And the client refreshes the current session
     Then the SDK operation succeeds
-    And the refreshed session replaces the previous credentials
+    And the refreshed session becomes current
     And the current session belongs to the contract user
     And the current session exposes access and refresh tokens
 

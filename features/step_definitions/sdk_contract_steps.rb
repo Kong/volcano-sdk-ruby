@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+ACCESS_TOKEN_CLOCK_TICK_SECONDS = 1.1
+
 def contract
   raise 'contract world is not initialized' unless @contract
 
@@ -37,6 +39,7 @@ When('the client refreshes the current session') do
   contract.previous_session = contract.client.auth.current_session
   raise 'current session is missing' unless contract.previous_session
 
+  sleep ACCESS_TOKEN_CLOCK_TICK_SECONDS
   contract.record { contract.client.auth.refresh_session }
 end
 
@@ -57,10 +60,11 @@ When('a fresh client tries to refresh the signed-out session') do
   contract.record { target.auth.refresh_session }
 end
 
-Then('the refreshed session replaces the previous credentials') do
+Then('the refreshed session becomes current') do
   refreshed = contract.last_outcome.value
-  previous = contract.previous_session
-  raise 'refresh did not rotate credentials' if refreshed.refresh_token == previous.refresh_token
+  raise 'refresh returned the previous session' if refreshed.equal?(contract.previous_session)
+  raise 'refresh did not issue a new access token' if refreshed.access_token == contract.previous_session.access_token
+  raise 'refreshed session is not current' unless contract.client.auth.current_session.equal?(refreshed)
 end
 
 Then('the SDK operation succeeds') do

@@ -42,6 +42,18 @@ The writer copies and freezes a complete native session in memory only. It does
 not make a request or persist credentials, and raises `ArgumentError` for an
 incomplete value.
 
+### Refresh the current session
+
+```ruby
+refreshed = client.auth.refresh_session
+raise "refresh failed" unless client.auth.current_session.equal?(refreshed)
+```
+
+On success, `refresh_session` replaces the in-memory session and returns the
+immutable new snapshot. An authentication failure clears the session that
+initiated the request. Server and transport failures preserve it, and a late
+response never replaces a newer session. The SDK does not persist sessions.
+
 ### Query a database
 
 ```ruby

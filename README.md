@@ -31,6 +31,17 @@ raise "session changed" unless current_session == session
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
 
+### Adopt an existing session
+
+```ruby
+session = source.auth.current_session
+fresh.auth.current_session = session if session
+```
+
+The writer copies and freezes a complete native session in memory only. It does
+not make a request or persist credentials, and raises `ArgumentError` for an
+incomplete value.
+
 ### Query a database
 
 ```ruby

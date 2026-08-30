@@ -18,6 +18,21 @@ When('the client reads the current session') do
   contract.record { contract.client.auth.current_session }
 end
 
+When('a fresh client adopts the current session') do
+  contract.record do
+    source = contract.client.auth.current_session
+    raise 'current session is missing' unless source
+
+    target = Volcano::Client.new(
+      api_url: contract.fixture.fetch('api_url'),
+      anon_key: contract.fixture.fetch('anon_key')
+    )
+    target.auth.current_session = source
+    contract.client = target
+    target.auth.current_session
+  end
+end
+
 Then('the SDK operation succeeds') do
   outcome = contract.last_outcome
   raise 'SDK operation did not run' unless outcome

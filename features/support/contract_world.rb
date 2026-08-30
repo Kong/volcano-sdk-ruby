@@ -54,8 +54,8 @@ module VolcanoContract
   end
 
   class World
-    attr_accessor :last_outcome, :subscriber, :publisher
-    attr_reader :fixture, :client, :service_client, :storage_path, :storage_bytes,
+    attr_accessor :client, :last_outcome, :subscriber, :publisher
+    attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 
     def initialize(fixture)

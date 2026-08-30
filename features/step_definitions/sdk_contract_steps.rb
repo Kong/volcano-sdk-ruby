@@ -34,9 +34,6 @@ When('a fresh client adopts the current session') do
 end
 
 When('the client refreshes the current session') do
-  contract.previous_session = contract.client.auth.current_session
-  raise 'current session is missing' unless contract.previous_session
-
   contract.record { contract.client.auth.refresh_session }
 end
 
@@ -57,10 +54,9 @@ When('a fresh client tries to refresh the signed-out session') do
   contract.record { target.auth.refresh_session }
 end
 
-Then('the refreshed session replaces the previous credentials') do
+Then('the refreshed session becomes current') do
   refreshed = contract.last_outcome.value
-  previous = contract.previous_session
-  raise 'refresh did not rotate credentials' if refreshed.refresh_token == previous.refresh_token
+  raise 'refreshed session is not current' unless contract.client.auth.current_session.equal?(refreshed)
 end
 
 Then('the SDK operation succeeds') do

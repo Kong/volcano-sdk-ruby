@@ -14,15 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class HostedRenderablePageType
-    SIGNUP = "signup".freeze
-    FORGOT_PASSWORD = "forgot-password".freeze
-    DEVICE = "device".freeze
-    VERIFY_EMAIL = "verify-email".freeze
-    RESET_PASSWORD = "reset-password".freeze
+  class AuthPageRadius
+    NONE = "none".freeze
+    SMALL = "small".freeze
+    MEDIUM = "medium".freeze
+    LARGE = "large".freeze
 
     def self.all_vars
-      @all_vars ||= [SIGNUP, FORGOT_PASSWORD, DEVICE, VERIFY_EMAIL, RESET_PASSWORD].freeze
+      @all_vars ||= [NONE, SMALL, MEDIUM, LARGE].freeze
     end
 
     # Builds the enum from string
@@ -36,8 +35,8 @@ module Volcano::Generated
     # @param [String] The enum value in the form of the string
     # @return [String] The enum value
     def build_from_hash(value)
-      return value if HostedRenderablePageType.all_vars.include?(value)
-      raise "Invalid ENUM value #{value} for class #HostedRenderablePageType"
+      return value if AuthPageRadius.all_vars.include?(value)
+      raise "Invalid ENUM value #{value} for class #AuthPageRadius"
     end
   end
 end

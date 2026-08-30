@@ -34,6 +34,9 @@ When('a fresh client adopts the current session') do
 end
 
 When('the client refreshes the current session') do
+  contract.previous_session = contract.client.auth.current_session
+  raise 'current session is missing' unless contract.previous_session
+
   contract.record { contract.client.auth.refresh_session }
 end
 
@@ -56,6 +59,7 @@ end
 
 Then('the refreshed session becomes current') do
   refreshed = contract.last_outcome.value
+  raise 'refresh returned the previous session' if refreshed.equal?(contract.previous_session)
   raise 'refreshed session is not current' unless contract.client.auth.current_session.equal?(refreshed)
 end
 

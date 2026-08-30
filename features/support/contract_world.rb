@@ -54,7 +54,7 @@ module VolcanoContract
   end
 
   class World
-    attr_accessor :client, :last_outcome, :signed_out_session, :subscriber, :publisher
+    attr_accessor :client, :last_outcome, :previous_session, :signed_out_session, :subscriber, :publisher
     attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 
@@ -63,6 +63,7 @@ module VolcanoContract
       initialize_clients
       initialize_resource_names
       @last_outcome = nil
+      @previous_session = nil
       @signed_out_session = nil
       @realtime_clients = []
       @cleanup_callbacks = []

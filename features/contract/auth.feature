@@ -35,3 +35,14 @@ Feature: SDK authentication contract
     And the refreshed session replaces the previous credentials
     And the current session belongs to the contract user
     And the current session exposes access and refresh tokens
+
+  @auth @SDK-AUTH-005
+  Scenario: A client signs out its current session
+    Given the confirmed contract user
+    When the client signs in with the contract user's credentials
+    And the client signs out
+    Then the SDK operation succeeds
+    And the current session is empty
+    When a fresh client tries to refresh the signed-out session
+    Then the SDK operation fails with an authentication error
+    And the current session is empty

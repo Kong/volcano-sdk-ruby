@@ -18,10 +18,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :refresh_calls
+    attr_reader :calls, :logout_calls, :refresh_calls
 
     def initialize
       @calls = []
+      @logout_calls = []
       @refresh_calls = []
     end
 
@@ -33,6 +34,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_refresh_with_http_info(options)
       @refresh_calls << options
       [FakeGeneratedModel.new(access_token: 'refreshed-token'), 200, { 'request-id' => 'refresh' }]
+    end
+
+    def auth_logout_with_http_info(options)
+      @logout_calls << options
+      [nil, 204, { 'request-id' => 'logout' }]
     end
   end
 
@@ -115,6 +121,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         authorization: 'anon-key',
         refresh_token: 'refresh-1'
       ),
+      logout: transport.auth_logout(
+        authorization: 'anon-key',
+        refresh_token: 'refresh-1'
+      ),
       database: transport.query_database_select(
         authorization: 'access-token',
         database_name: 'main',
@@ -165,10 +175,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
-  it 'routes only the seven POC operations through generated API classes', :aggregate_failures do
+  it 'routes only the eight POC operations through generated API classes', :aggregate_failures do
     responses
     expect(authorizations).to eq(
-      %w[anon-key anon-key access-token access-token access-token service-key service-key]
+      %w[anon-key anon-key anon-key access-token access-token access-token service-key service-key]
     )
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
@@ -203,9 +213,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(apis.locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
   end
 
+  it 'sends the refresh token through the generated logout request' do
+    transport.auth_logout(authorization: 'anon-key', refresh_token: 'refresh-1')
+
+    request = apis.authentication.logout_calls.fetch(0).fetch(:auth_refresh_request)
+    expect(request).to be_a(InternalGenerated::AuthRefreshRequest)
+      .and have_attributes(refresh_token: 'refresh-1')
+  end
+
   it 'normalizes generated responses for the facade', :aggregate_failures do
     expect(responses.fetch(:auth).body).to eq('access_token' => 'token')
     expect(responses.fetch(:refresh).body).to eq('access_token' => 'refreshed-token')
+    expect(responses.fetch(:logout).status).to eq(204)
     expect(responses.fetch(:database).body).to eq('data' => [{ 'slug' => 'a' }])
     expect(responses.fetch(:upload).body).to eq('name' => 'a.txt')
     expect(responses.fetch(:download).data).to eq("hello\x00".b)

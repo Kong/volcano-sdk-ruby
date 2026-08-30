@@ -21,13 +21,45 @@ module Volcano::Generated
     # Function visibility for anon-key invocation
     attr_accessor :public
 
+    attr_accessor :invocation_mode
+
+    attr_accessor :http_auth_mode
+
+    # OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function
+    attr_accessor :openapi_spec
+
     attr_accessor :schedulers
+
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'name' => :'name',
         :'public' => :'public',
+        :'invocation_mode' => :'invocation_mode',
+        :'http_auth_mode' => :'http_auth_mode',
+        :'openapi_spec' => :'openapi_spec',
         :'schedulers' => :'schedulers'
       }
     end
@@ -47,6 +79,9 @@ module Volcano::Generated
       {
         :'name' => :'String',
         :'public' => :'Boolean',
+        :'invocation_mode' => :'FunctionInvocationMode',
+        :'http_auth_mode' => :'FunctionHTTPAuthMode',
+        :'openapi_spec' => :'Hash<String, Object>',
         :'schedulers' => :'Array<ProjectConfigScheduler>'
       }
     end
@@ -54,6 +89,7 @@ module Volcano::Generated
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'openapi_spec',
       ])
     end
 
@@ -81,6 +117,20 @@ module Volcano::Generated
 
       if attributes.key?(:'public')
         self.public = attributes[:'public']
+      end
+
+      if attributes.key?(:'invocation_mode')
+        self.invocation_mode = attributes[:'invocation_mode']
+      end
+
+      if attributes.key?(:'http_auth_mode')
+        self.http_auth_mode = attributes[:'http_auth_mode']
+      end
+
+      if attributes.key?(:'openapi_spec')
+        if (value = attributes[:'openapi_spec']).is_a?(Hash)
+          self.openapi_spec = value
+        end
       end
 
       if attributes.key?(:'schedulers')
@@ -136,6 +186,9 @@ module Volcano::Generated
       self.class == o.class &&
           name == o.name &&
           public == o.public &&
+          invocation_mode == o.invocation_mode &&
+          http_auth_mode == o.http_auth_mode &&
+          openapi_spec == o.openapi_spec &&
           schedulers == o.schedulers
     end
 
@@ -148,7 +201,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, public, schedulers].hash
+      [name, public, invocation_mode, http_auth_mode, openapi_spec, schedulers].hash
     end
 
     # Builds the object from hash

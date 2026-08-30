@@ -19,6 +19,86 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
+    # Configure or rotate a function custom domain
+    # PRO capability. The function must be public, active, and use HTTP invocation mode. Configuration and rotation preserve the function's HTTP authentication mode and stored OpenAPI document. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param configure_function_custom_domain_request [ConfigureFunctionCustomDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCustomDomainResponse]
+    def configure_function_custom_domain(id, function_id, configure_function_custom_domain_request, opts = {})
+      data, _status_code, _headers = configure_function_custom_domain_with_http_info(id, function_id, configure_function_custom_domain_request, opts)
+      data
+    end
+
+    # Configure or rotate a function custom domain
+    # PRO capability. The function must be public, active, and use HTTP invocation mode. Configuration and rotation preserve the function&#39;s HTTP authentication mode and stored OpenAPI document. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param configure_function_custom_domain_request [ConfigureFunctionCustomDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCustomDomainResponse, Integer, Hash)>] FunctionCustomDomainResponse data, response status code and response headers
+    def configure_function_custom_domain_with_http_info(id, function_id, configure_function_custom_domain_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.configure_function_custom_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.configure_function_custom_domain"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.configure_function_custom_domain"
+      end
+      # verify the required parameter 'configure_function_custom_domain_request' is set
+      if @api_client.config.client_side_validation && configure_function_custom_domain_request.nil?
+        fail ArgumentError, "Missing the required parameter 'configure_function_custom_domain_request' when calling FunctionsApi.configure_function_custom_domain"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/domain'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(configure_function_custom_domain_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCustomDomainResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.configure_function_custom_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#configure_function_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Create or update function code
     # Upload a serverless function source bundle. Direct API clients may send the function code as a ZIP or tar.gz archive via multipart/form-data. The API stores a normalized tar.gz source archive. Cloud deploys should include source files and dependency manifests/lockfiles, not installed dependency directories. Volcano installs Node.js, Python, and Ruby dependencies during the function compile build. Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container image is built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. Uploaded source archives cannot contain symlink entries. Safe symlinks created during the cloud build are materialized before publish. Volcano builds and deploys the function asynchronously after upload. A deployment that starts immediately returns a Function resource with `status: provisioning`, then transitions to `active` or `failed`. If another deployment is running, the response preserves the resource's current status and exposes the queued deployment through `pending_deployment_id`. Existing function traffic continues to use the last known-good runtime during an update. A failed update keeps that runtime available and records the attempted deployment as failed. Only one deployment runs for a given function. A newer request supersedes any queued request and starts after the running deployment. Different functions and projects deploy concurrently. If a function with the same name already exists in the project, this operation updates that function's runtime, handler, and source bundle and returns `200 OK`. Each project can contain up to 10,000 functions. Creating a new function over this cap returns 403. 
     # @param id [String] Project ID
@@ -27,6 +107,10 @@ module Volcano::Generated
     # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
+    # @option opts [Boolean] :is_public Whether the function can be reached through public invocation ingress. (default to false)
+    # @option opts [FunctionInvocationMode] :invocation_mode 
+    # @option opts [FunctionHTTPAuthMode] :http_auth_mode 
+    # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
     # @return [Function]
     def create_function(id, name, code, runtime, opts = {})
       data, _status_code, _headers = create_function_with_http_info(id, name, code, runtime, opts)
@@ -41,6 +125,10 @@ module Volcano::Generated
     # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
+    # @option opts [Boolean] :is_public Whether the function can be reached through public invocation ingress. (default to false)
+    # @option opts [FunctionInvocationMode] :invocation_mode 
+    # @option opts [FunctionHTTPAuthMode] :http_auth_mode 
+    # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
     # @return [Array<(Function, Integer, Hash)>] Function data, response status code and response headers
     def create_function_with_http_info(id, name, code, runtime, opts = {})
       if @api_client.config.debugging
@@ -98,6 +186,10 @@ module Volcano::Generated
       form_params['code'] = code
       form_params['runtime'] = runtime
       form_params['handler'] = opts[:'handler'] if !opts[:'handler'].nil?
+      form_params['is_public'] = opts[:'is_public'] if !opts[:'is_public'].nil?
+      form_params['invocation_mode'] = opts[:'invocation_mode'] if !opts[:'invocation_mode'].nil?
+      form_params['http_auth_mode'] = opts[:'http_auth_mode'] if !opts[:'http_auth_mode'].nil?
+      form_params['openapi_spec'] = opts[:'openapi_spec'] if !opts[:'openapi_spec'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -352,6 +444,73 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Detach a function custom domain
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_function_custom_domain(id, function_id, opts = {})
+      delete_function_custom_domain_with_http_info(id, function_id, opts)
+      nil
+    end
+
+    # Detach a function custom domain
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_function_custom_domain_with_http_info(id, function_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.delete_function_custom_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.delete_function_custom_domain"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.delete_function_custom_domain"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/domain'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.delete_function_custom_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#delete_function_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Delete a function scheduler
     # @param id [String] Project ID
     # @param function_id [String] Function ID
@@ -490,6 +649,73 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Get a function custom domain
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCustomDomainResponse]
+    def get_function_custom_domain(id, function_id, opts = {})
+      data, _status_code, _headers = get_function_custom_domain_with_http_info(id, function_id, opts)
+      data
+    end
+
+    # Get a function custom domain
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCustomDomainResponse, Integer, Hash)>] FunctionCustomDomainResponse data, response status code and response headers
+    def get_function_custom_domain_with_http_info(id, function_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.get_function_custom_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.get_function_custom_domain"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.get_function_custom_domain"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/domain'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCustomDomainResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.get_function_custom_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#get_function_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get a function scheduler
     # @param id [String] Project ID
     # @param function_id [String] Function ID
@@ -564,7 +790,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - Direct invocation endpoint is intended for `http://api.<domain>/functions/{functionId}/invoke` - DNS invocation endpoint is `https://{functionId}.functions.<domain>/` - CORS preflight for invocation allows only `POST, OPTIONS` 
+    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -575,7 +801,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - Direct invocation endpoint is intended for &#x60;http://api.&lt;domain&gt;/functions/{functionId}/invoke&#x60; - DNS invocation endpoint is &#x60;https://{functionId}.functions.&lt;domain&gt;/&#x60; - CORS preflight for invocation allows only &#x60;POST, OPTIONS&#x60; 
+    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is &#x60;https://{functionId}.functions.&lt;domain&gt;/&#x60;. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -1179,6 +1405,7 @@ module Volcano::Generated
     end
 
     # Update function settings
+    # Updates invocation settings without redeploying the function runtime. A function with a custom domain attached or detaching must remain public and in HTTP invocation mode until the domain has been fully detached. 
     # @param id [String] Project ID
     # @param function_id [String] Function ID
     # @param update_function_request [UpdateFunctionRequest] 
@@ -1190,6 +1417,7 @@ module Volcano::Generated
     end
 
     # Update function settings
+    # Updates invocation settings without redeploying the function runtime. A function with a custom domain attached or detaching must remain public and in HTTP invocation mode until the domain has been fully detached. 
     # @param id [String] Project ID
     # @param function_id [String] Function ID
     # @param update_function_request [UpdateFunctionRequest] 

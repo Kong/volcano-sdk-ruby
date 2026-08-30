@@ -2596,6 +2596,17 @@ paths:
                     - Ruby: def handler() (in main.rb)
                   default: handler
                   example: handler
+                is_public:
+                  type: boolean
+                  default: false
+                  description: Whether the function can be reached through public invocation ingress.
+                invocation_mode:
+                  $ref: '#/components/schemas/FunctionInvocationMode'
+                http_auth_mode:
+                  $ref: '#/components/schemas/FunctionHTTPAuthMode'
+                openapi_spec:
+                  type: string
+                  description: JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
       responses:
         '200':
           description: Existing function updated; its deployment was started or queued
@@ -2661,6 +2672,10 @@ paths:
       tags:
         - Functions
       summary: Update function settings
+      description: |
+        Updates invocation settings without redeploying the function runtime. A function with a
+        custom domain attached or detaching must remain public and in HTTP invocation mode until
+        the domain has been fully detached.
       operationId: updateFunction
       security:
         - UserToken: []
@@ -2697,6 +2712,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Custom domain attached; the function must remain public and in HTTP mode
           content:
             application/json:
               schema:
@@ -2757,9 +2778,16 @@ paths:
         - Function receives payload only (no `__volcano_auth`)
 
         **Transport and CORS:**
-        - Direct invocation endpoint is intended for `http://api.<domain>/functions/{functionId}/invoke`
-        - DNS invocation endpoint is `https://{functionId}.functions.<domain>/`
-        - CORS preflight for invocation allows only `POST, OPTIONS`
+        - This operation is the authenticated direct RPC endpoint and always uses the
+          POST `{payload: ...}` contract, including for functions whose DNS ingress is
+          configured in HTTP mode.
+        - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`.
+        - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,
+          HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths.
+        - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS
+          preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`.
+        - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this
+          direct operation always requires a Volcano credential.
       operationId: invokeFunction
       security:
         - AnonKey: []
@@ -3228,6 +3256,128 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FunctionSchedulerListResponse'
+  /projects/{id}/functions/{functionId}/domain:
+    get:
+      tags:
+        - Functions
+      summary: Get a function custom domain
+      operationId: getFunctionCustomDomain
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/FunctionId'
+      responses:
+        '200':
+          description: Function custom domain, or null when no assignment exists
+          content:
+            application/json:
+              schema:
+                nullable: true
+                allOf:
+                  - $ref: '#/components/schemas/FunctionCustomDomainResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Functions
+      summary: Configure or rotate a function custom domain
+      description: |
+        PRO capability. The function must be public, active, and use HTTP invocation mode.
+        Configuration and rotation preserve the function's HTTP authentication mode and stored
+        OpenAPI document.
+      operationId: configureFunctionCustomDomain
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/FunctionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigureFunctionCustomDomainRequest'
+      responses:
+        '200':
+          description: Existing identical assignment returned without change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionCustomDomainResponse'
+        '201':
+          description: New domain assignment created with verification pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionCustomDomainResponse'
+        '202':
+          description: TLS rotation has been staged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionCustomDomainResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Hostname is claimed, the function already has another hostname, or the function is private or not in HTTP mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: Capability is not enabled for this environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Functions
+      summary: Detach a function custom domain
+      operationId: deleteFunctionCustomDomain
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/FunctionId'
+      responses:
+        '202':
+          description: Domain detach scheduled or already absent
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /projects/{id}/functions/{functionId}/schedulers:
     get:
       tags:
@@ -11280,6 +11430,30 @@ components:
         pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
       description: Variable name
   responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     BandwidthCapExceeded:
       description: |
         The platform user exceeded their billing-cycle bandwidth allowance (aggregate
@@ -12288,6 +12462,19 @@ components:
       required:
         - domain
         - tls
+    ConfigureFunctionCustomDomainRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        domain:
+          type: string
+          description: Fully-qualified hostname only, without a scheme, port, or path.
+          example: api.example.com
+        tls:
+          $ref: '#/components/schemas/FunctionCustomDomainTLSConfig'
+      required:
+        - domain
+        - tls
     CreateFunctionSchedulerRequest:
       type: object
       required:
@@ -12311,6 +12498,58 @@ components:
           maxItems: 1
           items:
             type: string
+    FunctionCustomDomainResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        function_id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+        tls_mode:
+          type: string
+          enum:
+            - byoc
+        domain_status:
+          type: string
+          enum:
+            - pending_verification
+            - provisioning
+            - active
+            - detaching
+            - failed
+        verification_status:
+          type: string
+          enum:
+            - pending
+            - verified
+            - failed
+        verification_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrontendDomainVerificationRecord'
+        required_routing_record:
+          $ref: '#/components/schemas/FrontendDomainRoutingRecord'
+        effective_urls:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - function_id
+        - domain
+        - tls_mode
+        - domain_status
+        - verification_status
+        - effective_urls
+        - created_at
+        - updated_at
     CreateOAuthConfigRequest:
       type: object
       required:
@@ -14376,6 +14615,18 @@ components:
             Function visibility for anon-key invocation.
             - `false` (default): only auth user tokens and service keys can invoke
             - `true`: anon keys with `functions.invoke` can invoke
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Optional OpenAPI 3.0 or 3.1 document describing an HTTP-mode function.
+        has_openapi_spec:
+          type: boolean
+          description: Whether OpenAPI metadata is configured; list responses omit the document itself.
         aws_function_arn:
           type: string
         invoke_url:
@@ -14414,9 +14665,30 @@ components:
         - name
         - status
         - is_public
+        - invocation_mode
+        - http_auth_mode
+        - openapi_spec
+        - has_openapi_spec
         - deployed_regions
         - created_at
         - updated_at
+    FunctionInvocationMode:
+      type: string
+      enum:
+        - rpc
+        - http
+      description: |
+        Invocation contract. `rpc` preserves the existing POST `{payload: ...}` contract;
+        `http` forwards HTTP request semantics to the function runtime. A function with a custom
+        domain attached or detaching cannot switch from `http` to `rpc` until detachment completes.
+    FunctionHTTPAuthMode:
+      type: string
+      enum:
+        - volcano
+        - none
+      description: |
+        Authentication applied by the HTTP ingress. `none` is valid only for public
+        HTTP-mode functions and is intended for externally signed webhooks.
     FunctionDeployment:
       type: object
       properties:
@@ -15199,7 +15471,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectFrontendCustomDomain'
+            $ref: '#/components/schemas/ProjectCustomDomain'
         page:
           type: integer
           description: Current page number (1-indexed)
@@ -16016,6 +16288,17 @@ components:
         public:
           type: boolean
           description: Function visibility for anon-key invocation
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          x-go-type: nullable.Nullable[map[string]interface{}]
+          x-go-type-skip-optional-pointer: true
+          description: OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function
         schedulers:
           type: array
           items:
@@ -16529,6 +16812,12 @@ components:
         - $ref: '#/components/schemas/FrontendCustomDomainResponse'
         - type: object
           properties:
+            target:
+              $ref: '#/components/schemas/ProjectCustomDomainTarget'
+            target_type:
+              type: string
+              enum:
+                - frontend
             frontend:
               type: object
               description: |
@@ -16544,7 +16833,44 @@ components:
                 - id
                 - name
           required:
+            - target
+            - target_type
             - frontend
+    ProjectFunctionCustomDomain:
+      allOf:
+        - $ref: '#/components/schemas/FunctionCustomDomainResponse'
+        - type: object
+          properties:
+            target:
+              $ref: '#/components/schemas/ProjectCustomDomainTarget'
+            target_type:
+              type: string
+              enum:
+                - function
+            function:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+              required:
+                - id
+                - name
+          required:
+            - target
+            - target_type
+            - function
+    ProjectCustomDomain:
+      oneOf:
+        - $ref: '#/components/schemas/ProjectFrontendCustomDomain'
+        - $ref: '#/components/schemas/ProjectFunctionCustomDomain'
+      discriminator:
+        propertyName: target_type
+        mapping:
+          frontend: '#/components/schemas/ProjectFrontendCustomDomain'
+          function: '#/components/schemas/ProjectFunctionCustomDomain'
     ProjectDeployment:
       type: object
       description: A Function or Frontend deployment attempt in a project-scoped feed.
@@ -17352,6 +17678,8 @@ components:
           type: string
     UpdateFunctionRequest:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         is_public:
           type: boolean
@@ -17359,8 +17687,15 @@ components:
             Function visibility for anon-key invocation.
             - `false` (default): private function
             - `true`: public function (anon keys with `functions.invoke` can invoke)
-      required:
-        - is_public
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: OpenAPI 3.0 or 3.1 metadata for HTTP mode. Send null to clear it.
     UpdateFunctionSchedulerRequest:
       type: object
       properties:
@@ -17767,6 +18102,24 @@ components:
         - elapsed_seconds
         - phases
         - updated_at
+    ProjectCustomDomainTarget:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - frontend
+            - function
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - type
+        - id
+        - name
     LogDeploymentRequestSelector:
       type: object
       description: Deployment log selector for deployable resources.
@@ -17889,6 +18242,26 @@ components:
           description: Deployment stage that produced the log event, when available.
       required:
         - id
+    FunctionCustomDomainTLSConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+            - byoc
+          default: byoc
+        certificate_pem:
+          type: string
+        private_key_pem:
+          type: string
+          writeOnly: true
+        certificate_chain_pem:
+          type: string
+      required:
+        - mode
+        - certificate_pem
+        - private_key_pem
     DatabaseQueryFilter:
       type: object
       description: One WHERE condition. Conditions are combined with AND.

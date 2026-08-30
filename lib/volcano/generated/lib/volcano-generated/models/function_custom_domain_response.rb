@@ -14,7 +14,9 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class ProjectFrontendCustomDomain < ApiModelBase
+  class FunctionCustomDomainResponse < ApiModelBase
+    attr_accessor :function_id
+
     attr_accessor :domain
 
     attr_accessor :tls_mode
@@ -32,12 +34,6 @@ module Volcano::Generated
     attr_accessor :created_at
 
     attr_accessor :updated_at
-
-    attr_accessor :target
-
-    attr_accessor :target_type
-
-    attr_accessor :frontend
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -64,6 +60,7 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'function_id' => :'function_id',
         :'domain' => :'domain',
         :'tls_mode' => :'tls_mode',
         :'domain_status' => :'domain_status',
@@ -72,10 +69,7 @@ module Volcano::Generated
         :'required_routing_record' => :'required_routing_record',
         :'effective_urls' => :'effective_urls',
         :'created_at' => :'created_at',
-        :'updated_at' => :'updated_at',
-        :'target' => :'target',
-        :'target_type' => :'target_type',
-        :'frontend' => :'frontend'
+        :'updated_at' => :'updated_at'
       }
     end
 
@@ -92,6 +86,7 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'function_id' => :'String',
         :'domain' => :'String',
         :'tls_mode' => :'String',
         :'domain_status' => :'String',
@@ -100,10 +95,7 @@ module Volcano::Generated
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
         :'effective_urls' => :'Array<String>',
         :'created_at' => :'Time',
-        :'updated_at' => :'Time',
-        :'target' => :'ProjectCustomDomainTarget',
-        :'target_type' => :'String',
-        :'frontend' => :'ProjectFrontendCustomDomainAllOfFrontend'
+        :'updated_at' => :'Time'
       }
     end
 
@@ -113,28 +105,27 @@ module Volcano::Generated
       ])
     end
 
-    # List of class defined in allOf (OpenAPI v3)
-    def self.openapi_all_of
-      [
-      :'FrontendCustomDomainResponse'
-      ]
-    end
-
     # Initializes the object
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectFrontendCustomDomain` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::FunctionCustomDomainResponse` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectFrontendCustomDomain`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::FunctionCustomDomainResponse`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'function_id')
+        self.function_id = attributes[:'function_id']
+      else
+        self.function_id = nil
+      end
 
       if attributes.key?(:'domain')
         self.domain = attributes[:'domain']
@@ -189,24 +180,6 @@ module Volcano::Generated
       else
         self.updated_at = nil
       end
-
-      if attributes.key?(:'target')
-        self.target = attributes[:'target']
-      else
-        self.target = nil
-      end
-
-      if attributes.key?(:'target_type')
-        self.target_type = attributes[:'target_type']
-      else
-        self.target_type = nil
-      end
-
-      if attributes.key?(:'frontend')
-        self.frontend = attributes[:'frontend']
-      else
-        self.frontend = nil
-      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -214,6 +187,10 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
+      if @function_id.nil?
+        invalid_properties.push('invalid value for "function_id", function_id cannot be nil.')
+      end
+
       if @domain.nil?
         invalid_properties.push('invalid value for "domain", domain cannot be nil.')
       end
@@ -242,18 +219,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
       end
 
-      if @target.nil?
-        invalid_properties.push('invalid value for "target", target cannot be nil.')
-      end
-
-      if @target_type.nil?
-        invalid_properties.push('invalid value for "target_type", target_type cannot be nil.')
-      end
-
-      if @frontend.nil?
-        invalid_properties.push('invalid value for "frontend", frontend cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -261,25 +226,31 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      return false if @function_id.nil?
       return false if @domain.nil?
       return false if @tls_mode.nil?
-      tls_mode_validator = EnumAttributeValidator.new('String', ["managed", "byoc"])
+      tls_mode_validator = EnumAttributeValidator.new('String', ["byoc"])
       return false unless tls_mode_validator.valid?(@tls_mode)
       return false if @domain_status.nil?
-      domain_status_validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed", "deleted"])
+      domain_status_validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed"])
       return false unless domain_status_validator.valid?(@domain_status)
       return false if @verification_status.nil?
-      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       return false unless verification_status_validator.valid?(@verification_status)
       return false if @effective_urls.nil?
       return false if @created_at.nil?
       return false if @updated_at.nil?
-      return false if @target.nil?
-      return false if @target_type.nil?
-      target_type_validator = EnumAttributeValidator.new('String', ["frontend"])
-      return false unless target_type_validator.valid?(@target_type)
-      return false if @frontend.nil?
       true
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] function_id Value to be assigned
+    def function_id=(function_id)
+      if function_id.nil?
+        fail ArgumentError, 'function_id cannot be nil'
+      end
+
+      @function_id = function_id
     end
 
     # Custom attribute writer method with validation
@@ -295,7 +266,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] tls_mode Object to be assigned
     def tls_mode=(tls_mode)
-      validator = EnumAttributeValidator.new('String', ["managed", "byoc"])
+      validator = EnumAttributeValidator.new('String', ["byoc"])
       unless validator.valid?(tls_mode)
         fail ArgumentError, "invalid value for \"tls_mode\", must be one of #{validator.allowable_values}."
       end
@@ -305,7 +276,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] domain_status Object to be assigned
     def domain_status=(domain_status)
-      validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed", "deleted"])
+      validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed"])
       unless validator.valid?(domain_status)
         fail ArgumentError, "invalid value for \"domain_status\", must be one of #{validator.allowable_values}."
       end
@@ -315,7 +286,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] verification_status Object to be assigned
     def verification_status=(verification_status)
-      validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       unless validator.valid?(verification_status)
         fail ArgumentError, "invalid value for \"verification_status\", must be one of #{validator.allowable_values}."
       end
@@ -352,41 +323,12 @@ module Volcano::Generated
       @updated_at = updated_at
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] target Value to be assigned
-    def target=(target)
-      if target.nil?
-        fail ArgumentError, 'target cannot be nil'
-      end
-
-      @target = target
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] target_type Object to be assigned
-    def target_type=(target_type)
-      validator = EnumAttributeValidator.new('String', ["frontend"])
-      unless validator.valid?(target_type)
-        fail ArgumentError, "invalid value for \"target_type\", must be one of #{validator.allowable_values}."
-      end
-      @target_type = target_type
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] frontend Value to be assigned
-    def frontend=(frontend)
-      if frontend.nil?
-        fail ArgumentError, 'frontend cannot be nil'
-      end
-
-      @frontend = frontend
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          function_id == o.function_id &&
           domain == o.domain &&
           tls_mode == o.tls_mode &&
           domain_status == o.domain_status &&
@@ -395,10 +337,7 @@ module Volcano::Generated
           required_routing_record == o.required_routing_record &&
           effective_urls == o.effective_urls &&
           created_at == o.created_at &&
-          updated_at == o.updated_at &&
-          target == o.target &&
-          target_type == o.target_type &&
-          frontend == o.frontend
+          updated_at == o.updated_at
     end
 
     # @see the `==` method
@@ -410,7 +349,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, effective_urls, created_at, updated_at, target, target_type, frontend].hash
+      [function_id, domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, effective_urls, created_at, updated_at].hash
     end
 
     # Builds the object from hash

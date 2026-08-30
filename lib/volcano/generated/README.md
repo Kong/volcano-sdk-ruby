@@ -196,12 +196,15 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::FrontendsApi* | [**list_frontends**](docs/FrontendsApi.md#list_frontends) | **GET** /projects/{id}/frontends | List all frontends in a project
 *Volcano::Generated::FrontendsApi* | [**list_project_custom_domains**](docs/FrontendsApi.md#list_project_custom_domains) | **GET** /projects/{id}/domains | List all custom domains in a project
 *Volcano::Generated::FrontendsApi* | [**redeploy_frontend**](docs/FrontendsApi.md#redeploy_frontend) | **POST** /projects/{id}/frontends/{frontendId}/redeploy | Redeploy frontend using latest uploaded artifact
+*Volcano::Generated::FunctionsApi* | [**configure_function_custom_domain**](docs/FunctionsApi.md#configure_function_custom_domain) | **POST** /projects/{id}/functions/{functionId}/domain | Configure or rotate a function custom domain
 *Volcano::Generated::FunctionsApi* | [**create_function**](docs/FunctionsApi.md#create_function) | **POST** /projects/{id}/functions | Create or update function code
 *Volcano::Generated::FunctionsApi* | [**create_function_scheduler**](docs/FunctionsApi.md#create_function_scheduler) | **POST** /projects/{id}/functions/{functionId}/schedulers | Create a scheduler for a function
 *Volcano::Generated::FunctionsApi* | [**create_functions_batch**](docs/FunctionsApi.md#create_functions_batch) | **POST** /projects/{id}/functions/batch | Deploy multiple functions in one request
 *Volcano::Generated::FunctionsApi* | [**delete_function**](docs/FunctionsApi.md#delete_function) | **DELETE** /projects/{id}/functions/{functionId} | Delete a function
+*Volcano::Generated::FunctionsApi* | [**delete_function_custom_domain**](docs/FunctionsApi.md#delete_function_custom_domain) | **DELETE** /projects/{id}/functions/{functionId}/domain | Detach a function custom domain
 *Volcano::Generated::FunctionsApi* | [**delete_function_scheduler**](docs/FunctionsApi.md#delete_function_scheduler) | **DELETE** /projects/{id}/functions/{functionId}/schedulers/{schedulerId} | Delete a function scheduler
 *Volcano::Generated::FunctionsApi* | [**get_function**](docs/FunctionsApi.md#get_function) | **GET** /projects/{id}/functions/{functionId} | Get function by ID
+*Volcano::Generated::FunctionsApi* | [**get_function_custom_domain**](docs/FunctionsApi.md#get_function_custom_domain) | **GET** /projects/{id}/functions/{functionId}/domain | Get a function custom domain
 *Volcano::Generated::FunctionsApi* | [**get_function_scheduler**](docs/FunctionsApi.md#get_function_scheduler) | **GET** /projects/{id}/functions/{functionId}/schedulers/{schedulerId} | Get a function scheduler
 *Volcano::Generated::FunctionsApi* | [**invoke_function**](docs/FunctionsApi.md#invoke_function) | **POST** /functions/{functionId}/invoke | Invoke a function
 *Volcano::Generated::FunctionsApi* | [**list_function_deployments**](docs/FunctionsApi.md#list_function_deployments) | **GET** /projects/{id}/functions/{functionId}/deployments | List function deployments
@@ -389,6 +392,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CompleteUploadSessionResponse](docs/CompleteUploadSessionResponse.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequest](docs/ConfigureAuthMethodsRequest.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequestOauthProvidersInner](docs/ConfigureAuthMethodsRequestOauthProvidersInner.md)
+ - [Volcano::Generated::ConfigureFunctionCustomDomainRequest](docs/ConfigureFunctionCustomDomainRequest.md)
  - [Volcano::Generated::ConnectProjectGitRequest](docs/ConnectProjectGitRequest.md)
  - [Volcano::Generated::CreateAnonKeyRequest](docs/CreateAnonKeyRequest.md)
  - [Volcano::Generated::CreateDatabaseBackupRequest](docs/CreateDatabaseBackupRequest.md)
@@ -450,7 +454,11 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::FrontendUsageData](docs/FrontendUsageData.md)
  - [Volcano::Generated::FrontendUsageHistoryResponse](docs/FrontendUsageHistoryResponse.md)
  - [Volcano::Generated::Function](docs/Function.md)
+ - [Volcano::Generated::FunctionCustomDomainResponse](docs/FunctionCustomDomainResponse.md)
+ - [Volcano::Generated::FunctionCustomDomainTLSConfig](docs/FunctionCustomDomainTLSConfig.md)
  - [Volcano::Generated::FunctionDeployment](docs/FunctionDeployment.md)
+ - [Volcano::Generated::FunctionHTTPAuthMode](docs/FunctionHTTPAuthMode.md)
+ - [Volcano::Generated::FunctionInvocationMode](docs/FunctionInvocationMode.md)
  - [Volcano::Generated::FunctionInvocationRequest](docs/FunctionInvocationRequest.md)
  - [Volcano::Generated::FunctionRegion](docs/FunctionRegion.md)
  - [Volcano::Generated::FunctionRuntimeDeployment](docs/FunctionRuntimeDeployment.md)
@@ -566,11 +574,15 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectConfigValidationError](docs/ProjectConfigValidationError.md)
  - [Volcano::Generated::ProjectConfigValidationErrorResponse](docs/ProjectConfigValidationErrorResponse.md)
  - [Volcano::Generated::ProjectConfigVariable](docs/ProjectConfigVariable.md)
+ - [Volcano::Generated::ProjectCustomDomain](docs/ProjectCustomDomain.md)
+ - [Volcano::Generated::ProjectCustomDomainTarget](docs/ProjectCustomDomainTarget.md)
  - [Volcano::Generated::ProjectDeployment](docs/ProjectDeployment.md)
  - [Volcano::Generated::ProjectDeploymentResource](docs/ProjectDeploymentResource.md)
  - [Volcano::Generated::ProjectDeploymentSummary](docs/ProjectDeploymentSummary.md)
  - [Volcano::Generated::ProjectFrontendCustomDomain](docs/ProjectFrontendCustomDomain.md)
  - [Volcano::Generated::ProjectFrontendCustomDomainAllOfFrontend](docs/ProjectFrontendCustomDomainAllOfFrontend.md)
+ - [Volcano::Generated::ProjectFunctionCustomDomain](docs/ProjectFunctionCustomDomain.md)
+ - [Volcano::Generated::ProjectFunctionCustomDomainAllOfFunction](docs/ProjectFunctionCustomDomainAllOfFunction.md)
  - [Volcano::Generated::ProjectGitConnection](docs/ProjectGitConnection.md)
  - [Volcano::Generated::ProjectGitDeploySettings](docs/ProjectGitDeploySettings.md)
  - [Volcano::Generated::ProjectHealthCategory](docs/ProjectHealthCategory.md)

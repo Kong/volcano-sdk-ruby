@@ -14,33 +14,17 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class PaginatedProjectCustomDomains < ApiModelBase
-    attr_accessor :data
+  class ConfigureFunctionCustomDomainRequest < ApiModelBase
+    # Fully-qualified hostname only, without a scheme, port, or path.
+    attr_accessor :domain
 
-    # Current page number (1-indexed)
-    attr_accessor :page
-
-    # Number of items per page
-    attr_accessor :limit
-
-    # Total number of items across all pages
-    attr_accessor :total
-
-    # Whether there are more pages available
-    attr_accessor :has_more
-
-    # URL path to next page (only present if has_more is true)
-    attr_accessor :_next
+    attr_accessor :tls
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'data' => :'data',
-        :'page' => :'page',
-        :'limit' => :'limit',
-        :'total' => :'total',
-        :'has_more' => :'has_more',
-        :'_next' => :'next'
+        :'domain' => :'domain',
+        :'tls' => :'tls'
       }
     end
 
@@ -57,12 +41,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'data' => :'Array<ProjectCustomDomain>',
-        :'page' => :'Integer',
-        :'limit' => :'Integer',
-        :'total' => :'Integer',
-        :'has_more' => :'Boolean',
-        :'_next' => :'String'
+        :'domain' => :'String',
+        :'tls' => :'FunctionCustomDomainTLSConfig'
       }
     end
 
@@ -76,52 +56,28 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::PaginatedProjectCustomDomains` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ConfigureFunctionCustomDomainRequest` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::PaginatedProjectCustomDomains`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ConfigureFunctionCustomDomainRequest`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'data')
-        if (value = attributes[:'data']).is_a?(Array)
-          self.data = value
-        end
+      if attributes.key?(:'domain')
+        self.domain = attributes[:'domain']
       else
-        self.data = nil
+        self.domain = nil
       end
 
-      if attributes.key?(:'page')
-        self.page = attributes[:'page']
+      if attributes.key?(:'tls')
+        self.tls = attributes[:'tls']
       else
-        self.page = nil
-      end
-
-      if attributes.key?(:'limit')
-        self.limit = attributes[:'limit']
-      else
-        self.limit = nil
-      end
-
-      if attributes.key?(:'total')
-        self.total = attributes[:'total']
-      else
-        self.total = nil
-      end
-
-      if attributes.key?(:'has_more')
-        self.has_more = attributes[:'has_more']
-      else
-        self.has_more = nil
-      end
-
-      if attributes.key?(:'_next')
-        self._next = attributes[:'_next']
+        self.tls = nil
       end
     end
 
@@ -130,24 +86,12 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @data.nil?
-        invalid_properties.push('invalid value for "data", data cannot be nil.')
+      if @domain.nil?
+        invalid_properties.push('invalid value for "domain", domain cannot be nil.')
       end
 
-      if @page.nil?
-        invalid_properties.push('invalid value for "page", page cannot be nil.')
-      end
-
-      if @limit.nil?
-        invalid_properties.push('invalid value for "limit", limit cannot be nil.')
-      end
-
-      if @total.nil?
-        invalid_properties.push('invalid value for "total", total cannot be nil.')
-      end
-
-      if @has_more.nil?
-        invalid_properties.push('invalid value for "has_more", has_more cannot be nil.')
+      if @tls.nil?
+        invalid_properties.push('invalid value for "tls", tls cannot be nil.')
       end
 
       invalid_properties
@@ -157,62 +101,29 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @data.nil?
-      return false if @page.nil?
-      return false if @limit.nil?
-      return false if @total.nil?
-      return false if @has_more.nil?
+      return false if @domain.nil?
+      return false if @tls.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] data Value to be assigned
-    def data=(data)
-      if data.nil?
-        fail ArgumentError, 'data cannot be nil'
+    # @param [Object] domain Value to be assigned
+    def domain=(domain)
+      if domain.nil?
+        fail ArgumentError, 'domain cannot be nil'
       end
 
-      @data = data
+      @domain = domain
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] page Value to be assigned
-    def page=(page)
-      if page.nil?
-        fail ArgumentError, 'page cannot be nil'
+    # @param [Object] tls Value to be assigned
+    def tls=(tls)
+      if tls.nil?
+        fail ArgumentError, 'tls cannot be nil'
       end
 
-      @page = page
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] limit Value to be assigned
-    def limit=(limit)
-      if limit.nil?
-        fail ArgumentError, 'limit cannot be nil'
-      end
-
-      @limit = limit
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] total Value to be assigned
-    def total=(total)
-      if total.nil?
-        fail ArgumentError, 'total cannot be nil'
-      end
-
-      @total = total
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] has_more Value to be assigned
-    def has_more=(has_more)
-      if has_more.nil?
-        fail ArgumentError, 'has_more cannot be nil'
-      end
-
-      @has_more = has_more
+      @tls = tls
     end
 
     # Checks equality by comparing each attribute.
@@ -220,12 +131,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          data == o.data &&
-          page == o.page &&
-          limit == o.limit &&
-          total == o.total &&
-          has_more == o.has_more &&
-          _next == o._next
+          domain == o.domain &&
+          tls == o.tls
     end
 
     # @see the `==` method
@@ -237,7 +144,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [data, page, limit, total, has_more, _next].hash
+      [domain, tls].hash
     end
 
     # Builds the object from hash

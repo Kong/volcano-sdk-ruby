@@ -102,6 +102,7 @@ lib/volcano-generated/models/call_o_auth_provider_api_request.rb
 lib/volcano-generated/models/complete_upload_session_response.rb
 lib/volcano-generated/models/configure_auth_methods_request.rb
 lib/volcano-generated/models/configure_auth_methods_request_oauth_providers_inner.rb
+lib/volcano-generated/models/configure_function_custom_domain_request.rb
 lib/volcano-generated/models/connect_project_git_request.rb
 lib/volcano-generated/models/create_anon_key_request.rb
 lib/volcano-generated/models/create_database_backup_request.rb
@@ -163,7 +164,11 @@ lib/volcano-generated/models/frontend_usage_daily_entry.rb
 lib/volcano-generated/models/frontend_usage_data.rb
 lib/volcano-generated/models/frontend_usage_history_response.rb
 lib/volcano-generated/models/function.rb
+lib/volcano-generated/models/function_custom_domain_response.rb
+lib/volcano-generated/models/function_custom_domain_tls_config.rb
 lib/volcano-generated/models/function_deployment.rb
+lib/volcano-generated/models/function_http_auth_mode.rb
+lib/volcano-generated/models/function_invocation_mode.rb
 lib/volcano-generated/models/function_invocation_request.rb
 lib/volcano-generated/models/function_region.rb
 lib/volcano-generated/models/function_runtime_deployment.rb
@@ -279,11 +284,15 @@ lib/volcano-generated/models/project_config_skipped_resource.rb
 lib/volcano-generated/models/project_config_validation_error.rb
 lib/volcano-generated/models/project_config_validation_error_response.rb
 lib/volcano-generated/models/project_config_variable.rb
+lib/volcano-generated/models/project_custom_domain.rb
+lib/volcano-generated/models/project_custom_domain_target.rb
 lib/volcano-generated/models/project_deployment.rb
 lib/volcano-generated/models/project_deployment_resource.rb
 lib/volcano-generated/models/project_deployment_summary.rb
 lib/volcano-generated/models/project_frontend_custom_domain.rb
 lib/volcano-generated/models/project_frontend_custom_domain_all_of_frontend.rb
+lib/volcano-generated/models/project_function_custom_domain.rb
+lib/volcano-generated/models/project_function_custom_domain_all_of_function.rb
 lib/volcano-generated/models/project_git_connection.rb
 lib/volcano-generated/models/project_git_deploy_settings.rb
 lib/volcano-generated/models/project_health_category.rb

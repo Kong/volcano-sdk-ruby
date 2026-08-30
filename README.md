@@ -54,6 +54,18 @@ immutable new snapshot. An authentication failure clears the session that
 initiated the request. Server and transport failures preserve it, and a late
 response never replaces a newer session. The SDK does not persist sessions.
 
+### Sign out the current session
+
+```ruby
+client.auth.sign_out
+raise "still signed in" if client.auth.current_session
+```
+
+`sign_out` revokes the current refresh token and clears the captured in-memory
+session. It succeeds without a request when no session exists. If revocation
+fails, the SDK still clears that session and raises the typed error. A session
+established while sign-out is pending remains current.
+
 ### Query a database
 
 ```ruby

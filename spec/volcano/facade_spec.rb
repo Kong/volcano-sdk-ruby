@@ -9,7 +9,7 @@ RSpec.describe Volcano::Client do
 
   class FakeContractTransport
     attr_reader :calls
-    attr_accessor :access_token, :on_refresh, :refresh_response
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response
 
     def initialize
       @access_token = 'access-token'
@@ -23,7 +23,14 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
+      @logout_response = Response.new(status: 204, body: nil, headers: {}, data: nil)
       @calls = []
+    end
+
+    def auth_logout(**arguments)
+      @calls << [:auth_logout, arguments]
+      @on_logout&.call
+      @logout_response
     end
 
     def auth_refresh(**arguments)
@@ -257,6 +264,56 @@ RSpec.describe Volcano::Client do
 
       expect { client.auth.refresh_session }.to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#sign_out' do
+    it 'revokes and clears the current session' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      expect(client.auth.sign_out).to be_nil
+      expect(client.auth.current_session).to be_nil
+      expect(transport.calls_for(:auth_logout).last.fetch(1)).to eq(
+        authorization: 'anon-key', refresh_token: 'refresh-token'
+      )
+    end
+
+    it 'succeeds without a session or transport call' do
+      expect(client.auth.sign_out).to be_nil
+      expect(transport.calls).to be_empty
+    end
+
+    it 'clears locally and raises after a 503' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.logout_response = Response.new(
+        status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.sign_out }.to raise_error(Volcano::Error::ServerError, 'unavailable')
+      expect(client.auth.current_session).to be_nil
+    end
+
+    it 'does not clear a session established during sign out' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = supplied_session
+      transport.on_logout = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.sign_out }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+
+    it 'preserves a revocation failure when the session changes' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      revocation_error = nil
+      transport.on_logout = -> { client.auth.current_session = supplied_session }
+      transport.logout_response = Response.new(
+        status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.sign_out }.to raise_error(Volcano::Error::SessionChangedError) do |error|
+        revocation_error = error.cause
+      end
+      expect(revocation_error).to be_a(Volcano::Error::ServerError)
     end
   end
 

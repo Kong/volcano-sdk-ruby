@@ -18,6 +18,7 @@ end
 module Volcano
   private_constant :Generated
   require_relative 'generated_transport_support'
+  require_relative 'generated_transport_auth'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
@@ -30,24 +31,6 @@ module Volcano
       @api_url = api_url
       @timeout = timeout
       @api_factory = api_factory || method(:build_apis)
-    end
-
-    def auth_signin(authorization:, email:, password:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.authentication.auth_signin_with_http_info(
-          Generated::AuthSigninRequest.new(email: email, password: password)
-        )
-        response(data, status, headers)
-      end
-    end
-
-    def auth_refresh(authorization:, refresh_token:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        request = Generated::AuthRefreshRequest.new(refresh_token: refresh_token)
-        response(*apis.authentication.auth_refresh_with_http_info(auth_refresh_request: request))
-      end
     end
 
     def query_database_select(authorization:, database_name:, body:)

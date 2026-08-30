@@ -10,7 +10,7 @@ require 'rubygems/package'
 RSpec.describe 'shared SDK contract bindings' do
   let(:expected_hashes) do
     {
-      'auth.feature' => 'ca01037d4f7c40a1d17be3e79ff24d2433c2085e991332f594ca698466c33f8d',
+      'auth.feature' => '681041f0e40df20a8decdf733fdadcc3f6486bc0767d9db2ab81cf8f70bdd5eb',
       'database.feature' => '4685b29357a621068b25984ff0de29cd4c504eebe5cfb597f0b999e29878a668',
       'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
       'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',

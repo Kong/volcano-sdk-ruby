@@ -40,6 +40,23 @@ When('the client refreshes the current session') do
   contract.record { contract.client.auth.refresh_session }
 end
 
+When('the client signs out') do
+  contract.signed_out_session = contract.client.auth.current_session
+  raise 'current session is missing' unless contract.signed_out_session
+
+  contract.record { contract.client.auth.sign_out }
+end
+
+When('a fresh client tries to refresh the signed-out session') do
+  target = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key')
+  )
+  target.auth.current_session = contract.signed_out_session
+  contract.client = target
+  contract.record { target.auth.refresh_session }
+end
+
 Then('the refreshed session replaces the previous credentials') do
   refreshed = contract.last_outcome.value
   previous = contract.previous_session
@@ -50,6 +67,16 @@ Then('the SDK operation succeeds') do
   outcome = contract.last_outcome
   raise 'SDK operation did not run' unless outcome
   raise "SDK operation failed (#{outcome.category}): #{outcome.error}" unless outcome.ok
+end
+
+Then('the SDK operation fails with an authentication error') do
+  outcome = contract.last_outcome
+  raise 'SDK operation unexpectedly succeeded' if outcome&.ok
+  raise "expected authentication error, got #{outcome&.category}" unless outcome&.category == 'authentication error'
+end
+
+Then('the current session is empty') do
+  raise 'current session is not empty' if contract.client.auth.current_session
 end
 
 Then('the current session belongs to the contract user') do

@@ -16,3 +16,12 @@ Feature: SDK authentication contract
     Then the SDK operation succeeds
     And the current session belongs to the contract user
     And the current session exposes access and refresh tokens
+
+  @auth @SDK-AUTH-003
+  Scenario: A client adopts a supplied session locally
+    Given the confirmed contract user
+    When the client signs in with the contract user's credentials
+    And a fresh client adopts the current session
+    Then the SDK operation succeeds
+    And the current session belongs to the contract user
+    And the current session exposes access and refresh tokens

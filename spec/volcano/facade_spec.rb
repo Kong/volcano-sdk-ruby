@@ -76,6 +76,7 @@ RSpec.describe Volcano::Client do
       _transport: transport
     )
   end
+
   let(:results) do
     session = client.auth.sign_in(email: 'user@example.com', password: 'secret')
     rows = client.database('main').from('items').select('*').eq('slug', 'a').execute
@@ -91,6 +92,12 @@ RSpec.describe Volcano::Client do
       lease: lease,
       released: released
     }
+  end
+
+  def supplied_session
+    Volcano::Session.new(
+      access_token: +'adopted-access', refresh_token: +'adopted-refresh', user_id: +'adopted-user'
+    )
   end
 
   it 'returns nil without a current session or transport call' do
@@ -109,6 +116,76 @@ RSpec.describe Volcano::Client do
     expect { current.access_token = 'changed' }.to raise_error(NoMethodError)
     expect { current.access_token.replace('changed') }.to raise_error(FrozenError)
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  describe '#current_session=' do
+    it 'stores an owned copy in an empty client' do
+      supplied = supplied_session
+      client.auth.current_session = supplied
+
+      expect(client.auth.current_session).to eq(supplied)
+      expect(client.auth.current_session).not_to be(supplied)
+    end
+
+    it 'owns and freezes every credential string', :aggregate_failures do
+      supplied = supplied_session
+      client.auth.current_session = supplied
+      stored = client.auth.current_session
+
+      expect(stored.to_h.values).to all(be_frozen)
+      expect(stored.access_token).not_to be(supplied.access_token)
+      expect(stored.refresh_token).not_to be(supplied.refresh_token)
+      expect(stored.user_id).not_to be(supplied.user_id)
+    end
+
+    it 'cannot be changed through the supplied mutable strings' do
+      supplied = supplied_session
+      client.auth.current_session = supplied
+      supplied.to_h.each_value { |value| value.replace('mutated') }
+
+      expect(client.auth.current_session).to eq(
+        Volcano::Session.new(
+          access_token: 'adopted-access', refresh_token: 'adopted-refresh', user_id: 'adopted-user'
+        )
+      )
+    end
+
+    it 'replaces an existing session' do
+      previous = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      supplied = supplied_session
+
+      client.auth.current_session = supplied
+
+      expect(client.auth.current_session).not_to be(previous)
+      expect(client.auth.current_session).to eq(supplied)
+    end
+
+    {
+      'a non-session value' => Object.new,
+      'an empty access token' => Volcano::Session.new(access_token: ' ', refresh_token: 'r', user_id: 'u'),
+      'an empty refresh token' => Volcano::Session.new(access_token: 'a', refresh_token: "\t", user_id: 'u'),
+      'an empty user ID' => Volcano::Session.new(access_token: 'a', refresh_token: 'r', user_id: "\n")
+    }.each do |description, invalid|
+      it "rejects #{description}" do
+        expect { client.auth.current_session = invalid }.to raise_error(ArgumentError)
+      end
+    end
+
+    it 'preserves the previous session after rejection' do
+      previous = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      invalid = Volcano::Session.new(access_token: ' ', refresh_token: 'r', user_id: 'u')
+
+      expect { client.auth.current_session = invalid }.to raise_error(ArgumentError)
+      expect(client.auth.current_session).to be(previous)
+    end
+
+    it 'does not call the transport' do
+      calls_before = transport.calls.dup
+
+      client.auth.current_session = supplied_session
+
+      expect(transport.calls).to eq(calls_before)
+    end
   end
 
   it 'returns stable public values from the five facade calls', :aggregate_failures do

@@ -28,6 +28,16 @@ module Volcano
       session
     end
 
+    def refresh_session
+      generation, current = @client.capture_session
+      raise Error::AuthenticationError, 'No active session' unless current
+
+      session = build_session(refresh_payload(current.refresh_token, generation))
+      raise Error::SessionChangedError unless @client.store_session_if_current(session, generation)
+
+      session
+    end
+
     private
 
     def sign_in_response(email:, password:)
@@ -38,6 +48,22 @@ module Volcano
           password: password
         )
       end
+    end
+
+    def refresh_response(refresh_token)
+      Transport.invoke do
+        @transport.auth_refresh(
+          authorization: @client.anon_token,
+          refresh_token: refresh_token
+        )
+      end
+    end
+
+    def refresh_payload(refresh_token, generation)
+      Transport.body(refresh_response(refresh_token), 200)
+    rescue Error::AuthenticationError
+      @client.clear_session_if_current(generation)
+      raise
     end
 
     def build_session(payload)

@@ -18,15 +18,21 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls
+    attr_reader :calls, :refresh_calls
 
     def initialize
       @calls = []
+      @refresh_calls = []
     end
 
     def auth_signin_with_http_info(body)
       @calls << body
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+
+    def auth_refresh_with_http_info(options)
+      @refresh_calls << options
+      [FakeGeneratedModel.new(access_token: 'refreshed-token'), 200, { 'request-id' => 'refresh' }]
     end
   end
 
@@ -105,6 +111,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         email: 'user@example.com',
         password: 'secret'
       ),
+      refresh: transport.auth_refresh(
+        authorization: 'anon-key',
+        refresh_token: 'refresh-1'
+      ),
       database: transport.query_database_select(
         authorization: 'access-token',
         database_name: 'main',
@@ -155,16 +165,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
-  it 'routes only the six POC operations through generated API classes', :aggregate_failures do
+  it 'routes only the seven POC operations through generated API classes', :aggregate_failures do
     responses
     expect(authorizations).to eq(
-      %w[anon-key access-token access-token access-token service-key service-key]
+      %w[anon-key anon-key access-token access-token access-token service-key service-key]
     )
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
       email: 'user@example.com',
       password: 'secret'
     )
+    refresh_request = apis.authentication.refresh_calls.fetch(0).fetch(:auth_refresh_request)
+    expect(refresh_request).to be_a(InternalGenerated::AuthRefreshRequest)
+      .and have_attributes(refresh_token: 'refresh-1')
     expect(apis.database.calls.fetch(0).fetch(0)).to eq('main')
     expect(apis.database.calls.fetch(0).fetch(1)).to be_a(InternalGenerated::DatabaseSelectRequest)
     expect(apis.database.calls.fetch(0).fetch(1).to_hash).to eq(
@@ -192,6 +205,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   it 'normalizes generated responses for the facade', :aggregate_failures do
     expect(responses.fetch(:auth).body).to eq('access_token' => 'token')
+    expect(responses.fetch(:refresh).body).to eq('access_token' => 'refreshed-token')
     expect(responses.fetch(:database).body).to eq('data' => [{ 'slug' => 'a' }])
     expect(responses.fetch(:upload).body).to eq('name' => 'a.txt')
     expect(responses.fetch(:download).data).to eq("hello\x00".b)

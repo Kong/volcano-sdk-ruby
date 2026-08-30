@@ -42,6 +42,14 @@ module Volcano
       end
     end
 
+    def auth_refresh(authorization:, refresh_token:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::AuthRefreshRequest.new(refresh_token: refresh_token)
+        response(*apis.authentication.auth_refresh_with_http_info(auth_refresh_request: request))
+      end
+    end
+
     def query_database_select(authorization:, database_name:, body:)
       invoke do
         apis = @api_factory.call(authorization)

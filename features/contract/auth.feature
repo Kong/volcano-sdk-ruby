@@ -25,3 +25,13 @@ Feature: SDK authentication contract
     Then the SDK operation succeeds
     And the current session belongs to the contract user
     And the current session exposes access and refresh tokens
+
+  @auth @SDK-AUTH-004
+  Scenario: A client refreshes its current session
+    Given the confirmed contract user
+    When the client signs in with the contract user's credentials
+    And the client refreshes the current session
+    Then the SDK operation succeeds
+    And the refreshed session replaces the previous credentials
+    And the current session belongs to the contract user
+    And the current session exposes access and refresh tokens

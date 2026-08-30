@@ -18,6 +18,18 @@ module Volcano
     class ValidationError < VolcanoError; end
     class NotFoundError < VolcanoError; end
     class ConflictError < VolcanoError; end
+
+    # Raised when an auth response arrives after the client session changes.
+    class SessionChangedError < ConflictError
+      def initialize
+        super(
+          'Session changed during authentication operation',
+          status: 409,
+          code: 'auth_session_changed'
+        )
+      end
+    end
+
     class RateLimitedError < VolcanoError; end
     class ServerError < VolcanoError; end
     class TransportError < VolcanoError; end

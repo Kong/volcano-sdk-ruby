@@ -9,11 +9,27 @@ RSpec.describe Volcano::Client do
 
   class FakeContractTransport
     attr_reader :calls
-    attr_accessor :access_token
+    attr_accessor :access_token, :on_refresh, :refresh_response
 
     def initialize
       @access_token = 'access-token'
+      @refresh_response = Response.new(
+        status: 200,
+        body: {
+          'access_token' => 'access-2',
+          'refresh_token' => 'refresh-2',
+          'user' => { 'id' => 'user-123' }
+        },
+        headers: {},
+        data: nil
+      )
       @calls = []
+    end
+
+    def auth_refresh(**arguments)
+      @calls << [:auth_refresh, arguments]
+      @on_refresh&.call
+      @refresh_response
     end
 
     def auth_signin(**arguments)
@@ -185,6 +201,62 @@ RSpec.describe Volcano::Client do
       client.auth.current_session = supplied_session
 
       expect(transport.calls).to eq(calls_before)
+    end
+  end
+
+  describe '#refresh_session' do
+    it 'refreshes and owns the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      refreshed = client.auth.refresh_session
+
+      expect(refreshed).to eq(
+        Volcano::Session.new(
+          access_token: 'access-2', refresh_token: 'refresh-2', user_id: established.user_id
+        )
+      )
+      expect(client.auth.current_session).to be(refreshed)
+      expect(refreshed.to_h.values).to all(be_frozen)
+    end
+
+    it 'rejects refresh without a session before transport' do
+      expect { client.auth.refresh_session }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'No active session'
+      )
+      expect(transport.calls).to be_empty
+    end
+
+    it 'clears the captured session after a 401' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.refresh_response = Response.new(
+        status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.refresh_session }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'expired'
+      )
+      expect(client.auth.current_session).to be_nil
+    end
+
+    it 'preserves the captured session after a 503' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.refresh_response = Response.new(
+        status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::ServerError, 'unavailable')
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'does not replace a session established during refresh' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = supplied_session
+      transport.on_refresh = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
     end
   end
 

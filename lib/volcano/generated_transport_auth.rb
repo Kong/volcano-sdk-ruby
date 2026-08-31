@@ -25,6 +25,13 @@ module Volcano
       end
     end
 
+    def auth_get_user(authorization:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        response(*apis.authentication.auth_get_user_with_http_info)
+      end
+    end
+
     def auth_refresh(authorization:, refresh_token:)
       invoke do
         apis = @api_factory.call(authorization)

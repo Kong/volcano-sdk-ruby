@@ -18,10 +18,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :logout_calls, :refresh_calls, :signup_calls
+    attr_reader :calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls
 
     def initialize
       @calls = []
+      @get_user_calls = []
       @logout_calls = []
       @refresh_calls = []
       @signup_calls = []
@@ -30,6 +31,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_signin_with_http_info(body)
       @calls << body
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+
+    def auth_get_user_with_http_info
+      @get_user_calls << true
+      profile = {
+        user: {
+          id: 'user-123', email: 'user@example.com', status: 'active',
+          user_metadata: { display_name: 'Ada' }
+        }
+      }
+      [FakeGeneratedModel.new(profile), 200, { 'request-id' => 'user' }]
     end
 
     def auth_signup_with_http_info(body)
@@ -247,6 +259,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     request = apis.authentication.logout_calls.fetch(0).fetch(:auth_refresh_request)
     expect(request).to be_a(InternalGenerated::AuthRefreshRequest)
       .and have_attributes(refresh_token: 'refresh-1')
+  end
+
+  it 'gets the current user through the generated operation' do
+    response = transport.auth_get_user(authorization: 'access-token')
+
+    expect(apis.authentication.get_user_calls).to eq([true])
+    expect(authorizations).to eq(['access-token'])
+    expect(response.status).to eq(200)
+    expect(response.body.fetch('user')).to include(
+      'id' => 'user-123', 'email' => 'user@example.com', 'status' => 'active'
+    )
   end
 
   it 'normalizes generated responses for the facade', :aggregate_failures do

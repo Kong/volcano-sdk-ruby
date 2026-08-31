@@ -9,8 +9,8 @@ RSpec.describe Volcano::Client do
 
   class FakeContractTransport
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response,
-                  :signup_response
+    attr_accessor :access_token, :logout_response, :on_get_user, :on_logout, :on_refresh,
+                  :refresh_response, :signup_response, :user_response
 
     def initialize
       @access_token = 'access-token'
@@ -19,6 +19,20 @@ RSpec.describe Volcano::Client do
         body: {
           'confirmation_required' => true,
           'message' => 'Check your email to confirm your account'
+        },
+        headers: {},
+        data: nil
+      )
+      @user_response = Response.new(
+        status: 200,
+        body: {
+          'user' => {
+            'id' => 'user-123',
+            'email' => 'user@example.com',
+            'status' => 'active',
+            'email_confirmed' => true,
+            'user_metadata' => { 'display_name' => 'Ada', 'roles' => ['admin'] }
+          }
         },
         headers: {},
         data: nil
@@ -41,6 +55,11 @@ RSpec.describe Volcano::Client do
       @calls << [:auth_logout, arguments]
       @on_logout&.call
       @logout_response
+    end
+
+    def auth_get_user(**arguments)
+      @calls << [:auth_get_user, arguments]
+      @user_response.tap { @on_get_user&.call }
     end
 
     def auth_refresh(**arguments)
@@ -99,9 +118,7 @@ RSpec.describe Volcano::Client do
     end
 
     def calls_for(name)
-      calls.each_with_object([]) do |call, matching|
-        matching << call if call.first == name
-      end
+      calls.select { |call| call.first == name }
     end
   end
 
@@ -214,6 +231,94 @@ RSpec.describe Volcano::Client do
         TypeError,
         'Expected a complete sign-up acknowledgement'
       )
+    end
+  end
+
+  describe '#user' do
+    it 'returns the server-validated profile through the access token', :aggregate_failures do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      user = client.auth.user
+
+      expect(user).to have_attributes(
+        id: 'user-123', email: 'user@example.com', status: 'active', email_confirmed: true
+      )
+      expect(user.user_metadata).to eq('display_name' => 'Ada', 'roles' => ['admin'])
+      expect(transport.calls_for(:auth_get_user).last.fetch(1)).to eq(authorization: 'access-token')
+    end
+
+    it 'owns and deeply freezes user data', :aggregate_failures do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      user = client.auth.user
+
+      expect(user).to be_frozen
+      expect(user.email).to be_frozen
+      expect(user.user_metadata).to be_frozen
+      expect(user.user_metadata.fetch('roles')).to be_frozen
+      expect { user.user_metadata.fetch('roles') << 'editor' }.to raise_error(FrozenError)
+    end
+
+    it 'does not replace the current session' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      client.auth.user
+
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'accepts a profile without an email address' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user')['email'] = ''
+
+      user = client.auth.user
+
+      expect(user.email).to eq('')
+    end
+
+    it 'rejects a missing session before transport' do
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'No active session'
+      )
+      expect(transport.calls).to be_empty
+    end
+
+    it 'preserves the current session after an authentication failure' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response = Response.new(
+        status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.user }.to raise_error(Volcano::Error::AuthenticationError, 'expired')
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'rejects a malformed successful profile' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response = Response.new(
+        status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => nil } }, headers: {}, data: nil
+      )
+
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Expected a complete user profile'
+      )
+    end
+
+    it 'rejects a profile loaded for a replaced session' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = supplied_session
+      transport.on_get_user = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.user }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+
+    it 'provides get_user as the cross-SDK alias' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      expect(client.auth.get_user).to be_a(Volcano::User)
     end
   end
 

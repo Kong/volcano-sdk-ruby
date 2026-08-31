@@ -8,7 +8,7 @@ RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
   OPENAPI_SHA256 = 'c26ab2f32961699b19f710c1174906b7baae077eefcec299a6c19a36d2f559f6'
 
-  it 'uses the exact bundled contract and emits all six POC operations' do
+  it 'uses the exact bundled contract and emits all eight POC operations' do
     expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)
 
     Dir.mktmpdir('volcano-ruby-openapi') do |directory|
@@ -22,7 +22,9 @@ RSpec.describe 'OpenAPI generation' do
 
       generated_source = Dir.glob(File.join(output, '**/*.rb')).map { |path| File.binread(path) }.join
       expect(generated_source).to include(
+        'auth_signup',
         'auth_signin',
+        'auth_get_user',
         'query_database_select',
         'upload_storage_object',
         'download_storage_object',

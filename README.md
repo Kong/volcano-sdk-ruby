@@ -46,6 +46,20 @@ raise "session changed" unless current_session == session
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
 
+### Get the current user
+
+```ruby
+user = client.auth.user
+raise "wrong user" unless user.id == session.user_id
+```
+
+`user` sends the active access token to Volcano and returns an immutable,
+server-validated `Volcano::User`. The SDK recursively freezes its strings and
+metadata, but does not cache the profile or replace the session. A session
+change while the request is in flight raises
+`Volcano::Error::SessionChangedError` instead of returning a stale profile.
+`get_user` is available as a cross-SDK alias.
+
 ### Adopt an existing session
 
 ```ruby

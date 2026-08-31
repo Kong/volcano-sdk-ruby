@@ -18,10 +18,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :logout_calls, :refresh_calls, :signup_calls
+    attr_reader :calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls
 
     def initialize
       @calls = []
+      @get_user_calls = []
       @logout_calls = []
       @refresh_calls = []
       @signup_calls = []
@@ -30,6 +31,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_signin_with_http_info(body)
       @calls << body
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+
+    def auth_get_user_with_http_info(options = {})
+      @get_user_calls << options
+      profile = {
+        user: {
+          id: 'user-123', email: 'user@example.com', status: 'active',
+          user_metadata: { display_name: 'Ada' }
+        }
+      }
+      [JSON.generate(profile), 200, { 'request-id' => 'user' }]
     end
 
     def auth_signup_with_http_info(body)
@@ -247,6 +259,56 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     request = apis.authentication.logout_calls.fetch(0).fetch(:auth_refresh_request)
     expect(request).to be_a(InternalGenerated::AuthRefreshRequest)
       .and have_attributes(refresh_token: 'refresh-1')
+  end
+
+  it 'gets the current user through the generated operation' do
+    response = transport.auth_get_user(authorization: 'access-token')
+
+    expect(apis.authentication.get_user_calls).to eq([{ debug_return_type: 'String' }])
+    expect(authorizations).to eq(['access-token'])
+    expect(response.status).to eq(200)
+    expect(response.body.fetch('user')).to include(
+      'id' => 'user-123', 'email' => 'user@example.com', 'status' => 'active'
+    )
+  end
+
+  it 'parses the current-user response independently of generated content-type handling' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |options|
+      raise 'generated deserializer selected' unless options.fetch(:debug_return_type) == 'String'
+
+      body = JSON.generate(user: { id: 'user-123', email: 'user@example.com', status: 'active' })
+      [body, 200, { 'Content-Type' => 'text/html' }]
+    end
+
+    response = transport.auth_get_user(authorization: 'access-token')
+
+    expect(response.body.fetch('user')).to include('id' => 'user-123', 'status' => 'active')
+  end
+
+  it 'normalizes an empty generated user response' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |_options|
+      [nil, 200, { 'Content-Type' => 'application/json' }]
+    end
+
+    expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(
+      Volcano::Error::AuthenticationError,
+      'Expected a complete user profile'
+    ) do |error|
+      expect(error.cause).to be_a(TypeError)
+    end
+  end
+
+  it 'normalizes invalid JSON returned for the current user' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |_options|
+      ['not-json', 200, { 'Content-Type' => 'application/json' }]
+    end
+
+    expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(
+      Volcano::Error::AuthenticationError,
+      'Expected a complete user profile'
+    ) do |error|
+      expect(error.cause).to be_a(JSON::ParserError)
+    end
   end
 
   it 'normalizes generated responses for the facade', :aggregate_failures do

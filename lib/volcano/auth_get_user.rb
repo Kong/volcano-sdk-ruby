@@ -6,12 +6,13 @@ module Volcano
   # Server-validated current-user behavior for the authentication facade.
   class Auth
     INVALID_USER = 'Expected a complete user profile'
+    RFC3339_OFFSET = /(?:[Zz]|[+-]\d{2}:\d{2})\z/
     USER_OPTIONAL_VALUES = %w[project_id email_confirmed user_metadata app_metadata avatar_url].freeze
     USER_OPTIONAL_STRINGS = %w[project_id avatar_url].freeze
     USER_STATUSES = %w[active banned deleted].freeze
     USER_TIMESTAMPS = %w[banned_until last_sign_in_at created_at updated_at].freeze
-    private_constant :INVALID_USER, :USER_OPTIONAL_STRINGS, :USER_OPTIONAL_VALUES,
-                     :USER_STATUSES, :USER_TIMESTAMPS
+    private_constant :INVALID_USER, :RFC3339_OFFSET, :USER_OPTIONAL_STRINGS,
+                     :USER_OPTIONAL_VALUES, :USER_STATUSES, :USER_TIMESTAMPS
 
     def user
       generation, current = @client.capture_session
@@ -93,7 +94,7 @@ module Volcano
     def valid_timestamp?(value)
       return true if value.nil?
 
-      value.is_a?(String) && Time.iso8601(value)
+      value.is_a?(String) && RFC3339_OFFSET.match?(value) && Time.iso8601(value)
     rescue ArgumentError
       false
     end

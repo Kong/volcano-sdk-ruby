@@ -9,10 +9,20 @@ RSpec.describe Volcano::Client do
 
   class FakeContractTransport
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response,
+                  :signup_response
 
     def initialize
       @access_token = 'access-token'
+      @signup_response = Response.new(
+        status: 201,
+        body: {
+          'confirmation_required' => true,
+          'message' => 'Check your email to confirm your account'
+        },
+        headers: {},
+        data: nil
+      )
       @refresh_response = Response.new(
         status: 200,
         body: {
@@ -51,6 +61,11 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
+    end
+
+    def auth_signup(**arguments)
+      @calls << [:auth_signup, arguments]
+      @signup_response
     end
 
     def query_database_select(**arguments)
@@ -139,6 +154,67 @@ RSpec.describe Volcano::Client do
     expect { current.access_token = 'changed' }.to raise_error(NoMethodError)
     expect { current.access_token.replace('changed') }.to raise_error(FrozenError)
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  describe '#sign_up' do
+    it 'returns an owned acknowledgement without changing the session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.sign_up(
+        email: 'new@example.com',
+        password: 'secret',
+        metadata: { display_name: 'New User' }
+      )
+
+      expect(result).to eq(
+        Volcano::SignUpResult.new(
+          confirmation_required: true,
+          message: 'Check your email to confirm your account'
+        )
+      )
+      expect(result.message).to be_frozen
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_signup).last.fetch(1)).to eq(
+        authorization: 'anon-key',
+        email: 'new@example.com',
+        password: 'secret',
+        metadata: { display_name: 'New User' }
+      )
+    end
+
+    it 'uses empty metadata without creating a session' do
+      client.auth.sign_up(email: 'new@example.com', password: 'secret')
+
+      expect(client.auth.current_session).to be_nil
+      expect(transport.calls_for(:auth_signup).last.fetch(1).fetch(:metadata)).to eq({})
+    end
+
+    it 'raises a typed error without changing the session' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.signup_response = Response.new(
+        status: 403, body: { 'error' => 'Signups are disabled' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.sign_up(email: 'new@example.com', password: 'secret') }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Signups are disabled'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'rejects a malformed acknowledgement' do
+      transport.signup_response = Response.new(
+        status: 201,
+        body: { 'confirmation_required' => 'yes', 'message' => 'Created' },
+        headers: {},
+        data: nil
+      )
+
+      expect { client.auth.sign_up(email: 'new@example.com', password: 'secret') }.to raise_error(
+        TypeError,
+        'Expected a complete sign-up acknowledgement'
+      )
+    end
   end
 
   describe '#current_session=' do

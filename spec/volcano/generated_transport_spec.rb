@@ -18,17 +18,27 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :logout_calls, :refresh_calls
+    attr_reader :calls, :logout_calls, :refresh_calls, :signup_calls
 
     def initialize
       @calls = []
       @logout_calls = []
       @refresh_calls = []
+      @signup_calls = []
     end
 
     def auth_signin_with_http_info(body)
       @calls << body
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+
+    def auth_signup_with_http_info(body)
+      @signup_calls << body
+      acknowledgement = {
+        confirmation_required: true,
+        message: 'Check your email to confirm your account'
+      }
+      [FakeGeneratedModel.new(acknowledgement), 201, { 'request-id' => 'signup' }]
     end
 
     def auth_refresh_with_http_info(options)
@@ -112,6 +122,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
   let(:responses) do
     {
+      signup: transport.auth_signup(
+        authorization: 'anon-key',
+        email: 'new@example.com',
+        password: 'secret',
+        metadata: { display_name: 'New User' }
+      ),
       auth: transport.auth_signin(
         authorization: 'anon-key',
         email: 'user@example.com',
@@ -175,10 +191,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
-  it 'routes only the eight POC operations through generated API classes', :aggregate_failures do
+  it 'routes only the nine POC operations through generated API classes', :aggregate_failures do
     responses
     expect(authorizations).to eq(
-      %w[anon-key anon-key anon-key access-token access-token access-token service-key service-key]
+      %w[anon-key anon-key anon-key anon-key access-token access-token access-token service-key service-key]
     )
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
@@ -213,6 +229,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(apis.locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
   end
 
+  it 'builds the generated sign-up request with metadata' do
+    responses
+
+    request = apis.authentication.signup_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthSignupRequest)
+    expect(request.to_hash).to eq(
+      email: 'new@example.com',
+      password: 'secret',
+      user_metadata: { display_name: 'New User' }
+    )
+  end
+
   it 'sends the refresh token through the generated logout request' do
     transport.auth_logout(authorization: 'anon-key', refresh_token: 'refresh-1')
 
@@ -222,6 +250,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'normalizes generated responses for the facade', :aggregate_failures do
+    expect(responses.fetch(:signup).body).to eq(
+      'confirmation_required' => true,
+      'message' => 'Check your email to confirm your account'
+    )
     expect(responses.fetch(:auth).body).to eq('access_token' => 'token')
     expect(responses.fetch(:refresh).body).to eq('access_token' => 'refreshed-token')
     expect(responses.fetch(:logout).status).to eq(204)

@@ -3,6 +3,18 @@
 module Volcano
   # Authentication operations for the internal generated transport.
   class GeneratedTransport
+    def auth_signup(authorization:, email:, password:, metadata:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::AuthSignupRequest.new(
+          email: email,
+          password: password,
+          user_metadata: metadata
+        )
+        response(*apis.authentication.auth_signup_with_http_info(request))
+      end
+    end
+
     def auth_signin(authorization:, email:, password:)
       invoke do
         apis = @api_factory.call(authorization)

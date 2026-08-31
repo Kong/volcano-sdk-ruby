@@ -6,7 +6,7 @@ module Volcano
   # Server-validated current-user behavior for the authentication facade.
   class Auth
     INVALID_USER = 'Expected a complete user profile'
-    RFC3339_OFFSET = /(?:Z|[+-]\d{2}:\d{2})\z/
+    RFC3339_OFFSET = /(?:[Zz]|[+-]\d{2}:\d{2})\z/
     USER_OPTIONAL_VALUES = %w[project_id email_confirmed user_metadata app_metadata avatar_url].freeze
     USER_OPTIONAL_STRINGS = %w[project_id avatar_url].freeze
     USER_STATUSES = %w[active banned deleted].freeze

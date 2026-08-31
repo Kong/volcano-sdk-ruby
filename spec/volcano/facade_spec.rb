@@ -268,7 +268,7 @@ RSpec.describe Volcano::Client do
         'app_metadata' => { 'provider' => 'email' },
         'avatar_url' => 'https://example.com/avatar.png',
         'banned_until' => nil,
-        'last_sign_in_at' => '2026-08-31T12:00:00Z',
+        'last_sign_in_at' => '2026-08-31T12:00:00z',
         'created_at' => '2026-08-30T12:00:00Z',
         'updated_at' => '2026-08-31T17:30:00+05:30'
       )
@@ -278,7 +278,7 @@ RSpec.describe Volcano::Client do
       expect(user).to have_attributes(
         project_id: 'project-123', app_metadata: { 'provider' => 'email' },
         avatar_url: 'https://example.com/avatar.png', banned_until: nil,
-        last_sign_in_at: Time.iso8601('2026-08-31T12:00:00Z'),
+        last_sign_in_at: Time.iso8601('2026-08-31T12:00:00z'),
         created_at: Time.iso8601('2026-08-30T12:00:00Z'),
         updated_at: Time.iso8601('2026-08-31T17:30:00+05:30')
       )

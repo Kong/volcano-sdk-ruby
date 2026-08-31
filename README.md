@@ -20,6 +20,21 @@ client = Volcano::Client.new(
 The REST facade is synchronous. Successful calls return Volcano-owned values;
 failures raise typed errors under `Volcano::Error`.
 
+### Sign up
+
+```ruby
+result = client.auth.sign_up(
+  email: "new-user@example.com",
+  password: "secret",
+  metadata: { display_name: "New User" }
+)
+puts result.message if result.confirmation_required
+```
+
+`sign_up` returns an immutable acknowledgement and never creates or replaces a
+session. The response is identical for new and existing email addresses. Call
+`sign_in` separately after the account is ready to establish a session.
+
 ### Sign in
 
 ```ruby

@@ -285,6 +285,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
+  it 'normalizes invalid JSON returned for the current user' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |_options|
+      raise JSON::ParserError, 'unexpected token'
+    end
+
+    expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(
+      Volcano::Error::AuthenticationError,
+      'Expected a complete user profile'
+    ) do |error|
+      expect(error.cause).to be_a(JSON::ParserError)
+    end
+  end
+
   it 'normalizes generated responses for the facade', :aggregate_failures do
     expect(responses.fetch(:signup).body).to eq(
       'confirmation_required' => true,

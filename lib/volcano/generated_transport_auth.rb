@@ -35,7 +35,7 @@ module Volcano
           *apis.authentication.auth_get_user_with_http_info(debug_return_type: 'Object')
         )
       end
-    rescue ArgumentError, TypeError => e
+    rescue ArgumentError, JSON::ParserError, TypeError => e
       raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
     end
 

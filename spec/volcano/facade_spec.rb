@@ -249,6 +249,7 @@ RSpec.describe Volcano::Client do
 
     it 'owns and deeply freezes user data', :aggregate_failures do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user')['app_metadata'] = { 'provider' => 'email' }
 
       user = client.auth.user
 
@@ -256,7 +257,31 @@ RSpec.describe Volcano::Client do
       expect(user.email).to be_frozen
       expect(user.user_metadata).to be_frozen
       expect(user.user_metadata.fetch('roles')).to be_frozen
+      expect(user.app_metadata).to be_frozen
       expect { user.user_metadata.fetch('roles') << 'editor' }.to raise_error(FrozenError)
+    end
+
+    it 'preserves the optional profile fields' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user').merge!(
+        'project_id' => 'project-123',
+        'app_metadata' => { 'provider' => 'email' },
+        'avatar_url' => 'https://example.com/avatar.png',
+        'banned_until' => nil,
+        'last_sign_in_at' => Time.iso8601('2026-08-31T12:00:00Z'),
+        'created_at' => Time.iso8601('2026-08-30T12:00:00Z'),
+        'updated_at' => Time.iso8601('2026-08-31T12:00:00Z')
+      )
+
+      user = client.auth.user
+
+      expect(user).to have_attributes(
+        project_id: 'project-123', app_metadata: { 'provider' => 'email' },
+        avatar_url: 'https://example.com/avatar.png', banned_until: nil,
+        last_sign_in_at: Time.iso8601('2026-08-31T12:00:00Z'),
+        created_at: Time.iso8601('2026-08-30T12:00:00Z'),
+        updated_at: Time.iso8601('2026-08-31T12:00:00Z')
+      )
     end
 
     it 'does not replace the current session' do
@@ -299,6 +324,16 @@ RSpec.describe Volcano::Client do
       transport.user_response = Response.new(
         status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => nil } }, headers: {}, data: nil
       )
+
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Expected a complete user profile'
+      )
+    end
+
+    it 'rejects a malformed successful envelope with a typed error' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response = Response.new(status: 200, body: nil, headers: {}, data: nil)
 
       expect { client.auth.user }.to raise_error(
         Volcano::Error::AuthenticationError,

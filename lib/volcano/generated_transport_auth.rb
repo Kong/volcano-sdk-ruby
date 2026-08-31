@@ -3,6 +3,9 @@
 module Volcano
   # Authentication operations for the internal generated transport.
   class GeneratedTransport
+    MALFORMED_USER_PROFILE = 'Expected a complete user profile'
+    private_constant :MALFORMED_USER_PROFILE
+
     def auth_signup(authorization:, email:, password:, metadata:)
       invoke do
         apis = @api_factory.call(authorization)
@@ -30,6 +33,8 @@ module Volcano
         apis = @api_factory.call(authorization)
         response(*apis.authentication.auth_get_user_with_http_info)
       end
+    rescue ArgumentError, TypeError => e
+      raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
     end
 
     def auth_refresh(authorization:, refresh_token:)

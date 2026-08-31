@@ -272,6 +272,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
   end
 
+  it 'normalizes malformed generated user profiles' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do
+      raise ArgumentError, 'invalid AuthUser status'
+    end
+
+    expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(
+      Volcano::Error::AuthenticationError,
+      'Expected a complete user profile'
+    ) do |error|
+      expect(error.cause).to be_a(ArgumentError)
+    end
+  end
+
   it 'normalizes generated responses for the facade', :aggregate_failures do
     expect(responses.fetch(:signup).body).to eq(
       'confirmation_required' => true,

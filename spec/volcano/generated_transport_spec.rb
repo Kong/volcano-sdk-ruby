@@ -41,7 +41,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           user_metadata: { display_name: 'Ada' }
         }
       }
-      [FakeGeneratedModel.new(profile), 200, { 'request-id' => 'user' }]
+      [JSON.generate(profile), 200, { 'request-id' => 'user' }]
     end
 
     def auth_signup_with_http_info(body)
@@ -264,7 +264,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'gets the current user through the generated operation' do
     response = transport.auth_get_user(authorization: 'access-token')
 
-    expect(apis.authentication.get_user_calls).to eq([{ debug_return_type: 'Object' }])
+    expect(apis.authentication.get_user_calls).to eq([{ debug_return_type: 'String' }])
     expect(authorizations).to eq(['access-token'])
     expect(response.status).to eq(200)
     expect(response.body.fetch('user')).to include(
@@ -272,22 +272,35 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
   end
 
-  it 'normalizes malformed generated user profiles' do
-    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do
-      raise ArgumentError, 'invalid AuthUser status'
+  it 'parses the current-user response independently of generated content-type handling' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |options|
+      raise 'generated deserializer selected' unless options.fetch(:debug_return_type) == 'String'
+
+      body = JSON.generate(user: { id: 'user-123', email: 'user@example.com', status: 'active' })
+      [body, 200, { 'Content-Type' => 'text/html' }]
+    end
+
+    response = transport.auth_get_user(authorization: 'access-token')
+
+    expect(response.body.fetch('user')).to include('id' => 'user-123', 'status' => 'active')
+  end
+
+  it 'normalizes an empty generated user response' do
+    apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |_options|
+      [nil, 200, { 'Content-Type' => 'application/json' }]
     end
 
     expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(
       Volcano::Error::AuthenticationError,
       'Expected a complete user profile'
     ) do |error|
-      expect(error.cause).to be_a(ArgumentError)
+      expect(error.cause).to be_a(TypeError)
     end
   end
 
   it 'normalizes invalid JSON returned for the current user' do
     apis.authentication.define_singleton_method(:auth_get_user_with_http_info) do |_options|
-      raise JSON::ParserError, 'unexpected token'
+      ['not-json', 200, { 'Content-Type' => 'application/json' }]
     end
 
     expect { transport.auth_get_user(authorization: 'access-token') }.to raise_error(

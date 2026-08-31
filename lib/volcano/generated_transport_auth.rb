@@ -31,11 +31,12 @@ module Volcano
     def auth_get_user(authorization:)
       invoke do
         apis = @api_factory.call(authorization)
-        response(
-          *apis.authentication.auth_get_user_with_http_info(debug_return_type: 'Object')
+        body, status, headers = apis.authentication.auth_get_user_with_http_info(
+          debug_return_type: 'String'
         )
+        response(JSON.parse(body), status, headers)
       end
-    rescue ArgumentError, JSON::ParserError, TypeError => e
+    rescue JSON::ParserError, TypeError => e
       raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
     end
 

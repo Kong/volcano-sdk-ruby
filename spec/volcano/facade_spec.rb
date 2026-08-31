@@ -270,7 +270,7 @@ RSpec.describe Volcano::Client do
         'banned_until' => nil,
         'last_sign_in_at' => '2026-08-31T12:00:00Z',
         'created_at' => '2026-08-30T12:00:00Z',
-        'updated_at' => '2026-08-31T12:00:00Z'
+        'updated_at' => '2026-08-31T17:30:00+05:30'
       )
 
       user = client.auth.user
@@ -280,7 +280,7 @@ RSpec.describe Volcano::Client do
         avatar_url: 'https://example.com/avatar.png', banned_until: nil,
         last_sign_in_at: Time.iso8601('2026-08-31T12:00:00Z'),
         created_at: Time.iso8601('2026-08-30T12:00:00Z'),
-        updated_at: Time.iso8601('2026-08-31T12:00:00Z')
+        updated_at: Time.iso8601('2026-08-31T17:30:00+05:30')
       )
     end
 
@@ -346,6 +346,16 @@ RSpec.describe Volcano::Client do
       transport.user_response.body.fetch('user').merge!(
         'status' => 'pending', 'created_at' => 'not-a-timestamp'
       )
+
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Expected a complete user profile'
+      )
+    end
+
+    it 'rejects timestamps without an RFC 3339 offset' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user')['created_at'] = '2026-08-31T12:00:00'
 
       expect { client.auth.user }.to raise_error(
         Volcano::Error::AuthenticationError,

@@ -33,8 +33,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
     end
 
-    def auth_get_user_with_http_info
-      @get_user_calls << true
+    def auth_get_user_with_http_info(options = {})
+      @get_user_calls << options
       profile = {
         user: {
           id: 'user-123', email: 'user@example.com', status: 'active',
@@ -264,7 +264,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'gets the current user through the generated operation' do
     response = transport.auth_get_user(authorization: 'access-token')
 
-    expect(apis.authentication.get_user_calls).to eq([true])
+    expect(apis.authentication.get_user_calls).to eq([{ debug_return_type: 'Object' }])
     expect(authorizations).to eq(['access-token'])
     expect(response.status).to eq(200)
     expect(response.body.fetch('user')).to include(

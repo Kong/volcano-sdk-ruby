@@ -268,9 +268,9 @@ RSpec.describe Volcano::Client do
         'app_metadata' => { 'provider' => 'email' },
         'avatar_url' => 'https://example.com/avatar.png',
         'banned_until' => nil,
-        'last_sign_in_at' => Time.iso8601('2026-08-31T12:00:00Z'),
-        'created_at' => Time.iso8601('2026-08-30T12:00:00Z'),
-        'updated_at' => Time.iso8601('2026-08-31T12:00:00Z')
+        'last_sign_in_at' => '2026-08-31T12:00:00Z',
+        'created_at' => '2026-08-30T12:00:00Z',
+        'updated_at' => '2026-08-31T12:00:00Z'
       )
 
       user = client.auth.user
@@ -323,6 +323,28 @@ RSpec.describe Volcano::Client do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
       transport.user_response = Response.new(
         status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => nil } }, headers: {}, data: nil
+      )
+
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Expected a complete user profile'
+      )
+    end
+
+    it 'rejects profile values that the generated client would coerce' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user').merge!('id' => 123, 'email' => { 'value' => 'x' })
+
+      expect { client.auth.user }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Expected a complete user profile'
+      )
+    end
+
+    it 'rejects invalid status and timestamp values' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.user_response.body.fetch('user').merge!(
+        'status' => 'pending', 'created_at' => 'not-a-timestamp'
       )
 
       expect { client.auth.user }.to raise_error(

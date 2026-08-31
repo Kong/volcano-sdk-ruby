@@ -31,7 +31,9 @@ module Volcano
     def auth_get_user(authorization:)
       invoke do
         apis = @api_factory.call(authorization)
-        response(*apis.authentication.auth_get_user_with_http_info)
+        response(
+          *apis.authentication.auth_get_user_with_http_info(debug_return_type: 'Object')
+        )
       end
     rescue ArgumentError, TypeError => e
       raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e

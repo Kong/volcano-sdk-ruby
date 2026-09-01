@@ -42,6 +42,14 @@ module Volcano
       end
     end
 
+    # Captures a generated request URL without performing network I/O.
+    class AuthorizationURLApiClient < ApiClient
+      def call_api(http_method, path, options = {})
+        [build_request(http_method, path, options).url, 0, {}]
+      end
+    end
+    private_constant :AuthorizationURLApiClient
+
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
       UPLOAD_OPTIONS = {
@@ -156,6 +164,11 @@ module Volcano
           storage: StorageApi.new(api_client),
           locks: Generated::LocksApi.new(api_client)
         )
+      end
+
+      def oauth_authorization_api
+        api_client = AuthorizationURLApiClient.new(generated_configuration(nil))
+        Generated::OAuthAuthenticationApi.new(api_client)
       end
 
       def host_with_port(uri)

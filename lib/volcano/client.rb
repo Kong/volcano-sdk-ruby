@@ -16,9 +16,7 @@ module Volcano
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
-      @session_mutex = Mutex.new
-      @session_generation = 0
-      @current_session = nil
+      @auth_state = AuthState.new
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
       initialize_facades(socket_factory)
     end
@@ -32,7 +30,7 @@ module Volcano
     end
 
     def current_session
-      capture_session.last
+      @auth_state.current
     end
 
     def session_token
@@ -48,35 +46,24 @@ module Volcano
       @service_key
     end
 
-    def store_session(session)
-      @session_mutex.synchronize do
-        @current_session = session
-        @session_generation += 1
-      end
+    def store_session(session, event: :signed_in)
+      @auth_state.store(session, event: event)
     end
 
     def capture_session
-      @session_mutex.synchronize { [@session_generation, @current_session] }
+      @auth_state.capture
     end
 
-    def store_session_if_current(session, generation)
-      @session_mutex.synchronize do
-        next false unless generation == @session_generation
-
-        @current_session = session
-        @session_generation += 1
-        true
-      end
+    def store_session_if_current?(session, generation, event: :signed_in)
+      @auth_state.store_if_current?(session, generation, event: event)
     end
 
-    def clear_session_if_current(generation)
-      @session_mutex.synchronize do
-        next false unless generation == @session_generation
+    def clear_session_if_current?(generation, event: :signed_out)
+      @auth_state.clear_if_current?(generation, event: event)
+    end
 
-        @current_session = nil
-        @session_generation += 1
-        true
-      end
+    def subscribe_auth_state_change(...)
+      @auth_state.subscribe(...)
     end
 
     private

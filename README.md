@@ -330,6 +330,23 @@ immutable new snapshot. An authentication failure clears the session that
 initiated the request. Server and transport failures preserve it, and a late
 response never replaces a newer session. The SDK does not persist sessions.
 
+### Observe auth-state changes
+
+```ruby
+subscription = client.auth.on_auth_state_change do |event, session|
+  puts "#{event}: #{session ? 'authenticated' : 'anonymous'}"
+end
+
+# Later, stop receiving events.
+subscription.unsubscribe
+```
+
+Registration immediately yields `:initial_session`. Successful session
+creation, refresh, and local clearing yield `:signed_in`, `:token_refreshed`,
+and `:signed_out`. Callbacks are delivered locally in transition order after the
+state lock is released, and callback failures cannot interrupt auth operations.
+The SDK does not broadcast between processes or persist sessions.
+
 ### Sign out the current session
 
 ```ruby

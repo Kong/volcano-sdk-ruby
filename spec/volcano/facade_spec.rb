@@ -81,7 +81,8 @@ RSpec.describe Volcano::Client do
   end
 
   module FakeAnonymousTransport
-    attr_accessor :anonymous_signin_response, :on_anonymous_signin
+    attr_accessor :anonymous_conversion_response, :anonymous_signin_response,
+                  :on_anonymous_conversion, :on_anonymous_signin
 
     def initialize_anonymous_signin_response
       @anonymous_signin_response = Response.new(
@@ -100,12 +101,28 @@ RSpec.describe Volcano::Client do
       initialize_password_recovery_response
       initialize_email_confirmation_response
       initialize_anonymous_signin_response
+      @anonymous_conversion_response = Response.new(
+        status: 200,
+        body: {
+          'user' => {
+            'id' => 'anonymous-user', 'email' => 'converted@example.com',
+            'status' => 'active', 'email_confirmed' => false
+          }
+        },
+        headers: {}, data: nil
+      )
     end
 
     def auth_signup_anonymous(**arguments)
       @calls << [:auth_signup_anonymous, arguments]
       @on_anonymous_signin&.call
       @anonymous_signin_response
+    end
+
+    def auth_convert_anonymous(**arguments)
+      @calls << [:auth_convert_anonymous, arguments]
+      @on_anonymous_conversion&.call
+      @anonymous_conversion_response
     end
   end
 
@@ -375,6 +392,51 @@ RSpec.describe Volcano::Client do
         'Anonymous sign-ins are disabled'
       )
       expect(client.auth.current_session).to be(established)
+    end
+  end
+
+  describe '#convert_anonymous' do
+    it 'returns the converted user without replacing the session', :aggregate_failures do
+      established = client.auth.sign_in_anonymously
+
+      user = client.auth.convert_anonymous(
+        email: 'converted@example.com',
+        password: 'secret',
+        metadata: { display_name: 'Ada' }
+      )
+
+      expect(user).to have_attributes(
+        id: 'anonymous-user', email: 'converted@example.com', email_confirmed: false
+      )
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_convert_anonymous).last.fetch(1)).to eq(
+        authorization: 'anonymous-access',
+        email: 'converted@example.com',
+        password: 'secret',
+        metadata: { display_name: 'Ada' }
+      )
+    end
+
+    it 'requires a session' do
+      expect do
+        client.auth.convert_anonymous(email: 'converted@example.com', password: 'secret')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_convert_anonymous)).to be_empty
+    end
+
+    it 'does not return a stale response' do
+      client.auth.sign_in_anonymously
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access',
+        refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_anonymous_conversion = -> { client.auth.current_session = replacement }
+
+      expect do
+        client.auth.convert_anonymous(email: 'converted@example.com', password: 'secret')
+      end.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
     end
   end
 

@@ -18,7 +18,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :anonymous_signup_calls, :calls, :confirm_email_calls, :forgot_password_calls, :get_user_calls,
+    attr_reader :anonymous_conversion_calls, :anonymous_signup_calls, :calls, :confirm_email_calls,
+                :forgot_password_calls, :get_user_calls,
                 :logout_calls, :refresh_calls,
                 :resend_confirmation_calls,
                 :reset_password_calls, :signup_calls, :update_user_calls
@@ -49,6 +50,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         user: { id: 'anonymous-user' }
       }
       [FakeGeneratedModel.new(session), 201, {}]
+    end
+
+    def auth_convert_anonymous_with_http_info(body)
+      (@anonymous_conversion_calls ||= []) << body
+      [FakeGeneratedModel.new(user: { id: 'anonymous-user' }), 200, {}]
     end
 
     def auth_confirm_email_with_http_info(body, options = {})
@@ -314,6 +320,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       .and have_attributes(user_metadata: { device: 'mobile' })
     expect(response.status).to eq(201)
     expect(authorizations).to eq(['anon-key'])
+  end
+
+  it 'converts an anonymous user through the generated operation' do
+    response = transport.auth_convert_anonymous(
+      authorization: 'anonymous-access',
+      email: 'converted@example.com',
+      password: 'secret',
+      metadata: { display_name: 'Ada' }
+    )
+
+    request = apis.authentication.anonymous_conversion_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthSignupRequest)
+      .and have_attributes(
+        email: 'converted@example.com',
+        password: 'secret',
+        user_metadata: { display_name: 'Ada' }
+      )
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['anonymous-access'])
   end
 
   it 'requests a password reset through the generated operation' do

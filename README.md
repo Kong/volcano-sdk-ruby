@@ -166,6 +166,17 @@ The method returns a frozen array of immutable `Volcano::LinkedOAuthProvider`
 values. It raises `Volcano::Error::SessionChangedError` if the active session
 changes while the request is in flight.
 
+### Link an OAuth provider
+
+```ruby
+authorization_url = client.auth.link_oauth_provider('github')
+```
+
+Redirect the user to the returned URL to complete the provider flow. The method
+accepts `apple`, `github`, `google`, or `microsoft` and raises
+`Volcano::Error::SessionChangedError` if the active session changes while the
+request is in flight.
+
 ### Sign out all other devices
 
 ```ruby

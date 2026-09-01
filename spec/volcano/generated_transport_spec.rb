@@ -198,11 +198,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeOAuthApi
-    attr_reader :link_calls, :list_calls, :unlink_calls
+    attr_reader :link_calls, :list_calls, :token_status_calls, :unlink_calls
 
     def initialize
       @link_calls = []
       @list_calls = []
+      @token_status_calls = []
       @unlink_calls = []
     end
 
@@ -229,6 +230,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_unlink_o_auth_provider_with_http_info(provider)
       @unlink_calls << provider
       [nil, 204, {}]
+    end
+
+    def get_o_auth_provider_token_with_http_info(provider)
+      @token_status_calls << provider
+      result = {
+        message: 'Provider token is valid', provider: provider, expires_in: 3600
+      }
+      [FakeGeneratedModel.new(result), 200, {}]
     end
   end
 
@@ -543,6 +552,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(apis.oauth.unlink_calls).to eq(['github'])
     expect(response.status).to eq(204)
     expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'gets OAuth provider token status through the generated operation' do
+    response = transport.auth_get_oauth_provider_token(
+      authorization: 'access-token', provider: 'google'
+    )
+
+    expect(response.status).to eq(200)
+    expect(apis.oauth.token_status_calls).to eq(['google'])
+    expect(response.body).to eq(
+      'message' => 'Provider token is valid', 'provider' => 'google', 'expires_in' => 3600
+    )
   end
 
   it 'deletes one session through the generated operation' do

@@ -254,7 +254,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @api_calls << [provider, request]
       result = {
         provider: provider, endpoint: request.endpoint, status_code: 200,
-        data: [{ name: 'volcano' }]
+        data: [{ name: 'volcano' }, nil]
       }
       [FakeGeneratedModel.new(result), 200, {}]
     end
@@ -602,17 +602,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'calls an OAuth provider API through the generated operation' do
     response = transport.auth_call_oauth_api(
       authorization: 'access-token', provider: 'github', endpoint: '/user/repos',
-      method: 'POST', body: { 'visibility' => 'private' }
+      method: 'POST', body: { 'items' => [1, nil, 2] }
     )
 
     provider, request = apis.oauth.api_calls.last
     expect(provider).to eq('github')
     expect(request).to have_attributes(
-      endpoint: '/user/repos', method: 'POST', body: { 'visibility' => 'private' }
+      endpoint: '/user/repos', method: 'POST', body: { 'items' => [1, nil, 2] }
     )
+    expect(request.to_hash.dig(:body, 'items')).to eq([1, nil, 2])
     expect(response.body).to eq(
       'provider' => 'github', 'endpoint' => '/user/repos', 'status_code' => 200,
-      'data' => [{ 'name' => 'volcano' }]
+      'data' => [{ 'name' => 'volcano' }, nil]
     )
   end
 

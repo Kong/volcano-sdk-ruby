@@ -42,5 +42,6 @@ npx --no-install openapi-generator-cli generate \
   -i openapi/openapi.yaml \
   -g ruby \
   -c openapi-generator.yaml \
+  -t openapi/templates \
   -o "$output" \
   --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false

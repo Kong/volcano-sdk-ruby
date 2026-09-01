@@ -31,6 +31,11 @@ RSpec.describe 'OpenAPI generation' do
         'acquire_project_lock',
         'release_project_lock'
       )
+      model_base = File.binread(
+        File.join(output, 'lib/volcano-generated/api_model_base.rb')
+      )
+      expect(model_base).to include('value.map { |v| _to_hash(v) }')
+      expect(model_base).not_to include('value.compact.map')
     end
   end
 

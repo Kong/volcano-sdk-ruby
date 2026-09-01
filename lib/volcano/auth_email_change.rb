@@ -3,6 +3,9 @@
 module Volcano
   # Email-change request behavior for the authentication facade.
   class Auth
+    INVALID_EMAIL_CHANGE_RESULT = 'Expected a valid email-change acknowledgement'
+    private_constant :INVALID_EMAIL_CHANGE_RESULT
+
     def request_email_change(new_email:)
       generation, current = @client.capture_session
       raise Error::AuthenticationError, 'No active session' unless current
@@ -24,7 +27,17 @@ module Volcano
 
     def email_change_result(payload)
       values = payload.is_a?(Hash) ? payload : {}
-      EmailChangeResult.new(message: values['message'], new_email: values['new_email'])
+      message = values['message']
+      new_email = values['new_email']
+      unless [message, new_email].all? { |value| value.nil? || value.is_a?(String) }
+        raise TypeError, INVALID_EMAIL_CHANGE_RESULT
+      end
+
+      EmailChangeResult.new(message: owned_string(message), new_email: owned_string(new_email))
+    end
+
+    def owned_string(value)
+      value&.dup&.freeze
     end
   end
 end

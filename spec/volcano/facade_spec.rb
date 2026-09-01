@@ -471,6 +471,8 @@ RSpec.describe Volcano::Client do
         )
       )
       expect(client.auth.current_session).to be(established)
+      expect(result.message).to be_frozen
+      expect(result.new_email).to be_frozen
       expect(transport.calls_for(:auth_request_email_change).last.fetch(1)).to eq(
         authorization: 'access-token', new_email: 'new@example.com'
       )

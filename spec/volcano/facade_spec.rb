@@ -51,17 +51,26 @@ RSpec.describe Volcano::Client do
   end
 
   module FakeEmailConfirmationTransport
-    attr_accessor :confirm_email_response
+    attr_accessor :confirm_email_response, :resend_confirmation_response
 
     def initialize_email_confirmation_response
       @confirm_email_response = Response.new(
         status: 200, body: { 'message' => 'Email confirmed successfully' }, headers: {}, data: nil
+      )
+      @resend_confirmation_response = Response.new(
+        status: 200, body: { 'message' => 'If eligible, a confirmation email has been sent.' },
+        headers: {}, data: nil
       )
     end
 
     def auth_confirm_email(**arguments)
       @calls << [:auth_confirm_email, arguments]
       @confirm_email_response
+    end
+
+    def auth_resend_confirmation(**arguments)
+      @calls << [:auth_resend_confirmation, arguments]
+      @resend_confirmation_response
     end
   end
 
@@ -379,6 +388,33 @@ RSpec.describe Volcano::Client do
       expect do
         client.auth.confirm_email(token: 'expired-token')
       end.to raise_error(Volcano::Error::AuthenticationError)
+      expect(client.auth.current_session).to be(established)
+    end
+  end
+
+  describe '#resend_confirmation' do
+    it 'is enumeration-safe without changing an unrelated session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+
+      result = client.auth.resend_confirmation(email: 'user@example.com')
+
+      expect(result).to be_nil
+      expect(transport.calls_for(:auth_resend_confirmation).last.fetch(1)).to eq(
+        authorization: 'anon-key', email: 'user@example.com'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'preserves rate-limit metadata without changing the session' do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+      transport.resend_confirmation_response = Response.new(
+        status: 429, body: { 'error' => 'Too many requests' },
+        headers: { 'Retry-After' => '17' }, data: nil
+      )
+
+      expect do
+        client.auth.resend_confirmation(email: 'user@example.com')
+      end.to raise_error(Volcano::Error::RateLimitedError) { |error| expect(error.retry_after).to eq(17) }
       expect(client.auth.current_session).to be(established)
     end
   end

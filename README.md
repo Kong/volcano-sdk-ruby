@@ -108,6 +108,15 @@ eligible. Volcano sends mail only for an existing unconfirmed account when
 transactional email is configured. Rate limits raise
 `Volcano::Error::RateLimitedError` with `retry_after` when supplied.
 
+### Sign in anonymously
+
+```ruby
+session = client.auth.sign_in_anonymously(metadata: { device: "mobile" })
+```
+
+Anonymous sign-ins must be enabled for the project. Convert the account before
+signing out if the user needs to recover it later.
+
 ### Reset the password
 
 ```ruby

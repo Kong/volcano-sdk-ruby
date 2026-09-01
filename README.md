@@ -168,8 +168,13 @@ hosted_url = client.auth.get_hosted_auth_url(
 ```
 
 Store `hosted_state` in the user's signed server-side session before redirecting
-to `hosted_url`. The SDK builds a login, signup, or forgot-password URL; it does
-not navigate or persist state.
+to `hosted_url`. Before adopting the returned session, require the returned
+`state` to exactly match the stored value. This URL-only method does not parse
+the callback, navigate, persist state, or adopt a session.
+
+The `action` deep link applies to Volcano's built-in page. A customized login
+page receives the request but must implement its own signup or forgot-password
+flow because Hosting ignores `action` for custom pages.
 
 ### Sign in with OAuth
 

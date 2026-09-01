@@ -126,7 +126,41 @@ RSpec.describe Volcano::Client do
   end
 
   module FakeSessionTransport
-    attr_accessor :delete_session_response, :on_delete_other_sessions, :on_delete_session
+    attr_accessor :delete_session_response, :list_sessions_response, :on_delete_other_sessions,
+                  :on_delete_session, :on_list_sessions
+
+    def auth_get_my_sessions(**arguments)
+      @calls << [:auth_get_my_sessions, arguments]
+      @on_list_sessions&.call
+      @list_sessions_response || Response.new(
+        status: 200,
+        body: {
+          'sessions' => [
+            {
+              'id' => '00000000-0000-4000-8000-000000000099',
+              'user_id' => '00000000-0000-4000-8000-000000000010',
+              'provider' => 'email',
+              'user_agent' => 'Volcano Test',
+              'ip_address' => '192.0.2.10',
+              'last_ip_address' => '192.0.2.11',
+              'expires_at' => Time.iso8601('2026-09-02T12:00:00Z'),
+              'last_activity_at' => Time.iso8601('2026-09-01T12:00:00Z'),
+              'session_started_at' => Time.iso8601('2026-08-31T12:00:00Z'),
+              'is_active' => true,
+              'is_current' => true,
+              'created_at' => Time.iso8601('2026-08-31T12:00:00Z'),
+              'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
+            }
+          ],
+          'total' => 21,
+          'page' => 2,
+          'limit' => 10,
+          'total_pages' => 3
+        },
+        headers: {},
+        data: nil
+      )
+    end
 
     def auth_delete_all_my_sessions(**arguments)
       @calls << [:auth_delete_all_my_sessions, arguments]
@@ -637,6 +671,75 @@ RSpec.describe Volcano::Client do
       transport.on_confirm_email_change = -> { client.auth.current_session = replacement }
 
       expect { client.auth.confirm_email_change(token: 'change-token') }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#list_sessions' do
+    it 'returns an immutable offset page and preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.list_sessions(page: 2, limit: 10)
+
+      expect(result).to be_a(Volcano::SessionPage)
+        .and have_attributes(total: 21, page: 2, limit: 10, total_pages: 3)
+      expect(result.sessions).to contain_exactly(
+        Volcano::AuthSession.new(
+          id: '00000000-0000-4000-8000-000000000099',
+          user_id: '00000000-0000-4000-8000-000000000010',
+          provider: 'email',
+          user_agent: 'Volcano Test',
+          ip_address: '192.0.2.10',
+          last_ip_address: '192.0.2.11',
+          expires_at: Time.iso8601('2026-09-02T12:00:00Z'),
+          last_activity_at: Time.iso8601('2026-09-01T12:00:00Z'),
+          session_started_at: Time.iso8601('2026-08-31T12:00:00Z'),
+          is_active: true,
+          is_current: true,
+          created_at: Time.iso8601('2026-08-31T12:00:00Z'),
+          updated_at: Time.iso8601('2026-09-01T12:00:00Z')
+        )
+      )
+      expect(result.sessions).to be_frozen
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_get_my_sessions).last.fetch(1)).to eq(
+        authorization: 'access-token', page: 2, limit: 10
+      )
+    end
+
+    it 'requires a session' do
+      expect { client.auth.list_sessions }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_get_my_sessions)).to be_empty
+    end
+
+    it 'copies a caller-owned sessions array before freezing it' do
+      session = Volcano::AuthSession.new(
+        id: 'session-id', user_id: 'user-id', provider: 'email',
+        expires_at: Time.iso8601('2026-09-02T12:00:00Z'), is_active: true, is_current: true
+      )
+      sessions = [session]
+
+      result = Volcano::SessionPage.new(
+        sessions: sessions, total: 1, page: 1, limit: 20, total_pages: 1
+      )
+
+      expect(result.sessions).not_to be(sessions)
+      expect(result.sessions).to be_frozen
+      expect(sessions).not_to be_frozen
+      expect { sessions << session }.not_to raise_error
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_list_sessions = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.list_sessions }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

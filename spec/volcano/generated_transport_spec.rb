@@ -49,11 +49,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [nil, 204, {}]
     end
 
+    def auth_get_my_sessions_with_http_info(options = {})
+      @list_sessions_options = options
+      page = {
+        sessions: [], total: 21, page: 2, limit: 10, total_pages: 3
+      }
+      [FakeGeneratedModel.new(page), 200, {}]
+    end
+
     def delete_other_sessions_called?
       @delete_other_sessions_calls || false
     end
 
-    attr_reader :deleted_session_id
+    attr_reader :deleted_session_id, :list_sessions_options
   end
 
   class FakeAuthenticationApi
@@ -442,6 +450,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     expect(apis.authentication.delete_other_sessions_called?).to be(true)
     expect(response.status).to eq(204)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'lists sessions through the generated operation' do
+    response = transport.auth_get_my_sessions(
+      authorization: 'access-token', page: 2, limit: 10
+    )
+
+    expect(apis.authentication.list_sessions_options).to eq(page: 2, limit: 10)
+    expect(response.body).to include(
+      'sessions' => [], 'total' => 21, 'page' => 2, 'limit' => 10, 'total_pages' => 3
+    )
+    expect(response.status).to eq(200)
     expect(authorizations).to eq(['access-token'])
   end
 

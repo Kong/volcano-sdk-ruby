@@ -187,6 +187,17 @@ The server rejects removal of the account's only authentication method. A
 successful stale response raises `Volcano::Error::SessionChangedError` instead
 of acknowledging work authorized by a replaced session.
 
+### Check provider token status
+
+```ruby
+status = client.auth.get_oauth_provider_token('github')
+puts [status.provider, status.expires_in].join(' ')
+```
+
+The immutable `Volcano::OAuthProviderTokenStatus` contains provider and expiry
+metadata, not the credential. Volcano refreshes an expired token on the server.
+A stale result raises `Volcano::Error::SessionChangedError`.
+
 ### Sign out all other devices
 
 ```ruby

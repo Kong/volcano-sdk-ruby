@@ -50,6 +50,15 @@ module Volcano
       value.frozen? ? value : value.dup.freeze
     end
   end
+  OAuthProviderTokenStatus = Data.define(:message, :provider, :expires_in) do
+    def initialize(message:, provider:, expires_in:)
+      values = [message, provider]
+      valid = values.all? { |value| value.is_a?(String) && !value.strip.empty? }
+      raise TypeError, 'Expected complete OAuth provider token status' unless valid && expires_in.is_a?(Integer)
+
+      super(message: message.dup.freeze, provider: provider.dup.freeze, expires_in: expires_in)
+    end
+  end
   SignUpResult = Data.define(:confirmation_required, :message)
   EmailChangeResult = Data.define(:message, :new_email)
   USER_OPTIONAL_ATTRIBUTES = %i[

@@ -6,9 +6,10 @@ module Volcano
     INCOMPLETE_SESSION = 'Expected a complete Volcano::Session'
     private_constant :INCOMPLETE_SESSION
 
-    def initialize(client, transport)
+    def initialize(client, transport, api_url:)
       @client = client
       @transport = transport
+      @api_url = api_url
     end
 
     def current_session

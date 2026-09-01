@@ -154,6 +154,28 @@ values in activity order. It raises `Volcano::Error::SessionChangedError` instea
 of returning a page for a session that was replaced while the request was in
 flight. Sort, filter, and cursor controls are not yet exposed by this facade.
 
+### Build a hosted-auth URL
+
+```ruby
+require 'securerandom'
+
+hosted_state = SecureRandom.urlsafe_base64(32)
+hosted_url = client.auth.get_hosted_auth_url(
+  project_id: '00000000-0000-4000-8000-000000000020',
+  action: 'signup',
+  state: hosted_state
+)
+```
+
+Store `hosted_state` in the user's signed server-side session before redirecting
+to `hosted_url`. Before adopting the returned session, require the returned
+`state` to exactly match the stored value. This URL-only method does not parse
+the callback, navigate, persist state, or adopt a session.
+
+The `action` deep link applies to Volcano's built-in page. A customized login
+page receives the request but must implement its own signup or forgot-password
+flow because Hosting ignores `action` for custom pages.
+
 ### Sign in with OAuth
 
 ```ruby

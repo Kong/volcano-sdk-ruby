@@ -17,7 +17,20 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
+  module FakeEmailChangeApi
+    def auth_cancel_email_change_with_http_info(options = {})
+      (@cancel_email_change_calls ||= []) << options
+      [FakeGeneratedModel.new({}), 200, {}]
+    end
+
+    def cancel_email_change_calls
+      @cancel_email_change_calls || []
+    end
+  end
+
   class FakeAuthenticationApi
+    include FakeEmailChangeApi
+
     attr_accessor :email_change_body
     attr_reader :anonymous_conversion_calls, :anonymous_signup_calls, :calls, :confirm_email_calls,
                 :email_change_calls,
@@ -371,6 +384,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request).to be_a(InternalGenerated::AuthRequestEmailChangeRequest)
       .and have_attributes(new_email: 'new@example.com')
     expect(options).to eq(debug_return_type: 'String')
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'cancels an email change through the generated operation' do
+    response = transport.auth_cancel_email_change(authorization: 'access-token')
+
+    expect(apis.authentication.cancel_email_change_calls).to eq([{}])
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['access-token'])
   end

@@ -8235,7 +8235,7 @@ paths:
         - GitHub repositories: `/user/repos`
         - Microsoft Graph profile: `/me`
 
-        The response is the raw JSON response from the provider's API.
+        The response wraps the provider's raw JSON value with request metadata.
       operationId: callOAuthProviderAPI
       security:
         - AuthUserAccessToken: []
@@ -8284,8 +8284,24 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
-                description: Raw response from the OAuth provider's API
+                description: OAuth provider API response envelope
+                required:
+                  - provider
+                  - endpoint
+                  - status_code
+                  - data
+                properties:
+                  provider:
+                    type: string
+                    enum: [google, github, microsoft, apple]
+                  endpoint:
+                    type: string
+                  status_code:
+                    type: integer
+                    minimum: 100
+                    maximum: 599
+                  data:
+                    description: Raw JSON value returned by the OAuth provider's API
         '400':
           description: |
             Invalid request (for example: missing `endpoint`, an `endpoint` that is

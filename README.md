@@ -208,6 +208,17 @@ puts [status.provider, status.expires_in].join(' ')
 The refresh credential and new access token remain on the server. A stale result
 raises `Volcano::Error::SessionChangedError`.
 
+Call a provider API through Volcano's fixed-host server proxy:
+
+```ruby
+repos = client.auth.call_oauth_api('github', endpoint: '/user/repos')
+puts repos.first.fetch('name')
+```
+
+The method returns an immutable copy of the provider's JSON value. Volcano owns
+token refresh and host validation. A stale result raises
+`Volcano::Error::SessionChangedError`.
+
 ### Sign out all other devices
 
 ```ruby
@@ -346,8 +357,8 @@ subscriptions are out of scope.
 
 The internal REST transport is generated from the self-contained public
 Volcano OpenAPI bundle at hosting commit
-`a3f4a6e9d0fb48a16621383bd796d8b0d1378630`. Its SHA-256 is
-`c26ab2f32961699b19f710c1174906b7baae077eefcec299a6c19a36d2f559f6`.
+`cb12eb4636252cb658f13850dad930fa73a5dc4c`. Its SHA-256 is
+`95e5c102830db382064180afca4c62ad8b11faabf58148f9d21236046b930090`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

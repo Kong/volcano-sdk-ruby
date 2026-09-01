@@ -87,6 +87,7 @@ lib/volcano-generated/models/ban_auth_user_request.rb
 lib/volcano-generated/models/ban_user_response.rb
 lib/volcano-generated/models/batch_function_deploy_failure.rb
 lib/volcano-generated/models/batch_function_deploy_response.rb
+lib/volcano-generated/models/call_o_auth_provider_api200_response.rb
 lib/volcano-generated/models/call_o_auth_provider_api_request.rb
 lib/volcano-generated/models/complete_upload_session_response.rb
 lib/volcano-generated/models/configure_auth_methods_request.rb

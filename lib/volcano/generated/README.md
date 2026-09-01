@@ -354,6 +354,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::BanUserResponse](docs/BanUserResponse.md)
  - [Volcano::Generated::BatchFunctionDeployFailure](docs/BatchFunctionDeployFailure.md)
  - [Volcano::Generated::BatchFunctionDeployResponse](docs/BatchFunctionDeployResponse.md)
+ - [Volcano::Generated::CallOAuthProviderAPI200Response](docs/CallOAuthProviderAPI200Response.md)
  - [Volcano::Generated::CallOAuthProviderAPIRequest](docs/CallOAuthProviderAPIRequest.md)
  - [Volcano::Generated::CompleteUploadSessionResponse](docs/CompleteUploadSessionResponse.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequest](docs/ConfigureAuthMethodsRequest.md)

@@ -6,7 +6,7 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = 'c26ab2f32961699b19f710c1174906b7baae077eefcec299a6c19a36d2f559f6'
+  OPENAPI_SHA256 = '95e5c102830db382064180afca4c62ad8b11faabf58148f9d21236046b930090'
 
   it 'uses the exact bundled contract and emits all eight POC operations' do
     expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)
@@ -31,6 +31,11 @@ RSpec.describe 'OpenAPI generation' do
         'acquire_project_lock',
         'release_project_lock'
       )
+      model_base = File.binread(
+        File.join(output, 'lib/volcano-generated/api_model_base.rb')
+      )
+      expect(model_base).to include('value.map { |v| _to_hash(v) }')
+      expect(model_base).not_to include('value.compact.map')
     end
   end
 

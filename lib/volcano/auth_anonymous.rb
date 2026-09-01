@@ -7,7 +7,7 @@ module Volcano
       generation, = @client.capture_session
       payload = Transport.body(anonymous_signin_response(metadata), 201)
       session = build_session(payload)
-      raise Error::SessionChangedError unless @client.store_session_if_current(session, generation)
+      raise Error::SessionChangedError unless @client.store_session_if_current?(session, generation)
 
       session
     end

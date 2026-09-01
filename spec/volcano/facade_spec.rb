@@ -497,6 +497,75 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to eq(calls_after_sign_in)
   end
 
+  it 'reports local auth-state transitions to subscribers', :aggregate_failures do
+    events = []
+    subscription = client.auth.on_auth_state_change do |event, session|
+      events << [event, session]
+    end
+
+    signed_in = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    refreshed = client.auth.refresh_session
+    client.auth.sign_out
+
+    expect(subscription).to be_a(Volcano::AuthSubscription)
+    expect(events).to eq(
+      [
+        [:initial_session, nil],
+        [:signed_in, signed_in],
+        [:token_refreshed, refreshed],
+        [:signed_out, nil]
+      ]
+    )
+  end
+
+  it 'unsubscribes from auth-state changes idempotently' do
+    events = []
+    subscription = client.auth.on_auth_state_change do |event, session|
+      events << [event, session]
+    end
+
+    subscription.unsubscribe
+    subscription.unsubscribe
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(events).to eq([[:initial_session, nil]])
+  end
+
+  it 'requires a callback block for auth-state changes' do
+    expect { client.auth.on_auth_state_change }.to raise_error(
+      ArgumentError,
+      'callback block required'
+    )
+  end
+
+  it 'isolates subscriber failures from auth operations and other subscribers' do
+    allow(Warning).to receive(:warn)
+    received = []
+    client.auth.on_auth_state_change { raise 'subscriber failed' }
+    client.auth.on_auth_state_change do |event, session|
+      received << [event, session]
+    end
+
+    signed_in = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(received).to eq([[:initial_session, nil], [:signed_in, signed_in]])
+  end
+
+  it 'preserves notification order during reentrant auth changes' do
+    received = []
+    client.auth.on_auth_state_change do |event, _session|
+      client.auth.sign_out if event == :signed_in
+    end
+    client.auth.on_auth_state_change do |event, session|
+      received << [event, session]
+    end
+    received.clear
+
+    signed_in = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(received).to eq([[:signed_in, signed_in], [:signed_out, nil]])
+  end
+
   describe '#sign_up' do
     it 'returns an owned acknowledgement without changing the session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')

@@ -21,6 +21,12 @@ module Volcano
       @client.store_session(owned_session(**session.to_h))
     end
 
+    def on_auth_state_change(&callback)
+      raise ArgumentError, 'callback block required' unless callback
+
+      @client.subscribe_auth_state_change(&callback)
+    end
+
     def sign_in(email:, password:)
       payload = Transport.body(sign_in_response(email:, password:), 200)
       session = build_session(payload)
@@ -33,7 +39,8 @@ module Volcano
       raise Error::AuthenticationError, 'No active session' unless current
 
       session = build_session(refresh_payload(current.refresh_token, generation))
-      raise Error::SessionChangedError unless @client.store_session_if_current(session, generation)
+      stored = @client.store_session_if_current?(session, generation, event: :token_refreshed)
+      raise Error::SessionChangedError unless stored
 
       session
     end
@@ -43,7 +50,7 @@ module Volcano
       return unless current
 
       error = revocation_error(current.refresh_token)
-      raise Error::SessionChangedError, cause: error unless @client.clear_session_if_current(generation)
+      raise Error::SessionChangedError, cause: error unless @client.clear_session_if_current?(generation)
 
       raise error if error
     end
@@ -88,7 +95,7 @@ module Volcano
     def refresh_payload(refresh_token, generation)
       Transport.body(refresh_response(refresh_token), 200)
     rescue Error::AuthenticationError
-      @client.clear_session_if_current(generation)
+      @client.clear_session_if_current?(generation)
       raise
     end
 

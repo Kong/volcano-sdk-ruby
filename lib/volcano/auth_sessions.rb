@@ -113,7 +113,7 @@ module Volcano
 
     def session_unchanged_after_deletion?(deletes_current, error, generation)
       uncertain = error.nil? || error.is_a?(Error::TransportError)
-      return @client.clear_session_if_current(generation) if deletes_current && uncertain
+      return @client.clear_session_if_current?(generation) if deletes_current && uncertain
 
       @client.capture_session.first == generation
     end

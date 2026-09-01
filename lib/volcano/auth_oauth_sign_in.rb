@@ -21,7 +21,7 @@ module Volcano
       validate_oauth_callback_state(state, expected_state)
       generation, = @client.capture_session
       session = build_session(Transport.body(oauth_exchange_response(code, redirect_to), 200))
-      raise Error::SessionChangedError unless @client.store_session_if_current(session, generation)
+      raise Error::SessionChangedError unless @client.store_session_if_current?(session, generation)
 
       session
     end

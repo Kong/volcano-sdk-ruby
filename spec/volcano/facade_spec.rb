@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'base64'
 require 'stringio'
 require 'time'
 
@@ -9,7 +8,7 @@ RSpec.describe Volcano::Client do
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   def access_token_with_session_id(session_id)
-    payload = Base64.urlsafe_encode64(JSON.generate(session_id: session_id), padding: false)
+    payload = [JSON.generate(session_id: session_id)].pack('m0').tr('+/', '-_').delete('=')
     "header.#{payload}.signature"
   end
 
@@ -715,14 +714,28 @@ RSpec.describe Volcano::Client do
     end
 
     it 'clears the deleted current session' do
+      upper_session_id = '00000000-0000-4000-8000-0000000000AB'
+      client.auth.current_session = Volcano::Session.new(
+        access_token: access_token_with_session_id(upper_session_id.downcase),
+        refresh_token: 'current-refresh',
+        user_id: 'current-user'
+      )
+
+      client.auth.delete_session(upper_session_id)
+
+      expect(client.auth.current_session).to be_nil
+    end
+
+    it 'clears current state when the deletion response is lost' do
       client.auth.current_session = Volcano::Session.new(
         access_token: access_token_with_session_id(session_id),
         refresh_token: 'current-refresh',
         user_id: 'current-user'
       )
+      transport.on_delete_session = -> { raise IOError, 'connection lost' }
 
-      client.auth.delete_session(session_id)
-
+      expect { client.auth.delete_session(session_id) }
+        .to raise_error(Volcano::Error::TransportError, 'connection lost')
       expect(client.auth.current_session).to be_nil
     end
   end

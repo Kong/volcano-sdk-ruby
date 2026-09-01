@@ -76,6 +76,17 @@ that key. The method returns an immutable `Volcano::User` without replacing the
 active session. It rejects a response if another authentication operation
 replaces the session while the request is in flight.
 
+### Request a password reset email
+
+```ruby
+message = client.auth.reset_password_for_email(email: "user@example.com")
+puts message
+```
+
+The acknowledgement is intentionally identical whether or not the email
+belongs to an account. Failures raise the same typed Volcano errors as other
+authentication operations, and the current session remains unchanged.
+
 ### Adopt an existing session
 
 ```ruby

@@ -3,6 +3,13 @@
 module Volcano
   # OAuth operations for the internal generated transport.
   class GeneratedTransport
+    def auth_oauth_authorization_url(anon_key:, provider:, redirect_url: nil)
+      options = redirect_url ? { redirect_url:, response_mode: 'code' } : {}
+      oauth_authorization_api.auth_o_auth_authorize_with_http_info(
+        provider, anon_key, options
+      ).first
+    end
+
     def auth_link_oauth_provider(authorization:, provider:)
       invoke do
         apis = @api_factory.call(authorization)

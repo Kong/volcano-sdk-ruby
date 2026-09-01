@@ -186,6 +186,11 @@ RSpec.describe Volcano::Client do
                   :on_oauth_provider_token_status, :on_refresh_oauth_provider_token,
                   :on_unlink_oauth_provider, :refresh_oauth_provider_token_response
 
+    def auth_oauth_authorization_url(**arguments)
+      @calls << [:auth_oauth_authorization_url, arguments]
+      'https://api.test.volcano.dev/auth/oauth/github/authorize?anon_key=anon-key'
+    end
+
     def auth_list_oauth_providers(**arguments)
       @calls << [:auth_list_oauth_providers, arguments]
       @on_list_oauth_providers&.call
@@ -884,6 +889,27 @@ RSpec.describe Volcano::Client do
       expect { client.auth.list_linked_oauth_providers }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#sign_in_with_oauth' do
+    it 'returns an authorization URL without creating a session', :aggregate_failures do
+      result = client.auth.sign_in_with_oauth(
+        'github', redirect_to: 'https://app.example.test/auth/callback'
+      )
+
+      expect(result).to start_with('https://api.test.volcano.dev/auth/oauth/github/authorize')
+      expect(client.auth.current_session).to be_nil
+      expect(transport.calls_for(:auth_oauth_authorization_url).last.fetch(1)).to eq(
+        anon_key: 'anon-key', provider: 'github',
+        redirect_url: 'https://app.example.test/auth/callback'
+      )
+    end
+
+    it 'rejects an unknown provider before building a URL' do
+      expect { client.auth.sign_in_with_oauth('invalid') }
+        .to raise_error(ArgumentError, 'Unsupported OAuth provider')
+      expect(transport.calls_for(:auth_oauth_authorization_url)).to be_empty
     end
   end
 

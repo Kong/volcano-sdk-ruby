@@ -18,7 +18,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls
+    attr_reader :calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls,
+                :update_user_calls
 
     def initialize
       @calls = []
@@ -26,6 +27,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @logout_calls = []
       @refresh_calls = []
       @signup_calls = []
+      @update_user_calls = []
     end
 
     def auth_signin_with_http_info(body)
@@ -51,6 +53,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         message: 'Check your email to confirm your account'
       }
       [FakeGeneratedModel.new(acknowledgement), 201, { 'request-id' => 'signup' }]
+    end
+
+    def auth_update_user_with_http_info(options)
+      @update_user_calls << options
+      profile = {
+        user: {
+          id: 'user-123', email: 'user@example.com', status: 'active',
+          user_metadata: { display_name: 'Grace' }
+        }
+      }
+      [FakeGeneratedModel.new(profile), 200, { 'request-id' => 'update-user' }]
     end
 
     def auth_refresh_with_http_info(options)
@@ -270,6 +283,33 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(response.body.fetch('user')).to include(
       'id' => 'user-123', 'email' => 'user@example.com', 'status' => 'active'
     )
+  end
+
+  it 'updates the current user through generated request and response models' do
+    response = transport.auth_update_user(
+      authorization: 'access-token',
+      password: 'new-secret',
+      metadata: { display_name: 'Grace', avatar: nil }
+    )
+
+    options = apis.authentication.update_user_calls.fetch(0)
+    request = options.fetch(:auth_update_user_request)
+    expect(request).to be_a(InternalGenerated::AuthUpdateUserRequest)
+    expect(request.to_hash).to eq(
+      password: 'new-secret',
+      user_metadata: { display_name: 'Grace', avatar: nil }
+    )
+    expect(response.body.fetch('user')).to include(
+      'id' => 'user-123', 'user_metadata' => { 'display_name' => 'Grace' }
+    )
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'omits absent current-user update fields' do
+    transport.auth_update_user(authorization: 'access-token', password: nil, metadata: nil)
+
+    request = apis.authentication.update_user_calls.fetch(0).fetch(:auth_update_user_request)
+    expect(request.to_hash).to be_empty
   end
 
   it 'parses the current-user response independently of generated content-type handling' do

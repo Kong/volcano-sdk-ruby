@@ -40,6 +40,22 @@ module Volcano
       raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
     end
 
+    def auth_update_user(authorization:, password:, metadata:)
+      attributes = {}
+      attributes[:password] = password unless password.nil?
+      attributes[:user_metadata] = metadata unless metadata.nil?
+      request = Generated::AuthUpdateUserRequest.new(attributes)
+
+      invoke do
+        apis = @api_factory.call(authorization)
+        response(
+          *apis.authentication.auth_update_user_with_http_info(
+            auth_update_user_request: request
+          )
+        )
+      end
+    end
+
     def auth_refresh(authorization:, refresh_token:)
       invoke do
         apis = @api_factory.call(authorization)

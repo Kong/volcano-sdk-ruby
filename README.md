@@ -60,6 +60,22 @@ change while the request is in flight raises
 `Volcano::Error::SessionChangedError` instead of returning a stale profile.
 `get_user` is available as a cross-SDK alias.
 
+### Update the current user
+
+```ruby
+user = client.auth.update_user(
+  password: "new-secret",
+  metadata: { display_name: "Grace", avatar: nil }
+)
+raise "wrong user" unless user.id == session.user_id
+```
+
+`update_user` changes the current user's password, metadata, or both. Metadata
+is a shallow patch: omitted keys remain unchanged, and a `nil` value removes
+that key. The method returns an immutable `Volcano::User` without replacing the
+active session. It rejects a response if another authentication operation
+replaces the session while the request is in flight.
+
 ### Adopt an existing session
 
 ```ruby

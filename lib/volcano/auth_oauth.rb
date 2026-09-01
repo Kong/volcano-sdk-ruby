@@ -29,6 +29,15 @@ module Volcano
       result
     end
 
+    def unlink_oauth_provider(provider)
+      provider_name = oauth_provider_name(provider)
+      generation, current = @client.capture_session
+      raise Error::AuthenticationError, 'No active session' unless current
+
+      Transport.body(unlink_oauth_provider_response(current.access_token, provider_name), 204)
+      raise Error::SessionChangedError unless @client.capture_session.first == generation
+    end
+
     private
 
     def list_oauth_providers_response(access_token)
@@ -40,6 +49,12 @@ module Volcano
     def link_oauth_provider_response(access_token, provider)
       Transport.invoke do
         @transport.auth_link_oauth_provider(authorization: access_token, provider: provider)
+      end
+    end
+
+    def unlink_oauth_provider_response(access_token, provider)
+      Transport.invoke do
+        @transport.auth_unlink_oauth_provider(authorization: access_token, provider: provider)
       end
     end
 

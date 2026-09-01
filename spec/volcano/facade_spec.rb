@@ -179,7 +179,8 @@ RSpec.describe Volcano::Client do
 
   module FakeOAuthTransport
     attr_accessor :link_oauth_provider_response, :list_oauth_providers_response,
-                  :on_link_oauth_provider, :on_list_oauth_providers
+                  :on_link_oauth_provider, :on_list_oauth_providers,
+                  :on_unlink_oauth_provider
 
     def auth_list_oauth_providers(**arguments)
       @calls << [:auth_list_oauth_providers, arguments]
@@ -207,6 +208,12 @@ RSpec.describe Volcano::Client do
         body: { 'authorization_url' => 'https://accounts.example/link' },
         headers: {}, data: nil
       )
+    end
+
+    def auth_unlink_oauth_provider(**arguments)
+      @calls << [:auth_unlink_oauth_provider, arguments]
+      @on_unlink_oauth_provider&.call
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
     end
   end
 
@@ -877,6 +884,45 @@ RSpec.describe Volcano::Client do
       transport.on_link_oauth_provider = -> { client.auth.current_session = replacement }
 
       expect { client.auth.link_oauth_provider('google') }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#unlink_oauth_provider' do
+    it 'preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.unlink_oauth_provider('github')
+
+      expect(result).to be_nil
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_unlink_oauth_provider).last.fetch(1)).to eq(
+        authorization: 'access-token', provider: 'github'
+      )
+    end
+
+    it 'rejects an unknown provider before sending a request' do
+      expect { client.auth.unlink_oauth_provider('invalid') }
+        .to raise_error(ArgumentError, 'Unsupported OAuth provider')
+      expect(transport.calls_for(:auth_unlink_oauth_provider)).to be_empty
+    end
+
+    it 'requires a session' do
+      expect { client.auth.unlink_oauth_provider('google') }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_unlink_oauth_provider)).to be_empty
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_unlink_oauth_provider = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.unlink_oauth_provider('google') }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

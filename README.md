@@ -177,6 +177,16 @@ accepts `apple`, `github`, `google`, or `microsoft` and raises
 `Volcano::Error::SessionChangedError` if the active session changes while the
 request is in flight.
 
+### Unlink an OAuth provider
+
+```ruby
+client.auth.unlink_oauth_provider('github')
+```
+
+The server rejects removal of the account's only authentication method. A
+successful stale response raises `Volcano::Error::SessionChangedError` instead
+of acknowledging work authorized by a replaced session.
+
 ### Sign out all other devices
 
 ```ruby

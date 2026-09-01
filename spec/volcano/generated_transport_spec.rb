@@ -18,8 +18,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls,
-                :update_user_calls
+    attr_reader :calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls,
+                :reset_password_calls, :signup_calls, :update_user_calls
 
     def initialize
       @calls = []
@@ -27,6 +27,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @get_user_calls = []
       @logout_calls = []
       @refresh_calls = []
+      @reset_password_calls = []
       @signup_calls = []
       @update_user_calls = []
     end
@@ -60,6 +61,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @forgot_password_calls << [body, options]
       acknowledgement = { message: 'If the email exists, a password reset link has been sent.' }
       [FakeGeneratedModel.new(acknowledgement), 200, { 'request-id' => 'forgot-password' }]
+    end
+
+    def auth_reset_password_with_http_info(body, options = {})
+      @reset_password_calls << [body, options]
+      [FakeGeneratedModel.new(message: 'Password reset successful'), 200, {}]
     end
 
     def auth_update_user_with_http_info(options)
@@ -286,6 +292,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(response.body).to eq(
       'message' => 'If the email exists, a password reset link has been sent.'
     )
+    expect(authorizations).to eq(['anon-key'])
+  end
+
+  it 'resets a password through the generated operation' do
+    response = transport.auth_reset_password(
+      authorization: 'anon-key', token: 'recovery-token', new_password: 'new-secret'
+    )
+
+    request, options = apis.authentication.reset_password_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthResetPasswordRequest)
+      .and have_attributes(token: 'recovery-token', new_password: 'new-secret')
+    expect(options).to eq(debug_return_type: 'String')
+    expect(response.status).to eq(200)
     expect(authorizations).to eq(['anon-key'])
   end
 

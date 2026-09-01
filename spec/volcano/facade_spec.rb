@@ -120,6 +120,18 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakeSessionTransport
+    attr_accessor :on_delete_other_sessions
+
+    def auth_delete_all_my_sessions(**arguments)
+      @calls << [:auth_delete_all_my_sessions, arguments]
+      @on_delete_other_sessions&.call
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
+    end
+  end
+
+  FakeEmailChangeTransport.include(FakeSessionTransport)
+
   module FakeAnonymousTransport
     attr_accessor :anonymous_conversion_response, :anonymous_signin_response,
                   :on_anonymous_conversion, :on_anonymous_signin
@@ -614,6 +626,39 @@ RSpec.describe Volcano::Client do
       transport.on_confirm_email_change = -> { client.auth.current_session = replacement }
 
       expect { client.auth.confirm_email_change(token: 'change-token') }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#delete_all_other_sessions' do
+    it 'preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.delete_all_other_sessions
+
+      expect(result).to be_nil
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_delete_all_my_sessions).last.fetch(1)).to eq(
+        authorization: 'access-token'
+      )
+    end
+
+    it 'requires a session' do
+      expect { client.auth.delete_all_other_sessions }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_delete_all_my_sessions)).to be_empty
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_delete_other_sessions = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.delete_all_other_sessions }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

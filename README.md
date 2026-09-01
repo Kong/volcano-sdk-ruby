@@ -140,6 +140,17 @@ The method returns the immutable updated user without replacing the active
 session. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
+### Sign out all other devices
+
+```ruby
+client.auth.delete_all_other_sessions
+```
+
+Success returns `nil` and keeps the authorizing session active. Do not replace
+the client's session while this request is in flight: the server may revoke that
+replacement as an "other" session. If replacement occurs, the method raises
+`Volcano::Error::SessionChangedError` instead of acknowledging a stale result.
+
 ### Sign in anonymously
 
 ```ruby

@@ -117,6 +117,20 @@ session = client.auth.sign_in_anonymously(metadata: { device: "mobile" })
 Anonymous sign-ins must be enabled for the project. Convert the account before
 signing out if the user needs to recover it later.
 
+Attach email credentials without changing the anonymous user's ID or current
+session:
+
+```ruby
+user = client.auth.convert_anonymous(
+  email: "user@example.com",
+  password: "secure-password",
+  metadata: { display_name: "Ada" }
+)
+```
+
+When email confirmation is required, confirm the new address before treating it
+as verified.
+
 ### Reset the password
 
 ```ruby

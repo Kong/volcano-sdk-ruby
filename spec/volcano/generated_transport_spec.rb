@@ -18,7 +18,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :anonymous_signup_calls, :calls, :confirm_email_calls, :forgot_password_calls, :get_user_calls,
+    attr_reader :anonymous_conversion_calls, :anonymous_signup_calls, :calls, :confirm_email_calls,
+                :forgot_password_calls, :get_user_calls,
                 :logout_calls, :refresh_calls,
                 :resend_confirmation_calls,
                 :reset_password_calls, :signup_calls, :update_user_calls
@@ -49,6 +50,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         user: { id: 'anonymous-user' }
       }
       [FakeGeneratedModel.new(session), 201, {}]
+    end
+
+    def auth_convert_anonymous_with_http_info(body, options = {})
+      (@anonymous_conversion_calls ||= []) << [body, options]
+      profile = {
+        user: {
+          id: 'anonymous-user', email: 'converted@example.com', status: 'active',
+          created_at: '2026-09-01T12:00:00Z'
+        }
+      }
+      [JSON.generate(profile), 200, {}]
     end
 
     def auth_confirm_email_with_http_info(body, options = {})
@@ -314,6 +326,33 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       .and have_attributes(user_metadata: { device: 'mobile' })
     expect(response.status).to eq(201)
     expect(authorizations).to eq(['anon-key'])
+  end
+
+  it 'converts an anonymous user through the generated operation' do
+    response = transport.auth_convert_anonymous(
+      authorization: 'anonymous-access',
+      email: 'converted@example.com',
+      password: 'secret',
+      metadata: { answers: [1, nil, 3] }
+    )
+
+    request, options = apis.authentication.anonymous_conversion_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthSignupRequest)
+      .and have_attributes(
+        email: 'converted@example.com',
+        password: 'secret',
+        user_metadata: { answers: [1, nil, 3] }
+      )
+    expect(options).to eq(
+      debug_body: {
+        email: 'converted@example.com', password: 'secret',
+        user_metadata: { answers: [1, nil, 3] }
+      },
+      debug_return_type: 'String'
+    )
+    expect(response.status).to eq(200)
+    expect(response.body.dig('user', 'created_at')).to eq('2026-09-01T12:00:00Z')
+    expect(authorizations).to eq(['anonymous-access'])
   end
 
   it 'requests a password reset through the generated operation' do

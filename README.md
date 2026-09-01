@@ -108,6 +108,17 @@ eligible. Volcano sends mail only for an existing unconfirmed account when
 transactional email is configured. Rate limits raise
 `Volcano::Error::RateLimitedError` with `retry_after` when supplied.
 
+### Request an email change
+
+```ruby
+result = client.auth.request_email_change(new_email: "new@example.com")
+puts result.new_email
+```
+
+The immutable result contains the server acknowledgement. Its `message` and
+`new_email` fields may be `nil`. The request requires an active session and
+rejects a response if that session changes in flight.
+
 ### Sign in anonymously
 
 ```ruby

@@ -6,12 +6,11 @@ module Volcano
     OAUTH_PROVIDERS = %w[apple github google microsoft].freeze
     private_constant :OAUTH_PROVIDERS
 
-    def sign_in_with_oauth(provider, redirect_to: nil)
+    def sign_in_with_oauth(provider)
       provider_name = oauth_provider_name(provider)
       @transport.auth_oauth_authorization_url(
         anon_key: @client.anon_token,
-        provider: provider_name,
-        redirect_url: redirect_to
+        provider: provider_name
       )
     end
 

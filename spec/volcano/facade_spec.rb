@@ -894,15 +894,12 @@ RSpec.describe Volcano::Client do
 
   describe '#sign_in_with_oauth' do
     it 'returns an authorization URL without creating a session', :aggregate_failures do
-      result = client.auth.sign_in_with_oauth(
-        'github', redirect_to: 'https://app.example.test/auth/callback'
-      )
+      result = client.auth.sign_in_with_oauth('github')
 
       expect(result).to start_with('https://api.test.volcano.dev/auth/oauth/github/authorize')
       expect(client.auth.current_session).to be_nil
       expect(transport.calls_for(:auth_oauth_authorization_url).last.fetch(1)).to eq(
-        anon_key: 'anon-key', provider: 'github',
-        redirect_url: 'https://app.example.test/auth/callback'
+        anon_key: 'anon-key', provider: 'github'
       )
     end
 

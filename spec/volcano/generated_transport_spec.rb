@@ -553,24 +553,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'builds an OAuth sign-in URL through the generated operation' do
     url = described_class.new(api_url: 'https://api.test.volcano.dev')
                          .auth_oauth_authorization_url(
-                           anon_key: 'anon key', provider: 'github',
-                           redirect_url: 'https://app.example.test/callback?next=/projects'
+                           anon_key: 'anon key', provider: 'github'
                          )
     uri = URI(url)
 
     expect(uri.path).to eq('/auth/oauth/github/authorize')
-    expect(URI.decode_www_form(uri.query).to_h).to eq(
-      'anon_key' => 'anon key',
-      'redirect_url' => 'https://app.example.test/callback?next=/projects',
-      'response_mode' => 'code'
-    )
-  end
-
-  it 'omits redirect parameters from an OAuth sign-in URL without a redirect' do
-    url = described_class.new(api_url: 'https://api.test.volcano.dev')
-                         .auth_oauth_authorization_url(anon_key: 'anon-key', provider: 'google')
-
-    expect(URI.decode_www_form(URI(url).query).to_h).to eq('anon_key' => 'anon-key')
+    expect(URI.decode_www_form(uri.query).to_h).to eq('anon_key' => 'anon key')
   end
 
   it 'starts linking an OAuth provider through the generated operation' do

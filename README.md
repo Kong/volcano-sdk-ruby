@@ -157,15 +157,13 @@ flight. Sort, filter, and cursor controls are not yet exposed by this facade.
 ### Sign in with OAuth
 
 ```ruby
-authorization_url = client.auth.sign_in_with_oauth(
-  'github',
-  redirect_to: 'https://app.example.com/auth/callback'
-)
+authorization_url = client.auth.sign_in_with_oauth('github')
 ```
 
-Redirect the user to the returned URL. This method only builds the authorization
-URL; it does not open a browser or create a local session. Omit `redirect_to` to
-use the project's managed hosted-auth flow.
+Redirect the user to the returned URL to continue through the project's managed
+hosted-auth flow. The method does not open a browser or create a local session.
+Custom callbacks, code exchange, and session persistence are not yet exposed by
+this facade.
 
 ### List linked OAuth providers
 

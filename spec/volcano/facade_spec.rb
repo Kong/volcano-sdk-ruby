@@ -600,7 +600,40 @@ RSpec.describe Volcano::Client do
     interrupting.unsubscribe
     client.auth.sign_out
 
-    expect(received).to eq([:signed_out])
+    expect(received).to eq(%i[signed_in signed_out])
+  end
+
+  it 'rolls back a subscription when initial delivery is interrupted' do
+    received = []
+    expect do
+      client.auth.on_auth_state_change do |event, _session|
+        received << event
+        raise Interrupt
+      end
+    end.to raise_error(Interrupt)
+
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.not_to raise_error
+    expect(received).to eq([:initial_session])
+  end
+
+  it 'preserves concurrent notifications when a callback is interrupted' do
+    entered = Queue.new
+    release = Queue.new
+    received = []
+    client.auth.on_auth_state_change do |event, _session|
+      next unless event == :signed_in
+
+      entered << true
+      release.pop
+      raise Interrupt
+    end
+    client.auth.on_auth_state_change { |event, _session| received << event }
+    received.clear
+    sign_out = Thread.new { entered.pop.then { client.auth.sign_out }.then { release << true } }
+
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(Interrupt)
+    sign_out.value
+    expect(received).to eq(%i[signed_in signed_out])
   end
 
   describe '#sign_up' do

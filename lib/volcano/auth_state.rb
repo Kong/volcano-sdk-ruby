@@ -21,6 +21,9 @@ module Volcano
 
   # Owns synchronized local session state and its subscribers.
   class AuthState
+    CALLBACK_ABORTS = [NoMemoryError, ScriptError, SecurityError, SignalException, SystemExit, SystemStackError].freeze
+    private_constant :CALLBACK_ABORTS
+
     def initialize
       @mutex = Mutex.new
       @generation = 0
@@ -99,16 +102,15 @@ module Volcano
     end
 
     def drain_notifications
-      completed = false
+      failure = nil
       loop do
         notification = next_notification
-        completed = notification.nil?
-        return if completed
+        break unless notification
 
-        notify(*notification)
+        current_failure = notify(*notification)
+        failure ||= current_failure
       end
-    ensure
-      reset_aborted_notifications unless completed
+      raise failure if failure
     end
 
     def next_notification
@@ -121,22 +123,22 @@ module Volcano
       end
     end
 
-    def reset_aborted_notifications
-      @mutex.synchronize do
-        @notifications.clear
-        @dispatching_notifications = false
-      end
-    end
-
     def notify(callback_ids, event, session)
+      failure = nil
       callback_ids.each do |callback_id|
-        callback = @mutex.synchronize { @callbacks[callback_id] }
-        next unless callback
-
-        callback.call(event, session)
+        notify_callback(callback_id, event, session)
       rescue StandardError => e
         Warning.warn("Volcano auth-state callback failed (#{e.class})\n")
+      rescue *CALLBACK_ABORTS => e
+        unsubscribe(callback_id)
+        failure ||= e
       end
+      failure
+    end
+
+    def notify_callback(callback_id, event, session)
+      callback = @mutex.synchronize { @callbacks[callback_id] }
+      callback&.call(event, session)
     end
   end
 end

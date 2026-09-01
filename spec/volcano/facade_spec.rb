@@ -267,13 +267,12 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#reset_password_for_email' do
-    it 'returns an owned generic acknowledgement without changing the session', :aggregate_failures do
+    it 'requests delivery without changing the session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
-      message = client.auth.reset_password_for_email(email: 'user@example.com')
+      result = client.auth.reset_password_for_email(email: 'user@example.com')
 
-      expect(message).to eq('If the email exists, a password reset link has been sent.')
-      expect(message).to be_frozen
+      expect(result).to be_nil
       expect(transport.calls_for(:auth_forgot_password).last.fetch(1)).to eq(
         authorization: 'anon-key', email: 'user@example.com'
       )
@@ -292,17 +291,12 @@ RSpec.describe Volcano::Client do
       expect(client.auth.current_session).to be(established)
     end
 
-    it 'rejects a malformed acknowledgement' do
+    it 'accepts an acknowledgement without the optional message' do
       transport.forgot_password_response = Response.new(
-        status: 200, body: { 'message' => nil }, headers: {}, data: nil
+        status: 200, body: {}, headers: {}, data: nil
       )
 
-      expect do
-        client.auth.reset_password_for_email(email: 'user@example.com')
-      end.to raise_error(
-        Volcano::Error::AuthenticationError,
-        'Expected a complete password reset acknowledgement'
-      )
+      expect(client.auth.reset_password_for_email(email: 'user@example.com')).to be_nil
     end
   end
 

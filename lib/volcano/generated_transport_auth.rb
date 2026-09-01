@@ -32,7 +32,11 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthForgotPasswordRequest.new(email: email)
-        response(*apis.authentication.auth_forgot_password_with_http_info(request))
+        response(
+          *apis.authentication.auth_forgot_password_with_http_info(
+            request, debug_return_type: 'String'
+          )
+        )
       end
     end
 

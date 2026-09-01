@@ -56,8 +56,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [FakeGeneratedModel.new(acknowledgement), 201, { 'request-id' => 'signup' }]
     end
 
-    def auth_forgot_password_with_http_info(body)
-      @forgot_password_calls << body
+    def auth_forgot_password_with_http_info(body, options = {})
+      @forgot_password_calls << [body, options]
       acknowledgement = { message: 'If the email exists, a password reset link has been sent.' }
       [FakeGeneratedModel.new(acknowledgement), 200, { 'request-id' => 'forgot-password' }]
     end
@@ -278,9 +278,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       authorization: 'anon-key', email: 'user@example.com'
     )
 
-    request = apis.authentication.forgot_password_calls.fetch(0)
+    request, options = apis.authentication.forgot_password_calls.fetch(0)
     expect(request).to be_a(InternalGenerated::AuthForgotPasswordRequest)
       .and have_attributes(email: 'user@example.com')
+    expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
     expect(response.body).to eq(
       'message' => 'If the email exists, a password reset link has been sent.'

@@ -79,13 +79,14 @@ replaces the session while the request is in flight.
 ### Request a password reset email
 
 ```ruby
-message = client.auth.reset_password_for_email(email: "user@example.com")
-puts message
+client.auth.reset_password_for_email(email: "user@example.com")
 ```
 
-The acknowledgement is intentionally identical whether or not the email
-belongs to an account. Failures raise the same typed Volcano errors as other
-authentication operations, and the current session remains unchanged.
+When transactional email is configured, Volcano sends the reset link. Success
+returns `nil`, and the acknowledgement is intentionally identical whether or
+not the email belongs to an account. Failures raise the same typed Volcano
+errors as other authentication operations, and the current session remains
+unchanged.
 
 ### Adopt an existing session
 

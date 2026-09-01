@@ -168,9 +168,19 @@ hosted_url = client.auth.get_hosted_auth_url(
 ```
 
 Store `hosted_state` in the user's signed server-side session before redirecting
-to `hosted_url`. Before adopting the returned session, require the returned
-`state` to exactly match the stored value. This URL-only method does not parse
-the callback, navigate, persist state, or adopt a session.
+to `hosted_url`. After parsing the returned fragment into a `Volcano::Session`,
+validate and adopt it atomically:
+
+```ruby
+session = client.auth.adopt_hosted_auth_session(
+  returned_session,
+  state: returned_state,
+  expected_state: hosted_state
+)
+```
+
+The SDK rejects a mismatched state before changing local authentication. It
+does not parse browser URLs, navigate, or persist state.
 
 The `action` deep link applies to Volcano's built-in page. A customized login
 page receives the request but must implement its own signup or forgot-password

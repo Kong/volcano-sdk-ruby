@@ -198,6 +198,16 @@ The immutable `Volcano::OAuthProviderTokenStatus` contains provider and expiry
 metadata, not the credential. Volcano refreshes an expired token on the server.
 A stale result raises `Volcano::Error::SessionChangedError`.
 
+Refresh a provider token explicitly:
+
+```ruby
+status = client.auth.refresh_oauth_provider_token('github')
+puts [status.provider, status.expires_in].join(' ')
+```
+
+The refresh credential and new access token remain on the server. A stale result
+raises `Volcano::Error::SessionChangedError`.
+
 ### Sign out all other devices
 
 ```ruby

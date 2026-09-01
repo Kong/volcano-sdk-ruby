@@ -54,7 +54,8 @@ module VolcanoContract
   end
 
   class World
-    attr_accessor :client, :last_outcome, :previous_session, :signed_out_session, :subscriber, :publisher
+    attr_accessor :auth_state_sessions, :client, :last_outcome, :previous_session, :signed_out_session,
+                  :subscriber, :publisher
     attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 
@@ -65,6 +66,7 @@ module VolcanoContract
       @last_outcome = nil
       @previous_session = nil
       @signed_out_session = nil
+      @auth_state_sessions = []
       @realtime_clients = []
       @cleanup_callbacks = []
     end
@@ -91,6 +93,10 @@ module VolcanoContract
 
     def register_lock_cleanup(key, lease)
       callback = -> { service_client.locks.release(key, lease) }
+      register_cleanup(callback)
+    end
+
+    def register_cleanup(callback)
       @cleanup_callbacks << callback
       callback
     end

@@ -12,6 +12,13 @@ Given('the confirmed contract user') do
   raise 'fixture user is missing' if contract.fixture.fetch('user_id').to_s.empty?
 end
 
+Given('the client listens for auth state changes') do
+  subscription = contract.client.auth.on_auth_state_change do |_event, session|
+    contract.auth_state_sessions << session
+  end
+  contract.register_cleanup(-> { subscription.unsubscribe })
+end
+
 When("the client signs in with the contract user's credentials") do
   contract.record { contract.authenticate }
 end
@@ -87,6 +94,12 @@ Then('the current session belongs to the contract user') do
   expected_user_id = contract.fixture.fetch('user_id')
   raise 'sign-in returned the wrong user' unless contract.last_outcome.value.user_id == expected_user_id
   raise 'current session has the wrong user' unless contract.client.current_session.user_id == expected_user_id
+end
+
+Then('the auth-state listener observes the signed-in contract user') do
+  expected_user_id = contract.fixture.fetch('user_id')
+  observed = contract.auth_state_sessions.any? { |session| session&.user_id == expected_user_id }
+  raise 'auth-state listener did not observe the contract user' unless observed
 end
 
 Then('the current session exposes access and refresh tokens') do

@@ -7,10 +7,25 @@ require 'time'
 RSpec.describe Volcano::Client do
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
+  module FakeUserTransport
+    def auth_get_user(**arguments)
+      @calls << [:auth_get_user, arguments]
+      @user_response.tap { @on_get_user&.call }
+    end
+
+    def auth_update_user(**arguments)
+      @calls << [:auth_update_user, arguments]
+      @update_user_response.tap { @on_update_user&.call }
+    end
+  end
+
   class FakeContractTransport
+    include FakeUserTransport
+
     attr_reader :calls
     attr_accessor :access_token, :logout_response, :on_get_user, :on_logout, :on_refresh,
-                  :refresh_response, :signup_response, :user_response
+                  :on_update_user, :refresh_response, :signup_response, :update_user_response,
+                  :user_response
 
     def initialize
       @access_token = 'access-token'
@@ -37,6 +52,7 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
+      @update_user_response = @user_response
       @refresh_response = Response.new(
         status: 200,
         body: {
@@ -55,11 +71,6 @@ RSpec.describe Volcano::Client do
       @calls << [:auth_logout, arguments]
       @on_logout&.call
       @logout_response
-    end
-
-    def auth_get_user(**arguments)
-      @calls << [:auth_get_user, arguments]
-      @user_response.tap { @on_get_user&.call }
     end
 
     def auth_refresh(**arguments)
@@ -386,6 +397,57 @@ RSpec.describe Volcano::Client do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
       expect(client.auth.get_user).to be_a(Volcano::User)
+    end
+  end
+
+  describe '#update_user' do
+    it 'returns the updated profile without replacing the session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      user = client.auth.update_user(
+        password: 'new-secret',
+        metadata: { display_name: 'Grace', avatar: nil }
+      )
+
+      expect(user).to have_attributes(id: 'user-123', email: 'user@example.com', status: 'active')
+      expect(transport.calls_for(:auth_update_user).last.fetch(1)).to eq(
+        authorization: 'access-token',
+        password: 'new-secret',
+        metadata: { display_name: 'Grace', avatar: nil }
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'rejects a missing session before transport' do
+      expect { client.auth.update_user(metadata: { display_name: 'Grace' }) }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'No active session'
+      )
+      expect(transport.calls).to be_empty
+    end
+
+    it 'preserves the current session after an authentication failure' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.update_user_response = Response.new(
+        status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.update_user(password: 'new-secret') }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'expired'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'rejects a profile returned for a replaced session' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = supplied_session
+      transport.on_update_user = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.update_user(metadata: { display_name: 'Grace' }) }.to raise_error(
+        Volcano::Error::SessionChangedError
+      )
+      expect(client.auth.current_session).to eq(replacement)
     end
   end
 

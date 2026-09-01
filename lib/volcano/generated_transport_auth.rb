@@ -40,6 +40,18 @@ module Volcano
       raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
     end
 
+    def auth_update_user(authorization:, password:, metadata:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        body, status, headers = apis.authentication.auth_update_user_with_http_info(
+          **update_user_options(password:, metadata:)
+        )
+        response(JSON.parse(body), status, headers)
+      end
+    rescue JSON::ParserError, TypeError => e
+      raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
+    end
+
     def auth_refresh(authorization:, refresh_token:)
       invoke do
         apis = @api_factory.call(authorization)
@@ -54,6 +66,19 @@ module Volcano
         request = Generated::AuthRefreshRequest.new(refresh_token: refresh_token)
         response(*apis.authentication.auth_logout_with_http_info(auth_refresh_request: request))
       end
+    end
+
+    private
+
+    def update_user_options(password:, metadata:)
+      attributes = {}
+      attributes[:password] = password unless password.nil?
+      attributes[:user_metadata] = metadata unless metadata.nil?
+      {
+        auth_update_user_request: Generated::AuthUpdateUserRequest.new(attributes),
+        debug_body: attributes,
+        debug_return_type: 'String'
+      }
     end
   end
 end

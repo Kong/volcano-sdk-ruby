@@ -60,10 +60,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       profile = {
         user: {
           id: 'user-123', email: 'user@example.com', status: 'active',
-          user_metadata: { display_name: 'Grace' }
+          user_metadata: { display_name: 'Grace' }, created_at: '2026-08-31T12:00:00Z'
         }
       }
-      [FakeGeneratedModel.new(profile), 200, { 'request-id' => 'update-user' }]
+      [JSON.generate(profile), 200, { 'request-id' => 'update-user' }]
     end
 
     def auth_refresh_with_http_info(options)
@@ -285,22 +285,24 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
   end
 
-  it 'updates the current user through generated request and response models' do
+  it 'updates the current user through the generated operation without lossy coercion' do
     response = transport.auth_update_user(
       authorization: 'access-token',
       password: 'new-secret',
-      metadata: { display_name: 'Grace', avatar: nil }
+      metadata: { display_name: 'Grace', answers: [1, nil, 3] }
     )
 
     options = apis.authentication.update_user_calls.fetch(0)
     request = options.fetch(:auth_update_user_request)
     expect(request).to be_a(InternalGenerated::AuthUpdateUserRequest)
-    expect(request.to_hash).to eq(
+    expect(options.fetch(:debug_body)).to eq(
       password: 'new-secret',
-      user_metadata: { display_name: 'Grace', avatar: nil }
+      user_metadata: { display_name: 'Grace', answers: [1, nil, 3] }
     )
+    expect(options.fetch(:debug_return_type)).to eq('String')
     expect(response.body.fetch('user')).to include(
-      'id' => 'user-123', 'user_metadata' => { 'display_name' => 'Grace' }
+      'id' => 'user-123', 'user_metadata' => { 'display_name' => 'Grace' },
+      'created_at' => '2026-08-31T12:00:00Z'
     )
     expect(authorizations).to eq(['access-token'])
   end
@@ -308,8 +310,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'omits absent current-user update fields' do
     transport.auth_update_user(authorization: 'access-token', password: nil, metadata: nil)
 
-    request = apis.authentication.update_user_calls.fetch(0).fetch(:auth_update_user_request)
-    expect(request.to_hash).to be_empty
+    options = apis.authentication.update_user_calls.fetch(0)
+    expect(options.fetch(:auth_update_user_request)).to be_a(
+      InternalGenerated::AuthUpdateUserRequest
+    )
+    expect(options.fetch(:debug_body)).to be_empty
   end
 
   it 'parses the current-user response independently of generated content-type handling' do

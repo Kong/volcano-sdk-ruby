@@ -38,6 +38,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def confirm_email_change_calls
       @confirm_email_change_calls || []
     end
+
+    def auth_delete_all_my_sessions_with_http_info
+      @delete_other_sessions_calls = true
+      [nil, 204, {}]
+    end
+
+    def delete_other_sessions_called?
+      @delete_other_sessions_calls || false
+    end
   end
 
   class FakeAuthenticationApi
@@ -418,6 +427,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       .and have_attributes(email_change_token: 'change-token')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.body.dig('user', 'email')).to eq('new@example.com')
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'deletes all other sessions through the generated operation' do
+    response = transport.auth_delete_all_my_sessions(authorization: 'access-token')
+
+    expect(apis.authentication.delete_other_sessions_called?).to be(true)
+    expect(response.status).to eq(204)
     expect(authorizations).to eq(['access-token'])
   end
 

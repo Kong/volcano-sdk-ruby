@@ -140,6 +140,16 @@ The method returns the immutable updated user without replacing the active
 session. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
+### Sign out all other devices
+
+```ruby
+client.auth.delete_all_other_sessions
+```
+
+Success returns `nil` and keeps the current session active. A successful stale
+response is rejected if another authentication operation replaces that session
+while deletion is in flight.
+
 ### Sign in anonymously
 
 ```ruby

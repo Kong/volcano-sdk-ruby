@@ -257,7 +257,7 @@ RSpec.describe Volcano::Client do
           'provider' => 'github',
           'endpoint' => '/user/repos',
           'status_code' => 200,
-          'data' => { 'repos' => [{ 'name' => 'volcano' }] }
+          'data' => [{ 'name' => 'volcano' }]
         },
         headers: {}, data: nil
       )
@@ -1099,10 +1099,9 @@ RSpec.describe Volcano::Client do
         'github', endpoint: '/user/repos', method: 'POST', body: { 'visibility' => 'private' }
       )
 
-      expect(result).to eq('repos' => [{ 'name' => 'volcano' }])
+      expect(result).to eq([{ 'name' => 'volcano' }])
       expect(result).to be_frozen
-      expect(result.fetch('repos')).to be_frozen
-      expect(result.fetch('repos').first).to be_frozen
+      expect(result.first).to be_frozen
       expect(client.auth.current_session).to be(established)
       expect(transport.calls_for(:auth_call_oauth_api).last.fetch(1)).to eq(
         authorization: 'access-token', provider: 'github', endpoint: '/user/repos',

@@ -30,8 +30,6 @@ module Volcano
 
     def oauth_api_data(response_body)
       data = response_body.fetch('data')
-      raise TypeError, 'Expected OAuth provider API response data' unless data.is_a?(Hash)
-
       freeze_oauth_api_data(data)
     rescue KeyError, NoMethodError
       raise TypeError, 'Expected OAuth provider API response data'

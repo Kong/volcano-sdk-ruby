@@ -254,7 +254,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @api_calls << [provider, request]
       result = {
         provider: provider, endpoint: request.endpoint, status_code: 200,
-        data: { repos: [{ name: 'volcano' }] }
+        data: [{ name: 'volcano' }]
       }
       [FakeGeneratedModel.new(result), 200, {}]
     end
@@ -612,7 +612,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
     expect(response.body).to eq(
       'provider' => 'github', 'endpoint' => '/user/repos', 'status_code' => 200,
-      'data' => { 'repos' => [{ 'name' => 'volcano' }] }
+      'data' => [{ 'name' => 'volcano' }]
     )
   end
 

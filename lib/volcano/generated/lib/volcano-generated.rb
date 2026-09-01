@@ -68,6 +68,7 @@ Volcano::Generated.autoload :BanAuthUserRequest, 'volcano-generated/models/ban_a
 Volcano::Generated.autoload :BanUserResponse, 'volcano-generated/models/ban_user_response'
 Volcano::Generated.autoload :BatchFunctionDeployFailure, 'volcano-generated/models/batch_function_deploy_failure'
 Volcano::Generated.autoload :BatchFunctionDeployResponse, 'volcano-generated/models/batch_function_deploy_response'
+Volcano::Generated.autoload :CallOAuthProviderAPI200Response, 'volcano-generated/models/call_o_auth_provider_api200_response'
 Volcano::Generated.autoload :CallOAuthProviderAPIRequest, 'volcano-generated/models/call_o_auth_provider_api_request'
 Volcano::Generated.autoload :CompleteUploadSessionResponse, 'volcano-generated/models/complete_upload_session_response'
 Volcano::Generated.autoload :ConfigureAuthMethodsRequest, 'volcano-generated/models/configure_auth_methods_request'

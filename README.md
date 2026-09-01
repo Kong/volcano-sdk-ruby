@@ -212,6 +212,7 @@ Call a provider API through Volcano's fixed-host server proxy:
 
 ```ruby
 repos = client.auth.call_oauth_api('github', endpoint: '/user/repos')
+puts repos.first.fetch('name')
 ```
 
 The method returns an immutable copy of the provider's JSON object. Volcano owns

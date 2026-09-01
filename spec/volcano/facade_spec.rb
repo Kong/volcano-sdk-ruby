@@ -714,6 +714,23 @@ RSpec.describe Volcano::Client do
       expect(transport.calls_for(:auth_get_my_sessions)).to be_empty
     end
 
+    it 'copies a caller-owned sessions array before freezing it' do
+      session = Volcano::AuthSession.new(
+        id: 'session-id', user_id: 'user-id', provider: 'email',
+        expires_at: Time.iso8601('2026-09-02T12:00:00Z'), is_active: true, is_current: true
+      )
+      sessions = [session]
+
+      result = Volcano::SessionPage.new(
+        sessions: sessions, total: 1, page: 1, limit: 20, total_pages: 1
+      )
+
+      expect(result.sessions).not_to be(sessions)
+      expect(result.sessions).to be_frozen
+      expect(sessions).not_to be_frozen
+      expect { sessions << session }.not_to raise_error
+    end
+
     it 'rejects a stale response' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
       replacement = Volcano::Session.new(

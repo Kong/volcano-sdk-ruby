@@ -31,7 +31,7 @@ module Volcano
 
   SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages) do
     def initialize(sessions:, total:, page:, limit:, total_pages:)
-      super(sessions: sessions.to_a.freeze, total: total, page: page, limit: limit,
+      super(sessions: sessions.to_a.dup.freeze, total: total, page: page, limit: limit,
             total_pages: total_pages)
     end
   end

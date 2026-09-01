@@ -129,6 +129,17 @@ Success returns `nil` and preserves the active session. A successful stale
 response is rejected if another authentication operation replaces the session
 while cancellation is in flight.
 
+### Confirm an email change
+
+```ruby
+user = client.auth.confirm_email_change(token: "email-change-token")
+puts user.email
+```
+
+The method returns the immutable updated user without replacing the active
+session. A successful stale response is rejected if another authentication
+operation replaces that session in flight.
+
 ### Sign in anonymously
 
 ```ruby

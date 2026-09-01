@@ -26,5 +26,19 @@ module Volcano
         response(*apis.authentication.auth_cancel_email_change_with_http_info)
       end
     end
+
+    def auth_confirm_email_change(authorization:, token:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::AuthConfirmEmailChangeRequest.new(email_change_token: token)
+        body, status, headers = apis.authentication.auth_confirm_email_change_with_http_info(
+          request,
+          debug_return_type: 'String'
+        )
+        response(JSON.parse(body), status, headers)
+      end
+    rescue JSON::ParserError, TypeError => e
+      raise Error::AuthenticationError, MALFORMED_USER_PROFILE, cause: e
+    end
   end
 end

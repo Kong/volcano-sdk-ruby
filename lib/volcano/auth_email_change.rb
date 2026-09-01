@@ -25,6 +25,17 @@ module Volcano
       raise Error::SessionChangedError unless @client.capture_session.first == generation
     end
 
+    def confirm_email_change(token:)
+      generation, current = @client.capture_session
+      raise Error::AuthenticationError, 'No active session' unless current
+
+      payload = Transport.body(confirm_email_change_response(current.access_token, token), 200)
+      user = build_user(user_payload(payload))
+      raise Error::SessionChangedError unless @client.capture_session.first == generation
+
+      user
+    end
+
     private
 
     def email_change_response(access_token, new_email)
@@ -36,6 +47,12 @@ module Volcano
     def cancel_email_change_response(access_token)
       Transport.invoke do
         @transport.auth_cancel_email_change(authorization: access_token)
+      end
+    end
+
+    def confirm_email_change_response(access_token, token)
+      Transport.invoke do
+        @transport.auth_confirm_email_change(authorization: access_token, token:)
       end
     end
 

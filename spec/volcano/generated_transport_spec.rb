@@ -198,11 +198,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeOAuthApi
-    attr_reader :link_calls, :list_calls
+    attr_reader :link_calls, :list_calls, :unlink_calls
 
     def initialize
       @link_calls = []
       @list_calls = []
+      @unlink_calls = []
     end
 
     def auth_link_o_auth_provider_with_http_info(provider, options = {})
@@ -223,6 +224,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         ]
       }
       [FakeGeneratedModel.new(providers), 200, {}]
+    end
+
+    def auth_unlink_o_auth_provider_with_http_info(provider)
+      @unlink_calls << provider
+      [nil, 204, {}]
     end
   end
 
@@ -526,6 +532,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       'authorization_url' => 'https://accounts.example/link'
     )
     expect(response.status).to eq(200)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'unlinks an OAuth provider through the generated operation' do
+    response = transport.auth_unlink_oauth_provider(
+      authorization: 'access-token', provider: 'github'
+    )
+
+    expect(apis.oauth.unlink_calls).to eq(['github'])
+    expect(response.status).to eq(204)
     expect(authorizations).to eq(['access-token'])
   end
 

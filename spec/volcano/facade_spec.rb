@@ -5,6 +5,7 @@ require 'stringio'
 require 'time'
 
 RSpec.describe Volcano::Client do
+  CallbackAbort = Exception unless const_defined?(:CallbackAbort)
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   def access_token_with_session_id(session_id)
@@ -564,6 +565,79 @@ RSpec.describe Volcano::Client do
     signed_in = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
     expect(received).to eq([[:signed_in, signed_in], [:signed_out, nil]])
+  end
+
+  it 'skips queued reentrant changes after unsubscription' do
+    received = []
+    client.auth.on_auth_state_change do |event, _session|
+      client.auth.sign_out if event == :signed_in
+    end
+    subscription = nil
+    subscription = client.auth.on_auth_state_change do |event, _session|
+      received << event
+      subscription.unsubscribe if event == :signed_in
+    end
+    received.clear
+
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(received).to eq([:signed_in])
+  end
+
+  it 'recovers notification dispatch after an interrupt' do
+    received = []
+    interrupting = client.auth.on_auth_state_change do |event, _session|
+      raise Interrupt if event == :signed_in
+    end
+    client.auth.on_auth_state_change do |event, _session|
+      received << event
+    end
+    received.clear
+
+    expect do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    end.to raise_error(Interrupt)
+
+    interrupting.unsubscribe
+    client.auth.sign_out
+
+    expect(received).to eq(%i[signed_in signed_out])
+  end
+
+  it 'rolls back a subscription when initial delivery is interrupted' do
+    received = []
+    observed = []
+    expect do
+      client.auth.on_auth_state_change do |event, _session|
+        received << event
+        raise CallbackAbort
+      end
+    end.to raise_error(CallbackAbort)
+
+    client.auth.on_auth_state_change { |event, _session| observed << event }
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.not_to raise_error
+    expect(received).to eq([:initial_session])
+    expect(observed).to eq(%i[initial_session signed_in])
+  end
+
+  it 'preserves concurrent notifications when a callback is interrupted' do
+    entered = Queue.new
+    release = Queue.new
+    received = []
+    client.auth.on_auth_state_change do |event, _session|
+      next unless event == :signed_in
+
+      entered << true
+      release.pop
+      raise CallbackAbort
+    end
+    client.auth.on_auth_state_change { |event, _session| received << event }
+    received.clear
+    sign_out = Thread.new { entered.pop.then { client.auth.sign_out }.then { release << true } }
+
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(CallbackAbort)
+    sign_out.value
+    expect(received).to eq(%i[signed_in signed_out])
   end
 
   describe '#sign_up' do

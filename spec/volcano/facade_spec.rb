@@ -8,6 +8,8 @@ RSpec.describe Volcano::Client do
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   module FakeUserTransport
+    attr_accessor :on_get_user, :on_update_user, :update_user_response, :user_response
+
     def auth_get_user(**arguments)
       @calls << [:auth_get_user, arguments]
       @user_response.tap { @on_get_user&.call }
@@ -19,13 +21,31 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakePasswordRecoveryTransport
+    attr_accessor :forgot_password_response
+
+    def initialize_password_recovery_response
+      @forgot_password_response = Response.new(
+        status: 200,
+        body: { 'message' => 'If the email exists, a password reset link has been sent.' },
+        headers: {},
+        data: nil
+      )
+    end
+
+    def auth_forgot_password(**arguments)
+      @calls << [:auth_forgot_password, arguments]
+      @forgot_password_response
+    end
+  end
+
   class FakeContractTransport
+    include FakePasswordRecoveryTransport
     include FakeUserTransport
 
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_get_user, :on_logout, :on_refresh,
-                  :on_update_user, :refresh_response, :signup_response, :update_user_response,
-                  :user_response
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response,
+                  :signup_response
 
     def initialize
       @access_token = 'access-token'
@@ -38,6 +58,7 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
+      initialize_password_recovery_response
       @user_response = Response.new(
         status: 200,
         body: {
@@ -242,6 +263,40 @@ RSpec.describe Volcano::Client do
         TypeError,
         'Expected a complete sign-up acknowledgement'
       )
+    end
+  end
+
+  describe '#reset_password_for_email' do
+    it 'requests delivery without changing the session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.reset_password_for_email(email: 'user@example.com')
+
+      expect(result).to be_nil
+      expect(transport.calls_for(:auth_forgot_password).last.fetch(1)).to eq(
+        authorization: 'anon-key', email: 'user@example.com'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'raises a typed error without changing the session' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.forgot_password_response = Response.new(
+        status: 403, body: { 'error' => 'Password reset disabled' }, headers: {}, data: nil
+      )
+
+      expect do
+        client.auth.reset_password_for_email(email: 'user@example.com')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Password reset disabled')
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'accepts an acknowledgement without the optional message' do
+      transport.forgot_password_response = Response.new(
+        status: 200, body: {}, headers: {}, data: nil
+      )
+
+      expect(client.auth.reset_password_for_email(email: 'user@example.com')).to be_nil
     end
   end
 

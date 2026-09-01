@@ -18,11 +18,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls,
+    attr_reader :calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls, :signup_calls,
                 :update_user_calls
 
     def initialize
       @calls = []
+      @forgot_password_calls = []
       @get_user_calls = []
       @logout_calls = []
       @refresh_calls = []
@@ -53,6 +54,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         message: 'Check your email to confirm your account'
       }
       [FakeGeneratedModel.new(acknowledgement), 201, { 'request-id' => 'signup' }]
+    end
+
+    def auth_forgot_password_with_http_info(body, options = {})
+      @forgot_password_calls << [body, options]
+      acknowledgement = { message: 'If the email exists, a password reset link has been sent.' }
+      [FakeGeneratedModel.new(acknowledgement), 200, { 'request-id' => 'forgot-password' }]
     end
 
     def auth_update_user_with_http_info(options)
@@ -264,6 +271,22 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       password: 'secret',
       user_metadata: { display_name: 'New User' }
     )
+  end
+
+  it 'requests a password reset through the generated operation' do
+    response = transport.auth_forgot_password(
+      authorization: 'anon-key', email: 'user@example.com'
+    )
+
+    request, options = apis.authentication.forgot_password_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthForgotPasswordRequest)
+      .and have_attributes(email: 'user@example.com')
+    expect(options).to eq(debug_return_type: 'String')
+    expect(response.status).to eq(200)
+    expect(response.body).to eq(
+      'message' => 'If the email exists, a password reset link has been sent.'
+    )
+    expect(authorizations).to eq(['anon-key'])
   end
 
   it 'sends the refresh token through the generated logout request' do

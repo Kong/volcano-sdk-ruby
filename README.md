@@ -157,10 +157,11 @@ replacement as an "other" session. If replacement occurs, the method raises
 client.auth.delete_session('00000000-0000-4000-8000-000000000099')
 ```
 
-The request uses the current access token and does not change local session
-state. If another authentication operation replaces the session before deletion
-finishes, the method raises `Volcano::Error::SessionChangedError` instead of
-acknowledging a stale result.
+The request uses the current access token. Deleting that token's own session
+clears local credentials; deleting another session preserves them. If another
+authentication operation replaces the session before deletion finishes, the
+method raises `Volcano::Error::SessionChangedError` instead of clearing the
+replacement or acknowledging a stale result.
 
 ### Sign in anonymously
 

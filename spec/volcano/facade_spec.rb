@@ -1,11 +1,17 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'base64'
 require 'stringio'
 require 'time'
 
 RSpec.describe Volcano::Client do
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
+
+  def access_token_with_session_id(session_id)
+    payload = Base64.urlsafe_encode64(JSON.generate(session_id: session_id), padding: false)
+    "header.#{payload}.signature"
+  end
 
   module FakeUserTransport
     attr_accessor :on_get_user, :on_update_user, :update_user_response, :user_response
@@ -692,7 +698,11 @@ RSpec.describe Volcano::Client do
     end
 
     it 'rejects a stale response' do
-      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      client.auth.current_session = Volcano::Session.new(
+        access_token: access_token_with_session_id(session_id),
+        refresh_token: 'original-refresh',
+        user_id: 'original-user'
+      )
       replacement = Volcano::Session.new(
         access_token: 'replacement-access', refresh_token: 'replacement-refresh',
         user_id: 'replacement-user'
@@ -702,6 +712,18 @@ RSpec.describe Volcano::Client do
       expect { client.auth.delete_session(session_id) }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
+    end
+
+    it 'clears the deleted current session' do
+      client.auth.current_session = Volcano::Session.new(
+        access_token: access_token_with_session_id(session_id),
+        refresh_token: 'current-refresh',
+        user_id: 'current-user'
+      )
+
+      client.auth.delete_session(session_id)
+
+      expect(client.auth.current_session).to be_nil
     end
   end
 

@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'base64'
+require 'json'
+
 module Volcano
   # Multi-device session behavior for the authentication facade.
   class Auth
@@ -15,8 +18,14 @@ module Volcano
       generation, current = @client.capture_session
       raise Error::AuthenticationError, 'No active session' unless current
 
+      deletes_current = access_token_session_id(current.access_token) == session_id
       Transport.body(delete_session_response(current.access_token, session_id), 204)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
+      current_unchanged = if deletes_current
+                            @client.clear_session_if_current(generation)
+                          else
+                            @client.capture_session.first == generation
+                          end
+      raise Error::SessionChangedError unless current_unchanged
     end
 
     private
@@ -34,6 +43,18 @@ module Volcano
           session_id: session_id
         )
       end
+    end
+
+    def access_token_session_id(access_token)
+      parts = access_token.split('.')
+      return unless parts.length == 3
+
+      padding = '=' * (-parts.fetch(1).length % 4)
+      payload = JSON.parse(Base64.urlsafe_decode64(parts.fetch(1) + padding))
+      session_id = payload['session_id']
+      session_id if session_id.is_a?(String) && !session_id.empty?
+    rescue ArgumentError, JSON::ParserError
+      nil
     end
   end
 end

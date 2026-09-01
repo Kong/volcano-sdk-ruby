@@ -3,6 +3,9 @@
 module Volcano
   # Email-change operations for the internal generated transport.
   class GeneratedTransport
+    INVALID_EMAIL_CHANGE_RESPONSE = 'Expected a valid email-change acknowledgement'
+    private_constant :INVALID_EMAIL_CHANGE_RESPONSE
+
     def auth_request_email_change(authorization:, new_email:)
       invoke do
         apis = @api_factory.call(authorization)
@@ -11,8 +14,10 @@ module Volcano
           request,
           debug_return_type: 'String'
         )
-        response(parse_body(data), status, headers)
+        response(JSON.parse(data), status, headers)
       end
+    rescue JSON::ParserError, TypeError => e
+      raise TypeError, INVALID_EMAIL_CHANGE_RESPONSE, cause: e
     end
   end
 end

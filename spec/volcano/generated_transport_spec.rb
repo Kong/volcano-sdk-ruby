@@ -18,6 +18,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
+    attr_accessor :email_change_body
     attr_reader :anonymous_conversion_calls, :anonymous_signup_calls, :calls, :confirm_email_calls,
                 :email_change_calls,
                 :forgot_password_calls, :get_user_calls,
@@ -66,7 +67,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     def auth_request_email_change_with_http_info(body, options = {})
       (@email_change_calls ||= []) << [body, options]
-      [JSON.generate({}), 200, {}]
+      [@email_change_body || JSON.generate({}), 200, {}]
     end
 
     def auth_confirm_email_with_http_info(body, options = {})
@@ -372,6 +373,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'rejects a malformed email-change response' do
+    apis.authentication.email_change_body = '{'
+
+    expect do
+      transport.auth_request_email_change(
+        authorization: 'access-token', new_email: 'new@example.com'
+      )
+    end.to raise_error(TypeError, 'Expected a valid email-change acknowledgement')
   end
 
   it 'requests a password reset through the generated operation' do

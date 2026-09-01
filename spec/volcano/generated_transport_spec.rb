@@ -198,9 +198,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeOAuthApi
-    attr_reader :link_calls, :list_calls, :refresh_calls, :token_status_calls, :unlink_calls
+    attr_reader :api_calls, :link_calls, :list_calls, :refresh_calls, :token_status_calls, :unlink_calls
 
     def initialize
+      @api_calls = []
       @link_calls = []
       @list_calls = []
       @refresh_calls = []
@@ -245,6 +246,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @refresh_calls << provider
       result = {
         message: 'Provider token refreshed successfully', provider: provider, expires_in: 3600
+      }
+      [FakeGeneratedModel.new(result), 200, {}]
+    end
+
+    def call_o_auth_provider_api_with_http_info(provider, request)
+      @api_calls << [provider, request]
+      result = {
+        provider: provider, endpoint: request.endpoint, status_code: 200,
+        data: { repos: [{ name: 'volcano' }] }
       }
       [FakeGeneratedModel.new(result), 200, {}]
     end
@@ -586,6 +596,23 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       'message' => 'Provider token refreshed successfully',
       'provider' => 'google',
       'expires_in' => 3600
+    )
+  end
+
+  it 'calls an OAuth provider API through the generated operation' do
+    response = transport.auth_call_oauth_api(
+      authorization: 'access-token', provider: 'github', endpoint: '/user/repos',
+      method: 'POST', body: { 'visibility' => 'private' }
+    )
+
+    provider, request = apis.oauth.api_calls.last
+    expect(provider).to eq('github')
+    expect(request).to have_attributes(
+      endpoint: '/user/repos', method: 'POST', body: { 'visibility' => 'private' }
+    )
+    expect(response.body).to eq(
+      'provider' => 'github', 'endpoint' => '/user/repos', 'status_code' => 200,
+      'data' => { 'repos' => [{ 'name' => 'volcano' }] }
     )
   end
 

@@ -179,7 +179,9 @@ RSpec.describe Volcano::Client do
 
   module FakeOAuthTransport
     attr_accessor :link_oauth_provider_response, :list_oauth_providers_response,
+                  :call_oauth_api_response,
                   :on_link_oauth_provider, :on_list_oauth_providers,
+                  :on_call_oauth_api,
                   :oauth_provider_token_status_response,
                   :on_oauth_provider_token_status, :on_refresh_oauth_provider_token,
                   :on_unlink_oauth_provider, :refresh_oauth_provider_token_response
@@ -241,6 +243,21 @@ RSpec.describe Volcano::Client do
           'message' => 'Provider token refreshed successfully',
           'provider' => 'google',
           'expires_in' => 3600
+        },
+        headers: {}, data: nil
+      )
+    end
+
+    def auth_call_oauth_api(**arguments)
+      @calls << [:auth_call_oauth_api, arguments]
+      @on_call_oauth_api&.call
+      @call_oauth_api_response || Response.new(
+        status: 200,
+        body: {
+          'provider' => 'github',
+          'endpoint' => '/user/repos',
+          'status_code' => 200,
+          'data' => { 'repos' => [{ 'name' => 'volcano' }] }
         },
         headers: {}, data: nil
       )
@@ -1069,6 +1086,51 @@ RSpec.describe Volcano::Client do
       transport.on_refresh_oauth_provider_token = -> { client.auth.current_session = replacement }
 
       expect { client.auth.refresh_oauth_provider_token('google') }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#call_oauth_api' do
+    it 'returns immutable provider data and preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.call_oauth_api(
+        'github', endpoint: '/user/repos', method: 'POST', body: { 'visibility' => 'private' }
+      )
+
+      expect(result).to eq('repos' => [{ 'name' => 'volcano' }])
+      expect(result).to be_frozen
+      expect(result.fetch('repos')).to be_frozen
+      expect(result.fetch('repos').first).to be_frozen
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_call_oauth_api).last.fetch(1)).to eq(
+        authorization: 'access-token', provider: 'github', endpoint: '/user/repos',
+        method: 'POST', body: { 'visibility' => 'private' }
+      )
+    end
+
+    it 'rejects an unknown provider before sending a request' do
+      expect { client.auth.call_oauth_api('invalid', endpoint: '/user') }
+        .to raise_error(ArgumentError, 'Unsupported OAuth provider')
+      expect(transport.calls_for(:auth_call_oauth_api)).to be_empty
+    end
+
+    it 'requires a session' do
+      expect { client.auth.call_oauth_api('github', endpoint: '/user') }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_call_oauth_api)).to be_empty
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_call_oauth_api = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.call_oauth_api('github', endpoint: '/user') }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

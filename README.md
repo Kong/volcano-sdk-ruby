@@ -208,6 +208,16 @@ puts [status.provider, status.expires_in].join(' ')
 The refresh credential and new access token remain on the server. A stale result
 raises `Volcano::Error::SessionChangedError`.
 
+Call a provider API through Volcano's fixed-host server proxy:
+
+```ruby
+repos = client.auth.call_oauth_api('github', endpoint: '/user/repos')
+```
+
+The method returns an immutable copy of the provider's JSON object. Volcano owns
+token refresh and host validation. A stale result raises
+`Volcano::Error::SessionChangedError`.
+
 ### Sign out all other devices
 
 ```ruby

@@ -18,11 +18,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeAuthenticationApi
-    attr_reader :calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls,
+    attr_reader :calls, :confirm_email_calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls,
                 :reset_password_calls, :signup_calls, :update_user_calls
 
     def initialize
       @calls = []
+      @confirm_email_calls = []
       @forgot_password_calls = []
       @get_user_calls = []
       @logout_calls = []
@@ -35,6 +36,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_signin_with_http_info(body)
       @calls << body
       [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
+    end
+
+    def auth_confirm_email_with_http_info(body, options = {})
+      @confirm_email_calls << [body, options]
+      [FakeGeneratedModel.new(message: 'Email confirmed successfully'), 200, {}]
     end
 
     def auth_get_user_with_http_info(options = {})
@@ -303,6 +309,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     request, options = apis.authentication.reset_password_calls.fetch(0)
     expect(request).to be_a(InternalGenerated::AuthResetPasswordRequest)
       .and have_attributes(token: 'recovery-token', new_password: 'new-secret')
+    expect(options).to eq(debug_return_type: 'String')
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['anon-key'])
+  end
+
+  it 'confirms an email through the generated operation' do
+    response = transport.auth_confirm_email(
+      authorization: 'anon-key', token: 'confirmation-token'
+    )
+
+    request, options = apis.authentication.confirm_email_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthConfirmEmailRequest)
+      .and have_attributes(token: 'confirmation-token')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['anon-key'])

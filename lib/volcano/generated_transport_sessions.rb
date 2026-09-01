@@ -3,6 +3,13 @@
 module Volcano
   # Session-management operations for the internal generated transport.
   class GeneratedTransport
+    def auth_get_my_sessions(authorization:, page:, limit:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        response(*apis.authentication.auth_get_my_sessions_with_http_info(page: page, limit: limit))
+      end
+    end
+
     def auth_delete_all_my_sessions(authorization:)
       invoke do
         apis = @api_factory.call(authorization)

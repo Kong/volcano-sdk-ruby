@@ -3,8 +3,60 @@
 require 'json'
 
 module Volcano
+  # Maps the internal wire response to immutable public session values.
+  module SessionPageMapping
+    SESSION_FIELDS = %i[
+      id user_id provider expires_at is_active is_current user_agent ip_address last_ip_address
+      last_activity_at session_started_at created_at updated_at
+    ].freeze
+    REQUIRED_SESSION_FIELDS = SESSION_FIELDS.first(6).freeze
+
+    private
+
+    def session_page(body)
+      raise TypeError, 'Expected a complete session page' unless body.is_a?(Hash)
+
+      sessions = body.fetch('sessions')
+      raise TypeError, 'Expected a complete session page' unless sessions.is_a?(Array)
+
+      SessionPage.new(
+        sessions: sessions.map { |attributes| auth_session(attributes) },
+        total: body.fetch('total'), page: body.fetch('page'), limit: body.fetch('limit'),
+        total_pages: body.fetch('total_pages')
+      )
+    rescue KeyError
+      raise TypeError, 'Expected a complete session page'
+    end
+
+    def auth_session(attributes)
+      raise TypeError, 'Expected a complete authentication session' unless attributes.is_a?(Hash)
+
+      required = REQUIRED_SESSION_FIELDS.to_h { |name| [name, attributes.fetch(name.to_s)] }
+      optional = (SESSION_FIELDS - REQUIRED_SESSION_FIELDS).to_h do |name|
+        [name, attributes[name.to_s]]
+      end
+      AuthSession.new(**required, **optional)
+    rescue KeyError
+      raise TypeError, 'Expected a complete authentication session'
+    end
+  end
+  private_constant :SessionPageMapping
+
   # Multi-device session behavior for the authentication facade.
   class Auth
+    include SessionPageMapping
+
+    def list_sessions(page: 1, limit: 20)
+      generation, current = @client.capture_session
+      raise Error::AuthenticationError, 'No active session' unless current
+
+      body = Transport.body(list_sessions_response(current.access_token, page, limit), 200)
+      result = session_page(body)
+      raise Error::SessionChangedError unless @client.capture_session.first == generation
+
+      result
+    end
+
     def delete_all_other_sessions
       generation, current = @client.capture_session
       raise Error::AuthenticationError, 'No active session' unless current
@@ -26,6 +78,16 @@ module Volcano
     end
 
     private
+
+    def list_sessions_response(access_token, page, limit)
+      Transport.invoke do
+        @transport.auth_get_my_sessions(
+          authorization: access_token,
+          page: page,
+          limit: limit
+        )
+      end
+    end
 
     def delete_all_other_sessions_response(access_token)
       Transport.invoke do

@@ -140,6 +140,20 @@ The method returns the immutable updated user without replacing the active
 session. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
+### List sessions
+
+```ruby
+page = client.auth.list_sessions(page: 1, limit: 20)
+page.sessions.each do |session|
+  puts [session.id, session.user_agent, session.is_current].join(' ')
+end
+```
+
+The method returns immutable `Volcano::SessionPage` and `Volcano::AuthSession`
+values in activity order. It raises `Volcano::Error::SessionChangedError` instead
+of returning a page for a session that was replaced while the request was in
+flight. Sort, filter, and cursor controls are not yet exposed by this facade.
+
 ### Sign out all other devices
 
 ```ruby

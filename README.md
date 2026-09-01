@@ -88,6 +88,15 @@ not the email belongs to an account. Failures raise the same typed Volcano
 errors as other authentication operations, and the current session remains
 unchanged.
 
+### Confirm an email address
+
+```ruby
+client.auth.confirm_email(token: "confirmation-token")
+```
+
+Success returns `nil`. Confirmation does not sign in the confirmed account or
+change an unrelated local session.
+
 ### Reset the password
 
 ```ruby

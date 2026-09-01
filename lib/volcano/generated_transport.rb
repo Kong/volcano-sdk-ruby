@@ -19,6 +19,7 @@ module Volcano
   private_constant :Generated
   require_relative 'generated_transport_support'
   require_relative 'generated_transport_auth'
+  require_relative 'generated_transport_confirmation'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport

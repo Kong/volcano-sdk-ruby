@@ -50,7 +50,30 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakeEmailConfirmationTransport
+    attr_accessor :confirm_email_response
+
+    def initialize_email_confirmation_response
+      @confirm_email_response = Response.new(
+        status: 200, body: { 'message' => 'Email confirmed successfully' }, headers: {}, data: nil
+      )
+    end
+
+    def auth_confirm_email(**arguments)
+      @calls << [:auth_confirm_email, arguments]
+      @confirm_email_response
+    end
+  end
+
+  module FakeCallLog
+    def calls_for(name)
+      calls.select { |call| call.first == name }
+    end
+  end
+
   class FakeContractTransport
+    include FakeCallLog
+    include FakeEmailConfirmationTransport
     include FakePasswordRecoveryTransport
     include FakeUserTransport
 
@@ -70,6 +93,7 @@ RSpec.describe Volcano::Client do
         data: nil
       )
       initialize_password_recovery_response
+      initialize_email_confirmation_response
       @user_response = Response.new(
         status: 200,
         body: {
@@ -158,10 +182,6 @@ RSpec.describe Volcano::Client do
     def release_project_lock(**arguments)
       @calls << [:release_project_lock, arguments]
       Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-
-    def calls_for(name)
-      calls.select { |call| call.first == name }
     end
   end
 
@@ -332,6 +352,32 @@ RSpec.describe Volcano::Client do
 
       expect do
         client.auth.reset_password(token: 'expired-token', new_password: 'new-secret')
+      end.to raise_error(Volcano::Error::AuthenticationError)
+      expect(client.auth.current_session).to be(established)
+    end
+  end
+
+  describe '#confirm_email' do
+    it 'uses the confirmation token without changing an unrelated session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+
+      result = client.auth.confirm_email(token: 'confirmation-token')
+
+      expect(result).to be_nil
+      expect(transport.calls_for(:auth_confirm_email).last.fetch(1)).to eq(
+        authorization: 'anon-key', token: 'confirmation-token'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'raises a typed error without changing the session' do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+      transport.confirm_email_response = Response.new(
+        status: 401, body: nil, headers: {}, data: nil
+      )
+
+      expect do
+        client.auth.confirm_email(token: 'expired-token')
       end.to raise_error(Volcano::Error::AuthenticationError)
       expect(client.auth.current_session).to be(established)
     end

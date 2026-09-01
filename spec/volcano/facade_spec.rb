@@ -80,8 +80,38 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakeAnonymousTransport
+    attr_accessor :anonymous_signin_response, :on_anonymous_signin
+
+    def initialize_anonymous_signin_response
+      @anonymous_signin_response = Response.new(
+        status: 201,
+        body: {
+          'access_token' => 'anonymous-access',
+          'refresh_token' => 'anonymous-refresh',
+          'user' => { 'id' => 'anonymous-user' }
+        },
+        headers: {},
+        data: nil
+      )
+    end
+
+    def initialize_auth_responses
+      initialize_password_recovery_response
+      initialize_email_confirmation_response
+      initialize_anonymous_signin_response
+    end
+
+    def auth_signup_anonymous(**arguments)
+      @calls << [:auth_signup_anonymous, arguments]
+      @on_anonymous_signin&.call
+      @anonymous_signin_response
+    end
+  end
+
   class FakeContractTransport
     include FakeCallLog
+    include FakeAnonymousTransport
     include FakeEmailConfirmationTransport
     include FakePasswordRecoveryTransport
     include FakeUserTransport
@@ -101,8 +131,7 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
-      initialize_password_recovery_response
-      initialize_email_confirmation_response
+      initialize_auth_responses
       @user_response = Response.new(
         status: 200,
         body: {
@@ -303,6 +332,49 @@ RSpec.describe Volcano::Client do
         TypeError,
         'Expected a complete sign-up acknowledgement'
       )
+    end
+  end
+
+  describe '#sign_in_anonymously' do
+    it 'stores the returned session and sends metadata', :aggregate_failures do
+      session = client.auth.sign_in_anonymously(metadata: { device: 'mobile' })
+
+      expect(session).to eq(
+        Volcano::Session.new(
+          access_token: 'anonymous-access',
+          refresh_token: 'anonymous-refresh',
+          user_id: 'anonymous-user'
+        )
+      )
+      expect(client.auth.current_session).to be(session)
+      expect(transport.calls_for(:auth_signup_anonymous).last.fetch(1)).to eq(
+        authorization: 'anon-key', metadata: { device: 'mobile' }
+      )
+    end
+
+    it 'does not replace a newer session' do
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access',
+        refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_anonymous_signin = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.sign_in_anonymously }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+
+    it 'preserves the current session when anonymous sign-ins are disabled' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.anonymous_signin_response = Response.new(
+        status: 403, body: { 'error' => 'Anonymous sign-ins are disabled' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.sign_in_anonymously }.to raise_error(
+        Volcano::Error::AuthenticationError,
+        'Anonymous sign-ins are disabled'
+      )
+      expect(client.auth.current_session).to be(established)
     end
   end
 

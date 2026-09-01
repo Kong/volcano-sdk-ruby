@@ -178,7 +178,8 @@ RSpec.describe Volcano::Client do
   FakeEmailChangeTransport.include(FakeSessionTransport)
 
   module FakeOAuthTransport
-    attr_accessor :list_oauth_providers_response, :on_list_oauth_providers
+    attr_accessor :link_oauth_provider_response, :list_oauth_providers_response,
+                  :on_link_oauth_provider, :on_list_oauth_providers
 
     def auth_list_oauth_providers(**arguments)
       @calls << [:auth_list_oauth_providers, arguments]
@@ -194,6 +195,16 @@ RSpec.describe Volcano::Client do
             }
           ]
         },
+        headers: {}, data: nil
+      )
+    end
+
+    def auth_link_oauth_provider(**arguments)
+      @calls << [:auth_link_oauth_provider, arguments]
+      @on_link_oauth_provider&.call
+      @link_oauth_provider_response || Response.new(
+        status: 200,
+        body: { 'authorization_url' => 'https://accounts.example/link' },
         headers: {}, data: nil
       )
     end
@@ -817,6 +828,55 @@ RSpec.describe Volcano::Client do
       transport.on_list_oauth_providers = -> { client.auth.current_session = replacement }
 
       expect { client.auth.list_linked_oauth_providers }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#link_oauth_provider' do
+    it 'returns the authorization URL and preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.link_oauth_provider('github')
+
+      expect(result).to eq('https://accounts.example/link')
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_link_oauth_provider).last.fetch(1)).to eq(
+        authorization: 'access-token', provider: 'github'
+      )
+    end
+
+    it 'rejects an unknown provider before sending a request' do
+      expect { client.auth.link_oauth_provider('invalid') }
+        .to raise_error(ArgumentError, 'Unsupported OAuth provider')
+      expect(transport.calls_for(:auth_link_oauth_provider)).to be_empty
+    end
+
+    it 'requires a session' do
+      expect { client.auth.link_oauth_provider('google') }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_link_oauth_provider)).to be_empty
+    end
+
+    it 'rejects an incomplete response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.link_oauth_provider_response = Response.new(
+        status: 200, body: {}, headers: {}, data: nil
+      )
+
+      expect { client.auth.link_oauth_provider('google') }
+        .to raise_error(TypeError, 'Expected an OAuth authorization URL')
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_link_oauth_provider = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.link_oauth_provider('google') }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

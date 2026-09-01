@@ -198,10 +198,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeOAuthApi
-    attr_reader :list_calls
+    attr_reader :link_calls, :list_calls
 
     def initialize
+      @link_calls = []
       @list_calls = []
+    end
+
+    def auth_link_o_auth_provider_with_http_info(provider, options = {})
+      @link_calls << [provider, options]
+      result = { authorization_url: 'https://accounts.example/link' }
+      [FakeGeneratedModel.new(result), 200, {}]
     end
 
     def auth_list_o_auth_providers_with_http_info(options = {})
@@ -504,6 +511,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
         }
       ]
+    )
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'starts linking an OAuth provider through the generated operation' do
+    response = transport.auth_link_oauth_provider(
+      authorization: 'access-token', provider: 'github'
+    )
+
+    expect(apis.oauth.link_calls).to eq([['github', {}]])
+    expect(response.body).to eq(
+      'authorization_url' => 'https://accounts.example/link'
     )
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['access-token'])

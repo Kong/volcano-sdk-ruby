@@ -5,6 +5,7 @@ require 'stringio'
 require 'time'
 
 RSpec.describe Volcano::Client do
+  CallbackAbort = Exception unless const_defined?(:CallbackAbort)
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   def access_token_with_session_id(session_id)
@@ -605,15 +606,18 @@ RSpec.describe Volcano::Client do
 
   it 'rolls back a subscription when initial delivery is interrupted' do
     received = []
+    observed = []
     expect do
       client.auth.on_auth_state_change do |event, _session|
         received << event
-        raise Interrupt
+        raise CallbackAbort
       end
-    end.to raise_error(Interrupt)
+    end.to raise_error(CallbackAbort)
 
+    client.auth.on_auth_state_change { |event, _session| observed << event }
     expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.not_to raise_error
     expect(received).to eq([:initial_session])
+    expect(observed).to eq(%i[initial_session signed_in])
   end
 
   it 'preserves concurrent notifications when a callback is interrupted' do
@@ -625,13 +629,13 @@ RSpec.describe Volcano::Client do
 
       entered << true
       release.pop
-      raise Interrupt
+      raise CallbackAbort
     end
     client.auth.on_auth_state_change { |event, _session| received << event }
     received.clear
     sign_out = Thread.new { entered.pop.then { client.auth.sign_out }.then { release << true } }
 
-    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(Interrupt)
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(CallbackAbort)
     sign_out.value
     expect(received).to eq(%i[signed_in signed_out])
   end

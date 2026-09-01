@@ -21,8 +21,8 @@ module Volcano
 
   # Owns synchronized local session state and its subscribers.
   class AuthState
-    CALLBACK_ABORTS = [NoMemoryError, ScriptError, SecurityError, SignalException, SystemExit, SystemStackError].freeze
-    private_constant :CALLBACK_ABORTS
+    CALLBACK_FAILURES = [Exception].freeze
+    private_constant :CALLBACK_FAILURES
 
     def initialize
       @mutex = Mutex.new
@@ -129,7 +129,7 @@ module Volcano
         notify_callback(callback_id, event, session)
       rescue StandardError => e
         Warning.warn("Volcano auth-state callback failed (#{e.class})\n")
-      rescue *CALLBACK_ABORTS => e
+      rescue *CALLBACK_FAILURES => e
         unsubscribe(callback_id)
         failure ||= e
       end

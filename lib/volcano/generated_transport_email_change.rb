@@ -19,5 +19,12 @@ module Volcano
     rescue JSON::ParserError, TypeError => e
       raise TypeError, INVALID_EMAIL_CHANGE_RESPONSE, cause: e
     end
+
+    def auth_cancel_email_change(authorization:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        response(*apis.authentication.auth_cancel_email_change_with_http_info)
+      end
+    end
   end
 end

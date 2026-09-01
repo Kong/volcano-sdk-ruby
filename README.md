@@ -119,6 +119,16 @@ The immutable result contains the server acknowledgement. Its `message` and
 `new_email` fields may be `nil`. The request requires an active session and
 rejects a response if that session changes in flight.
 
+### Cancel an email change
+
+```ruby
+client.auth.cancel_email_change
+```
+
+Success returns `nil` and preserves the active session. A successful stale
+response is rejected if another authentication operation replaces the session
+while cancellation is in flight.
+
 ### Sign in anonymously
 
 ```ruby

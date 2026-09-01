@@ -183,12 +183,26 @@ RSpec.describe Volcano::Client do
                   :on_link_oauth_provider, :on_list_oauth_providers,
                   :on_call_oauth_api,
                   :oauth_provider_token_status_response,
-                  :on_oauth_provider_token_status, :on_refresh_oauth_provider_token,
+                  :on_oauth_exchange, :on_oauth_provider_token_status,
+                  :on_refresh_oauth_provider_token,
                   :on_unlink_oauth_provider, :refresh_oauth_provider_token_response
 
     def auth_oauth_authorization_url(**arguments)
       @calls << [:auth_oauth_authorization_url, arguments]
       'https://api.test.volcano.dev/auth/oauth/github/authorize?anon_key=anon-key'
+    end
+
+    def auth_oauth_exchange(**arguments)
+      @calls << [:auth_oauth_exchange, arguments]
+      @on_oauth_exchange&.call
+      Response.new(
+        status: 200,
+        body: {
+          'access_token' => 'oauth-access', 'refresh_token' => 'oauth-refresh',
+          'user' => { 'id' => 'oauth-user' }
+        },
+        headers: {}, data: nil
+      )
     end
 
     def auth_list_oauth_providers(**arguments)
@@ -894,19 +908,70 @@ RSpec.describe Volcano::Client do
 
   describe '#sign_in_with_oauth' do
     it 'returns an authorization URL without creating a session', :aggregate_failures do
-      result = client.auth.sign_in_with_oauth('github')
+      result = client.auth.sign_in_with_oauth(
+        'github', redirect_to: 'https://app.example.test/auth/callback', state: 'state-value'
+      )
 
       expect(result).to start_with('https://api.test.volcano.dev/auth/oauth/github/authorize')
       expect(client.auth.current_session).to be_nil
       expect(transport.calls_for(:auth_oauth_authorization_url).last.fetch(1)).to eq(
-        anon_key: 'anon-key', provider: 'github'
+        anon_key: 'anon-key', provider: 'github',
+        redirect_url: 'https://app.example.test/auth/callback', client_state: 'state-value'
       )
     end
 
     it 'rejects an unknown provider before building a URL' do
-      expect { client.auth.sign_in_with_oauth('invalid') }
+      expect do
+        client.auth.sign_in_with_oauth(
+          'invalid', redirect_to: 'https://app.example.test/auth/callback', state: 'state-value'
+        )
+      end
         .to raise_error(ArgumentError, 'Unsupported OAuth provider')
       expect(transport.calls_for(:auth_oauth_authorization_url)).to be_empty
+    end
+
+    it 'exchanges a code for the current session after validating state', :aggregate_failures do
+      result = client.auth.exchange_oauth_code(
+        code: 'oauth-code', redirect_to: 'https://app.example.test/auth/callback',
+        state: 'state-value', expected_state: 'state-value'
+      )
+
+      expect(result).to eq(
+        Volcano::Session.new(
+          access_token: 'oauth-access', refresh_token: 'oauth-refresh', user_id: 'oauth-user'
+        )
+      )
+      expect(client.auth.current_session).to be(result)
+      expect(transport.calls_for(:auth_oauth_exchange).last.fetch(1)).to eq(
+        authorization: 'anon-key', code: 'oauth-code',
+        redirect_url: 'https://app.example.test/auth/callback'
+      )
+    end
+
+    it 'rejects a mismatched callback state before exchange' do
+      expect do
+        client.auth.exchange_oauth_code(
+          code: 'oauth-code', redirect_to: 'https://app.example.test/auth/callback',
+          state: 'attacker-state', expected_state: 'expected-state'
+        )
+      end.to raise_error(ArgumentError, 'OAuth state mismatch')
+      expect(transport.calls_for(:auth_oauth_exchange)).to be_empty
+    end
+
+    it 'does not replace a session changed during exchange' do
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_oauth_exchange = -> { client.auth.current_session = replacement }
+
+      expect do
+        client.auth.exchange_oauth_code(
+          code: 'oauth-code', redirect_to: 'https://app.example.test/auth/callback',
+          state: 'state-value', expected_state: 'state-value'
+        )
+      end.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
     end
   end
 

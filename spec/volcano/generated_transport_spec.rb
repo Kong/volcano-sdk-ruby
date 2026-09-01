@@ -198,15 +198,27 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeOAuthApi
-    attr_reader :api_calls, :link_calls, :list_calls, :refresh_calls, :token_status_calls, :unlink_calls
+    attr_reader :api_calls, :exchange_calls, :link_calls, :list_calls, :refresh_calls,
+                :token_status_calls, :unlink_calls
 
     def initialize
       @api_calls = []
+      @exchange_calls = []
       @link_calls = []
       @list_calls = []
       @refresh_calls = []
       @token_status_calls = []
       @unlink_calls = []
+    end
+
+    def auth_o_auth_exchange_with_http_info(body)
+      @exchange_calls << body
+      result = {
+        access_token: 'oauth-access', token_type: 'bearer', expires_in: 3600,
+        refresh_token: 'oauth-refresh',
+        user: { id: '00000000-0000-4000-8000-000000000010' }
+      }
+      [FakeGeneratedModel.new(result), 200, {}]
     end
 
     def auth_link_o_auth_provider_with_http_info(provider, options = {})
@@ -553,12 +565,33 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   it 'builds an OAuth sign-in URL through the generated operation' do
     url = described_class.new(api_url: 'https://api.test.volcano.dev')
                          .auth_oauth_authorization_url(
-                           anon_key: 'anon key', provider: 'github'
+                           anon_key: 'anon key', provider: 'github',
+                           redirect_url: 'https://app.example.test/callback?next=/projects',
+                           client_state: 'state-value'
                          )
     uri = URI(url)
 
     expect(uri.path).to eq('/auth/oauth/github/authorize')
-    expect(URI.decode_www_form(uri.query).to_h).to eq('anon_key' => 'anon key')
+    expect(URI.decode_www_form(uri.query).to_h).to eq(
+      'anon_key' => 'anon key',
+      'redirect_url' => 'https://app.example.test/callback?next=/projects',
+      'client_state' => 'state-value', 'response_mode' => 'code'
+    )
+  end
+
+  it 'exchanges an OAuth code through the generated operation' do
+    response = transport.auth_oauth_exchange(
+      authorization: 'anon-key', code: 'oauth-code',
+      redirect_url: 'https://app.example.test/callback'
+    )
+
+    expect(apis.oauth.exchange_calls.last).to have_attributes(
+      code: 'oauth-code', redirect_url: 'https://app.example.test/callback'
+    )
+    expect(response.body).to include(
+      'access_token' => 'oauth-access', 'refresh_token' => 'oauth-refresh'
+    )
+    expect(authorizations).to include('anon-key')
   end
 
   it 'starts linking an OAuth provider through the generated operation' do

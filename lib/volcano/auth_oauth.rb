@@ -6,14 +6,6 @@ module Volcano
     OAUTH_PROVIDERS = %w[apple github google microsoft].freeze
     private_constant :OAUTH_PROVIDERS
 
-    def sign_in_with_oauth(provider)
-      provider_name = oauth_provider_name(provider)
-      @transport.auth_oauth_authorization_url(
-        anon_key: @client.anon_token,
-        provider: provider_name
-      )
-    end
-
     def list_linked_oauth_providers
       generation, current = @client.capture_session
       raise Error::AuthenticationError, 'No active session' unless current

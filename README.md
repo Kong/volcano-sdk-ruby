@@ -157,13 +157,33 @@ flight. Sort, filter, and cursor controls are not yet exposed by this facade.
 ### Sign in with OAuth
 
 ```ruby
-authorization_url = client.auth.sign_in_with_oauth('github')
+require 'securerandom'
+
+oauth_state = SecureRandom.urlsafe_base64(32)
+authorization_url = client.auth.sign_in_with_oauth(
+  'github',
+  redirect_to: 'https://app.example.com/auth/callback',
+  state: oauth_state
+)
 ```
 
-Redirect the user to the returned URL to continue through the project's managed
-hosted-auth flow. The method does not open a browser or create a local session.
-Custom callbacks, code exchange, and session persistence are not yet exposed by
-this facade.
+Store `oauth_state` in the user's signed server-side session, then redirect the
+user to the returned URL. In the callback, pass the returned and stored states
+to the SDK so it rejects login CSRF before exchanging the one-time code:
+
+```ruby
+session = client.auth.exchange_oauth_code(
+  code: callback_code,
+  redirect_to: 'https://app.example.com/auth/callback',
+  state: callback_state,
+  expected_state: stored_oauth_state
+)
+```
+
+The callback URL must exactly match a registered project redirect. The exchange
+stores the returned Volcano session on the client. The SDK does not open a
+browser or persist OAuth state between requests; use your framework's signed
+session or equivalent storage for that state.
 
 ### List linked OAuth providers
 

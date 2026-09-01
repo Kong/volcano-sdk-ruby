@@ -18,6 +18,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   module FakeEmailChangeApi
+    attr_accessor :confirmed_email_change_body
+
     def auth_cancel_email_change_with_http_info(options = {})
       (@cancel_email_change_calls ||= []) << options
       [FakeGeneratedModel.new({}), 200, {}]
@@ -25,6 +27,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     def cancel_email_change_calls
       @cancel_email_change_calls || []
+    end
+
+    def auth_confirm_email_change_with_http_info(body, options = {})
+      (@confirm_email_change_calls ||= []) << [body, options]
+      profile = { user: { id: 'user-123', email: 'new@example.com', status: 'active' } }
+      [@confirmed_email_change_body || JSON.generate(profile), 200, {}]
+    end
+
+    def confirm_email_change_calls
+      @confirm_email_change_calls || []
     end
   end
 
@@ -393,6 +405,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     expect(apis.authentication.cancel_email_change_calls).to eq([{}])
     expect(response.status).to eq(200)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'confirms an email change through the generated operation' do
+    response = transport.auth_confirm_email_change(
+      authorization: 'access-token', token: 'change-token'
+    )
+
+    request, options = apis.authentication.confirm_email_change_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthConfirmEmailChangeRequest)
+      .and have_attributes(email_change_token: 'change-token')
+    expect(options).to eq(debug_return_type: 'String')
+    expect(response.body.dig('user', 'email')).to eq('new@example.com')
     expect(authorizations).to eq(['access-token'])
   end
 

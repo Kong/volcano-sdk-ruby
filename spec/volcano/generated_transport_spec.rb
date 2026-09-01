@@ -4,7 +4,9 @@ require 'spec_helper'
 require 'tempfile'
 
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
-  GeneratedApis = Data.define(:authentication, :database, :storage, :locks) unless const_defined?(:GeneratedApis)
+  unless const_defined?(:GeneratedApis)
+    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks)
+  end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
   class FakeGeneratedModel
@@ -195,6 +197,28 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
+  class FakeOAuthApi
+    attr_reader :list_calls
+
+    def initialize
+      @list_calls = []
+    end
+
+    def auth_list_o_auth_providers_with_http_info(options = {})
+      @list_calls << options
+      providers = {
+        providers: [
+          {
+            provider: 'google',
+            linked_at: Time.iso8601('2026-08-30T12:00:00Z'),
+            updated_at: Time.iso8601('2026-09-01T12:00:00Z')
+          }
+        ]
+      }
+      [FakeGeneratedModel.new(providers), 200, {}]
+    end
+  end
+
   class FakeStorageApi
     attr_reader :calls
 
@@ -235,6 +259,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   let(:apis) do
     GeneratedApis.new(
       authentication: FakeAuthenticationApi.new,
+      oauth: FakeOAuthApi.new,
       database: FakeDatabaseApi.new,
       storage: FakeStorageApi.new,
       locks: FakeLocksApi.new
@@ -313,6 +338,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     factory = lambda do |_authorization|
       GeneratedApis.new(
         authentication: empty,
+        oauth: empty,
         database: empty,
         storage: storage,
         locks: empty
@@ -461,6 +487,23 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(apis.authentication.list_sessions_options).to eq(page: 2, limit: 10)
     expect(response.body).to include(
       'sessions' => [], 'total' => 21, 'page' => 2, 'limit' => 10, 'total_pages' => 3
+    )
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'lists linked OAuth providers through the generated operation' do
+    response = transport.auth_list_oauth_providers(authorization: 'access-token')
+
+    expect(apis.oauth.list_calls).to eq([{}])
+    expect(response.body).to eq(
+      'providers' => [
+        {
+          'provider' => 'google',
+          'linked_at' => Time.iso8601('2026-08-30T12:00:00Z'),
+          'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
+        }
+      ]
     )
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['access-token'])
@@ -748,7 +791,9 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     authentication.define_singleton_method(:auth_signin_with_http_info) { |_| raise error }
     empty = Object.new
     factory = lambda do |_authorization|
-      GeneratedApis.new(authentication: authentication, database: empty, storage: empty, locks: empty)
+      GeneratedApis.new(
+        authentication: authentication, oauth: empty, database: empty, storage: empty, locks: empty
+      )
     end
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
 

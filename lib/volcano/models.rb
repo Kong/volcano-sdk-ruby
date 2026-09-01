@@ -35,6 +35,21 @@ module Volcano
             total_pages: total_pages)
     end
   end
+  LinkedOAuthProvider = Data.define(:provider, :linked_at, :updated_at) do
+    def initialize(provider:, linked_at:, updated_at:)
+      super(
+        provider: immutable_value(provider),
+        linked_at: immutable_value(linked_at),
+        updated_at: immutable_value(updated_at)
+      )
+    end
+
+    private
+
+    def immutable_value(value)
+      value.frozen? ? value : value.dup.freeze
+    end
+  end
   SignUpResult = Data.define(:confirmation_required, :message)
   EmailChangeResult = Data.define(:message, :new_email)
   USER_OPTIONAL_ATTRIBUTES = %i[

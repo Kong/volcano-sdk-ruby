@@ -23,13 +23,14 @@ module Volcano
   require_relative 'generated_transport_confirmation'
   require_relative 'generated_transport_email_change'
   require_relative 'generated_transport_sessions'
+  require_relative 'generated_transport_oauth'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
     include ApiFactory
     include ValueNormalization
 
-    GeneratedApis = Data.define(:authentication, :database, :storage, :locks)
+    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks)
 
     def initialize(api_url:, timeout: 60, api_factory: nil)
       @api_url = api_url

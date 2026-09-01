@@ -1118,6 +1118,47 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  describe '#get_hosted_auth_url' do
+    it 'builds the unified hosted-auth URL for every supported action' do
+      urls = %w[login signup forgot-password].to_h do |action|
+        [action, client.auth.get_hosted_auth_url(
+          project_id: 'project/id', state: 'state value', action: action
+        )]
+      end
+
+      expect(urls).to eq(
+        'login' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=login&anon_key=anon-key&state=state+value',
+        'signup' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=signup&anon_key=anon-key&state=state+value',
+        'forgot-password' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=forgot-password&anon_key=anon-key&state=state+value'
+      )
+    end
+
+    it 'defaults to login without creating a session or transport call', :aggregate_failures do
+      url = client.auth.get_hosted_auth_url(project_id: 'project-id', state: 'state-value')
+
+      expect(url).to include('/auth/hosted?action=login')
+      expect(client.auth.current_session).to be_nil
+      expect(transport.calls).to be_empty
+    end
+
+    it 'rejects empty parameters' do
+      expect do
+        client.auth.get_hosted_auth_url(project_id: ' ', state: 'state-value')
+      end.to raise_error(ArgumentError, 'Hosted auth parameters must be non-empty strings')
+      expect do
+        client.auth.get_hosted_auth_url(project_id: 'project-id', state: '')
+      end.to raise_error(ArgumentError, 'Hosted auth parameters must be non-empty strings')
+    end
+
+    it 'rejects an unsupported action' do
+      expect do
+        client.auth.get_hosted_auth_url(
+          project_id: 'project-id', state: 'state-value', action: 'device'
+        )
+      end.to raise_error(ArgumentError, 'Unsupported hosted auth action')
+    end
+  end
+
   describe '#link_oauth_provider' do
     it 'returns the authorization URL and preserves the current session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')

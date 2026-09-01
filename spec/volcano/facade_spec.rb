@@ -566,6 +566,43 @@ RSpec.describe Volcano::Client do
     expect(received).to eq([[:signed_in, signed_in], [:signed_out, nil]])
   end
 
+  it 'skips queued reentrant changes after unsubscription' do
+    received = []
+    client.auth.on_auth_state_change do |event, _session|
+      client.auth.sign_out if event == :signed_in
+    end
+    subscription = nil
+    subscription = client.auth.on_auth_state_change do |event, _session|
+      received << event
+      subscription.unsubscribe if event == :signed_in
+    end
+    received.clear
+
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(received).to eq([:signed_in])
+  end
+
+  it 'recovers notification dispatch after an interrupt' do
+    received = []
+    interrupting = client.auth.on_auth_state_change do |event, _session|
+      raise Interrupt if event == :signed_in
+    end
+    client.auth.on_auth_state_change do |event, _session|
+      received << event
+    end
+    received.clear
+
+    expect do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    end.to raise_error(Interrupt)
+
+    interrupting.unsubscribe
+    client.auth.sign_out
+
+    expect(received).to eq([:signed_out])
+  end
+
   describe '#sign_up' do
     it 'returns an owned acknowledgement without changing the session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')

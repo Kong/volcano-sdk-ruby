@@ -46,3 +46,11 @@ Feature: SDK authentication contract
     When a fresh client tries to refresh the signed-out session
     Then the SDK operation fails with an authentication error
     And the current session is empty
+
+  @auth @SDK-AUTH-006
+  Scenario: An auth-state listener observes sign-in
+    Given the confirmed contract user
+    And the client listens for auth state changes
+    When the client signs in with the contract user's credentials
+    Then the SDK operation succeeds
+    And the auth-state listener observes the signed-in contract user

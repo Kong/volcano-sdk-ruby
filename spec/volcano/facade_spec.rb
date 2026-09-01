@@ -177,6 +177,30 @@ RSpec.describe Volcano::Client do
 
   FakeEmailChangeTransport.include(FakeSessionTransport)
 
+  module FakeOAuthTransport
+    attr_accessor :list_oauth_providers_response, :on_list_oauth_providers
+
+    def auth_list_oauth_providers(**arguments)
+      @calls << [:auth_list_oauth_providers, arguments]
+      @on_list_oauth_providers&.call
+      @list_oauth_providers_response || Response.new(
+        status: 200,
+        body: {
+          'providers' => [
+            {
+              'provider' => 'google',
+              'linked_at' => Time.iso8601('2026-08-30T12:00:00Z'),
+              'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
+            }
+          ]
+        },
+        headers: {}, data: nil
+      )
+    end
+  end
+
+  FakeEmailChangeTransport.include(FakeOAuthTransport)
+
   module FakeAnonymousTransport
     attr_accessor :anonymous_conversion_response, :anonymous_signin_response,
                   :on_anonymous_conversion, :on_anonymous_signin
@@ -740,6 +764,59 @@ RSpec.describe Volcano::Client do
       transport.on_list_sessions = -> { client.auth.current_session = replacement }
 
       expect { client.auth.list_sessions }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#list_linked_oauth_providers' do
+    it 'returns immutable linked-provider values and preserves the session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.list_linked_oauth_providers
+
+      expect(result).to contain_exactly(
+        Volcano::LinkedOAuthProvider.new(
+          provider: 'google',
+          linked_at: Time.iso8601('2026-08-30T12:00:00Z'),
+          updated_at: Time.iso8601('2026-09-01T12:00:00Z')
+        )
+      )
+      expect(result).to be_frozen
+      expect(result.first).to be_frozen
+      expect(result.first.provider).to be_frozen
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_list_oauth_providers).last.fetch(1)).to eq(
+        authorization: 'access-token'
+      )
+    end
+
+    it 'requires a session' do
+      expect { client.auth.list_linked_oauth_providers }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_list_oauth_providers)).to be_empty
+    end
+
+    it 'rejects an incomplete provider' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.list_oauth_providers_response = Response.new(
+        status: 200, body: { 'providers' => [{ 'provider' => 'google' }] },
+        headers: {}, data: nil
+      )
+
+      expect { client.auth.list_linked_oauth_providers }
+        .to raise_error(TypeError, 'Expected complete linked OAuth providers')
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_list_oauth_providers = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.list_linked_oauth_providers }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

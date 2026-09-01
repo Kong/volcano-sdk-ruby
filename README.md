@@ -154,6 +154,18 @@ values in activity order. It raises `Volcano::Error::SessionChangedError` instea
 of returning a page for a session that was replaced while the request was in
 flight. Sort, filter, and cursor controls are not yet exposed by this facade.
 
+### List linked OAuth providers
+
+```ruby
+client.auth.list_linked_oauth_providers.each do |provider|
+  puts [provider.provider, provider.linked_at].join(' ')
+end
+```
+
+The method returns a frozen array of immutable `Volcano::LinkedOAuthProvider`
+values. It raises `Volcano::Error::SessionChangedError` if the active session
+changes while the request is in flight.
+
 ### Sign out all other devices
 
 ```ruby

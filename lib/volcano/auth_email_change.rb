@@ -26,9 +26,10 @@ module Volcano
     end
 
     def email_change_result(payload)
-      values = payload.is_a?(Hash) ? payload : {}
-      message = values['message']
-      new_email = values['new_email']
+      raise TypeError, INVALID_EMAIL_CHANGE_RESULT unless payload.is_a?(Hash)
+
+      message = payload['message']
+      new_email = payload['new_email']
       unless [message, new_email].all? { |value| value.nil? || value.is_a?(String) }
         raise TypeError, INVALID_EMAIL_CHANGE_RESULT
       end

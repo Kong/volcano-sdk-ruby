@@ -487,6 +487,15 @@ RSpec.describe Volcano::Client do
       expect(result).to eq(Volcano::EmailChangeResult.new(message: nil, new_email: nil))
     end
 
+    it 'rejects a non-object acknowledgement' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.email_change_response = Response.new(status: 200, body: [], headers: {}, data: nil)
+
+      expect do
+        client.auth.request_email_change(new_email: 'new@example.com')
+      end.to raise_error(TypeError, 'Expected a valid email-change acknowledgement')
+    end
+
     it 'requires a session' do
       expect do
         client.auth.request_email_change(new_email: 'new@example.com')

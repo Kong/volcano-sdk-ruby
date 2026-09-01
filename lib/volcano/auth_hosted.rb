@@ -20,8 +20,9 @@ module Volcano
 
     def adopt_hosted_auth_session(session, state:, expected_state:)
       validate_hosted_auth_callback_state(state, expected_state)
-      self.current_session = session
-      current_session
+      adopted = owned_complete_session(session)
+      @client.store_session(adopted)
+      adopted
     end
 
     private

@@ -1176,6 +1176,19 @@ RSpec.describe Volcano::Client do
       expect(client.auth.current_session).to be(adopted)
     end
 
+    it 'returns the adopted snapshot after a subscriber replaces current state' do
+      client.auth.on_auth_state_change do |event, _session|
+        client.auth.sign_out if event == :signed_in
+      end
+
+      adopted = client.auth.adopt_hosted_auth_session(
+        returned_session, state: 'returned-state', expected_state: 'returned-state'
+      )
+
+      expect(adopted).to eq(returned_session)
+      expect(client.auth.current_session).to be_nil
+    end
+
     it 'preserves the current session when state does not match' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 

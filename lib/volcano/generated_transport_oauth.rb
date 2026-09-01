@@ -30,5 +30,12 @@ module Volcano
         response(*apis.oauth.get_o_auth_provider_token_with_http_info(provider))
       end
     end
+
+    def auth_refresh_oauth_provider_token(authorization:, provider:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        response(*apis.oauth.refresh_o_auth_provider_token_with_http_info(provider))
+      end
+    end
   end
 end

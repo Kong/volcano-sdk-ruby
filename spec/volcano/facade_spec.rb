@@ -181,7 +181,8 @@ RSpec.describe Volcano::Client do
     attr_accessor :link_oauth_provider_response, :list_oauth_providers_response,
                   :on_link_oauth_provider, :on_list_oauth_providers,
                   :oauth_provider_token_status_response,
-                  :on_oauth_provider_token_status, :on_unlink_oauth_provider
+                  :on_oauth_provider_token_status, :on_refresh_oauth_provider_token,
+                  :on_unlink_oauth_provider, :refresh_oauth_provider_token_response
 
     def auth_list_oauth_providers(**arguments)
       @calls << [:auth_list_oauth_providers, arguments]
@@ -224,6 +225,20 @@ RSpec.describe Volcano::Client do
         status: 200,
         body: {
           'message' => 'Provider token is valid',
+          'provider' => 'google',
+          'expires_in' => 3600
+        },
+        headers: {}, data: nil
+      )
+    end
+
+    def auth_refresh_oauth_provider_token(**arguments)
+      @calls << [:auth_refresh_oauth_provider_token, arguments]
+      @on_refresh_oauth_provider_token&.call
+      @refresh_oauth_provider_token_response || Response.new(
+        status: 200,
+        body: {
+          'message' => 'Provider token refreshed successfully',
           'provider' => 'google',
           'expires_in' => 3600
         },
@@ -1010,6 +1025,50 @@ RSpec.describe Volcano::Client do
       transport.on_oauth_provider_token_status = -> { client.auth.current_session = replacement }
 
       expect { client.auth.get_oauth_provider_token('google') }
+        .to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#refresh_oauth_provider_token' do
+    it 'returns immutable token metadata and preserves the current session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.refresh_oauth_provider_token('google')
+
+      expect(result).to eq(
+        Volcano::OAuthProviderTokenStatus.new(
+          message: 'Provider token refreshed successfully', provider: 'google', expires_in: 3600
+        )
+      )
+      expect(result).to be_frozen
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_refresh_oauth_provider_token).last.fetch(1)).to eq(
+        authorization: 'access-token', provider: 'google'
+      )
+    end
+
+    it 'rejects an unknown provider before sending a request' do
+      expect { client.auth.refresh_oauth_provider_token('invalid') }
+        .to raise_error(ArgumentError, 'Unsupported OAuth provider')
+      expect(transport.calls_for(:auth_refresh_oauth_provider_token)).to be_empty
+    end
+
+    it 'requires a session' do
+      expect { client.auth.refresh_oauth_provider_token('google') }
+        .to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_refresh_oauth_provider_token)).to be_empty
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access', refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_refresh_oauth_provider_token = -> { client.auth.current_session = replacement }
+
+      expect { client.auth.refresh_oauth_provider_token('google') }
         .to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

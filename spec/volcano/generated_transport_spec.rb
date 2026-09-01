@@ -19,6 +19,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   class FakeAuthenticationApi
     attr_reader :calls, :confirm_email_calls, :forgot_password_calls, :get_user_calls, :logout_calls, :refresh_calls,
+                :resend_confirmation_calls,
                 :reset_password_calls, :signup_calls, :update_user_calls
 
     def initialize
@@ -28,6 +29,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @get_user_calls = []
       @logout_calls = []
       @refresh_calls = []
+      @resend_confirmation_calls = []
       @reset_password_calls = []
       @signup_calls = []
       @update_user_calls = []
@@ -41,6 +43,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def auth_confirm_email_with_http_info(body, options = {})
       @confirm_email_calls << [body, options]
       [FakeGeneratedModel.new(message: 'Email confirmed successfully'), 200, {}]
+    end
+
+    def auth_resend_confirmation_with_http_info(body, options = {})
+      @resend_confirmation_calls << [body, options]
+      [FakeGeneratedModel.new(message: 'Confirmation sent'), 200, {}]
     end
 
     def auth_get_user_with_http_info(options = {})
@@ -322,6 +329,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     request, options = apis.authentication.confirm_email_calls.fetch(0)
     expect(request).to be_a(InternalGenerated::AuthConfirmEmailRequest)
       .and have_attributes(token: 'confirmation-token')
+    expect(options).to eq(debug_return_type: 'String')
+    expect(response.status).to eq(200)
+    expect(authorizations).to eq(['anon-key'])
+  end
+
+  it 'resends confirmation through the generated operation' do
+    response = transport.auth_resend_confirmation(
+      authorization: 'anon-key', email: 'user@example.com'
+    )
+
+    request, options = apis.authentication.resend_confirmation_calls.fetch(0)
+    expect(request).to be_a(InternalGenerated::AuthForgotPasswordRequest)
+      .and have_attributes(email: 'user@example.com')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
     expect(authorizations).to eq(['anon-key'])

@@ -97,6 +97,17 @@ client.auth.confirm_email(token: "confirmation-token")
 Success returns `nil`. Confirmation does not sign in the confirmed account or
 change an unrelated local session.
 
+### Resend a confirmation email
+
+```ruby
+client.auth.resend_confirmation(email: "user@example.com")
+```
+
+Success returns `nil` whether the account is unknown, already confirmed, or
+eligible. Volcano sends mail only for an existing unconfirmed account when
+transactional email is configured. Rate limits raise
+`Volcano::Error::RateLimitedError` with `retry_after` when supplied.
+
 ### Reset the password
 
 ```ruby

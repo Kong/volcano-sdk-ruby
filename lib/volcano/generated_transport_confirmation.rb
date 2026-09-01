@@ -14,5 +14,17 @@ module Volcano
         )
       end
     end
+
+    def auth_resend_confirmation(authorization:, email:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::AuthForgotPasswordRequest.new(email:)
+        response(
+          *apis.authentication.auth_resend_confirmation_with_http_info(
+            request, debug_return_type: 'String'
+          )
+        )
+      end
+    end
   end
 end

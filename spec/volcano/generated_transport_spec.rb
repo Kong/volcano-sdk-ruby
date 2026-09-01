@@ -44,9 +44,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [nil, 204, {}]
     end
 
+    def auth_delete_my_session_with_http_info(session_id)
+      @deleted_session_id = session_id
+      [nil, 204, {}]
+    end
+
     def delete_other_sessions_called?
       @delete_other_sessions_calls || false
     end
+
+    attr_reader :deleted_session_id
   end
 
   class FakeAuthenticationApi
@@ -434,6 +441,19 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     response = transport.auth_delete_all_my_sessions(authorization: 'access-token')
 
     expect(apis.authentication.delete_other_sessions_called?).to be(true)
+    expect(response.status).to eq(204)
+    expect(authorizations).to eq(['access-token'])
+  end
+
+  it 'deletes one session through the generated operation' do
+    response = transport.auth_delete_my_session(
+      authorization: 'access-token',
+      session_id: '00000000-0000-4000-8000-000000000099'
+    )
+
+    expect(apis.authentication.deleted_session_id).to eq(
+      '00000000-0000-4000-8000-000000000099'
+    )
     expect(response.status).to eq(204)
     expect(authorizations).to eq(['access-token'])
   end

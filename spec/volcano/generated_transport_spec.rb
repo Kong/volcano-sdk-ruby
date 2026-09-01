@@ -52,9 +52,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [FakeGeneratedModel.new(session), 201, {}]
     end
 
-    def auth_convert_anonymous_with_http_info(body)
-      (@anonymous_conversion_calls ||= []) << body
-      [FakeGeneratedModel.new(user: { id: 'anonymous-user' }), 200, {}]
+    def auth_convert_anonymous_with_http_info(body, options = {})
+      (@anonymous_conversion_calls ||= []) << [body, options]
+      profile = {
+        user: {
+          id: 'anonymous-user', email: 'converted@example.com', status: 'active',
+          created_at: '2026-09-01T12:00:00Z'
+        }
+      }
+      [JSON.generate(profile), 200, {}]
     end
 
     def auth_confirm_email_with_http_info(body, options = {})
@@ -327,17 +333,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       authorization: 'anonymous-access',
       email: 'converted@example.com',
       password: 'secret',
-      metadata: { display_name: 'Ada' }
+      metadata: { answers: [1, nil, 3] }
     )
 
-    request = apis.authentication.anonymous_conversion_calls.fetch(0)
+    request, options = apis.authentication.anonymous_conversion_calls.fetch(0)
     expect(request).to be_a(InternalGenerated::AuthSignupRequest)
       .and have_attributes(
         email: 'converted@example.com',
         password: 'secret',
-        user_metadata: { display_name: 'Ada' }
+        user_metadata: { answers: [1, nil, 3] }
       )
+    expect(options).to eq(
+      debug_body: {
+        email: 'converted@example.com', password: 'secret',
+        user_metadata: { answers: [1, nil, 3] }
+      },
+      debug_return_type: 'String'
+    )
     expect(response.status).to eq(200)
+    expect(response.body.dig('user', 'created_at')).to eq('2026-09-01T12:00:00Z')
     expect(authorizations).to eq(['anonymous-access'])
   end
 

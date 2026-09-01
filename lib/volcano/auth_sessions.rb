@@ -19,7 +19,7 @@ module Volcano
 
       deletes_current = same_session_id?(current.access_token, session_id)
       error = delete_session_error(current.access_token, session_id)
-      current_unchanged = session_unchanged_after_deletion?(deletes_current, generation)
+      current_unchanged = session_unchanged_after_deletion?(deletes_current, error, generation)
       raise Error::SessionChangedError, cause: error unless current_unchanged
 
       raise error if error
@@ -49,8 +49,9 @@ module Volcano
       e
     end
 
-    def session_unchanged_after_deletion?(deletes_current, generation)
-      return @client.clear_session_if_current(generation) if deletes_current
+    def session_unchanged_after_deletion?(deletes_current, error, generation)
+      uncertain = error.nil? || error.is_a?(Error::TransportError)
+      return @client.clear_session_if_current(generation) if deletes_current && uncertain
 
       @client.capture_session.first == generation
     end

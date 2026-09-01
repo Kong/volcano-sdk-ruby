@@ -126,7 +126,7 @@ RSpec.describe Volcano::Client do
   end
 
   module FakeSessionTransport
-    attr_accessor :on_delete_other_sessions, :on_delete_session
+    attr_accessor :delete_session_response, :on_delete_other_sessions, :on_delete_session
 
     def auth_delete_all_my_sessions(**arguments)
       @calls << [:auth_delete_all_my_sessions, arguments]
@@ -137,7 +137,7 @@ RSpec.describe Volcano::Client do
     def auth_delete_my_session(**arguments)
       @calls << [:auth_delete_my_session, arguments]
       @on_delete_session&.call
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
+      @delete_session_response || Response.new(status: 204, body: nil, headers: {}, data: nil)
     end
   end
 
@@ -737,6 +737,23 @@ RSpec.describe Volcano::Client do
       expect { client.auth.delete_session(session_id) }
         .to raise_error(Volcano::Error::TransportError, 'connection lost')
       expect(client.auth.current_session).to be_nil
+    end
+
+    it 'preserves current state when the server rejects deletion' do
+      current = Volcano::Session.new(
+        access_token: access_token_with_session_id(session_id),
+        refresh_token: 'current-refresh',
+        user_id: 'current-user'
+      )
+      client.auth.current_session = current
+      stored = client.auth.current_session
+      transport.delete_session_response = Response.new(
+        status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
+      )
+
+      expect { client.auth.delete_session(session_id) }
+        .to raise_error(Volcano::Error::AuthenticationError, 'expired')
+      expect(client.auth.current_session).to be(stored)
     end
   end
 

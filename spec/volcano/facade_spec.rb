@@ -80,6 +80,24 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakeEmailChangeTransport
+    attr_accessor :email_change_response, :on_email_change
+
+    def initialize_email_change_response
+      @email_change_response = Response.new(
+        status: 200,
+        body: { 'message' => 'Confirmation email sent', 'new_email' => 'new@example.com' },
+        headers: {}, data: nil
+      )
+    end
+
+    def auth_request_email_change(**arguments)
+      @calls << [:auth_request_email_change, arguments]
+      @on_email_change&.call
+      @email_change_response
+    end
+  end
+
   module FakeAnonymousTransport
     attr_accessor :anonymous_conversion_response, :anonymous_signin_response,
                   :on_anonymous_conversion, :on_anonymous_signin
@@ -101,6 +119,7 @@ RSpec.describe Volcano::Client do
       initialize_password_recovery_response
       initialize_email_confirmation_response
       initialize_anonymous_signin_response
+      initialize_email_change_response
       @anonymous_conversion_response = Response.new(
         status: 200,
         body: {
@@ -128,6 +147,7 @@ RSpec.describe Volcano::Client do
 
   class FakeContractTransport
     include FakeCallLog
+    include FakeEmailChangeTransport
     include FakeAnonymousTransport
     include FakeEmailConfirmationTransport
     include FakePasswordRecoveryTransport
@@ -180,8 +200,7 @@ RSpec.describe Volcano::Client do
 
     def auth_logout(**arguments)
       @calls << [:auth_logout, arguments]
-      @on_logout&.call
-      @logout_response
+      @logout_response.tap { @on_logout&.call }
     end
 
     def auth_refresh(**arguments)
@@ -435,6 +454,55 @@ RSpec.describe Volcano::Client do
 
       expect do
         client.auth.convert_anonymous(email: 'converted@example.com', password: 'secret')
+      end.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.auth.current_session).to eq(replacement)
+    end
+  end
+
+  describe '#request_email_change' do
+    it 'returns an acknowledgement without replacing the session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      result = client.auth.request_email_change(new_email: 'new@example.com')
+
+      expect(result).to eq(
+        Volcano::EmailChangeResult.new(
+          message: 'Confirmation email sent', new_email: 'new@example.com'
+        )
+      )
+      expect(client.auth.current_session).to be(established)
+      expect(transport.calls_for(:auth_request_email_change).last.fetch(1)).to eq(
+        authorization: 'access-token', new_email: 'new@example.com'
+      )
+    end
+
+    it 'accepts an acknowledgement without optional fields' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.email_change_response = Response.new(status: 200, body: {}, headers: {}, data: nil)
+
+      result = client.auth.request_email_change(new_email: 'new@example.com')
+
+      expect(result).to eq(Volcano::EmailChangeResult.new(message: nil, new_email: nil))
+    end
+
+    it 'requires a session' do
+      expect do
+        client.auth.request_email_change(new_email: 'new@example.com')
+      end.to raise_error(Volcano::Error::AuthenticationError, 'No active session')
+      expect(transport.calls_for(:auth_request_email_change)).to be_empty
+    end
+
+    it 'rejects a stale response' do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      replacement = Volcano::Session.new(
+        access_token: 'replacement-access',
+        refresh_token: 'replacement-refresh',
+        user_id: 'replacement-user'
+      )
+      transport.on_email_change = -> { client.auth.current_session = replacement }
+
+      expect do
+        client.auth.request_email_change(new_email: 'new@example.com')
       end.to raise_error(Volcano::Error::SessionChangedError)
       expect(client.auth.current_session).to eq(replacement)
     end

@@ -3,6 +3,7 @@
 module Volcano
   Session = Data.define(:access_token, :refresh_token, :user_id)
   SignUpResult = Data.define(:confirmation_required, :message)
+  EmailChangeResult = Data.define(:message, :new_email)
   USER_OPTIONAL_ATTRIBUTES = %i[
     project_id email_confirmed user_metadata app_metadata avatar_url banned_until
     last_sign_in_at created_at updated_at

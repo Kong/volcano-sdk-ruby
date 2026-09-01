@@ -40,6 +40,18 @@ module Volcano
       end
     end
 
+    def auth_reset_password(authorization:, token:, new_password:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::AuthResetPasswordRequest.new(token:, new_password:)
+        response(
+          *apis.authentication.auth_reset_password_with_http_info(
+            request, debug_return_type: 'String'
+          )
+        )
+      end
+    end
+
     def auth_get_user(authorization:)
       invoke do
         apis = @api_factory.call(authorization)

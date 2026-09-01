@@ -22,7 +22,7 @@ RSpec.describe Volcano::Client do
   end
 
   module FakePasswordRecoveryTransport
-    attr_accessor :forgot_password_response
+    attr_accessor :forgot_password_response, :reset_password_response
 
     def initialize_password_recovery_response
       @forgot_password_response = Response.new(
@@ -31,11 +31,22 @@ RSpec.describe Volcano::Client do
         headers: {},
         data: nil
       )
+      @reset_password_response = Response.new(
+        status: 200,
+        body: { 'message' => 'Password reset successful. Please sign in again.' },
+        headers: {},
+        data: nil
+      )
     end
 
     def auth_forgot_password(**arguments)
       @calls << [:auth_forgot_password, arguments]
       @forgot_password_response
+    end
+
+    def auth_reset_password(**arguments)
+      @calls << [:auth_reset_password, arguments]
+      @reset_password_response
     end
   end
 
@@ -297,6 +308,32 @@ RSpec.describe Volcano::Client do
       )
 
       expect(client.auth.reset_password_for_email(email: 'user@example.com')).to be_nil
+    end
+  end
+
+  describe '#reset_password' do
+    it 'uses the recovery token without changing an unrelated session', :aggregate_failures do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+
+      result = client.auth.reset_password(token: 'recovery-token', new_password: 'new-secret')
+
+      expect(result).to be_nil
+      expect(transport.calls_for(:auth_reset_password).last.fetch(1)).to eq(
+        authorization: 'anon-key', token: 'recovery-token', new_password: 'new-secret'
+      )
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'raises a typed error without changing the session' do
+      established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
+      transport.reset_password_response = Response.new(
+        status: 401, body: nil, headers: {}, data: nil
+      )
+
+      expect do
+        client.auth.reset_password(token: 'expired-token', new_password: 'new-secret')
+      end.to raise_error(Volcano::Error::AuthenticationError)
+      expect(client.auth.current_session).to be(established)
     end
   end
 

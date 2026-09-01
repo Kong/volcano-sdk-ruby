@@ -88,6 +88,16 @@ not the email belongs to an account. Failures raise the same typed Volcano
 errors as other authentication operations, and the current session remains
 unchanged.
 
+### Reset the password
+
+```ruby
+client.auth.reset_password(token: "recovery-token", new_password: "new-secret")
+```
+
+Success returns `nil`. The reset revokes the recovered account's existing
+sessions and does not sign it in. The client keeps any unrelated local session
+unchanged; sign in with the new password when the reset flow completes.
+
 ### Adopt an existing session
 
 ```ruby

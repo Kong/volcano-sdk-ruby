@@ -29,6 +29,32 @@ module Volcano
   )
   private_constant :EMPTY_QUERY_STATE
 
+  # Adds the shared immutable filter vocabulary to database builders.
+  module FilterMethods
+    def eq(column, value) = add_filter(column, 'eq', value)
+    def neq(column, value) = add_filter(column, 'neq', value)
+    def gt(column, value) = add_filter(column, 'gt', value)
+    def gte(column, value) = add_filter(column, 'gte', value)
+    def lt(column, value) = add_filter(column, 'lt', value)
+    def lte(column, value) = add_filter(column, 'lte', value)
+    def like(column, pattern) = add_filter(column, 'like', pattern)
+    def ilike(column, pattern) = add_filter(column, 'ilike', pattern)
+    def is(column, value) = add_filter(column, 'is', value)
+    def in(column, values) = add_filter(column, 'in', values)
+
+    private
+
+    def add_filter(column, operator, value)
+      condition = {
+        'column' => ImmutableQueryValue.capture(column),
+        'operator' => operator,
+        'value' => ImmutableQueryValue.capture(value)
+      }.freeze
+      copy(filters: [*@filters, condition])
+    end
+  end
+  private_constant :FilterMethods
+
   # Creates immutable queries scoped to one project database.
   class Database
     def initialize(client, transport, name)
@@ -43,6 +69,8 @@ module Volcano
 
   # Builds and executes immutable database select queries.
   class QueryBuilder
+    include FilterMethods
+
     def initialize(context, table, state: EMPTY_QUERY_STATE)
       @context = context
       @table = ImmutableQueryValue.capture(table)
@@ -58,47 +86,8 @@ module Volcano
       copy(columns: ImmutableQueryValue.capture(columns))
     end
 
-    def eq(column, value)
-      add_filter(column, 'eq', value)
-    end
-
-    def neq(column, value)
-      add_filter(column, 'neq', value)
-    end
-
-    def gt(column, value)
-      add_filter(column, 'gt', value)
-    end
-
-    def gte(column, value)
-      add_filter(column, 'gte', value)
-    end
-
-    def lt(column, value)
-      add_filter(column, 'lt', value)
-    end
-
-    def lte(column, value)
-      add_filter(column, 'lte', value)
-    end
-
-    def like(column, pattern)
-      add_filter(column, 'like', pattern)
-    end
-
-    def ilike(column, pattern)
-      add_filter(column, 'ilike', pattern)
-    end
-
-    def is(column, value)
-      add_filter(column, 'is', value)
-    end
-
-    def in(column, values)
-      add_filter(column, 'in', values)
-    end
-
     def insert(values) = InsertBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
+    def update(values) = UpdateBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
 
     def order(column, ascending: true)
       clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze
@@ -125,13 +114,6 @@ module Volcano
     end
 
     private
-
-    def add_filter(column, operator, value)
-      column = ImmutableQueryValue.capture(column)
-      value = ImmutableQueryValue.capture(value)
-      condition = { 'column' => column, 'operator' => operator, 'value' => value }.freeze
-      copy(filters: [*@filters, condition])
-    end
 
     def copy(
       columns: @columns,
@@ -182,6 +164,36 @@ module Volcano
         )
       end
       Transport.body(response, 200).fetch('data')
+    end
+  end
+
+  # Builds and executes an immutable filtered database update.
+  class UpdateBuilder
+    include FilterMethods
+
+    def initialize(context, table, values, filters: [].freeze)
+      @context = context
+      @table = table
+      @values = values
+      @filters = filters
+      freeze
+    end
+
+    def execute
+      response = Transport.invoke do
+        @context.transport.query_database_update(
+          authorization: @context.client.session_token,
+          database_name: @context.database_name,
+          body: { 'table' => @table, 'values' => @values, 'filters' => @filters }
+        )
+      end
+      Transport.body(response, 200).fetch('data')
+    end
+
+    private
+
+    def copy(filters:)
+      self.class.new(@context, @table, @values, filters: filters.freeze)
     end
   end
 end

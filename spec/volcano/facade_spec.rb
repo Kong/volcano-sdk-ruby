@@ -345,6 +345,12 @@ RSpec.describe Volcano::Client do
       values = arguments.fetch(:body).fetch('values')
       Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
     end
+
+    def query_database_update(**arguments)
+      @calls << [:query_database_update, arguments]
+      values = arguments.fetch(:body).fetch('values')
+      Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2311,6 +2317,47 @@ RSpec.describe Volcano::Client do
           }
         ]
       ]
+    )
+  end
+
+  it 'updates filtered rows from captured values using the current session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    values = { 'metadata' => { 'labels' => [+'sdk'] } }
+    statuses = [+'draft', +'published']
+
+    update = client.database('main').from('items').update(values).in('status', statuses)
+    values['metadata']['labels'].first.replace('mutated')
+    statuses.first.replace('review')
+    statuses << 'archived'
+    transport.access_token = 'access-token-2'
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(update.execute).to eq([{ 'metadata' => { 'labels' => ['sdk'] } }])
+    expect(transport.calls_for(:query_database_update)).to contain_exactly(
+      [
+        :query_database_update,
+        {
+          authorization: 'access-token-2', database_name: 'main',
+          body: {
+            'table' => 'items', 'values' => { 'metadata' => { 'labels' => ['sdk'] } },
+            'filters' => [{ 'column' => 'status', 'operator' => 'in', 'value' => %w[draft published] }]
+          }
+        }
+      ]
+    )
+  end
+
+  it 'reuses the select filter vocabulary for updates' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    update = client.database('main').from('items').update(status: 'review')
+
+    update.eq('id', 1).neq('state', 'deleted').gt('score', 1).gte('priority', 2)
+          .lt('attempts', 5).lte('rank', 10).like('name', 'Vol%').ilike('owner', 'ada%')
+          .is('deleted_at', nil).execute
+
+    filters = transport.calls_for(:query_database_update).fetch(0).fetch(1).fetch(:body).fetch('filters')
+    expect(filters.map { |filter| filter.fetch('operator') }).to eq(
+      %w[eq neq gt gte lt lte like ilike is]
     )
   end
 

@@ -13,27 +13,32 @@ module Volcano
       path,
       value,
       content_type: 'application/octet-stream',
-      part_size: nil
+      part_size: nil,
+      on_progress: nil
     )
       with_resumable_upload_source(value) do |source, total_size|
         session = create_upload_session(
           path, total_size: total_size, content_type: content_type, part_size: part_size
         )
-        upload_session_parts(path, source, session)
+        upload_session_parts(path, source, session, total_size, on_progress)
         complete_upload_session(path, session_id: session.session_id)
       end
     end
 
     private
 
-    def upload_session_parts(path, source, session)
+    def upload_session_parts(path, source, session, total_size, on_progress)
+      uploaded = 0
       session.total_parts.times do |part_index|
+        part = source.read(session.part_size)
         upload_part(
           path,
           session_id: session.session_id,
           part_number: part_index + 1,
-          data: source.read(session.part_size)
+          data: part
         )
+        uploaded += part.bytesize
+        on_progress&.call(uploaded, total_size)
       end
     rescue StandardError
       abort_failed_upload(path, session.session_id)

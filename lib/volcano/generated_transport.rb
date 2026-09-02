@@ -26,6 +26,7 @@ module Volcano
   require_relative 'generated_transport_oauth'
   require_relative 'generated_transport_database'
   require_relative 'generated_transport_storage'
+  require_relative 'generated_transport_upload_sessions'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport

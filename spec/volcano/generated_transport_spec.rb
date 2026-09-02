@@ -317,6 +317,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [session, 201, {}]
     end
 
+    def upload_part_with_http_info(bucket, path, session_id, part_number, data)
+      @calls << [:upload_part, bucket, path, session_id, part_number, data]
+      [FakeGeneratedModel.new(part_number: part_number, etag: 'etag-part', size: data.bytesize), 200, {}]
+    end
+
     def list_storage_objects_with_http_info(bucket, options)
       @calls << [:list, bucket, options]
       page = FakeGeneratedModel.new(objects: [], next_cursor: 'cursor-2')
@@ -1044,6 +1049,20 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
   end
 
+  it 'uploads a part through the stable transport' do
+    response = transport.upload_part(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadPartRequest, false).new(
+        path: 'videos/demo.mp4', session_id: 'session-123', part_number: 2, data: "chunk\x00".b
+      )
+    )
+
+    expect(response.body).to eq('part_number' => 2, 'etag' => 'etag-part', 'size' => 6)
+    expect(apis.storage.calls.last).to eq(
+      [:upload_part, 'assets', 'videos/demo.mp4', 'session-123', 2, "chunk\x00".b]
+    )
+  end
+
   it 'converts the public timeout in seconds to Typhoeus milliseconds' do
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
     configuration = transport.send(:generated_configuration, 'access-token')
@@ -1103,6 +1122,30 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       'total_size' => 20_000_000
     )
     expect(options.fetch(:return_type)).to eq('CreateUploadSessionResponse')
+  end
+
+  it 'sends upload parts as binary through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+
+    storage.upload_part_with_http_info(
+      'assets', 'videos/demo clip.mp4', 'session-123', 2, "chunk\x00".b
+    )
+
+    method, path, options = calls.fetch(0)
+    expect([method, path]).to eq([:PUT, '/storage/assets/videos/demo%20clip.mp4'])
+    expect(options.fetch(:header_params)).to include(
+      'Content-Type' => 'application/octet-stream',
+      'X-Upload-Session' => 'session-123',
+      'X-Part-Number' => '2'
+    )
+    expect(options.fetch(:body)).to eq("chunk\x00".b)
+    expect(options.fetch(:return_type)).to eq('UploadSessionPart')
   end
 
   it 'preserves nested object paths when updating visibility' do

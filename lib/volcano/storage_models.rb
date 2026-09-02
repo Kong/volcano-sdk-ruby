@@ -52,6 +52,18 @@ module Volcano
   end
   private_constant :UploadSessionRequest
 
+  UploadPartRequest = Data.define(:path, :session_id, :part_number, :data) do
+    def initialize(path:, session_id:, part_number:, data:)
+      super(
+        path: path.dup.freeze,
+        session_id: session_id.dup.freeze,
+        part_number: part_number,
+        data: data.dup.freeze
+      )
+    end
+  end
+  private_constant :UploadPartRequest
+
   UploadSession = Data.define(:session_id, :part_size, :total_parts, :expires_at) do
     def initialize(session_id:, part_size:, total_parts:, expires_at:)
       super(
@@ -60,6 +72,12 @@ module Volcano
         total_parts: total_parts,
         expires_at: expires_at.dup.freeze
       )
+    end
+  end
+
+  UploadPart = Data.define(:part_number, :etag, :size) do
+    def initialize(part_number:, etag:, size:)
+      super(part_number: part_number, etag: etag.dup.freeze, size: size)
     end
   end
 end

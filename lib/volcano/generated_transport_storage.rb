@@ -14,27 +14,6 @@ module Volcano
       end
     end
 
-    def create_upload_session(
-      authorization:,
-      bucket_name:,
-      request:
-    )
-      invoke do
-        attributes = {
-          object_path: request.path,
-          content_type: request.content_type,
-          total_size: request.total_size,
-          part_size: request.part_size
-        }.compact
-        generated_request = Generated::CreateUploadSessionRequest.new(attributes)
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.storage.create_upload_session_with_http_info(
-          bucket_name, request.path, generated_request
-        )
-        response(data, status, headers)
-      end
-    end
-
     def download_storage_object(authorization:, bucket_name:, path:, byte_range: nil)
       invoke do
         apis = @api_factory.call(authorization)

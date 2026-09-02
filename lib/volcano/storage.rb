@@ -105,7 +105,7 @@ module Volcano
 
     def removal_paths(paths)
       path_list = paths.is_a?(String) ? [paths] : paths.to_a
-      unless path_list.all? { |path| path.is_a?(String) && !path.empty? }
+      if path_list.empty? || !path_list.all? { |path| path.is_a?(String) && !path.empty? }
         raise ArgumentError, 'storage paths must be non-empty strings'
       end
 

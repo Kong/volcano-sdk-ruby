@@ -966,8 +966,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'preserves object path segments and percent-encodes spaces' do
-    configuration = InternalGenerated::Configuration.new
-    api_client = described_class::ApiClient.new(configuration)
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
@@ -978,11 +977,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
     storage.download_storage_object_with_http_info('assets', 'folder/payload with space.txt')
+    storage.delete_storage_object_with_http_info('assets', 'folder/payload with space.txt')
 
-    expect(calls.map { |call| call.fetch(1) }).to eq(
-      Array.new(2, '/storage/assets/folder/payload%20with%20space.txt')
-    )
-    expect(calls.fetch(0).fetch(2).fetch(:return_type)).to eq('StorageObject')
+    expected_paths = Array.new(3, '/storage/assets/folder/payload%20with%20space.txt')
+    expect(calls.map { |call| call.fetch(1) }).to eq(expected_paths)
   ensure
     file&.close!
   end

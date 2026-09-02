@@ -64,6 +64,11 @@ module Volcano
         auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
         return_type: 'File'
       }.freeze
+      DELETE_OPTIONS = {
+        operation: :'StorageObjectsApi.delete_storage_object',
+        header_params: { 'Accept' => 'application/json' }.freeze,
+        auth_names: %w[ServiceRoleKey AuthUserAccessToken].freeze
+      }.freeze
 
       def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
         options = opts.merge(UPLOAD_OPTIONS).merge(form_params: { 'file' => file })
@@ -72,6 +77,10 @@ module Volcano
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})
         call_storage_api(:GET, bucket_name, path, opts.merge(DOWNLOAD_OPTIONS))
+      end
+
+      def delete_storage_object_with_http_info(bucket_name, path, opts = {})
+        call_storage_api(:DELETE, bucket_name, path, opts.merge(DELETE_OPTIONS))
       end
 
       private

@@ -2270,12 +2270,14 @@ RSpec.describe Volcano::Client do
     expect(removed).to be_frozen
   end
 
-  it 'rejects an empty storage path before transport' do
+  it 'rejects empty storage path inputs before transport' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     calls_after_sign_in = transport.calls.dup
 
-    expect { client.storage.from('assets').remove(['']) }
-      .to raise_error(ArgumentError, 'storage paths must be non-empty strings')
+    [[], ['']].each do |invalid_paths|
+      expect { client.storage.from('assets').remove(invalid_paths) }
+        .to raise_error(ArgumentError, 'storage paths must be non-empty strings')
+    end
     expect(transport.calls).to eq(calls_after_sign_in)
   end
 

@@ -450,7 +450,8 @@ video = "demo video".b
 uploaded = bucket.upload_resumable(
   "videos/automatic.mp4",
   video,
-  content_type: "video/mp4"
+  content_type: "video/mp4",
+  on_progress: ->(uploaded_bytes, total_bytes) { puts "#{uploaded_bytes}/#{total_bytes}" }
 )
 puts uploaded.name
 upload_session = bucket.create_upload_session(
@@ -502,7 +503,9 @@ count, and expiration time for a resumable upload.
 `upload_resumable` creates a session, chunks the data using the server-selected
 part size, and completes the upload. It streams seekable `IO` values directly;
 non-seekable inputs are spooled to a temporary file with bounded reads. If a
-part fails, it makes a best-effort abort and raises the original error.
+part or progress callback fails, it makes a best-effort abort and raises the
+original error. `on_progress` runs after each successful part with cumulative
+uploaded bytes and the total size.
 `upload_part` returns immutable part metadata and can safely retry the same part
 number to replace that part.
 `get_upload_session` returns immutable progress and uploaded-part metadata for

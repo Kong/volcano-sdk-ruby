@@ -2610,6 +2610,33 @@ RSpec.describe Volcano::Client do
     expect(object.name).to eq('videos/demo.mp4')
   end
 
+  it 'reports progress after each uploaded part' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    progress = []
+
+    client.storage.from('assets').upload_resumable(
+      'file.bin', 'abcdefghij', on_progress: ->(uploaded, total) { progress << [uploaded, total] }
+    )
+
+    expect(progress).to eq([[4, 10], [8, 10], [10, 10]])
+  end
+
+  it 'aborts when a progress callback fails' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 2
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    progress = ->(*) { raise 'progress failed' }
+
+    expect do
+      client.storage.from('assets').upload_resumable(
+        'file.bin', 'abcdefgh', on_progress: progress
+      )
+    end.to raise_error(RuntimeError, 'progress failed')
+    expect(transport.calls.last(2).map(&:first)).to eq(%i[upload_part abort_upload_session])
+  end
+
   it 'streams seekable IO with bounded server-selected reads' do
     transport.upload_session_part_size = 4
     transport.upload_session_total_parts = 3

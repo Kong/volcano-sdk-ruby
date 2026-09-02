@@ -620,7 +620,7 @@ RSpec.describe Volcano::Client do
       @calls << [:renew_project_lock, arguments]
       Response.new(
         status: 200,
-        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 8 },
+        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 7 },
         headers: {}, data: nil
       )
     end
@@ -2428,7 +2428,7 @@ RSpec.describe Volcano::Client do
     expect(renewed).to eq(
       Volcano::LockLease.new(
         key: 'build', token: lease.token,
-        expires_at: Time.iso8601('2026-08-26T12:01:00Z'), fencing_token: 8
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'), fencing_token: 7
       )
     )
     expect(lease.expires_at).to eq(Time.iso8601('2026-08-26T12:00:30Z'))

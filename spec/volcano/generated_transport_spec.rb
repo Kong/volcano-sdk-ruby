@@ -406,7 +406,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:renew, key, token, request_id, body]
       lease = FakeGeneratedModel.new(
         expires_at: Time.iso8601('2026-08-26T12:01:00Z'),
-        fencing_token: 8
+        fencing_token: 7
       )
       [lease, 200, {}]
     end
@@ -541,7 +541,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       token: '00000000-0000-4000-8000-000000000001'
     )
 
-    expect(response.body).to include('fencing_token' => 8)
+    expect(response.body).to include('fencing_token' => 7)
     operation, key, token, request_id, body = apis.locks.calls.last
     expect([operation, key, token]).to eq(
       [:renew, 'build:queue', '00000000-0000-4000-8000-000000000001']

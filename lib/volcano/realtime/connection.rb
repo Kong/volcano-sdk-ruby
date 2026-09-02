@@ -7,6 +7,7 @@ module Volcano
       private
 
       def connect_protocol
+        @protocol_error_reported = false
         socket = @socket_factory.call(address)
         protocol = build_protocol(socket)
         result = protocol.connect(token: @client.session_token)
@@ -19,7 +20,7 @@ module Volcano
 
       def handle_connection_failure(socket, error)
         failure = public_error(error)
-        protocol_error(failure) unless @reported_protocol_error.equal?(error)
+        protocol_error(failure) unless @protocol_error_reported
         close_socket(socket)
         raise failure, cause: nil
       end

@@ -43,7 +43,10 @@ RSpec.describe Volcano::Realtime do
     end
 
     def read
-      @incoming.dequeue
+      value = @incoming.dequeue
+      raise value if value.is_a?(Exception)
+
+      value
     end
 
     def publication(channel:, data:)
@@ -61,12 +64,18 @@ RSpec.describe Volcano::Realtime do
       @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
     end
 
-    def reject(id, message)
-      @incoming.enqueue(JSON.generate('id' => id, 'error' => { 'message' => message }))
+    def reject(id, message, code: nil)
+      error = { 'message' => message }
+      error['code'] = code if code
+      @incoming.enqueue(JSON.generate('id' => id, 'error' => error))
     end
 
     def invalid_frame
       @incoming.enqueue('{')
+    end
+
+    def fail_read(error)
+      @incoming.enqueue(error)
     end
 
     def connect_then_invalid(id)
@@ -264,6 +273,59 @@ RSpec.describe Volcano::Realtime do
     expect(errors.first.message).to include('apikey=[REDACTED]')
     expect(errors.first.message).not_to include(anon_key, encoded_key)
     expect(errors.first.error).to be_frozen
+  end
+
+  it 'reports one error when a pending connect receives a copied read failure' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('connect')
+
+      socket.fail_read(IOError.new('socket read failed'))
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    errors = []
+
+    Async do
+      client.realtime.on_error { |context| errors << context }
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        'socket read failed'
+      )
+    end.wait
+
+    expect(errors.length).to eq(1)
+  end
+
+  it 'preserves a connect rejection code in the error context' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('connect')
+
+      socket.reject(command.fetch('id'), 'permission denied', code: 107)
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    errors = []
+
+    Async do
+      client.realtime.on_error { |context| errors << context }
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ServerError
+      )
+    end.wait
+
+    expect(errors.map(&:code)).to eq([107])
   end
 
   it 'runs connection callbacks outside protocol processing' do

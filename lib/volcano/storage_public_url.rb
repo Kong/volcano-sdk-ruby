@@ -1,0 +1,49 @@
+# frozen_string_literal: true
+
+require 'base64'
+require 'cgi'
+require 'json'
+
+module Volcano
+  # Local public URL construction for one storage bucket.
+  class StorageBucket
+    INVALID_PUBLIC_URL_ANON_KEY = 'Anon key must contain a project ID'
+    private_constant :INVALID_PUBLIC_URL_ANON_KEY
+
+    def get_public_url(path)
+      object_path = storage_paths(path).fetch(0)
+      segments = [project_id, @name, *object_path.split('/')]
+      "#{@api_url}/public/#{segments.map { |segment| encode_segment(segment) }.join('/')}".freeze
+    end
+
+    private
+
+    def project_id
+      value = anon_key_payload['project_id']
+      return value if value.is_a?(String) && !value.strip.empty?
+
+      raise ArgumentError, INVALID_PUBLIC_URL_ANON_KEY
+    end
+
+    def anon_key_payload
+      parts = @anon_key.split('.')
+      raise ArgumentError, INVALID_PUBLIC_URL_ANON_KEY unless parts.length == 3
+
+      encoded = parts.fetch(1).tr('-_', '+/')
+      payload = JSON.parse(Base64.strict_decode64(pad_base64(encoded)))
+      return payload if payload.is_a?(Hash)
+
+      raise ArgumentError, INVALID_PUBLIC_URL_ANON_KEY
+    rescue ArgumentError, JSON::ParserError => e
+      raise ArgumentError, INVALID_PUBLIC_URL_ANON_KEY, cause: e
+    end
+
+    def pad_base64(encoded)
+      encoded + ('=' * (-encoded.length % 4))
+    end
+
+    def encode_segment(segment)
+      CGI.escapeURIComponent(segment)
+    end
+  end
+end

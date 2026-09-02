@@ -5,22 +5,32 @@ require 'time'
 module Volcano
   # Entry point for project object storage.
   class Storage
-    def initialize(client, transport)
+    def initialize(client, transport, api_url:, anon_key:)
       @client = client
       @transport = transport
+      @api_url = api_url
+      @anon_key = anon_key
     end
 
     def from(bucket)
-      StorageBucket.new(@client, @transport, bucket)
+      StorageBucket.new(
+        @client,
+        @transport,
+        bucket,
+        api_url: @api_url,
+        anon_key: @anon_key
+      )
     end
   end
 
   # Operates on objects in one storage bucket.
   class StorageBucket
-    def initialize(client, transport, name)
+    def initialize(client, transport, name, api_url:, anon_key:)
       @client = client
       @transport = transport
       @name = name
+      @api_url = api_url.dup.freeze
+      @anon_key = anon_key.dup.freeze
       freeze
     end
 

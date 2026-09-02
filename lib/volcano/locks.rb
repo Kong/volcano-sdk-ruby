@@ -53,11 +53,25 @@ module Volcano
       nil
     end
 
+    def force_release(key)
+      Transport.body(force_release_response(key), 204)
+      nil
+    end
+
     private
 
     def get_response(key)
       Transport.invoke do
         @transport.get_project_lock(
+          authorization: @client.service_token,
+          key: key
+        )
+      end
+    end
+
+    def force_release_response(key)
+      Transport.invoke do
+        @transport.force_release_project_lock(
           authorization: @client.service_token,
           key: key
         )

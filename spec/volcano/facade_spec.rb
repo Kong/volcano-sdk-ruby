@@ -624,6 +624,11 @@ RSpec.describe Volcano::Client do
         headers: {}, data: nil
       )
     end
+
+    def force_release_project_lock(**arguments)
+      @calls << [:force_release_project_lock, arguments]
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2455,6 +2460,15 @@ RSpec.describe Volcano::Client do
         copy.key.equal?(lease.key), copy.token.equal?(lease.token), copy.expires_at.equal?(lease.expires_at)
       ]
     ).to all(be(false))
+  end
+
+  it 'force releases a lock without an ownership token' do
+    result = client.locks.force_release('build')
+
+    expect(result).to be_nil
+    expect(transport.calls).to eq(
+      [[:force_release_project_lock, { authorization: 'service-key', key: 'build' }]]
+    )
   end
 
   it 'creates an immutable upload session' do

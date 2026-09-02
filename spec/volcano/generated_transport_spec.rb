@@ -410,6 +410,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       )
       [lease, 200, {}]
     end
+
+    def force_release_project_lock_with_http_info(key, request_id)
+      @calls << [:force_release, key, request_id]
+      [nil, 204, {}]
+    end
   end
 
   let(:apis) do
@@ -548,6 +553,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
     expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
     expect(body.ttl_seconds).to eq(60)
+    expect(authorizations).to eq(['service-key'])
+  end
+
+  it 'force releases a lock through the generated API' do
+    response = transport.force_release_project_lock(
+      authorization: 'service-key', key: 'build:queue'
+    )
+
+    expect(response.status).to eq(204)
+    operation, key, request_id = apis.locks.calls.last
+    expect([operation, key]).to eq([:force_release, 'build:queue'])
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
     expect(authorizations).to eq(['service-key'])
   end
 

@@ -303,8 +303,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [FakeGeneratedModel.new(name: path), 201, {}]
     end
 
-    def download_storage_object_with_http_info(bucket, path)
-      @calls << [:download, bucket, path]
+    def download_storage_object_with_http_info(bucket, path, options = {})
+      @calls << [:download, bucket, path, options]
       ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
     end
 
@@ -415,7 +415,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       download: transport.download_storage_object(
         authorization: 'access-token',
         bucket_name: 'assets',
-        path: 'a.txt'
+        path: 'a.txt',
+        byte_range: 'bytes=0-4'
       ),
       list: transport.list_storage_objects(
         authorization: 'access-token',
@@ -445,7 +446,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   def download_transport(tempfile)
     storage = Object.new
-    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path|
+    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path, _options|
       [tempfile, 200, { 'content-type' => 'application/octet-stream' }]
     end
     empty = Object.new
@@ -482,7 +483,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           "hello\x00".b,
           {}
         ],
-        [:download, 'assets', 'a.txt'],
+        [:download, 'assets', 'a.txt', { range: 'bytes=0-4' }],
         [:list, 'assets', { prefix: 'avatars', limit: 25, cursor: 'cursor-1' }],
         [:delete, 'assets', 'archive/a.txt']
       ]

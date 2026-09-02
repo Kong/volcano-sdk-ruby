@@ -14,10 +14,13 @@ module Volcano
       end
     end
 
-    def download_storage_object(authorization:, bucket_name:, path:)
+    def download_storage_object(authorization:, bucket_name:, path:, byte_range: nil)
       invoke do
         apis = @api_factory.call(authorization)
-        data, status, headers = apis.storage.download_storage_object_with_http_info(bucket_name, path)
+        options = { range: byte_range }.compact
+        data, status, headers = apis.storage.download_storage_object_with_http_info(
+          bucket_name, path, options
+        )
         response(nil, status, headers, binary: binary_data(data))
       end
     end

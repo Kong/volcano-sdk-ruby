@@ -12,10 +12,11 @@ module Volcano
 
     def with_lock(key, ttl:, &)
       validate_ttl(ttl)
-      started_at = LockLeaseClock.now
+      started_at = LockLeaseClock.capture
       guard = LockGuard.new(acquire(key, ttl: ttl), ttl: ttl, started_at: started_at)
-      renewer = lock_renewer(key, guard, ttl)
-      LockSession.new(self, key, guard, renewer, method(:renewal_delay)).run(&)
+      owned_key = guard.lease.key
+      renewer = lock_renewer(owned_key, guard, ttl)
+      LockSession.new(self, owned_key, guard, renewer, method(:renewal_delay)).run(&)
     end
 
     private

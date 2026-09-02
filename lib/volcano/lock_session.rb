@@ -27,7 +27,7 @@ module Volcano
     def prepare
       return unless @guard.renewal_delay(@delay).zero?
 
-      started_at = LockLeaseClock.now
+      started_at = LockLeaseClock.capture
       lease = @locks.renew(@key, @guard.lease, ttl: @guard.ttl)
       replaced = @guard.replace_lease(lease, started_at: started_at)
       return if replaced && @guard.renewal_delay(@delay).positive?
@@ -44,10 +44,12 @@ module Volcano
     end
 
     def cleanup(completed)
+      failure = nil
+      @guard.stop_expiry_watch
+      failure = @guard.failure
       @renewer.stop if @renewer_started
     ensure
-      @guard.stop_expiry_watch
-      finish(completed, @guard.failure)
+      finish(completed, failure)
     end
 
     def finish(completed, failure)

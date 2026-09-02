@@ -49,7 +49,7 @@ module Volcano
     end
 
     def renew
-      started_at = LockLeaseClock.now
+      started_at = LockLeaseClock.capture
       lease = @locks.renew(@key, @guard.lease, ttl: @config.ttl)
       replaced = @guard.replace_lease(lease, started_at: started_at)
       return if replaced && renewal_safe?

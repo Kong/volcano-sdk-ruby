@@ -135,7 +135,8 @@ RSpec.describe Volcano::Locks do
     lease = Volcano::LockLease.new(
       key: 'build', token: 'token', expires_at: Time.now.utc + 5, fencing_token: 7
     )
-    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_clock_class.now)
+    allow(lease_clock_class).to receive(:suspend_aware?).and_return(true)
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_timestamp(lease_clock_class.now))
     allow(Time).to receive(:now).and_return(Time.now + 10)
 
     expect(guard.__send__(:expiry_delay)).to be_between(0, 5).exclusive
@@ -144,17 +145,29 @@ RSpec.describe Volcano::Locks do
   it 'uses the suspend-aware lease clock for expiry' do
     lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
     allow(lease_clock_class).to receive(:now).and_return(6.0)
-    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: 0.0)
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_timestamp(0.0))
 
     expect(guard).to be_lost
     expect(guard.failure).to be_a(Timeout::Error)
+  end
+
+  it 'uses wall elapsed time when a suspend-aware clock is unavailable' do
+    lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
+    wall_started_at = Time.now
+    allow(lease_clock_class).to receive_messages(suspend_aware?: false, now: 0.0)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5, started_at: lease_timestamp(0.0, wall: wall_started_at)
+    )
+    allow(Time).to receive(:now).and_return(wall_started_at + 6)
+
+    expect(guard).to be_lost
   end
 
   it 'records expiry before stopping a starved watcher' do
     lease = Volcano::LockLease.new(
       key: 'build', token: 'token', expires_at: Time.now.utc + 30, fencing_token: 7
     )
-    started_at = lease_clock_class.now - 6
+    started_at = lease_timestamp(lease_clock_class.now - 6, wall: Time.now - 6)
     guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
 
     guard.stop_expiry_watch
@@ -165,7 +178,10 @@ RSpec.describe Volcano::Locks do
 
   it 'observes expiry synchronously when the watcher has not run' do
     lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
-    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_clock_class.now - 6)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5,
+             started_at: lease_timestamp(lease_clock_class.now - 6, wall: Time.now - 6)
+    )
 
     expect(guard).to be_lost
     expect(guard.wait_lost(timeout: 0)).to be(true)
@@ -174,9 +190,14 @@ RSpec.describe Volcano::Locks do
   it 'preserves the absolute acquisition deadline across renewals' do
     lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
     allow(lease_clock_class).to receive(:now).and_return(0.0)
-    guard = Volcano::LockGuard.new(lease, ttl: 7_776_000, started_at: 0.0)
+    allow(lease_clock_class).to receive(:suspend_aware?).and_return(true)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 7_776_000, started_at: lease_timestamp(0.0, wall: Time.at(0))
+    )
 
-    guard.replace_lease(lease, started_at: 7_775_999.0)
+    guard.replace_lease(
+      lease, started_at: lease_timestamp(7_775_999.0, wall: Time.at(7_775_999))
+    )
     allow(lease_clock_class).to receive(:now).and_return(7_775_999.0)
 
     expect(guard.__send__(:expiry_delay)).to eq(1.0)
@@ -205,6 +226,19 @@ RSpec.describe Volcano::Locks do
       .to raise_error(Volcano::Error::ServerError, 'renewal failed')
   end
 
+  it 'retains the acquired key when the caller mutates its string' do
+    key = +'build'
+    acquired_key = nil
+
+    locks.with_lock(key, ttl: 30) do |guard|
+      key.replace('other')
+      acquired_key = guard.lease.key
+    end
+
+    expect(acquired_key).to eq('build')
+    expect(transport.calls.last).to match([:release_project_lock, hash_including(key: 'build')])
+  end
+
   def call_names
     transport.calls.map(&:first)
   end
@@ -229,6 +263,10 @@ RSpec.describe Volcano::Locks do
   end
 
   def lease_clock_class = Volcano.const_get(:LockLeaseClock)
+
+  def lease_timestamp(monotonic, wall: Time.now)
+    lease_clock_class.const_get(:Timestamp).new(monotonic: monotonic, wall: wall)
+  end
 
   def advance_after_acquire(clock)
     allow(transport).to receive(:acquire_project_lock).and_wrap_original do |method, **arguments|

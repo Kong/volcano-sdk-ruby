@@ -17,9 +17,7 @@ module Volcano
     end
 
     def current_session=(session)
-      raise ArgumentError, INCOMPLETE_SESSION unless complete_session?(session)
-
-      @client.store_session(owned_session(**session.to_h))
+      @client.store_session(owned_complete_session(session))
     end
 
     def on_auth_state_change(&callback)
@@ -112,6 +110,12 @@ module Volcano
       return false unless session.is_a?(Session)
 
       session.to_h.values.all? { |value| value.is_a?(String) && !value.strip.empty? }
+    end
+
+    def owned_complete_session(session)
+      raise ArgumentError, INCOMPLETE_SESSION unless complete_session?(session)
+
+      owned_session(**session.to_h)
     end
 
     def owned_session(access_token:, refresh_token:, user_id:)

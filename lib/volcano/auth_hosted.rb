@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'openssl'
 require 'uri'
 
 module Volcano
@@ -17,7 +18,21 @@ module Volcano
       "#{@api_url}/projects/#{URI.encode_uri_component(project)}/auth/hosted?#{query}"
     end
 
+    def adopt_hosted_auth_session(session, state:, expected_state:)
+      validate_hosted_auth_callback_state(state, expected_state)
+      adopted = owned_complete_session(session)
+      @client.store_session(adopted)
+      adopted
+    end
+
     private
+
+    def validate_hosted_auth_callback_state(state, expected_state)
+      actual = hosted_auth_parameter(state)
+      expected = hosted_auth_parameter(expected_state)
+      valid = actual.bytesize == expected.bytesize && OpenSSL.fixed_length_secure_compare(actual, expected)
+      raise ArgumentError, 'Hosted auth state mismatch' unless valid
+    end
 
     def hosted_auth_parameter(value)
       return value if value.is_a?(String) && !value.strip.empty?

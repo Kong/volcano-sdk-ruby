@@ -1159,6 +1159,61 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  describe '#adopt_hosted_auth_session' do
+    let(:returned_session) do
+      Volcano::Session.new(
+        access_token: 'hosted-access', refresh_token: 'hosted-refresh', user_id: 'hosted-user'
+      )
+    end
+
+    it 'validates state and stores an owned session copy', :aggregate_failures do
+      adopted = client.auth.adopt_hosted_auth_session(
+        returned_session, state: 'returned-state', expected_state: 'returned-state'
+      )
+
+      expect(adopted).to eq(returned_session)
+      expect(adopted).not_to be(returned_session)
+      expect(client.auth.current_session).to be(adopted)
+    end
+
+    it 'returns the adopted snapshot after a subscriber replaces current state' do
+      client.auth.on_auth_state_change do |event, _session|
+        client.auth.sign_out if event == :signed_in
+      end
+
+      adopted = client.auth.adopt_hosted_auth_session(
+        returned_session, state: 'returned-state', expected_state: 'returned-state'
+      )
+
+      expect(adopted).to eq(returned_session)
+      expect(client.auth.current_session).to be_nil
+    end
+
+    it 'preserves the current session when state does not match' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+      expect do
+        client.auth.adopt_hosted_auth_session(
+          returned_session, state: 'attacker-state', expected_state: 'expected-state'
+        )
+      end.to raise_error(ArgumentError, 'Hosted auth state mismatch')
+      expect(client.auth.current_session).to be(established)
+    end
+
+    it 'rejects empty returned or expected state' do
+      expect do
+        client.auth.adopt_hosted_auth_session(
+          returned_session, state: ' ', expected_state: 'state-value'
+        )
+      end.to raise_error(ArgumentError, 'Hosted auth parameters must be non-empty strings')
+      expect do
+        client.auth.adopt_hosted_auth_session(
+          returned_session, state: 'state-value', expected_state: ''
+        )
+      end.to raise_error(ArgumentError, 'Hosted auth parameters must be non-empty strings')
+    end
+  end
+
   describe '#link_oauth_provider' do
     it 'returns the authorization URL and preserves the current session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')

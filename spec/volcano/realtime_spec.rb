@@ -119,6 +119,63 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'reports connection state and removes one channel', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      channel = client.realtime.channel('contract')
+      expect(client.realtime).not_to be_connected
+      channel.subscribe
+      expect(client.realtime).to be_connected
+
+      expect(client.realtime.remove_channel('contract')).to be_nil
+
+      expect(client.realtime.channel('contract')).not_to be(channel)
+      expect(client.realtime).to be_connected
+      expect(client.realtime.remove_channel('missing')).to be_nil
+      client.realtime.disconnect
+      expect(client.realtime).not_to be_connected
+    end.wait
+
+    expect(socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe unsubscribe]
+    )
+  end
+
+  it 'removes all channels without disconnecting', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      first = client.realtime.channel('first')
+      second = client.realtime.channel('second')
+      first.subscribe
+      second.subscribe
+
+      expect(client.realtime.remove_all_channels).to be_nil
+
+      expect(client.realtime.channel('first')).not_to be(first)
+      expect(client.realtime.channel('second')).not_to be(second)
+      expect(client.realtime).to be_connected
+      client.realtime.disconnect
+    end.wait
+
+    expect(socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe subscribe unsubscribe unsubscribe]
+    )
+  end
+
   it 'preserves the API base path in the realtime endpoint' do
     socket = FacadeSocket.new
     addresses = []

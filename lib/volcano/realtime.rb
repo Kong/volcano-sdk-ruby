@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require 'uri'
+require_relative 'realtime/lifecycle'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
   class Realtime
+    include Lifecycle
+
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
       @api_url = api_url

@@ -583,15 +583,19 @@ Async do
   channel = client.realtime.channel("deployments")
   channel.on("message") { |message| puts message.fetch("value") }
   channel.subscribe
+  raise "not connected" unless client.realtime.connected?
   channel.send(event: "message", value: "contract")
-  channel.unsubscribe
+  client.realtime.remove_channel("deployments")
+  raise "disconnected" unless client.realtime.connected?
   client.realtime.disconnect
+  raise "still connected" if client.realtime.connected?
 end.wait
 ```
 
-This proof of concept implements connect, subscribe, publish, unsubscribe, and
-clean shutdown. Reconnect, recovery, presence, and database-change
-subscriptions are out of scope.
+`remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
+does the same for every managed channel without disconnecting the shared
+realtime transport, so later calls to `channel` return fresh facades. Reconnect,
+recovery, presence, and database-change subscriptions are out of scope.
 
 ## Generated boundary
 

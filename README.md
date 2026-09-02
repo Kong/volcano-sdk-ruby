@@ -565,12 +565,21 @@ lease = client.locks.acquire("build", ttl: 30)
 lease = client.locks.renew("build", lease, ttl: 30)
 client.locks.release("build", lease)
 client.locks.force_release("stale-build")
+
+client.locks.with_lock("deploy", ttl: 30) do |guard|
+  deploy(fencing_token: guard.lease.fencing_token)
+  raise "lock lost" if guard.lost?
+end
 ```
 
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
 `locks.renew` returns a new immutable lease and leaves the previous value
 unchanged.
+`locks.with_lock` renews the lease for the lifetime of the block and always
+attempts to release its latest lease. The guard exposes the latest immutable
+lease, `lost?`, and `wait_lost(timeout:)`. Use the fencing token for protected
+writes; stop work when the guard reports lease loss.
 `locks.force_release` drops any current lease without an ownership token. Use
 it only for administrative recovery behind fencing-token enforcement.
 

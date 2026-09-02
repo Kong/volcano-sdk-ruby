@@ -6,6 +6,8 @@ require 'time'
 module Volcano
   # Acquires and releases project-scoped distributed locks.
   class Locks
+    include LockAutoRenewal
+
     def initialize(client, transport)
       @client = client
       @transport = transport

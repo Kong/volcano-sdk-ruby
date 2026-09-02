@@ -7142,13 +7142,345 @@ paths:
           description: Forbidden
         '404':
           description: Project not found
+  /projects/{id}/auth/pages/appearance:
+    get:
+      tags:
+        - Auth Configuration
+      summary: Get managed auth page appearance
+      operationId: getAuthPageAppearance
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Saved appearance and effective plan state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthPageAppearanceResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Appearance could not be read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/theme:
+    put:
+      tags:
+        - Auth Configuration
+      summary: Save the managed auth page theme
+      operationId: updateAuthPageTheme
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthPageThemeRequest'
+      responses:
+        '200':
+          description: Theme saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAuthPageThemeRequest'
+        '400':
+          description: Invalid or unreadable theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Theme could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Auth Configuration
+      summary: Clear the managed auth page theme
+      operationId: deleteAuthPageTheme
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: Theme cleared
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Theme could not be cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/{pageType}/layout:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: pageType
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/HostedAuthPageType'
+    put:
+      tags:
+        - Auth Configuration
+      summary: Save one managed auth page layout
+      operationId: updateAuthPageLayout
+      security:
+        - UserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthPageLayoutRequest'
+      responses:
+        '200':
+          description: Layout saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAuthPageLayoutRequest'
+        '400':
+          description: Invalid page type or layout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Layout could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Auth Configuration
+      summary: Clear one managed auth page layout
+      operationId: deleteAuthPageLayout
+      security:
+        - UserToken: []
+      responses:
+        '204':
+          description: Layout cleared
+        '400':
+          description: Invalid page type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Layout could not be cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/{pageType}/preview:
+    get:
+      tags:
+        - Auth Configuration
+      summary: Render a short-lived managed auth page preview
+      description: |
+        Public HTML endpoint for a preview URL returned by the POST operation.
+        The signed ticket contains the unsaved appearance, expires shortly, and
+        runs the production page runtime against mocked authentication responses.
+      operationId: renderAuthPagePreview
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: pageType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/HostedAuthPageType'
+        - name: ticket
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 4096
+          description: Short-lived signed preview ticket returned by the POST operation.
+      responses:
+        '200':
+          description: Rendered preview document
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          description: Ticket is invalid or expired, its path does not match, or managed authentication is disabled
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Preview could not be rendered
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      tags:
+        - Auth Configuration
+      summary: Preview an unsaved managed auth page appearance
+      operationId: previewAuthPage
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: pageType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/HostedAuthPageType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewAuthPageRequest'
+      responses:
+        '200':
+          description: Short-lived URL for the rendered preview document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewAuthPageResponse'
+        '400':
+          description: Invalid page type or draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found or managed authentication is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Preview could not be rendered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/auth/hosted/{pageType}:
     get:
       tags:
         - Auth Configuration
-      summary: Render managed reset-password page
+      summary: Render a managed auth page
       description: |
-        Public HTML endpoint for the managed reset-password page.
+        Public HTML endpoint for signup, forgot-password, device approval,
+        verify-email, and reset-password pages. Login uses the path without a
+        page type.
         Requires `Accept: text/html`.
         Returns 404 when managed hosted pages are disabled for the project.
       security: []
@@ -10499,6 +10831,91 @@ components:
         updated_at:
           type: string
           format: date-time
+    AuthPageAppearanceResponse:
+      type: object
+      required:
+        - theme
+        - layouts
+        - customisation_allowed
+        - parked
+        - defaults
+        - options
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layouts:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AuthPageLayout'
+        customisation_allowed:
+          type: boolean
+        parked:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Per-page saved-but-not-live state.
+        defaults:
+          $ref: '#/components/schemas/AuthPageAppearanceDefaults'
+        options:
+          $ref: '#/components/schemas/AuthPageAppearanceOptions'
+    AuthPageDensity:
+      type: string
+      enum:
+        - compact
+        - comfortable
+        - spacious
+    AuthPageFont:
+      type: string
+      enum:
+        - system
+        - humanist
+        - geometric
+        - slab
+        - mono
+    AuthPageLayout:
+      type: string
+      enum:
+        - centered
+        - split-left
+        - split-right
+    AuthPageRadius:
+      type: string
+      enum:
+        - none
+        - small
+        - medium
+        - large
+    AuthPageScale:
+      type: string
+      enum:
+        - small
+        - default
+        - large
+    AuthPageTheme:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - colors
+        - font
+        - scale
+        - density
+        - radius
+      properties:
+        version:
+          type: integer
+          enum:
+            - 1
+        colors:
+          $ref: '#/components/schemas/AuthPageThemeColors'
+        font:
+          $ref: '#/components/schemas/AuthPageFont'
+        scale:
+          $ref: '#/components/schemas/AuthPageScale'
+        density:
+          $ref: '#/components/schemas/AuthPageDensity'
+        radius:
+          $ref: '#/components/schemas/AuthPageRadius'
     AuthHostedPageResponse:
       type: object
       required:
@@ -13209,6 +13626,10 @@ components:
       type: string
       enum:
         - login
+        - signup
+        - forgot-password
+        - device
+        - verify-email
         - reset-password
     HostedLoginEmailCheckRequest:
       type: object
@@ -13241,6 +13662,10 @@ components:
     HostedRenderablePageType:
       type: string
       enum:
+        - signup
+        - forgot-password
+        - device
+        - verify-email
         - reset-password
     LogEvent:
       type: object
@@ -14090,6 +14515,8 @@ components:
           $ref: '#/components/schemas/ProjectConfigAuthRedirects'
         pages:
           $ref: '#/components/schemas/ProjectConfigHostedPages'
+        appearance:
+          $ref: '#/components/schemas/ProjectConfigAuthPageAppearance'
     ProjectConfigAuthPassword:
       type: object
       additionalProperties: false
@@ -14416,6 +14843,39 @@ components:
           $ref: '#/components/schemas/ProjectConfigHostedPage'
         reset_password:
           $ref: '#/components/schemas/ProjectConfigHostedPage'
+        signup:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        forgot_password:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        device:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        verify_email:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+    PreviewAuthPageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - theme
+        - layout
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+        action:
+          type: string
+    PreviewAuthPageResponse:
+      type: object
+      required:
+        - preview_url
+        - expires_at
+      properties:
+        preview_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
     ProjectConfigMissingResource:
       type: object
       properties:
@@ -15649,6 +16109,22 @@ components:
         css:
           type: string
           description: Optional CSS injected at render time. Max 256 KiB.
+    UpdateAuthPageLayoutRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - layout
+      properties:
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+    UpdateAuthPageThemeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - theme
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
     UpdateDatabaseTypeRequest:
       type: object
       description: Update database compute size tier
@@ -15914,6 +16390,55 @@ components:
         - value
         - created_at
         - updated_at
+    AuthPageThemeColors:
+      type: object
+      additionalProperties: false
+      required:
+        - background
+        - surface
+        - text
+        - accent
+        - accent_text
+      properties:
+        background:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        surface:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        text:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        accent:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        accent_text:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+    ProjectConfigAuthPageLayouts:
+      type: object
+      additionalProperties: false
+      properties:
+        login:
+          $ref: '#/components/schemas/AuthPageLayout'
+        signup:
+          $ref: '#/components/schemas/AuthPageLayout'
+        forgot_password:
+          $ref: '#/components/schemas/AuthPageLayout'
+        device:
+          $ref: '#/components/schemas/AuthPageLayout'
+        verify_email:
+          $ref: '#/components/schemas/AuthPageLayout'
+        reset_password:
+          $ref: '#/components/schemas/AuthPageLayout'
+    ProjectConfigAuthPageAppearance:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layouts:
+          $ref: '#/components/schemas/ProjectConfigAuthPageLayouts'
     DatabaseQueryPerformanceDatabase:
       type: object
       properties:
@@ -16300,3 +16825,47 @@ components:
         mock_prelude:
           type: string
           description: Preview harness that supplies request params and stubs the hosted-auth API. Never served on a real page.
+    AuthPageAppearanceDefaults:
+      type: object
+      required:
+        - theme
+        - layout
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+    AuthPageAppearanceOptions:
+      type: object
+      required:
+        - pages
+        - fonts
+        - scales
+        - densities
+        - radii
+        - layouts
+      properties:
+        pages:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostedAuthPageType'
+        fonts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageFont'
+        scales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageScale'
+        densities:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageDensity'
+        radii:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageRadius'
+        layouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageLayout'

@@ -14,29 +14,16 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Hosted auth pages keyed by page type (PRO plan). Upsert-only: omitted pages are left untouched (there is no delete for hosted pages). 
-  class ProjectConfigHostedPages < ApiModelBase
-    attr_accessor :login
+  class ProjectConfigAuthPageAppearance < ApiModelBase
+    attr_accessor :theme
 
-    attr_accessor :reset_password
-
-    attr_accessor :signup
-
-    attr_accessor :forgot_password
-
-    attr_accessor :device
-
-    attr_accessor :verify_email
+    attr_accessor :layouts
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'login' => :'login',
-        :'reset_password' => :'reset_password',
-        :'signup' => :'signup',
-        :'forgot_password' => :'forgot_password',
-        :'device' => :'device',
-        :'verify_email' => :'verify_email'
+        :'theme' => :'theme',
+        :'layouts' => :'layouts'
       }
     end
 
@@ -53,12 +40,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'login' => :'ProjectConfigHostedPage',
-        :'reset_password' => :'ProjectConfigHostedPage',
-        :'signup' => :'ProjectConfigHostedPage',
-        :'forgot_password' => :'ProjectConfigHostedPage',
-        :'device' => :'ProjectConfigHostedPage',
-        :'verify_email' => :'ProjectConfigHostedPage'
+        :'theme' => :'AuthPageTheme',
+        :'layouts' => :'ProjectConfigAuthPageLayouts'
       }
     end
 
@@ -72,40 +55,24 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigHostedPages` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigAuthPageAppearance` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigHostedPages`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigAuthPageAppearance`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'login')
-        self.login = attributes[:'login']
+      if attributes.key?(:'theme')
+        self.theme = attributes[:'theme']
       end
 
-      if attributes.key?(:'reset_password')
-        self.reset_password = attributes[:'reset_password']
-      end
-
-      if attributes.key?(:'signup')
-        self.signup = attributes[:'signup']
-      end
-
-      if attributes.key?(:'forgot_password')
-        self.forgot_password = attributes[:'forgot_password']
-      end
-
-      if attributes.key?(:'device')
-        self.device = attributes[:'device']
-      end
-
-      if attributes.key?(:'verify_email')
-        self.verify_email = attributes[:'verify_email']
+      if attributes.key?(:'layouts')
+        self.layouts = attributes[:'layouts']
       end
     end
 
@@ -129,12 +96,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          login == o.login &&
-          reset_password == o.reset_password &&
-          signup == o.signup &&
-          forgot_password == o.forgot_password &&
-          device == o.device &&
-          verify_email == o.verify_email
+          theme == o.theme &&
+          layouts == o.layouts
     end
 
     # @see the `==` method
@@ -146,7 +109,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [login, reset_password, signup, forgot_password, device, verify_email].hash
+      [theme, layouts].hash
     end
 
     # Builds the object from hash

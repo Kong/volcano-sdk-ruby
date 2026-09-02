@@ -28,6 +28,8 @@ RSpec.describe 'OpenAPI generation' do
         'query_database_select',
         'upload_storage_object',
         'download_storage_object',
+        'resolve_function_for_invocation',
+        'invoke_function',
         'acquire_project_lock',
         'release_project_lock'
       )

@@ -5,7 +5,7 @@ require 'tempfile'
 
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   unless const_defined?(:GeneratedApis)
-    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks)
+    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks, :functions)
   end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
@@ -417,13 +417,41 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
+  class FakeFunctionsApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def resolve_function_for_invocation_with_http_info(name)
+      @calls << [:resolve, name]
+      result = FakeGeneratedModel.new(
+        name: name,
+        function_id: '00000000-0000-4000-8000-000000000040',
+        cache_ttl_seconds: 60
+      )
+      [result, 200, {}]
+    end
+
+    def invoke_function_with_http_info(function_id, request, options = {})
+      @calls << [:invoke, function_id, request, options]
+      [
+        FakeGeneratedModel.new(error: 'invalid order'),
+        422,
+        { 'X-Volcano-Version' => 'staging-v1' }
+      ]
+    end
+  end
+
   let(:apis) do
     GeneratedApis.new(
       authentication: FakeAuthenticationApi.new,
       oauth: FakeOAuthApi.new,
       database: FakeDatabaseApi.new,
       storage: FakeStorageApi.new,
-      locks: FakeLocksApi.new
+      locks: FakeLocksApi.new,
+      functions: FakeFunctionsApi.new
     )
   end
   let(:authorizations) { [] }
@@ -436,6 +464,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   let(:transport) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
+
   let(:responses) do
     {
       signup: transport.auth_signup(
@@ -520,10 +549,34 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         oauth: empty,
         database: empty,
         storage: storage,
-        locks: empty
+        locks: empty,
+        functions: empty
       )
     end
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+  end
+
+  it 'resolves and invokes a function through generated operations' do
+    resolved = transport.resolve_function_for_invocation(
+      authorization: 'access-token', name: 'send-welcome'
+    )
+    response = transport.invoke_function(
+      authorization: 'access-token',
+      function_id: resolved.body.fetch('function_id'),
+      payload: { 'user_id' => 'user-123' }
+    )
+
+    expect(response).to have_attributes(
+      status: 422, body: { 'error' => 'invalid order' },
+      headers: { 'X-Volcano-Version' => 'staging-v1' }
+    )
+    operation, function_id, request, options = apis.functions.calls.last
+    expect([operation, function_id]).to eq(
+      [:invoke, '00000000-0000-4000-8000-000000000040']
+    )
+    expect(request.to_hash).to eq(payload: { 'user_id' => 'user-123' })
+    expect(options).to eq(follow_location: false)
+    expect(authorizations).to eq(%w[access-token access-token])
   end
 
   it 'reads a lock through the generated API' do
@@ -1209,6 +1262,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request.options.fetch(:timeout)).to eq(1_500)
   end
 
+  it 'honors disabled redirect following for passthrough responses' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+
+    request = api_client.build_request(
+      :post, '/functions/function-id/invoke', auth_names: [], follow_location: false
+    )
+
+    expect(request.options.fetch(:followlocation)).to be(false)
+  end
+
   it 'preserves object path segments and percent-encodes spaces' do
     api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
     calls = []
@@ -1422,7 +1485,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     empty = Object.new
     factory = lambda do |_authorization|
       GeneratedApis.new(
-        authentication: authentication, oauth: empty, database: empty, storage: empty, locks: empty
+        authentication: authentication, oauth: empty, database: empty,
+        storage: empty, locks: empty, functions: empty
       )
     end
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)

@@ -3,7 +3,7 @@
 module Volcano
   # Entry point for Volcano API, storage, lock, and realtime operations.
   class Client
-    attr_reader :auth, :storage, :locks, :realtime
+    attr_reader :auth, :functions, :storage, :locks, :realtime
 
     def initialize(
       anon_key:,
@@ -46,6 +46,10 @@ module Volcano
       @service_key
     end
 
+    def function_token
+      current_session&.access_token || @service_key || @anon_key
+    end
+
     def store_session(session, event: :signed_in)
       @auth_state.store(session, event: event)
     end
@@ -78,6 +82,7 @@ module Volcano
 
     def initialize_facades(socket_factory)
       @auth = Auth.new(self, @transport, api_url: @api_url)
+      @functions = Functions.new(self, @transport)
       @storage = Storage.new(self, @transport, api_url: @api_url, anon_key: @anon_key)
       @locks = Locks.new(self, @transport)
       @realtime = Realtime.new(

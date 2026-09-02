@@ -20,7 +20,56 @@ module Volcano
           nil
         end
 
+        def on_presence(channel, &handler)
+          ensure_open!
+          @presence_handlers[channel] << handler
+          handler
+        end
+
+        def off_presence(channel, handler)
+          handlers = @presence_handlers[channel]
+          handlers.delete(handler)
+          @presence_handlers.delete(channel) if handlers.empty?
+          @pending_presence_resyncs.delete(channel)
+          nil
+        end
+
         private
+
+        def initialize_state
+          @next_id = 0
+          @pending = {}
+          initialize_locks
+          initialize_handlers
+          @callback_stopping = @connected = @closed = false
+          @subscriptions = Set.new
+          @closed_error = nil
+        end
+
+        def initialize_locks
+          @write_lock = Async::Semaphore.new(1)
+          @subscription_lock = Async::Semaphore.new(1)
+        end
+
+        def initialize_handlers
+          @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
+          @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
+          @pending_presence_resyncs = {}
+          @callback_queue = Async::Queue.new
+        end
+
+        def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
+
+        def close_socket
+          @socket.close
+        rescue StandardError
+          nil
+        end
+
+        def stop_callback_task
+          @callback_stopping = true
+          @callback_task.stop unless @callback_task == Async::Task.current
+        end
 
         def close_with(error, notify_error: false)
           return if @closed

@@ -6,8 +6,9 @@ module Volcano
     module Lifecycle
       def connected? = !@closed && (@protocol&.connected? || false)
 
-      def remove_channel(name)
-        channel_lock.acquire { remove_channel_locked("broadcast:#{name}") }
+      def remove_channel(name, type: :broadcast)
+        channel_type = normalize_channel_type(type)
+        channel_lock.acquire { remove_channel_locked("#{channel_type}:#{name}") }
         nil
       end
 

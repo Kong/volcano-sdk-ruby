@@ -60,6 +60,17 @@ RSpec.describe Volcano::Realtime do
       )
     end
 
+    def presence_event(channel:, event:, info:)
+      @incoming.enqueue(
+        JSON.generate(
+          'push' => {
+            'channel' => channel,
+            event => { 'info' => info }
+          }
+        )
+      )
+    end
+
     def respond(id, result: {})
       @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
     end
@@ -95,11 +106,318 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  def realtime_client(socket)
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    client
+  end
+
+  def presence_info(client, user, display_name)
+    {
+      'client' => client,
+      'user' => user,
+      'conn_info' => { 'user_metadata' => { 'display_name' => display_name } }
+    }
+  end
+
+  def presence_reply(socket, clients)
+    lambda do |command|
+      next unless command.key?('presence')
+
+      socket.respond(command.fetch('id'), result: { 'presence' => clients })
+      :defer
+    end
+  end
+
   it 'exposes the canonical channel name' do
     client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
 
     expect(client.realtime.channel('contract').name).to eq('broadcast:contract')
     expect(client.realtime.channel('contract').name).to be_frozen
+    expect(client.realtime.channel('lobby', type: :presence).name).to eq('presence:lobby')
+    expect { client.realtime.channel('bad', type: :unknown) }.to raise_error(
+      ArgumentError,
+      'unsupported realtime channel type: unknown'
+    )
+  end
+
+  it 'tracks an immutable presence snapshot through sync, join, leave, and unsubscribe', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    bob = presence_info('bob-client', 'bob', 'Bob')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      states = []
+      joins = []
+      leaves = []
+      channel.on_presence_sync { |state| states << state }
+      channel.on('join') { |info| joins << info }
+      channel.on('leave') { |info| leaves << info }
+      channel.subscribe
+      tracked = { 'status' => ['online'] }
+      channel.track(tracked)
+      tracked.fetch('status') << 'away'
+      socket.presence_event(channel: 'project:presence:lobby', event: 'join', info: bob)
+      socket.presence_event(channel: 'project:presence:lobby', event: 'leave', info: alice)
+      task.with_timeout(0.2) { task.yield until leaves.any? }
+
+      expect(channel.get_presence_state.keys).to eq(['bob-client'])
+      expect(joins.first).to eq(Volcano::Realtime::PresenceInfo.new(
+                                  client: 'bob-client', user: 'bob', data: bob.fetch('conn_info')
+                                ))
+      expect(channel.tracked_state).to eq('status' => ['online'])
+      expect { channel.tracked_state.fetch('status') << 'late' }.to raise_error(FrozenError)
+      channel.unsubscribe
+      expect(channel.get_presence_state).to be_empty
+      expect(states.last).to be_empty
+      expect { channel.track }.to raise_error(Volcano::Realtime::ClosedError, /not subscribed/)
+      expect(client.realtime.remove_channel('lobby', type: :presence)).to be_nil
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'applies join and leave pushes that arrive during presence synchronization' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    bob = presence_info('bob-client', 'bob', 'Bob')
+    presence_commands = Async::Queue.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('presence')
+
+      presence_commands.enqueue(command)
+      :defer
+    end
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      subscribing = task.async { channel.subscribe }
+      command = presence_commands.dequeue
+      socket.presence_event(channel: 'project:presence:lobby', event: 'join', info: bob)
+      socket.presence_event(channel: 'project:presence:lobby', event: 'leave', info: alice)
+      socket.respond(command.fetch('id'), result: { 'presence' => { 'alice-client' => alice } })
+      subscribing.wait
+      task.with_timeout(0.2) { task.yield until channel.presence_state.keys == ['bob-client'] }
+
+      expect(channel.presence_state.keys).to eq(['bob-client'])
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'lets presence callbacks call channel methods without deadlocking' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      finished = Async::Queue.new
+      channel.on_presence_sync do
+        channel.track('status' => 'online')
+        channel.unsubscribe
+        finished.enqueue(true)
+      end
+      channel.subscribe
+
+      expect(task.with_timeout(0.2) { finished.dequeue }).to be(true)
+      expect(channel.tracked_state).to be_empty
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'ignores presence pushes captured before unsubscribe' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      channel.unsubscribe
+      socket.presence_event(
+        channel: 'project:presence:lobby',
+        event: 'join',
+        info: presence_info('late-client', 'late', 'Late')
+      )
+      task.yield
+
+      expect(channel.presence_state).to be_empty
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'delivers unsubscribe presence sync outside the lifecycle lock' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      finished = Async::Queue.new
+      channel.on_presence_sync do |state|
+        next unless state.empty?
+
+        begin
+          channel.track('status' => 'online')
+        rescue Volcano::Realtime::ClosedError
+          finished.enqueue(true)
+        end
+      end
+      channel.subscribe
+      channel.unsubscribe
+
+      expect(task.with_timeout(0.2) { finished.dequeue }).to be(true)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not emit a stale sync when a join callback unsubscribes' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      states = []
+      channel.on_presence_sync { |state| states << state }
+      channel.on('join') { channel.unsubscribe }
+      channel.subscribe
+      states.clear
+      socket.presence_event(
+        channel: 'project:presence:lobby', event: 'join',
+        info: presence_info('bob-client', 'bob', 'Bob')
+      )
+      task.with_timeout(0.2) { task.yield until states.any? }
+
+      expect(states).to all(be_empty)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'keeps a successful subscription usable when its initial presence query fails' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = lambda do |command|
+      next unless command.key?('presence')
+
+      socket.reject(command.fetch('id'), 'presence unavailable')
+      :defer
+    end
+
+    Async do |task|
+      errors = []
+      client.realtime.on_error { |context| errors << context }
+      channel = client.realtime.channel('lobby', type: :presence)
+      expect(channel.subscribe).to be_nil
+      task.with_timeout(0.2) { task.yield until errors.any? }
+      expect(channel.unsubscribe).to be_nil
+      expect(errors.first.message).to eq('presence unavailable')
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'retains the last presence snapshot when a resync fails' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      errors = []
+      client.realtime.on_error { |context| errors << context }
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      socket.on_write = lambda do |command|
+        next unless command.key?('presence')
+
+        socket.reject(command.fetch('id'), 'resync unavailable')
+        :defer
+      end
+
+      channel.__send__(:sync_presence, client.realtime.send(:protocol), 1)
+      task.with_timeout(0.2) { task.yield until errors.any? }
+
+      expect(channel.presence_state.keys).to eq(['alice-client'])
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reports one error when protocol loss rejects a presence resync' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      errors = []
+      pending = Async::Queue.new
+      client.realtime.on_error { |context| errors << context }
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      socket.on_write = lambda do |command|
+        pending.enqueue(command) if command.key?('presence')
+        :defer
+      end
+      syncing = task.async do
+        channel.__send__(:sync_presence, client.realtime.send(:protocol), 1)
+      end
+      pending.dequeue
+
+      socket.fail_read(IOError.new('socket failed'))
+      syncing.wait
+      task.with_timeout(0.2) { task.yield until errors.any? }
+
+      expect(errors.length).to eq(1)
+    end.wait
+  end
+
+  it 'clears presence after an unexpected disconnect' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      expect(channel.presence_state).not_to be_empty
+      socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) { task.yield until channel.presence_state.empty? }
+
+      expect(channel.presence_state).to be_empty
+    end.wait
+  end
+
+  it 'isolates failing join callbacks and still emits the resulting sync' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      joins = []
+      states = []
+      channel.on('join') { raise 'callback failed' }
+      channel.on('join') { |info| joins << info.client }
+      channel.on_presence_sync { |state| states << state }
+      channel.subscribe
+      socket.presence_event(
+        channel: 'project:presence:lobby',
+        event: 'join',
+        info: presence_info('bob-client', 'bob', 'Bob')
+      )
+      task.with_timeout(0.2) { task.yield until states.last&.key?('bob-client') }
+
+      expect(joins).to eq(['bob-client'])
+      expect(states.last.keys).to eq(['bob-client'])
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do

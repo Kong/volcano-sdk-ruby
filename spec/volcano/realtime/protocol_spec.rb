@@ -77,6 +77,97 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
       'id' => 4,
       'unsubscribe' => { 'channel' => 'broadcast:contract' }
     )
+    expect(described_class.presence(id: 5, channel: 'presence:lobby')).to eq(
+      'id' => 5,
+      'presence' => { 'channel' => 'presence:lobby' }
+    )
+  end
+
+  it 'builds a recoverable presence subscription command' do
+    expect(
+      described_class.subscribe(
+        id: 1,
+        channel: 'presence:lobby',
+        recoverable: true,
+        join_leave: true
+      )
+    ).to eq(
+      'id' => 1,
+      'subscribe' => {
+        'channel' => 'presence:lobby',
+        'recoverable' => true,
+        'join_leave' => true
+      }
+    )
+  end
+
+  it 'returns presence command results' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {
+                                       'presence' => { 'client-1' => { 'client' => 'client-1' } }
+                                     }))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+
+      expect(protocol.presence(channel: 'presence:lobby')).to eq(
+        'presence' => { 'client-1' => { 'client' => 'client-1' } }
+      )
+      protocol.close
+    end.wait
+  end
+
+  it 'dispatches project-prefixed join and leave pushes' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task)
+      events = Async::Queue.new
+      protocol.on_presence('presence:lobby') { |event, info| events.enqueue([event, info]) }
+      info = { 'client' => 'client-1', 'user' => 'user-1', 'conn_info' => { 'status' => 'online' } }
+
+      %w[join leave].each do |event|
+        socket.receive(JSON.generate('push' => {
+                                       'channel' => 'project-id:presence:lobby',
+                                       event => { 'info' => info }
+                                     }))
+      end
+
+      expect(task.with_timeout(0.2) { [events.dequeue, events.dequeue] }).to eq(
+        [['join', info], ['leave', info]]
+      )
+      protocol.close
+    end.wait
+  end
+
+  it 'requests a presence resync when join and leave pushes overflow the callback queue' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      events = Async::Queue.new
+      protocol.on_presence('presence:lobby') do |event, info|
+        entered.enqueue(true) if event == 'join' && info['client'] == 'client-1'
+        release.dequeue if event == 'join' && info['client'] == 'client-1'
+        events.enqueue(event)
+      end
+
+      push = lambda do |client|
+        JSON.generate('push' => {
+                        'channel' => 'project:presence:lobby',
+                        'join' => { 'info' => { 'client' => client } }
+                      })
+      end
+      socket.receive(push.call('client-1'))
+      entered.dequeue
+      socket.receive(push.call('client-2'), push.call('client-3'))
+      release.enqueue(true)
+
+      received = task.with_timeout(0.2) { [events.dequeue, events.dequeue, events.dequeue] }
+      expect(received).to eq(%w[join join sync_required])
+      protocol.close
+    end.wait
   end
 
   it 'correlates distinct concurrent replies that arrive in reverse ID order' do

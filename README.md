@@ -602,10 +602,38 @@ Async do
 end.wait
 ```
 
+### Track presence
+
+Presence identity and metadata come from the authenticated user. `track` keeps
+optional application state locally without replacing that server-managed data:
+
+```ruby
+Async do
+  lobby = client.realtime.channel("lobby", type: :presence)
+  lobby.on_presence_sync do |state|
+    puts "#{state.length} clients online"
+  end
+  lobby.on("join") { |info| puts "joined #{info.user}" }
+  lobby.on("leave") { |info| puts "left #{info.user}" }
+
+  lobby.subscribe
+  lobby.track("status" => "online")
+  puts lobby.tracked_state.fetch("status")
+  lobby.presence_state.each_value { |info| puts info.data }
+  lobby.unsubscribe
+  client.realtime.disconnect
+end.wait
+```
+
+`presence_state` returns an immutable snapshot keyed by Centrifuge client ID.
+`get_presence_state` is an equivalent cross-SDK alias. Subscribe again to fetch
+a fresh authoritative snapshot.
+
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
-realtime transport, so later calls to `channel` return fresh facades. Reconnect,
-recovery, presence, and database-change subscriptions are out of scope.
+realtime transport, so later calls to `channel` return fresh facades. Pass the
+same `type:` to `remove_channel` for presence channels. Reconnect, recovery, and
+database-change subscriptions are out of scope.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.

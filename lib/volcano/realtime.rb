@@ -4,6 +4,9 @@ require 'uri'
 require_relative 'realtime/connection_callbacks'
 require_relative 'realtime/connection'
 require_relative 'realtime/lifecycle'
+require_relative 'realtime/presence_state'
+require_relative 'realtime/presence'
+require_relative 'realtime/channel_callbacks'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
@@ -15,6 +18,33 @@ module Volcano
     ConnectContext = Data.define(:client)
     DisconnectContext = Data.define(:code, :reason)
     ErrorContext = Data.define(:code, :message, :error)
+
+    # Recursively snapshots JSON-compatible values for callback and state safety.
+    module Immutable
+      module_function
+
+      def call(value)
+        case value
+        when Hash then value.to_h { |key, child| [call(key), call(child)] }.freeze
+        when Array then value.map { |child| call(child) }.freeze
+        when String then value.dup.freeze
+        else value.freeze
+        end
+      end
+    end
+    private_constant :Immutable
+
+    PresenceInfo = Data.define(:client, :user, :data) do
+      def initialize(client:, user: nil, data: {})
+        super(
+          client: Immutable.call(client.to_s),
+          user: user.nil? ? nil : Immutable.call(user.to_s),
+          data: Immutable.call(data)
+        )
+      end
+    end
+
+    CHANNEL_TYPES = %i[broadcast presence].freeze
 
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
@@ -29,13 +59,16 @@ module Volcano
       @closed = false
     end
 
-    def channel(name)
+    def channel(name, type: :broadcast)
+      type = normalize_channel_type(type)
       channel_lock.acquire do
         ensure_open!
-        @channels["broadcast:#{name}"] ||= Channel.new(
+        channel_name = "#{type}:#{name}"
+        @channels[channel_name] ||= Channel.new(
           self,
           method(:protocol),
-          "broadcast:#{name}"
+          channel_name,
+          type
         )
       end
     end
@@ -83,6 +116,15 @@ module Volcano
 
     private
 
+    def normalize_channel_type(type)
+      normalized = type.to_s.to_sym
+      return normalized if CHANNEL_TYPES.include?(normalized)
+
+      raise ArgumentError, "unsupported realtime channel type: #{type}"
+    end
+
+    def report_channel_error(error) = protocol_error(public_error(error))
+
     def protocol_lock
       require 'async/semaphore'
       @protocol_lock ||= Async::Semaphore.new(1)
@@ -95,35 +137,31 @@ module Volcano
 
     # Represents one realtime broadcast channel.
     class Channel
+      include PresenceState
+      include Presence
+      include ChannelCallbacks
+
       attr_reader :name
 
-      def initialize(realtime, protocol_provider, name)
+      def initialize(realtime, protocol_provider, name, type)
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
-        @callbacks = []
         @handler_registered = @subscribed = @closed = false
-        @publication_handler = nil
         @lifecycle_lock = nil
-      end
-
-      def on(event, callback = nil, &block)
-        raise ArgumentError, "unsupported realtime event: #{event}" unless event == 'message'
-
-        @callbacks << (callback || block || raise(ArgumentError, 'callback or block is required'))
-        self
+        initialize_callback_dispatch
+        initialize_presence(type)
       end
 
       def subscribe
-        with_lifecycle_lock do
+        protocol, epoch = with_lifecycle_lock do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
 
           protocol = @protocol_provider.call
-          register_handler(protocol)
-          protocol.subscribe(channel: @name)
-          @subscribed = true
+          subscribe_protocol(protocol)
         end
+        sync_presence(protocol, epoch)
         nil
       end
 
@@ -131,6 +169,7 @@ module Volcano
         with_lifecycle_lock do
           ensure_open!
           raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
+          raise ArgumentError, 'send is only available for broadcast channels' if presence?
 
           data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
           @protocol_provider.call.publish(channel: @name, data: data)
@@ -139,13 +178,8 @@ module Volcano
       end
 
       def unsubscribe
-        with_lifecycle_lock do
-          ensure_open!
-          next unless @subscribed
-
-          @protocol_provider.call.unsubscribe(channel: @name)
-          @subscribed = false
-        end
+        state = with_lifecycle_lock { unsubscribe_protocol }
+        emit_presence_sync(state)
         nil
       end
 
@@ -161,23 +195,39 @@ module Volcano
 
       def mark_closed
         @closed = true
-        @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
+        @subscribed = false
+        reset_presence
+      end
+
+      def protocol_lost(protocol)
+        @subscribed = false
+        detach_publication_handler(protocol)
+        @handler_registered = false
+        reset_presence
       end
 
       private
 
-      def register_handler(protocol)
-        return if @handler_registered
+      def unsubscribe_protocol
+        ensure_open!
+        return unless @subscribed
 
-        @publication_handler = protocol.on_publication(@name) do |event, data|
-          @callbacks.each { |callback| callback.call(data) } if event == 'message'
-        end
-        @handler_registered = true
+        protocol = @protocol_provider.call
+        protocol.unsubscribe(channel: @name)
+        @subscribed = false
+        invalidate_presence_subscription(protocol)
+        clear_presence
       end
 
-      def detach_publication_handler(protocol)
-        protocol.off_publication(@name, @publication_handler) if @publication_handler
-        @publication_handler = nil
+      def subscribe_protocol(protocol)
+        epoch = next_presence_epoch
+        register_handlers(protocol, epoch)
+        protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
+        @subscribed = true
+        [protocol, epoch]
+      rescue StandardError
+        invalidate_presence_subscription(protocol)
+        raise
       end
 
       def detach_from_protocol
@@ -189,8 +239,9 @@ module Volcano
       end
 
       def mark_removed
-        @callbacks.clear
+        @callbacks.each_value(&:clear)
         @handler_registered = @subscribed = false
+        reset_presence
         @closed = true
       end
 

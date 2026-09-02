@@ -134,9 +134,8 @@ When('the client inserts its contract row') do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
                     .from(contract.fixture.fetch('table_name'))
-    result = table.insert(row).execute
     contract.register_cleanup(-> { table.delete.eq('slug', row.fetch('slug')).execute })
-    result
+    table.insert(row).execute
   end
 end
 
@@ -151,15 +150,14 @@ When('the client updates its contract row') do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
                     .from(contract.fixture.fetch('table_name'))
-    result = table.update('value' => row.fetch('after').fetch('value'))
-                  .eq('slug', row.fetch('before').fetch('slug'))
-                  .execute
     contract.register_cleanup(lambda do
       table.update('value' => row.fetch('before').fetch('value'))
            .eq('slug', row.fetch('before').fetch('slug'))
            .execute
     end)
-    result
+    table.update('value' => row.fetch('after').fetch('value'))
+         .eq('slug', row.fetch('before').fetch('slug'))
+         .execute
   end
 end
 
@@ -174,9 +172,11 @@ When('the client deletes its contract row') do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
                     .from(contract.fixture.fetch('table_name'))
-    result = table.delete.eq('slug', row.fetch('slug')).execute
-    contract.register_cleanup(-> { table.insert(row).execute })
-    result
+    contract.register_cleanup(lambda do
+      table.delete.eq('slug', row.fetch('slug')).execute
+      table.insert(row).execute
+    end)
+    table.delete.eq('slug', row.fetch('slug')).execute
   end
 end
 

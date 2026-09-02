@@ -15,7 +15,7 @@ module Volcano
     end
   end
 
-  # Uploads and downloads objects in one storage bucket.
+  # Operates on objects in one storage bucket.
   class StorageBucket
     def initialize(client, transport, name)
       @client = client
@@ -66,6 +66,13 @@ module Volcano
       )
     end
 
+    def remove(paths)
+      deleted = removal_paths(paths)
+      authorization = @client.session_token
+      deleted.each { |path| delete_path(path, authorization) }
+      deleted
+    end
+
     private
 
     def upload_bytes(value)
@@ -94,6 +101,26 @@ module Volcano
 
     def parse_time(value)
       value.is_a?(String) ? Time.iso8601(value) : value
+    end
+
+    def removal_paths(paths)
+      path_list = paths.is_a?(String) ? [paths] : paths.to_a
+      if path_list.empty? || !path_list.all? { |path| path.is_a?(String) && !path.empty? }
+        raise ArgumentError, 'storage paths must be non-empty strings'
+      end
+
+      path_list.map { |path| path.dup.freeze }.freeze
+    end
+
+    def delete_path(path, authorization)
+      response = Transport.invoke do
+        @transport.delete_storage_object(
+          authorization: authorization,
+          bucket_name: @name,
+          path: path
+        )
+      end
+      Transport.body(response, 200)
     end
   end
 end

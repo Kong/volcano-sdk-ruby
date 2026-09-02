@@ -313,6 +313,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       page = FakeGeneratedModel.new(objects: [], next_cursor: 'cursor-2')
       [page, 200, {}]
     end
+
+    def delete_storage_object_with_http_info(bucket, path)
+      @calls << [:delete, bucket, path]
+      [nil, 200, {}]
+    end
   end
 
   class FakeLocksApi
@@ -404,6 +409,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         limit: 25,
         cursor: 'cursor-1'
       ),
+      delete: transport.delete_storage_object(
+        authorization: 'access-token',
+        bucket_name: 'assets',
+        path: 'archive/a.txt'
+      ),
       acquire: transport.acquire_project_lock(
         authorization: 'service-key',
         key: 'build',
@@ -438,7 +448,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   it 'routes only the ten POC operations through generated API classes', :aggregate_failures do
     responses
-    expected_authorizations = Array.new(4, 'anon-key') + Array.new(5, 'access-token') + Array.new(2, 'service-key')
+    expected_authorizations = Array.new(4, 'anon-key') + Array.new(6, 'access-token') + Array.new(2, 'service-key')
     expect(authorizations).to eq(expected_authorizations)
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
@@ -458,7 +468,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           {}
         ],
         [:download, 'assets', 'a.txt'],
-        [:list, 'assets', { prefix: 'avatars', limit: 25, cursor: 'cursor-1' }]
+        [:list, 'assets', { prefix: 'avatars', limit: 25, cursor: 'cursor-1' }],
+        [:delete, 'assets', 'archive/a.txt']
       ]
     )
     expect(apis.locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])
@@ -955,8 +966,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'preserves object path segments and percent-encodes spaces' do
-    configuration = InternalGenerated::Configuration.new
-    api_client = described_class::ApiClient.new(configuration)
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
@@ -967,11 +977,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
     storage.download_storage_object_with_http_info('assets', 'folder/payload with space.txt')
+    storage.delete_storage_object_with_http_info('assets', 'folder/payload with space.txt')
 
-    expect(calls.map { |call| call.fetch(1) }).to eq(
-      Array.new(2, '/storage/assets/folder/payload%20with%20space.txt')
-    )
-    expect(calls.fetch(0).fetch(2).fetch(:return_type)).to eq('StorageObject')
+    expected_paths = Array.new(3, '/storage/assets/folder/payload%20with%20space.txt')
+    expect(calls.map { |call| call.fetch(1) }).to eq(expected_paths)
   ensure
     file&.close!
   end

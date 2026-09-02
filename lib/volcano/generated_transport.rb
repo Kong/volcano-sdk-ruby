@@ -70,6 +70,17 @@ module Volcano
       end
     end
 
+    def delete_storage_object(authorization:, bucket_name:, path:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.storage.delete_storage_object_with_http_info(
+          bucket_name,
+          path
+        )
+        response(data, status, headers)
+      end
+    end
+
     def acquire_project_lock(authorization:, key:, ttl:, token:)
       invoke do
         apis = @api_factory.call(authorization)

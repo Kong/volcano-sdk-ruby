@@ -1047,6 +1047,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     file&.close!
   end
 
+  it 'maps the generated download range option to the request header' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 206, {}] }
+    storage = described_class::StorageApi.new(api_client)
+
+    options, = storage.download_storage_object_with_http_info('assets', 'payload.txt', range: 'bytes=0-4')
+
+    expect(options.fetch(:header_params).fetch('Range')).to eq('bytes=0-4')
+  end
+
   it 'preserves nested object paths when updating visibility' do
     api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
     calls = []

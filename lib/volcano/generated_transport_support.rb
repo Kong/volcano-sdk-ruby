@@ -82,7 +82,11 @@ module Volcano
       end
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})
-        call_storage_api(:GET, bucket_name, path, opts.merge(DOWNLOAD_OPTIONS))
+        header_params = DOWNLOAD_OPTIONS.fetch(:header_params).merge(opts[:header_params] || {})
+        header_params['Range'] = opts[:range] unless opts[:range].nil?
+        options = opts.merge(DOWNLOAD_OPTIONS, header_params: header_params)
+
+        call_storage_api(:GET, bucket_name, path, options)
       end
 
       def delete_storage_object_with_http_info(bucket_name, path, opts = {})

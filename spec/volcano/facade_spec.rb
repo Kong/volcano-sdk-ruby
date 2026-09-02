@@ -615,6 +615,15 @@ RSpec.describe Volcano::Client do
         headers: {}, data: nil
       )
     end
+
+    def renew_project_lock(**arguments)
+      @calls << [:renew_project_lock, arguments]
+      Response.new(
+        status: 200,
+        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 8 },
+        headers: {}, data: nil
+      )
+    end
   end
 
   class FakeContractTransport
@@ -2405,6 +2414,28 @@ RSpec.describe Volcano::Client do
     expect(state.to_h.values).to all(be_frozen)
     expect(transport.calls).to eq(
       [[:get_project_lock, { authorization: 'service-key', key: 'build' }]]
+    )
+  end
+
+  it 'renews a lock lease without mutating the original' do
+    lease = Volcano::LockLease.new(
+      key: 'build', token: '00000000-0000-4000-8000-000000000001',
+      expires_at: Time.iso8601('2026-08-26T12:00:30Z'), fencing_token: 7
+    )
+
+    renewed = client.locks.renew('build', lease, ttl: 60)
+
+    expect(renewed).to eq(
+      Volcano::LockLease.new(
+        key: 'build', token: lease.token,
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'), fencing_token: 8
+      )
+    )
+    expect(lease.expires_at).to eq(Time.iso8601('2026-08-26T12:00:30Z'))
+    expect(transport.calls).to eq(
+      [[:renew_project_lock, {
+        authorization: 'service-key', key: 'build', ttl: 60, token: lease.token
+      }]]
     )
   end
 

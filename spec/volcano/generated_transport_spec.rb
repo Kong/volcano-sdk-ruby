@@ -401,6 +401,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       )
       [state, 200, {}]
     end
+
+    def renew_project_lock_with_http_info(key, token, request_id, body)
+      @calls << [:renew, key, token, request_id, body]
+      lease = FakeGeneratedModel.new(
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'),
+        fencing_token: 8
+      )
+      [lease, 200, {}]
+    end
   end
 
   let(:apis) do
@@ -523,6 +532,22 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     operation, key, request_id = apis.locks.calls.last
     expect([operation, key]).to eq([:get, 'build:queue'])
     expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(authorizations).to eq(['service-key'])
+  end
+
+  it 'renews a lock through the generated API' do
+    response = transport.renew_project_lock(
+      authorization: 'service-key', key: 'build:queue', ttl: 60,
+      token: '00000000-0000-4000-8000-000000000001'
+    )
+
+    expect(response.body).to include('fencing_token' => 8)
+    operation, key, token, request_id, body = apis.locks.calls.last
+    expect([operation, key, token]).to eq(
+      [:renew, 'build:queue', '00000000-0000-4000-8000-000000000001']
+    )
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(body.ttl_seconds).to eq(60)
     expect(authorizations).to eq(['service-key'])
   end
 

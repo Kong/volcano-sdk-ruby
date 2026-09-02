@@ -521,11 +521,14 @@ when the object is public.
 state = client.locks.get("build")
 puts state.held
 lease = client.locks.acquire("build", ttl: 30)
+lease = client.locks.renew("build", lease, ttl: 30)
 client.locks.release("build", lease)
 ```
 
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
+`locks.renew` returns a new immutable lease and leaves the previous value
+unchanged.
 
 ### Broadcast over realtime
 

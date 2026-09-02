@@ -31,6 +31,16 @@ module Volcano
       )
     end
 
+    def renew(key, lease, ttl:)
+      payload = Transport.body(renew_response(key, lease, ttl), 200)
+      LockLease.new(
+        key: key,
+        token: lease.token,
+        expires_at: parse_time(payload['expires_at']),
+        fencing_token: payload['fencing_token']
+      )
+    end
+
     def release(key, lease)
       response = Transport.invoke do
         @transport.release_project_lock(
@@ -61,6 +71,17 @@ module Volcano
           key: key,
           ttl: ttl,
           token: token
+        )
+      end
+    end
+
+    def renew_response(key, lease, ttl)
+      Transport.invoke do
+        @transport.renew_project_lock(
+          authorization: @client.service_token,
+          key: key,
+          ttl: ttl,
+          token: lease.token
         )
       end
     end

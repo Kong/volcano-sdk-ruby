@@ -457,7 +457,7 @@ part = bucket.upload_part(
   "videos/demo.mp4",
   session_id: upload_session.session_id,
   part_number: 1,
-  data: "first part".b
+  data: "x".b * upload_session.part_size
 )
 puts part.etag
 

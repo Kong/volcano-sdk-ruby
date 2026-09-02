@@ -20,17 +20,28 @@ module Volcano
       end
 
       def allowed_event?(event)
-        event == 'message' || (presence? && %w[join leave presence_sync].include?(event))
+        event == 'message' || (presence? && %w[join leave presence_sync].include?(event)) ||
+          (postgres? && PostgresChanges::EVENTS.include?(event))
       end
 
       def register_handlers(protocol, epoch)
-        unless @handler_registered
-          @publication_handler = protocol.on_publication(@name) do |event, data|
-            emit('message', data) if event == 'message'
-          end
-          @handler_registered = true
-        end
+        register_publication_handler(protocol)
         register_presence_handler(protocol, epoch)
+      end
+
+      def register_publication_handler(protocol)
+        return if @handler_registered
+
+        @publication_handler = protocol.on_publication(@name) { |event, data| deliver_publication(event, data) }
+        @handler_registered = true
+      end
+
+      def deliver_publication(event, data)
+        if postgres?
+          dispatch_postgres_change(data)
+        elsif event == 'message'
+          emit('message', data)
+        end
       end
 
       def emit(event, data)

@@ -6,6 +6,7 @@ require_relative 'realtime/connection'
 require_relative 'realtime/lifecycle'
 require_relative 'realtime/presence_state'
 require_relative 'realtime/presence'
+require_relative 'realtime/postgres_changes'
 require_relative 'realtime/channel_callbacks'
 
 module Volcano
@@ -44,7 +45,7 @@ module Volcano
       end
     end
 
-    CHANNEL_TYPES = %i[broadcast presence].freeze
+    CHANNEL_TYPES = %i[broadcast presence postgres].freeze
 
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
@@ -139,6 +140,7 @@ module Volcano
     class Channel
       include PresenceState
       include Presence
+      include PostgresChanges
       include ChannelCallbacks
 
       attr_reader :name
@@ -169,7 +171,7 @@ module Volcano
         with_lifecycle_lock do
           ensure_open!
           raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
-          raise ArgumentError, 'send is only available for broadcast channels' if presence?
+          raise ArgumentError, 'send is only available for broadcast channels' unless broadcast?
 
           data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
           @protocol_provider.call.publish(channel: @name, data: data)

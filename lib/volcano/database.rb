@@ -35,13 +35,27 @@ module Volcano
     end
 
     def eq(column, value)
-      condition = { 'column' => column, 'operator' => 'eq', 'value' => value }.freeze
-      self.class.new(
-        @context,
-        @table,
-        columns: @columns,
-        filters: [*@filters, condition]
-      )
+      add_filter(column, 'eq', value)
+    end
+
+    def neq(column, value)
+      add_filter(column, 'neq', value)
+    end
+
+    def gt(column, value)
+      add_filter(column, 'gt', value)
+    end
+
+    def gte(column, value)
+      add_filter(column, 'gte', value)
+    end
+
+    def lt(column, value)
+      add_filter(column, 'lt', value)
+    end
+
+    def lte(column, value)
+      add_filter(column, 'lte', value)
     end
 
     def execute
@@ -56,6 +70,16 @@ module Volcano
     end
 
     private
+
+    def add_filter(column, operator, value)
+      condition = { 'column' => column, 'operator' => operator, 'value' => value }.freeze
+      self.class.new(
+        @context,
+        @table,
+        columns: @columns,
+        filters: [*@filters, condition]
+      )
+    end
 
     def query_body
       { 'table' => @table }.tap do |body|

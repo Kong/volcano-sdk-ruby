@@ -2167,4 +2167,31 @@ RSpec.describe Volcano::Client do
       ]
     )
   end
+
+  {
+    neq: 'neq',
+    gt: 'gt',
+    gte: 'gte',
+    lt: 'lt',
+    lte: 'lte'
+  }.each do |method_name, operator|
+    it "keeps #{method_name} comparison filters immutable" do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      source = client.database('main').from('items').select('*')
+
+      source.public_send(method_name, 'priority', 7).execute
+      source.execute
+
+      query_calls = transport.calls_for(:query_database_select)
+      expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+        [
+          {
+            'table' => 'items',
+            'filters' => [{ 'column' => 'priority', 'operator' => operator, 'value' => 7 }]
+          },
+          { 'table' => 'items' }
+        ]
+      )
+    end
+  end
 end

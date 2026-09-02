@@ -397,6 +397,14 @@ established while sign-out is pending remains current.
 rows = client.database("main").from("items").select("*").eq("slug", "a").execute
 ```
 
+Database builders are immutable, so a base query can be reused safely. Chain
+`neq`, `gt`, `gte`, `lt`, and `lte` for comparison filters:
+
+```ruby
+base_query = client.database("main").from("items").select("id", "priority")
+rows = base_query.gte("priority", 3).lt("priority", 10).execute
+```
+
 ### Upload and download an object
 
 ```ruby

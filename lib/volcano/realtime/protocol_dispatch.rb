@@ -12,7 +12,17 @@ module Volcano
         elsif frame.key?('id')
           dispatch_reply(frame)
         elsif frame.key?('push')
-          dispatch_publication(frame.fetch('push'))
+          dispatch_push(frame.fetch('push'))
+        end
+      end
+
+      def dispatch_push(push)
+        if push.key?('pub')
+          dispatch_publication(push)
+        elsif push.key?('join')
+          dispatch_presence(push, 'join')
+        elsif push.key?('leave')
+          dispatch_presence(push, 'leave')
         end
       end
 
@@ -37,13 +47,26 @@ module Volcano
         return unless data.is_a?(Hash)
 
         event = data['event']
-        registered_channel = @publication_handlers.each_key.select do |candidate|
-          channel == candidate || channel.end_with?(":#{candidate}")
-        end.max_by(&:length)
+        registered_channel = matching_channel(@publication_handlers, channel)
         return unless registered_channel
         return if @callback_queue.size >= @max_callback_queue
 
         @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
+      end
+
+      def dispatch_presence(push, event)
+        channel = matching_channel(@presence_handlers, push['channel'].to_s)
+        info = push.dig(event, 'info')
+        return unless channel && info.is_a?(Hash)
+        return if @callback_queue.size >= @max_callback_queue
+
+        @callback_queue.enqueue([@presence_handlers.fetch(channel).dup, event, info])
+      end
+
+      def matching_channel(handlers, channel)
+        handlers.each_key.select do |candidate|
+          channel == candidate || channel.end_with?(":#{candidate}")
+        end.max_by(&:length)
       end
 
       def dispatch_callbacks

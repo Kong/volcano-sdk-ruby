@@ -5,7 +5,9 @@ require 'tempfile'
 
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   unless const_defined?(:GeneratedApis)
-    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks, :functions)
+    GeneratedApis = Data.define(
+      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+    )
   end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
@@ -444,6 +446,34 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
 
+  class FakeLogsApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def search_project_logs_with_http_info(project_id, request)
+      @calls << [:search, project_id, request]
+      result = FakeGeneratedModel.new(
+        data: [
+          {
+            id: 'event-1', timestamp: '2026-09-02T12:00:00Z', body: 'ready',
+            resource: { type: 'function', id: 'function-1' }
+          }
+        ],
+        limit: 25, has_more: false
+      )
+      [result, 200, {}]
+    end
+
+    def get_project_log_activity_with_http_info(project_id, request)
+      @calls << [:activity, project_id, request]
+      result = FakeGeneratedModel.new(data: [], total: 0)
+      [result, 200, {}]
+    end
+  end
+
   let(:apis) do
     GeneratedApis.new(
       authentication: FakeAuthenticationApi.new,
@@ -451,7 +481,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       database: FakeDatabaseApi.new,
       storage: FakeStorageApi.new,
       locks: FakeLocksApi.new,
-      functions: FakeFunctionsApi.new
+      functions: FakeFunctionsApi.new,
+      logs: FakeLogsApi.new
     )
   end
   let(:authorizations) { [] }
@@ -550,7 +581,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         database: empty,
         storage: storage,
         locks: empty,
-        functions: empty
+        functions: empty,
+        logs: empty
       )
     end
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
@@ -577,6 +609,33 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request.to_hash).to eq(payload: { 'user_id' => 'user-123' })
     expect(options).to eq(follow_location: false)
     expect(authorizations).to eq(%w[access-token access-token])
+  end
+
+  it 'reads project logs through generated operations', :aggregate_failures do
+    project_id = '00000000-0000-4000-8000-000000000001'
+    resource = { 'resource' => { 'type' => 'function' } }
+
+    search = transport.search_project_logs(
+      authorization: 'access-token', project_id: project_id,
+      request: resource.merge('limit' => 25)
+    )
+    activity = transport.get_project_log_activity(
+      authorization: 'access-token', project_id: project_id,
+      request: resource.merge('bucket_count' => 12)
+    )
+
+    expect(search.body.fetch('data').first.fetch('id')).to eq('event-1')
+    expect(activity.body.fetch('total')).to eq(0)
+    search_call = apis.logs.calls.fetch(0)
+    activity_call = apis.logs.calls.fetch(1)
+    expect(search_call.first(2)).to eq([:search, project_id])
+    expect(search_call.last.to_hash).to eq(
+      resource: { type: 'function' }, limit: 25
+    )
+    expect(activity_call.first(2)).to eq([:activity, project_id])
+    expect(activity_call.last.to_hash).to eq(
+      resource: { type: 'function' }, bucket_count: 12
+    )
   end
 
   it 'reads a lock through the generated API' do
@@ -1486,7 +1545,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     factory = lambda do |_authorization|
       GeneratedApis.new(
         authentication: authentication, oauth: empty, database: empty,
-        storage: empty, locks: empty, functions: empty
+        storage: empty, locks: empty, functions: empty, logs: empty
       )
     end
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)

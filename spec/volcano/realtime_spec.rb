@@ -80,6 +80,7 @@ RSpec.describe Volcano::Realtime do
     client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
 
     expect(client.realtime.channel('contract').name).to eq('broadcast:contract')
+    expect(client.realtime.channel('contract').name).to be_frozen
   end
 
   it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do

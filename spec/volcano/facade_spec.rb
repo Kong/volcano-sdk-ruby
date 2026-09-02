@@ -2198,21 +2198,29 @@ RSpec.describe Volcano::Client do
   { like: 'like', ilike: 'ilike' }.each do |method_name, operator|
     it "keeps #{method_name} pattern filters immutable" do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      source = client.database('main').from('items').select('*')
+      database_name = +'main'
+      table = +'items'
+      selected_column = +'id'
+      filter_column = +'name'
+      pattern = +'%volcano%'
+      source = client.database(database_name).from(table).select(selected_column)
 
-      source.public_send(method_name, 'name', '%volcano%').execute
-      source.execute
+      query = source.public_send(method_name, filter_column, pattern)
+      [database_name, table, selected_column, filter_column, pattern]
+        .zip(%w[other other_items other_id other_name %lava%]) { |value, replacement| value.replace(replacement) }
+      query.execute
 
       query_calls = transport.calls_for(:query_database_select)
+      expect(query_calls.map { |_, arguments| arguments[:database_name] }).to eq(['main'])
       expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
         [
           {
             'table' => 'items',
+            'select' => ['id'],
             'filters' => [
               { 'column' => 'name', 'operator' => operator, 'value' => '%volcano%' }
             ]
-          },
-          { 'table' => 'items' }
+          }
         ]
       )
     end

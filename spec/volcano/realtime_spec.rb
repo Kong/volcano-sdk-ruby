@@ -275,6 +275,60 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'retains the last presence snapshot when a resync fails' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      errors = []
+      client.realtime.on_error { |context| errors << context }
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      socket.on_write = lambda do |command|
+        next unless command.key?('presence')
+
+        socket.reject(command.fetch('id'), 'resync unavailable')
+        :defer
+      end
+
+      channel.__send__(:sync_presence, client.realtime.send(:protocol), 1)
+      task.with_timeout(0.2) { task.yield until errors.any? }
+
+      expect(channel.presence_state.keys).to eq(['alice-client'])
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reports one error when protocol loss rejects a presence resync' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      errors = []
+      pending = Async::Queue.new
+      client.realtime.on_error { |context| errors << context }
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      socket.on_write = lambda do |command|
+        pending.enqueue(command) if command.key?('presence')
+        :defer
+      end
+      syncing = task.async do
+        channel.__send__(:sync_presence, client.realtime.send(:protocol), 1)
+      end
+      pending.dequeue
+
+      socket.fail_read(IOError.new('socket failed'))
+      syncing.wait
+      task.with_timeout(0.2) { task.yield until errors.any? }
+
+      expect(errors.length).to eq(1)
+    end.wait
+  end
+
   it 'clears presence after an unexpected disconnect' do
     socket = FacadeSocket.new
     client = realtime_client(socket)

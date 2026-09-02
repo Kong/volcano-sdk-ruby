@@ -59,8 +59,7 @@ module Volcano
 
         emit_presence_sync(fetch_presence_state(protocol, epoch))
       rescue StandardError => e
-        emit_presence_sync(clear_failed_presence(epoch))
-        @realtime.__send__(:report_channel_error, e)
+        report_presence_error(protocol, epoch, e)
       end
 
       def fetch_presence_state(protocol, epoch)
@@ -83,14 +82,14 @@ module Volcano
         emit('presence_sync', state)
       end
 
-      def clear_failed_presence(epoch)
-        presence_lock.acquire do
-          replace_presence({}) if active_presence_epoch?(epoch)
-        end
-      end
-
       def emit_presence_sync(state)
         emit('presence_sync', state) if state
+      end
+
+      def report_presence_error(protocol, epoch, error)
+        return unless protocol.connected? && active_presence_epoch?(epoch)
+
+        @realtime.__send__(:report_channel_error, error)
       end
 
       def next_presence_epoch

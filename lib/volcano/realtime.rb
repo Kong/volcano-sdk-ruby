@@ -147,22 +147,21 @@ module Volcano
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
-        @callbacks = Hash.new { |hash, key| hash[key] = [] }
         @handler_registered = @subscribed = @closed = false
-        @publication_handler = nil
         @lifecycle_lock = nil
-        @callback_lock = nil
+        initialize_callback_dispatch
         initialize_presence(type)
       end
 
       def subscribe
-        with_lifecycle_lock do
+        protocol, epoch = with_lifecycle_lock do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
 
           protocol = @protocol_provider.call
           subscribe_protocol(protocol)
         end
+        sync_presence(protocol, epoch)
         nil
       end
 
@@ -208,6 +207,13 @@ module Volcano
         reset_presence
       end
 
+      def protocol_lost(protocol)
+        @subscribed = false
+        detach_publication_handler(protocol)
+        @handler_registered = false
+        reset_presence
+      end
+
       private
 
       def subscribe_protocol(protocol)
@@ -215,7 +221,7 @@ module Volcano
         register_handlers(protocol, epoch)
         protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
         @subscribed = true
-        sync_presence(protocol, epoch)
+        [protocol, epoch]
       rescue StandardError
         invalidate_presence_subscription(protocol)
         raise

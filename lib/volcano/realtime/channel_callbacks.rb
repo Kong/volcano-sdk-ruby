@@ -13,6 +13,12 @@ module Volcano
 
       private
 
+      def initialize_callback_dispatch
+        @callbacks = Hash.new { |hash, key| hash[key] = [] }
+        @publication_handler = @callback_lock = @callback_task = nil
+        @deferred_callback_deliveries = []
+      end
+
       def allowed_event?(event)
         event == 'message' || (presence? && %w[join leave presence_sync].include?(event))
       end
@@ -31,10 +37,33 @@ module Volcano
         callbacks = @callbacks[event].dup
         return if callbacks.empty?
 
-        Async::Task.current.async do
-          callback_lock.acquire { dispatch_callbacks(event, data, callbacks) }
-        end
+        delivery = [event, data, callbacks]
+        return defer_callback_delivery(delivery) if callback_dispatching?
+
+        callback_lock.acquire { dispatch_callback_delivery(delivery) }
         nil
+      end
+
+      def callback_dispatching?
+        @callback_task.equal?(Async::Task.current)
+      end
+
+      def defer_callback_delivery(delivery)
+        @deferred_callback_deliveries << delivery
+        nil
+      end
+
+      def dispatch_callback_delivery(delivery)
+        @callback_task = Async::Task.current
+        @deferred_callback_deliveries << delivery
+        dispatch_deferred_callbacks until @deferred_callback_deliveries.empty?
+      ensure
+        @callback_task = nil
+      end
+
+      def dispatch_deferred_callbacks
+        event, data, callbacks = @deferred_callback_deliveries.shift
+        dispatch_callbacks(event, data, callbacks)
       end
 
       def dispatch_callbacks(event, data, callbacks)

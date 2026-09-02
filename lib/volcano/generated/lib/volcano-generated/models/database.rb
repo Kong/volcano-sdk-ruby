@@ -23,7 +23,7 @@ module Volcano::Generated
     # Database name
     attr_accessor :name
 
-    # Database provisioning status
+    # Database status. `restoring` means a restore is replacing the database's data: it does not accept connections, and the operations that would race the restore are rejected until it finishes. Its branches keep serving throughout. 
     attr_accessor :status
 
     # Timestamp when the current provisioning phase started
@@ -41,7 +41,7 @@ module Volcano::Generated
     # Database size tier that determines available RAM and scaling limits. 
     attr_accessor :database_type
 
-    # Latest observed on-disk size from `pg_database_size`, in bytes. This point-in-time gauge may be absent until the database has been sampled. Summing the latest samples for every database in a project produces the project's \"Database Storage (Bytes)\" usage gauge. Populated on database list responses; single-database responses omit it. 
+    # Latest observed storage for this database, in bytes: its own on-disk size, plus what each branch has diverged from it, plus what its backups cost to hold. This is the figure the storage allowance is enforced against, and the stats endpoint breaks it down. A point-in-time gauge recorded by a background pass, so it may be absent until the database has been sampled, and it can trail the stats endpoint's `current_storage_bytes`, which measures on request. Summing the latest samples for every database in a project produces the project's \"Database Storage (Bytes)\" usage gauge. Populated on database list responses; single-database responses omit it. 
     attr_accessor :storage_bytes
 
     # Most recent request timestamp for this database
@@ -263,7 +263,7 @@ module Volcano::Generated
       return false if @name.to_s.length > 64
       return false if @name !~ Regexp.new(/^[a-z0-9_]+$/)
       return false if @status.nil?
-      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "deleting"])
+      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "restoring", "deleting"])
       return false unless status_validator.valid?(@status)
       database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
       return false unless database_type_validator.valid?(@database_type)
@@ -315,7 +315,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] status Object to be assigned
     def status=(status)
-      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "deleting"])
+      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "restoring", "deleting"])
       unless validator.valid?(status)
         fail ArgumentError, "invalid value for \"status\", must be one of #{validator.allowable_values}."
       end

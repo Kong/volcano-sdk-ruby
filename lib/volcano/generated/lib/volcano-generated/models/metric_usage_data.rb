@@ -16,7 +16,7 @@ require 'time'
 module Volcano::Generated
   # Usage data for one metric across totals, daily, and hourly windows.
   class MetricUsageData < ApiModelBase
-    # Metric name (for example, \"Function & Frontend Invocations\", \"Frontend Requests\", \"CodeBuild Build Seconds\", \"Bandwidth Ingress (Bytes)\", \"Bandwidth Egress (Bytes)\", \"Bandwidth Total (Bytes)\", or \"Database Storage (Bytes)\"). Byte-based metrics are reported in bytes. \"Bandwidth Total (Bytes)\" is derived (ingress + egress) and is not billed separately. \"Database Storage (Bytes)\" is a current observed gauge, not a cumulative counter. It is the sum of the latest `pg_database_size` samples exposed as `storage_bytes` by the project's database list. 
+    # Metric name (for example, \"Function & Frontend Invocations\", \"Frontend Requests\", \"CodeBuild Build Seconds\", \"Bandwidth Ingress (Bytes)\", \"Bandwidth Egress (Bytes)\", \"Bandwidth Total (Bytes)\", or \"Database Storage (Bytes)\"). Byte-based metrics are reported in bytes. \"Bandwidth Total (Bytes)\" is derived (ingress + egress) and is not billed separately. \"Database Storage (Bytes)\" is a current observed gauge, not a cumulative counter. It is the sum of the latest samples exposed as `storage_bytes` by the project's database list, so it includes what each database's branches and backups hold, and it inherits that field's lag behind a live measurement. 
     attr_accessor :metric
 
     # Total usage for the current usage month

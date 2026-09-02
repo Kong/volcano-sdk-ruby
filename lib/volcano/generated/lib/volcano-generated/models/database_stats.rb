@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class DatabaseStats < ApiModelBase
-    # On-disk size right now, in bytes: the database itself plus every branch's divergence from it. This is the figure the storage allowance is enforced against. `branches` breaks it down. 
+    # On-disk size right now, in bytes: the database itself, plus every branch's divergence from it, plus what its backups cost to hold. This is the figure the storage allowance is enforced against. `branches` and `backup_storage_bytes` break it down. 
     attr_accessor :current_storage_bytes
 
     # `current_storage_bytes` expressed in megabytes.
@@ -23,6 +23,9 @@ module Volcano::Generated
 
     # Per-branch contribution to `current_storage_bytes`. Empty when the database has no branches. A branch that has not diverged from its parent contributes nothing. 
     attr_accessor :branches
+
+    # What this database's backups contribute to `current_storage_bytes`.  A backup taken on request is charged as a full copy of the database as it was at that moment, so two backups of a 2 GB database are 4 GB. A backup schedule is charged its first snapshot in full and each later one only for the storage it adds. Deleting a backup releases its storage immediately.  Sampled from the provider rather than measured live, so it can lag a change by a few minutes, and a backup taken seconds ago may not be costed yet. Zero on a plan without backups. 
+    attr_accessor :backup_storage_bytes
 
     # Total storage used in bytes (data + WAL)
     attr_accessor :storage_bytes
@@ -73,6 +76,7 @@ module Volcano::Generated
         :'current_storage_bytes' => :'current_storage_bytes',
         :'current_storage_mb' => :'current_storage_mb',
         :'branches' => :'branches',
+        :'backup_storage_bytes' => :'backup_storage_bytes',
         :'storage_bytes' => :'storage_bytes',
         :'data_written_bytes' => :'data_written_bytes',
         :'data_transfer_bytes' => :'data_transfer_bytes',
@@ -99,6 +103,7 @@ module Volcano::Generated
         :'current_storage_bytes' => :'Integer',
         :'current_storage_mb' => :'Float',
         :'branches' => :'Array<DatabaseBranchStorage>',
+        :'backup_storage_bytes' => :'Integer',
         :'storage_bytes' => :'Integer',
         :'data_written_bytes' => :'Integer',
         :'data_transfer_bytes' => :'Integer',
@@ -147,6 +152,12 @@ module Volcano::Generated
         if (value = attributes[:'branches']).is_a?(Array)
           self.branches = value
         end
+      end
+
+      if attributes.key?(:'backup_storage_bytes')
+        self.backup_storage_bytes = attributes[:'backup_storage_bytes']
+      else
+        self.backup_storage_bytes = nil
       end
 
       if attributes.key?(:'storage_bytes')
@@ -209,6 +220,14 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "current_storage_mb", must be greater than or equal to 0.')
       end
 
+      if @backup_storage_bytes.nil?
+        invalid_properties.push('invalid value for "backup_storage_bytes", backup_storage_bytes cannot be nil.')
+      end
+
+      if @backup_storage_bytes < 0
+        invalid_properties.push('invalid value for "backup_storage_bytes", must be greater than or equal to 0.')
+      end
+
       if @storage_bytes.nil?
         invalid_properties.push('invalid value for "storage_bytes", storage_bytes cannot be nil.')
       end
@@ -240,6 +259,8 @@ module Volcano::Generated
       return false if @current_storage_bytes < 0
       return false if @current_storage_mb.nil?
       return false if @current_storage_mb < 0
+      return false if @backup_storage_bytes.nil?
+      return false if @backup_storage_bytes < 0
       return false if @storage_bytes.nil?
       return false if @data_written_bytes.nil?
       return false if @data_transfer_bytes.nil?
@@ -276,6 +297,20 @@ module Volcano::Generated
       end
 
       @current_storage_mb = current_storage_mb
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] backup_storage_bytes Value to be assigned
+    def backup_storage_bytes=(backup_storage_bytes)
+      if backup_storage_bytes.nil?
+        fail ArgumentError, 'backup_storage_bytes cannot be nil'
+      end
+
+      if backup_storage_bytes < 0
+        fail ArgumentError, 'invalid value for "backup_storage_bytes", must be greater than or equal to 0.'
+      end
+
+      @backup_storage_bytes = backup_storage_bytes
     end
 
     # Custom attribute writer method with validation
@@ -346,6 +381,7 @@ module Volcano::Generated
           current_storage_bytes == o.current_storage_bytes &&
           current_storage_mb == o.current_storage_mb &&
           branches == o.branches &&
+          backup_storage_bytes == o.backup_storage_bytes &&
           storage_bytes == o.storage_bytes &&
           data_written_bytes == o.data_written_bytes &&
           data_transfer_bytes == o.data_transfer_bytes &&
@@ -364,7 +400,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [current_storage_bytes, current_storage_mb, branches, storage_bytes, data_written_bytes, data_transfer_bytes, compute_time_seconds, active_time_seconds, time_range, granularity].hash
+      [current_storage_bytes, current_storage_mb, branches, backup_storage_bytes, storage_bytes, data_written_bytes, data_transfer_bytes, compute_time_seconds, active_time_seconds, time_range, granularity].hash
     end
 
     # Builds the object from hash

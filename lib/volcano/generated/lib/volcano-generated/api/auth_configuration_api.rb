@@ -161,6 +161,134 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Clear one managed auth page layout
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_auth_page_layout(id, page_type, opts = {})
+      delete_auth_page_layout_with_http_info(id, page_type, opts)
+      nil
+    end
+
+    # Clear one managed auth page layout
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_auth_page_layout_with_http_info(id, page_type, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.delete_auth_page_layout ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.delete_auth_page_layout"
+      end
+      # verify the required parameter 'page_type' is set
+      if @api_client.config.client_side_validation && page_type.nil?
+        fail ArgumentError, "Missing the required parameter 'page_type' when calling AuthConfigurationApi.delete_auth_page_layout"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/{pageType}/layout'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'pageType' + '}', CGI.escape(page_type.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.delete_auth_page_layout",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#delete_auth_page_layout\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Clear the managed auth page theme
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_auth_page_theme(id, opts = {})
+      delete_auth_page_theme_with_http_info(id, opts)
+      nil
+    end
+
+    # Clear the managed auth page theme
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_auth_page_theme_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.delete_auth_page_theme ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.delete_auth_page_theme"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/theme'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.delete_auth_page_theme",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#delete_auth_page_theme\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Delete email template
     # Deletes a custom template, reverting to the default. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403. 
     # @param id [String] Project ID
@@ -424,6 +552,67 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: AuthConfigurationApi#get_auth_methods\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get managed auth page appearance
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [AuthPageAppearanceResponse]
+    def get_auth_page_appearance(id, opts = {})
+      data, _status_code, _headers = get_auth_page_appearance_with_http_info(id, opts)
+      data
+    end
+
+    # Get managed auth page appearance
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(AuthPageAppearanceResponse, Integer, Hash)>] AuthPageAppearanceResponse data, response status code and response headers
+    def get_auth_page_appearance_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.get_auth_page_appearance ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.get_auth_page_appearance"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/appearance'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'AuthPageAppearanceResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.get_auth_page_appearance",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#get_auth_page_appearance\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -837,6 +1026,84 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Preview an unsaved managed auth page appearance
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param preview_auth_page_request [PreviewAuthPageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [PreviewAuthPageResponse]
+    def preview_auth_page(id, page_type, preview_auth_page_request, opts = {})
+      data, _status_code, _headers = preview_auth_page_with_http_info(id, page_type, preview_auth_page_request, opts)
+      data
+    end
+
+    # Preview an unsaved managed auth page appearance
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param preview_auth_page_request [PreviewAuthPageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(PreviewAuthPageResponse, Integer, Hash)>] PreviewAuthPageResponse data, response status code and response headers
+    def preview_auth_page_with_http_info(id, page_type, preview_auth_page_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.preview_auth_page ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.preview_auth_page"
+      end
+      # verify the required parameter 'page_type' is set
+      if @api_client.config.client_side_validation && page_type.nil?
+        fail ArgumentError, "Missing the required parameter 'page_type' when calling AuthConfigurationApi.preview_auth_page"
+      end
+      # verify the required parameter 'preview_auth_page_request' is set
+      if @api_client.config.client_side_validation && preview_auth_page_request.nil?
+        fail ArgumentError, "Missing the required parameter 'preview_auth_page_request' when calling AuthConfigurationApi.preview_auth_page"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/{pageType}/preview'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'pageType' + '}', CGI.escape(page_type.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(preview_auth_page_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'PreviewAuthPageResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.preview_auth_page",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#preview_auth_page\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Render default managed auth page
     # Public HTML endpoint for the managed login page. Requires `Accept: text/html`. 
     # @param id [String] Project ID
@@ -916,8 +1183,8 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
-    # Render managed reset-password page
-    # Public HTML endpoint for the managed reset-password page. Requires `Accept: text/html`. Returns 404 when managed hosted pages are disabled for the project. 
+    # Render a managed auth page
+    # Public HTML endpoint for signup, forgot-password, device approval, verify-email, and reset-password pages. Login uses the path without a page type. Requires `Accept: text/html`. Returns 404 when managed hosted pages are disabled for the project. 
     # @param id [String] Project ID
     # @param page_type [HostedRenderablePageType] 
     # @param [Hash] opts the optional parameters
@@ -927,8 +1194,8 @@ module Volcano::Generated
       data
     end
 
-    # Render managed reset-password page
-    # Public HTML endpoint for the managed reset-password page. Requires &#x60;Accept: text/html&#x60;. Returns 404 when managed hosted pages are disabled for the project. 
+    # Render a managed auth page
+    # Public HTML endpoint for signup, forgot-password, device approval, verify-email, and reset-password pages. Login uses the path without a page type. Requires &#x60;Accept: text/html&#x60;. Returns 404 when managed hosted pages are disabled for the project. 
     # @param id [String] Project ID
     # @param page_type [HostedRenderablePageType] 
     # @param [Hash] opts the optional parameters
@@ -1205,6 +1472,156 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: AuthConfigurationApi#update_auth_hosted_page\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Save one managed auth page layout
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param update_auth_page_layout_request [UpdateAuthPageLayoutRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [UpdateAuthPageLayoutRequest]
+    def update_auth_page_layout(id, page_type, update_auth_page_layout_request, opts = {})
+      data, _status_code, _headers = update_auth_page_layout_with_http_info(id, page_type, update_auth_page_layout_request, opts)
+      data
+    end
+
+    # Save one managed auth page layout
+    # @param id [String] Project ID
+    # @param page_type [HostedAuthPageType] 
+    # @param update_auth_page_layout_request [UpdateAuthPageLayoutRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(UpdateAuthPageLayoutRequest, Integer, Hash)>] UpdateAuthPageLayoutRequest data, response status code and response headers
+    def update_auth_page_layout_with_http_info(id, page_type, update_auth_page_layout_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.update_auth_page_layout ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.update_auth_page_layout"
+      end
+      # verify the required parameter 'page_type' is set
+      if @api_client.config.client_side_validation && page_type.nil?
+        fail ArgumentError, "Missing the required parameter 'page_type' when calling AuthConfigurationApi.update_auth_page_layout"
+      end
+      # verify the required parameter 'update_auth_page_layout_request' is set
+      if @api_client.config.client_side_validation && update_auth_page_layout_request.nil?
+        fail ArgumentError, "Missing the required parameter 'update_auth_page_layout_request' when calling AuthConfigurationApi.update_auth_page_layout"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/{pageType}/layout'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'pageType' + '}', CGI.escape(page_type.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(update_auth_page_layout_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'UpdateAuthPageLayoutRequest'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.update_auth_page_layout",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#update_auth_page_layout\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Save the managed auth page theme
+    # @param id [String] Project ID
+    # @param update_auth_page_theme_request [UpdateAuthPageThemeRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [UpdateAuthPageThemeRequest]
+    def update_auth_page_theme(id, update_auth_page_theme_request, opts = {})
+      data, _status_code, _headers = update_auth_page_theme_with_http_info(id, update_auth_page_theme_request, opts)
+      data
+    end
+
+    # Save the managed auth page theme
+    # @param id [String] Project ID
+    # @param update_auth_page_theme_request [UpdateAuthPageThemeRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(UpdateAuthPageThemeRequest, Integer, Hash)>] UpdateAuthPageThemeRequest data, response status code and response headers
+    def update_auth_page_theme_with_http_info(id, update_auth_page_theme_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.update_auth_page_theme ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AuthConfigurationApi.update_auth_page_theme"
+      end
+      # verify the required parameter 'update_auth_page_theme_request' is set
+      if @api_client.config.client_side_validation && update_auth_page_theme_request.nil?
+        fail ArgumentError, "Missing the required parameter 'update_auth_page_theme_request' when calling AuthConfigurationApi.update_auth_page_theme"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/auth/pages/theme'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(update_auth_page_theme_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'UpdateAuthPageThemeRequest'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AuthConfigurationApi.update_auth_page_theme",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AuthConfigurationApi#update_auth_page_theme\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

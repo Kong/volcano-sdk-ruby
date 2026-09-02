@@ -14,27 +14,48 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class GitRepository < ApiModelBase
-    # Stable GitHub repository id (repository.id), unchanged by renames.
-    attr_accessor :id
+  # The project's source of truth and any pending Git transition.
+  class ProjectSourceExportState < ApiModelBase
+    attr_accessor :mode
 
-    attr_accessor :full_name
+    # When source export started, cleared if an incomplete transition is canceled.
+    attr_accessor :transition_started_at
 
-    attr_accessor :default_branch
+    # When the initial export push entered deployment, or when a transition was canceled after its commit was reserved. Once set, the one-time export is consumed.
+    attr_accessor :exported_at
 
-    attr_accessor :private
+    # When a complete production-branch deployment first proved the repository could drive the project, null until then. Once set, the repository is the project's source of truth.
+    attr_accessor :handed_over_at
 
-    # Whether the repository has no commits and can receive an initial source export.
-    attr_accessor :is_empty
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'id' => :'id',
-        :'full_name' => :'full_name',
-        :'default_branch' => :'default_branch',
-        :'private' => :'private',
-        :'is_empty' => :'is_empty'
+        :'mode' => :'mode',
+        :'transition_started_at' => :'transition_started_at',
+        :'exported_at' => :'exported_at',
+        :'handed_over_at' => :'handed_over_at'
       }
     end
 
@@ -51,17 +72,19 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'id' => :'Integer',
-        :'full_name' => :'String',
-        :'default_branch' => :'String',
-        :'private' => :'Boolean',
-        :'is_empty' => :'Boolean'
+        :'mode' => :'String',
+        :'transition_started_at' => :'Time',
+        :'exported_at' => :'Time',
+        :'handed_over_at' => :'Time'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'transition_started_at',
+        :'exported_at',
+        :'handed_over_at'
       ])
     end
 
@@ -69,46 +92,40 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::GitRepository` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectSourceExportState` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::GitRepository`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectSourceExportState`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'id')
-        self.id = attributes[:'id']
+      if attributes.key?(:'mode')
+        self.mode = attributes[:'mode']
       else
-        self.id = nil
+        self.mode = nil
       end
 
-      if attributes.key?(:'full_name')
-        self.full_name = attributes[:'full_name']
+      if attributes.key?(:'transition_started_at')
+        self.transition_started_at = attributes[:'transition_started_at']
       else
-        self.full_name = nil
+        self.transition_started_at = nil
       end
 
-      if attributes.key?(:'default_branch')
-        self.default_branch = attributes[:'default_branch']
+      if attributes.key?(:'exported_at')
+        self.exported_at = attributes[:'exported_at']
       else
-        self.default_branch = nil
+        self.exported_at = nil
       end
 
-      if attributes.key?(:'private')
-        self.private = attributes[:'private']
+      if attributes.key?(:'handed_over_at')
+        self.handed_over_at = attributes[:'handed_over_at']
       else
-        self.private = nil
-      end
-
-      if attributes.key?(:'is_empty')
-        self.is_empty = attributes[:'is_empty']
-      else
-        self.is_empty = nil
+        self.handed_over_at = nil
       end
     end
 
@@ -117,24 +134,8 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @id.nil?
-        invalid_properties.push('invalid value for "id", id cannot be nil.')
-      end
-
-      if @full_name.nil?
-        invalid_properties.push('invalid value for "full_name", full_name cannot be nil.')
-      end
-
-      if @default_branch.nil?
-        invalid_properties.push('invalid value for "default_branch", default_branch cannot be nil.')
-      end
-
-      if @private.nil?
-        invalid_properties.push('invalid value for "private", private cannot be nil.')
-      end
-
-      if @is_empty.nil?
-        invalid_properties.push('invalid value for "is_empty", is_empty cannot be nil.')
+      if @mode.nil?
+        invalid_properties.push('invalid value for "mode", mode cannot be nil.')
       end
 
       invalid_properties
@@ -144,62 +145,20 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @id.nil?
-      return false if @full_name.nil?
-      return false if @default_branch.nil?
-      return false if @private.nil?
-      return false if @is_empty.nil?
+      return false if @mode.nil?
+      mode_validator = EnumAttributeValidator.new('String', ["platform", "git_exporting", "git_pending", "git"])
+      return false unless mode_validator.valid?(@mode)
       true
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] id Value to be assigned
-    def id=(id)
-      if id.nil?
-        fail ArgumentError, 'id cannot be nil'
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] mode Object to be assigned
+    def mode=(mode)
+      validator = EnumAttributeValidator.new('String', ["platform", "git_exporting", "git_pending", "git"])
+      unless validator.valid?(mode)
+        fail ArgumentError, "invalid value for \"mode\", must be one of #{validator.allowable_values}."
       end
-
-      @id = id
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] full_name Value to be assigned
-    def full_name=(full_name)
-      if full_name.nil?
-        fail ArgumentError, 'full_name cannot be nil'
-      end
-
-      @full_name = full_name
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] default_branch Value to be assigned
-    def default_branch=(default_branch)
-      if default_branch.nil?
-        fail ArgumentError, 'default_branch cannot be nil'
-      end
-
-      @default_branch = default_branch
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] private Value to be assigned
-    def private=(private)
-      if private.nil?
-        fail ArgumentError, 'private cannot be nil'
-      end
-
-      @private = private
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] is_empty Value to be assigned
-    def is_empty=(is_empty)
-      if is_empty.nil?
-        fail ArgumentError, 'is_empty cannot be nil'
-      end
-
-      @is_empty = is_empty
+      @mode = mode
     end
 
     # Checks equality by comparing each attribute.
@@ -207,11 +166,10 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          id == o.id &&
-          full_name == o.full_name &&
-          default_branch == o.default_branch &&
-          private == o.private &&
-          is_empty == o.is_empty
+          mode == o.mode &&
+          transition_started_at == o.transition_started_at &&
+          exported_at == o.exported_at &&
+          handed_over_at == o.handed_over_at
     end
 
     # @see the `==` method
@@ -223,7 +181,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, full_name, default_branch, private, is_empty].hash
+      [mode, transition_started_at, exported_at, handed_over_at].hash
     end
 
     # Builds the object from hash

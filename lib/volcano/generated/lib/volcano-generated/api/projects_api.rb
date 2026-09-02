@@ -96,6 +96,69 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Cancel an incomplete source export
+    # Restores platform source writes while the project is in `git_exporting` or `git_pending`. If Volcano reserved or deployed the root commit, export remains consumed and cannot be run again. The connected repository and any commit already pushed to it are unchanged. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def cancel_project_source_export(id, opts = {})
+      cancel_project_source_export_with_http_info(id, opts)
+      nil
+    end
+
+    # Cancel an incomplete source export
+    # Restores platform source writes while the project is in &#x60;git_exporting&#x60; or &#x60;git_pending&#x60;. If Volcano reserved or deployed the root commit, export remains consumed and cannot be run again. The connected repository and any commit already pushed to it are unchanged. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def cancel_project_source_export_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.cancel_project_source_export ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.cancel_project_source_export"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.cancel_project_source_export",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#cancel_project_source_export\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Connect or update a project's repo connection
     # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
     # @param id [String] Project ID
@@ -421,6 +484,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#disconnect_project_git\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Initialize an empty repository with a project's stored source
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (`skipped`), and things no export can hand back (`omitted`) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # @param id [String] Project ID
+    # @param export_project_source_request [ExportProjectSourceRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectSourceExport]
+    def export_project_source(id, export_project_source_request, opts = {})
+      data, _status_code, _headers = export_project_source_with_http_info(id, export_project_source_request, opts)
+      data
+    end
+
+    # Initialize an empty repository with a project&#39;s stored source
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (&#x60;skipped&#x60;), and things no export can hand back (&#x60;omitted&#x60;) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # @param id [String] Project ID
+    # @param export_project_source_request [ExportProjectSourceRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectSourceExport, Integer, Hash)>] ProjectSourceExport data, response status code and response headers
+    def export_project_source_with_http_info(id, export_project_source_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.export_project_source ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.export_project_source"
+      end
+      # verify the required parameter 'export_project_source_request' is set
+      if @api_client.config.client_side_validation && export_project_source_request.nil?
+        fail ArgumentError, "Missing the required parameter 'export_project_source_request' when calling ProjectsApi.export_project_source"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(export_project_source_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectSourceExport'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.export_project_source",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#export_project_source\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -804,6 +941,69 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Report the project's source-of-truth state
+    # Volcano stores the source of the functions and frontend it runs for a project. This reports whether that source has been written to the connected repository, and whether the repository has taken over as the project's source of truth.  `mode` is `platform`, `git_exporting`, `git_pending`, or `git`. Export enters `git_exporting` before reading stored source. GitHub's signed push event confirms that the initial commit reached the production branch. That push or a newer production push changes the mode to `git_pending` when it starts a deployment. `exported_at` records that transition.  A successful Git run completes the transition when it matches the recorded repository, production branch, and root directory and actually dispatches every recorded resource. Ordinary production-branch pushes deploy without changing a platform-managed project's source ownership. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectSourceExportState]
+    def get_project_source_export(id, opts = {})
+      data, _status_code, _headers = get_project_source_export_with_http_info(id, opts)
+      data
+    end
+
+    # Report the project&#39;s source-of-truth state
+    # Volcano stores the source of the functions and frontend it runs for a project. This reports whether that source has been written to the connected repository, and whether the repository has taken over as the project&#39;s source of truth.  &#x60;mode&#x60; is &#x60;platform&#x60;, &#x60;git_exporting&#x60;, &#x60;git_pending&#x60;, or &#x60;git&#x60;. Export enters &#x60;git_exporting&#x60; before reading stored source. GitHub&#39;s signed push event confirms that the initial commit reached the production branch. That push or a newer production push changes the mode to &#x60;git_pending&#x60; when it starts a deployment. &#x60;exported_at&#x60; records that transition.  A successful Git run completes the transition when it matches the recorded repository, production branch, and root directory and actually dispatches every recorded resource. Ordinary production-branch pushes deploy without changing a platform-managed project&#39;s source ownership. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectSourceExportState, Integer, Hash)>] ProjectSourceExportState data, response status code and response headers
+    def get_project_source_export_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.get_project_source_export ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.get_project_source_export"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectSourceExportState'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.get_project_source_export",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#get_project_source_export\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get usage metrics for a project
     # Returns project usage totals for the current usage month plus recent hourly and daily time series for each tracked metric. 
     # @param id [String] Project ID
@@ -1108,7 +1308,7 @@ module Volcano::Generated
     end
 
     # List all projects for authenticated user
-    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses `page` and `limit`. Cursor mode uses `cursor` or `ending_before` with `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded `offset` past the cursor anchor. Supplying `limit` without `page` selects cursor mode. `search` applies a case-insensitive project-name filter in either mode. Sending `page` with `cursor` or `ending_before`, or sending both cursor directions, returns 400. 
+    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses `page` and `limit`. Cursor mode uses `cursor` or `ending_before` with `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded `offset` past the cursor anchor. Supplying `limit` without `page` selects cursor mode. `search` applies a case-insensitive project-name filter in either mode. `include` optionally expands each returned project with its Git connection and/or aggregate health summary using `git_connection` and `health`. Sending `page` with `cursor` or `ending_before`, or sending both cursor directions, returns 400. 
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
@@ -1116,6 +1316,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [Array<String>] :include Optional comma-separated project metadata expansions.
     # @return [PaginatedProjects]
     def list_projects(opts = {})
       data, _status_code, _headers = list_projects_with_http_info(opts)
@@ -1123,7 +1324,7 @@ module Volcano::Generated
     end
 
     # List all projects for authenticated user
-    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses &#x60;page&#x60; and &#x60;limit&#x60;. Cursor mode uses &#x60;cursor&#x60; or &#x60;ending_before&#x60; with &#x60;limit&#x60;, returns &#x60;next_cursor&#x60;/&#x60;prev_cursor&#x60;, and supports a bounded &#x60;offset&#x60; past the cursor anchor. Supplying &#x60;limit&#x60; without &#x60;page&#x60; selects cursor mode. &#x60;search&#x60; applies a case-insensitive project-name filter in either mode. Sending &#x60;page&#x60; with &#x60;cursor&#x60; or &#x60;ending_before&#x60;, or sending both cursor directions, returns 400. 
+    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses &#x60;page&#x60; and &#x60;limit&#x60;. Cursor mode uses &#x60;cursor&#x60; or &#x60;ending_before&#x60; with &#x60;limit&#x60;, returns &#x60;next_cursor&#x60;/&#x60;prev_cursor&#x60;, and supports a bounded &#x60;offset&#x60; past the cursor anchor. Supplying &#x60;limit&#x60; without &#x60;page&#x60; selects cursor mode. &#x60;search&#x60; applies a case-insensitive project-name filter in either mode. &#x60;include&#x60; optionally expands each returned project with its Git connection and/or aggregate health summary using &#x60;git_connection&#x60; and &#x60;health&#x60;. Sending &#x60;page&#x60; with &#x60;cursor&#x60; or &#x60;ending_before&#x60;, or sending both cursor directions, returns 400. 
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
@@ -1131,6 +1332,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [Array<String>] :include Optional comma-separated project metadata expansions.
     # @return [Array<(PaginatedProjects, Integer, Hash)>] PaginatedProjects data, response status code and response headers
     def list_projects_with_http_info(opts = {})
       if @api_client.config.debugging
@@ -1156,6 +1358,10 @@ module Volcano::Generated
         fail ArgumentError, 'invalid value for "opts[:"search"]" when calling ProjectsApi.list_projects, the character length must be smaller than or equal to 256.'
       end
 
+      allowable_values = ["git_connection", "health"]
+      if @api_client.config.client_side_validation && opts[:'include'] && !opts[:'include'].all? { |item| allowable_values.include?(item) }
+        fail ArgumentError, "invalid value for \"include\", must include one of #{allowable_values}"
+      end
       # resource path
       local_var_path = '/projects'
 
@@ -1167,6 +1373,7 @@ module Volcano::Generated
       query_params[:'ending_before'] = opts[:'ending_before'] if !opts[:'ending_before'].nil?
       query_params[:'offset'] = opts[:'offset'] if !opts[:'offset'].nil?
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
+      query_params[:'include'] = @api_client.build_collection_param(opts[:'include'], :csv) if !opts[:'include'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}

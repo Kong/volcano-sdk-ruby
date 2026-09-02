@@ -50,6 +50,18 @@ module Volcano
       end
     end
 
+    def query_database_insert(authorization:, database_name:, body:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::DatabaseInsertRequest.new(deep_symbolize(body))
+        data, status, headers = apis.database.query_database_insert_with_http_info(
+          database_name,
+          request
+        )
+        response(data, status, headers)
+      end
+    end
+
     def upload_storage_object(authorization:, bucket_name:, path:, data:)
       invoke do
         apis = @api_factory.call(authorization)

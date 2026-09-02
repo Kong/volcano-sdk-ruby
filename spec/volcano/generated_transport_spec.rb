@@ -185,15 +185,21 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeDatabaseApi
-    attr_reader :calls
+    attr_reader :calls, :insert_calls
 
     def initialize
       @calls = []
+      @insert_calls = []
     end
 
     def query_database_select_with_http_info(name, body)
       @calls << [name, body]
       [FakeGeneratedModel.new(data: [{ slug: 'a' }]), 200, {}]
+    end
+
+    def query_database_insert_with_http_info(name, body)
+      @insert_calls << [name, body]
+      [FakeGeneratedModel.new(data: [{ slug: 'new' }]), 200, {}]
     end
   end
 
@@ -357,6 +363,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'a' }]
         }
       ),
+      insert: transport.query_database_insert(
+        authorization: 'access-token',
+        database_name: 'main',
+        body: { 'table' => 'items', 'values' => { 'slug' => 'new' } }
+      ),
       upload: transport.upload_storage_object(
         authorization: 'access-token',
         bucket_name: 'assets',
@@ -400,11 +411,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
-  it 'routes only the nine POC operations through generated API classes', :aggregate_failures do
+  it 'routes only the ten POC operations through generated API classes', :aggregate_failures do
     responses
-    expect(authorizations).to eq(
-      %w[anon-key anon-key anon-key anon-key access-token access-token access-token service-key service-key]
-    )
+    expected_authorizations = Array.new(4, 'anon-key') + Array.new(4, 'access-token') + Array.new(2, 'service-key')
+    expect(authorizations).to eq(expected_authorizations)
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
       email: 'user@example.com',
@@ -413,12 +423,6 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     refresh_request = apis.authentication.refresh_calls.fetch(0).fetch(:auth_refresh_request)
     expect(refresh_request).to be_a(InternalGenerated::AuthRefreshRequest)
       .and have_attributes(refresh_token: 'refresh-1')
-    expect(apis.database.calls.fetch(0).fetch(0)).to eq('main')
-    expect(apis.database.calls.fetch(0).fetch(1)).to be_a(InternalGenerated::DatabaseSelectRequest)
-    expect(apis.database.calls.fetch(0).fetch(1).to_hash).to eq(
-      table: 'items',
-      filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
-    )
     expect(apis.storage.calls).to eq(
       [
         [
@@ -436,6 +440,27 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(apis.locks.calls[0][4].to_hash).to eq(ttl_seconds: 30)
     expect(apis.locks.calls[1][0..2]).to eq([:release, 'build', 'ownership-token'])
     expect(apis.locks.calls[1][3]).to match(/\A[0-9a-f-]{36}\z/)
+  end
+
+  it 'builds selects with the generated database request model' do
+    responses
+    database_name, request = apis.database.calls.fetch(0)
+
+    expect(database_name).to eq('main')
+    expect(request).to be_a(InternalGenerated::DatabaseSelectRequest)
+    expect(request.to_hash).to eq(
+      table: 'items',
+      filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
+    )
+  end
+
+  it 'builds inserts with the generated database request model' do
+    responses
+    database_name, request = apis.database.insert_calls.fetch(0)
+
+    expect(database_name).to eq('main')
+    expect(request).to be_a(InternalGenerated::DatabaseInsertRequest)
+    expect(request.to_hash).to eq(table: 'items', values: { slug: 'new' })
   end
 
   it 'builds the generated sign-up request with metadata' do

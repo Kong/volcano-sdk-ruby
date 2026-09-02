@@ -615,6 +615,15 @@ RSpec.describe Volcano::Client do
         headers: {}, data: nil
       )
     end
+
+    def renew_project_lock(**arguments)
+      @calls << [:renew_project_lock, arguments]
+      Response.new(
+        status: 200,
+        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 7 },
+        headers: {}, data: nil
+      )
+    end
   end
 
   class FakeContractTransport
@@ -2406,6 +2415,46 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to eq(
       [[:get_project_lock, { authorization: 'service-key', key: 'build' }]]
     )
+  end
+
+  it 'renews a lock lease without mutating the original' do
+    lease = Volcano::LockLease.new(
+      key: 'build', token: '00000000-0000-4000-8000-000000000001',
+      expires_at: Time.iso8601('2026-08-26T12:00:30Z'), fencing_token: 7
+    )
+
+    renewed = client.locks.renew('build', lease, ttl: 60)
+
+    expect(renewed).to eq(
+      Volcano::LockLease.new(
+        key: 'build', token: lease.token,
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'), fencing_token: 7
+      )
+    )
+    expect(lease.expires_at).to eq(Time.iso8601('2026-08-26T12:00:30Z'))
+    expect(transport.calls).to eq(
+      [[:renew_project_lock, {
+        authorization: 'service-key', key: 'build', ttl: 60, token: lease.token
+      }]]
+    )
+  end
+
+  it 'deep-freezes independent lock lease values' do
+    raw_key = +'build'
+    raw_token = +'00000000-0000-4000-8000-000000000001'
+    raw_expiry = Time.iso8601('2026-08-26T12:00:30Z')
+    lease = Volcano::LockLease.new(
+      key: raw_key, token: raw_token, expires_at: raw_expiry, fencing_token: 7
+    )
+    copy = Volcano::LockLease.new(**lease.to_h)
+
+    expect(lease.to_h.values + copy.to_h.values).to all(be_frozen)
+    expect(
+      [
+        lease.key.equal?(raw_key), lease.token.equal?(raw_token), lease.expires_at.equal?(raw_expiry),
+        copy.key.equal?(lease.key), copy.token.equal?(lease.token), copy.expires_at.equal?(lease.expires_at)
+      ]
+    ).to all(be(false))
   end
 
   it 'creates an immutable upload session' do

@@ -60,6 +60,10 @@ RSpec.describe Volcano::Realtime do
       @incoming.enqueue(JSON.generate('id' => id, 'result' => {}))
     end
 
+    def reject(id, message)
+      @incoming.enqueue(JSON.generate('id' => id, 'error' => { 'message' => message }))
+    end
+
     def close
       return if @closed
 
@@ -174,6 +178,89 @@ RSpec.describe Volcano::Realtime do
     expect(socket.commands.map { |command| command.keys.fetch(1) }).to eq(
       %w[connect subscribe subscribe unsubscribe unsubscribe]
     )
+  end
+
+  it 'detaches a removed channel before recreating it', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    old_messages = []
+    new_messages = []
+
+    Async do
+      old_channel = client.realtime.channel('contract')
+      old_channel.on('message') { |message| old_messages << message }
+      old_channel.subscribe
+      client.realtime.remove_channel('contract')
+
+      new_channel = client.realtime.channel('contract')
+      new_channel.on('message') { |message| new_messages << message }
+      new_channel.subscribe
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'new' }
+      )
+      Async::Task.current.yield until new_messages.any?
+      client.realtime.disconnect
+    end.wait
+
+    expect(old_messages).to be_empty
+    expect(new_messages).to eq([{ 'event' => 'message', 'value' => 'new' }])
+  end
+
+  it 'retains a channel when removal fails' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        socket.reject(command.fetch('id'), 'unsubscribe failed')
+        :defer
+      end
+
+      expect { client.realtime.remove_channel('contract') }.to raise_error(
+        Volcano::Realtime::ServerError,
+        'unsubscribe failed'
+      )
+      expect(client.realtime.channel('contract')).to be(channel)
+      socket.on_write = nil
+      client.realtime.remove_channel('contract')
+      expect(client.realtime.channel('contract')).not_to be(channel)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reports a peer-closed transport as disconnected' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      client.realtime.channel('contract').subscribe
+      expect(client.realtime).to be_connected
+
+      socket.close
+      Async::Task.current.yield while client.realtime.connected?
+
+      expect(client.realtime).not_to be_connected
+    end.wait
   end
 
   it 'preserves the API base path in the realtime endpoint' do

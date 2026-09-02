@@ -123,6 +123,7 @@ module Volcano
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
+        @publication_handler = nil
         @lifecycle_lock = nil
       end
 
@@ -168,6 +169,17 @@ module Volcano
         nil
       end
 
+      def remove
+        with_lifecycle_lock do
+          ensure_open!
+          protocol = @protocol_provider.call
+          protocol.unsubscribe(channel: @name) if @subscribed
+          detach_publication_handler(protocol)
+          mark_removed
+        end
+        nil
+      end
+
       def mark_closed
         @closed = true
         @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
@@ -178,10 +190,21 @@ module Volcano
       def register_handler(protocol)
         return if @handler_registered
 
-        protocol.on_publication(@name) do |event, data|
+        @publication_handler = protocol.on_publication(@name) do |event, data|
           @callbacks.each { |callback| callback.call(data) } if event == 'message'
         end
         @handler_registered = true
+      end
+
+      def detach_publication_handler(protocol)
+        protocol.off_publication(@name, @publication_handler) if @publication_handler
+        @publication_handler = nil
+      end
+
+      def mark_removed
+        @callbacks.clear
+        @handler_registered = @subscribed = false
+        @closed = true
       end
 
       def with_lifecycle_lock(&)

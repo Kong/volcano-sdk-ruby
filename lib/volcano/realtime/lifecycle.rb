@@ -4,24 +4,23 @@ module Volcano
   class Realtime
     # Channel collection and connection-state lifecycle operations.
     module Lifecycle
-      def connected? = !@protocol.nil? && !@closed
+      def connected? = !@closed && (@protocol&.connected? || false)
 
       def remove_channel(name)
-        @channels.delete("broadcast:#{name}")&.unsubscribe
+        key = "broadcast:#{name}"
+        channel = @channels[key]
+        return nil unless channel
+
+        channel.remove
+        @channels.delete(key)
         nil
       end
 
       def remove_all_channels
-        channels = @channels.values
-        @channels.clear
-        first_error = nil
-        channels.each do |channel|
-          channel.unsubscribe
-        rescue StandardError => e
-          first_error ||= e
+        @channels.dup.each do |name, channel|
+          channel.remove
+          @channels.delete(name)
         end
-        raise first_error if first_error
-
         nil
       end
     end

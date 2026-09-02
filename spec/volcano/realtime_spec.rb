@@ -253,6 +253,54 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'delivers unsubscribe presence sync outside the lifecycle lock' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      finished = Async::Queue.new
+      channel.on_presence_sync do |state|
+        next unless state.empty?
+
+        begin
+          channel.track('status' => 'online')
+        rescue Volcano::Realtime::ClosedError
+          finished.enqueue(true)
+        end
+      end
+      channel.subscribe
+      channel.unsubscribe
+
+      expect(task.with_timeout(0.2) { finished.dequeue }).to be(true)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not emit a stale sync when a join callback unsubscribes' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      states = []
+      channel.on_presence_sync { |state| states << state }
+      channel.on('join') { channel.unsubscribe }
+      channel.subscribe
+      states.clear
+      socket.presence_event(
+        channel: 'project:presence:lobby', event: 'join',
+        info: presence_info('bob-client', 'bob', 'Bob')
+      )
+      task.with_timeout(0.2) { task.yield until states.any? }
+
+      expect(states).to all(be_empty)
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'keeps a successful subscription usable when its initial presence query fails' do
     socket = FacadeSocket.new
     client = realtime_client(socket)

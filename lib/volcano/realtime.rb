@@ -178,16 +178,8 @@ module Volcano
       end
 
       def unsubscribe
-        with_lifecycle_lock do
-          ensure_open!
-          next unless @subscribed
-
-          protocol = @protocol_provider.call
-          protocol.unsubscribe(channel: @name)
-          @subscribed = false
-          invalidate_presence_subscription(protocol)
-          clear_presence
-        end
+        state = with_lifecycle_lock { unsubscribe_protocol }
+        emit_presence_sync(state)
         nil
       end
 
@@ -215,6 +207,17 @@ module Volcano
       end
 
       private
+
+      def unsubscribe_protocol
+        ensure_open!
+        return unless @subscribed
+
+        protocol = @protocol_provider.call
+        protocol.unsubscribe(channel: @name)
+        @subscribed = false
+        invalidate_presence_subscription(protocol)
+        clear_presence
+      end
 
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch

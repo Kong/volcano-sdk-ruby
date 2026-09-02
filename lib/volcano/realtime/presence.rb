@@ -79,7 +79,7 @@ module Volcano
 
         snapshot, state = delivery
         emit(event, snapshot)
-        emit('presence_sync', state)
+        emit('presence_sync', state) if active_presence_epoch?(epoch)
       end
 
       def emit_presence_sync(state)

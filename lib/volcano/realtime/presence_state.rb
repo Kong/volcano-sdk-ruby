@@ -43,12 +43,11 @@ module Volcano
       def clear_presence
         return unless presence?
 
-        state = presence_lock.acquire do
+        presence_lock.acquire do
           @presence_state = Immutable.call({})
           @tracked_state = Immutable.call({})
           @presence_state
         end
-        emit('presence_sync', state)
       end
 
       def reset_presence

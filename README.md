@@ -629,6 +629,23 @@ end.wait
 `get_presence_state` is an equivalent cross-SDK alias. Subscribe again to fetch
 a fresh authoritative snapshot.
 
+### Subscribe to Postgres changes
+
+Postgres channels deliver immutable, RLS-scoped row changes and filter
+callbacks by event, schema, and table. When the server sends only a lightweight
+notification, `record` is `nil` and the change retains its `id` and `mode`:
+
+```ruby
+Async do
+  changes = client.realtime.channel("public:messages", type: :postgres)
+  changes.on_postgres_changes("INSERT", schema: "public", table: "messages") do |change|
+    puts change.record.fetch("body")
+  end
+  changes.subscribe
+  client.realtime.disconnect
+end.wait
+```
+
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the

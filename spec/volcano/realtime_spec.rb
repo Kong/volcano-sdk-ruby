@@ -139,10 +139,119 @@ RSpec.describe Volcano::Realtime do
     expect(client.realtime.channel('contract').name).to eq('broadcast:contract')
     expect(client.realtime.channel('contract').name).to be_frozen
     expect(client.realtime.channel('lobby', type: :presence).name).to eq('presence:lobby')
+    expect(client.realtime.channel('public:messages', type: :postgres).name).to eq(
+      'postgres:public:messages'
+    )
     expect { client.realtime.channel('bad', type: :unknown) }.to raise_error(
       ArgumentError,
       'unsupported realtime channel type: unknown'
     )
+  end
+
+  it 'routes immutable RLS-scoped Postgres changes by event, schema, and table' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    updates = []
+    inserts = []
+
+    Async do |task|
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('UPDATE', schema: 'public', table: 'messages') do |change|
+        updates << change
+      end
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        inserts << change
+      end
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'UPDATE', 'schema' => 'public', 'table' => 'messages',
+          'record' => { 'id' => 1, 'body' => 'updated' },
+          'old_record' => { 'id' => 1, 'body' => 'old' },
+          'columns' => ['body'], 'timestamp' => '2026-09-02T12:00:00Z'
+        }
+      )
+      task.with_timeout(0.2) { task.yield until updates.any? }
+
+      expect(updates.fetch(0)).to have_attributes(
+        type: 'UPDATE', schema: 'public', table: 'messages',
+        record: { 'id' => 1, 'body' => 'updated' },
+        old_record: { 'id' => 1, 'body' => 'old' },
+        columns: ['body'], timestamp: '2026-09-02T12:00:00Z'
+      )
+      expect(updates.fetch(0).record).to be_frozen
+      expect(updates.fetch(0).columns).to be_frozen
+      expect(inserts).to be_empty
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not overmatch malformed or different Postgres publication channels' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    received = []
+
+    Async do |task|
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('*', schema: 'public', table: 'messages') do |change|
+        received << change
+      end
+      channel.subscribe
+      payload = {
+        'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+        'record' => { 'id' => 1 }, 'timestamp' => '2026-09-02T12:00:00Z'
+      }
+      socket.publication(channel: 'project-id:postgres:public:other:user-id', data: payload)
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:extra:user-id', data: payload
+      )
+      task.yield
+
+      expect(received).to be_empty
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'preserves lightweight Postgres metadata when a full row is unavailable' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    received = []
+
+    Async do |task|
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received << change
+      end
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+        }
+      )
+      task.with_timeout(0.2) { task.yield until received.any? }
+
+      expect(received.fetch(0)).to have_attributes(id: 42, mode: 'lightweight', record: nil)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'validates Postgres change registrations' do
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    callback = proc {}
+
+    expect do
+      client.realtime.channel('contract').on_postgres_changes(
+        '*', schema: 'public', table: 'messages', &callback
+      )
+    end.to raise_error(ArgumentError, 'operation is only available for postgres channels')
+    expect do
+      client.realtime.channel('public:messages', type: :postgres).on_postgres_changes(
+        'UPSERT', schema: 'public', table: 'messages', &callback
+      )
+    end.to raise_error(ArgumentError, 'unsupported postgres change event: UPSERT')
   end
 
   it 'tracks an immutable presence snapshot through sync, join, leave, and unsubscribe', :aggregate_failures do

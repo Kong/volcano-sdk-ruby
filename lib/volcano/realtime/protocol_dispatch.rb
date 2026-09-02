@@ -69,8 +69,16 @@ module Volcano
 
       def matching_channel(handlers, channel)
         handlers.each_key.select do |candidate|
-          channel == candidate || channel.end_with?(":#{candidate}")
+          channel == candidate || channel.end_with?(":#{candidate}") ||
+            postgres_channel?(candidate, channel)
         end.max_by(&:length)
+      end
+
+      def postgres_channel?(candidate, channel)
+        candidate_parts = candidate.split(':')
+        channel_parts = channel.split(':')
+        candidate_parts.length == 3 && candidate_parts.first == 'postgres' &&
+          channel_parts.length == 5 && channel_parts.slice(1, 3) == candidate_parts
       end
 
       def dispatch_callbacks

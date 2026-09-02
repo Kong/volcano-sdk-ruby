@@ -111,7 +111,7 @@ module Volcano
         apis = @api_factory.call(authorization)
         request = Generated::FunctionInvocationRequest.new(payload: payload)
         data, status, headers = apis.functions.invoke_function_with_http_info(
-          function_id, request
+          function_id, request, follow_location: false
         )
         response(data, status, headers)
       end

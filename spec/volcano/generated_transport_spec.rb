@@ -434,8 +434,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [result, 200, {}]
     end
 
-    def invoke_function_with_http_info(function_id, request)
-      @calls << [:invoke, function_id, request]
+    def invoke_function_with_http_info(function_id, request, options = {})
+      @calls << [:invoke, function_id, request, options]
       [
         FakeGeneratedModel.new(error: 'invalid order'),
         422,
@@ -570,11 +570,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       status: 422, body: { 'error' => 'invalid order' },
       headers: { 'X-Volcano-Version' => 'staging-v1' }
     )
-    operation, function_id, request = apis.functions.calls.last
+    operation, function_id, request, options = apis.functions.calls.last
     expect([operation, function_id]).to eq(
       [:invoke, '00000000-0000-4000-8000-000000000040']
     )
     expect(request.to_hash).to eq(payload: { 'user_id' => 'user-123' })
+    expect(options).to eq(follow_location: false)
     expect(authorizations).to eq(%w[access-token access-token])
   end
 
@@ -1259,6 +1260,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     expect(request.options.fetch(:timeout)).to eq(1_500)
+  end
+
+  it 'honors disabled redirect following for passthrough responses' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+
+    request = api_client.build_request(
+      :post, '/functions/function-id/invoke', auth_names: [], follow_location: false
+    )
+
+    expect(request.options.fetch(:followlocation)).to be(false)
   end
 
   it 'preserves object path segments and percent-encodes spaces' do

@@ -73,6 +73,16 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'returns an empty successful function response' do
+    invoke_responses << Volcano::Transport::Response.new(
+      status: 204, body: nil, headers: { 'x-volcano-version' => 'v2' }, data: nil
+    )
+
+    result = client.functions.invoke('run-cleanup')
+
+    expect(result).to have_attributes(status: 204, data: nil, version: 'v2')
+  end
+
   it 'raises for a platform failure' do
     invoke_responses << Volcano::Transport::Response.new(
       status: 503,

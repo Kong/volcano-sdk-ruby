@@ -66,6 +66,22 @@ module Volcano
       add_filter(column, 'lte', value)
     end
 
+    def like(column, pattern)
+      add_filter(column, 'like', pattern)
+    end
+
+    def ilike(column, pattern)
+      add_filter(column, 'ilike', pattern)
+    end
+
+    def is(column, value)
+      add_filter(column, 'is', value)
+    end
+
+    def in(column, values)
+      add_filter(column, 'in', values.dup.freeze)
+    end
+
     def order(column, ascending: true)
       clause = { 'column' => column, 'ascending' => ascending }.freeze
       copy(order: [*@order, clause])

@@ -2195,6 +2195,72 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  { like: 'like', ilike: 'ilike' }.each do |method_name, operator|
+    it "keeps #{method_name} pattern filters immutable" do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      source = client.database('main').from('items').select('*')
+
+      source.public_send(method_name, 'name', '%volcano%').execute
+      source.execute
+
+      query_calls = transport.calls_for(:query_database_select)
+      expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+        [
+          {
+            'table' => 'items',
+            'filters' => [
+              { 'column' => 'name', 'operator' => operator, 'value' => '%volcano%' }
+            ]
+          },
+          { 'table' => 'items' }
+        ]
+      )
+    end
+  end
+
+  it 'keeps null filters immutable' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+
+    source.is('deleted_at', nil).execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        {
+          'table' => 'items',
+          'filters' => [{ 'column' => 'deleted_at', 'operator' => 'is', 'value' => nil }]
+        },
+        { 'table' => 'items' }
+      ]
+    )
+  end
+
+  it 'copies membership filter values' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+    statuses = %w[draft published]
+
+    query = source.in('status', statuses)
+    statuses << 'archived'
+    query.execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        {
+          'table' => 'items',
+          'filters' => [
+            { 'column' => 'status', 'operator' => 'in', 'value' => %w[draft published] }
+          ]
+        },
+        { 'table' => 'items' }
+      ]
+    )
+  end
+
   it 'keeps ordered query chains immutable' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     source = client.database('main').from('items').select('*')

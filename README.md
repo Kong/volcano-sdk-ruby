@@ -450,11 +450,14 @@ page = bucket.list("avatars", limit: 100)
 page.objects.each { |object| puts object.name }
 
 next_page = bucket.list("avatars", limit: 100, cursor: page.next_cursor) if page.next_cursor
+
+removed_paths = bucket.remove(["archive/a.txt", "archive/b.txt"])
 ```
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for
-the next page.
+the next page. Removals run in input order; a failed request raises after any
+earlier paths have already been deleted.
 
 ### Acquire and release a lock
 

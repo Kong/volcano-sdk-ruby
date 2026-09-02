@@ -375,6 +375,11 @@ RSpec.describe Volcano::Client do
       Response.new(status: 200, body: storage_page_body, headers: {}, data: nil)
     end
 
+    def delete_storage_object(**arguments)
+      @calls << [:delete_storage_object, arguments]
+      Response.new(status: 200, body: nil, headers: {}, data: nil)
+    end
+
     private
 
     def storage_page_body
@@ -517,6 +522,7 @@ RSpec.describe Volcano::Client do
     uploaded = client.storage.from('assets').upload('a.txt', StringIO.new("hello\x00".b))
     downloaded = client.storage.from('assets').download('a.txt')
     page = client.storage.from('assets').list('avatars', limit: 25, cursor: 'cursor-1')
+    removed = client.storage.from('assets').remove(['archive/a.txt', 'archive/b.txt'])
     lease = client.locks.acquire('build', ttl: 30)
     released = client.locks.release('build', lease)
     {
@@ -525,6 +531,7 @@ RSpec.describe Volcano::Client do
       uploaded: uploaded,
       downloaded: downloaded,
       page: page,
+      removed: removed,
       lease: lease,
       released: released
     }
@@ -2162,6 +2169,8 @@ RSpec.describe Volcano::Client do
       )
     )
     expect(results.fetch(:page).objects.first.metadata['labels']).to be_frozen
+    expect(results.fetch(:removed)).to eq(['archive/a.txt', 'archive/b.txt'])
+    expect(results.fetch(:removed)).to be_frozen
     expect(results.fetch(:lease)).to eq(
       Volcano::LockLease.new(
         key: 'build',
@@ -2182,6 +2191,8 @@ RSpec.describe Volcano::Client do
         upload_storage_object
         download_storage_object
         list_storage_objects
+        delete_storage_object
+        delete_storage_object
         acquire_project_lock
         release_project_lock
       ]
@@ -2217,13 +2228,19 @@ RSpec.describe Volcano::Client do
       limit: 25,
       cursor: 'cursor-1'
     )
-    expect(transport.calls[5][1]).to include(
+    expect(transport.calls[5..6].map(&:last)).to eq(
+      [
+        { authorization: 'access-token', bucket_name: 'assets', path: 'archive/a.txt' },
+        { authorization: 'access-token', bucket_name: 'assets', path: 'archive/b.txt' }
+      ]
+    )
+    expect(transport.calls[7][1]).to include(
       authorization: 'service-key',
       key: 'build',
       ttl: 30,
       token: lease.token
     )
-    expect(transport.calls[6][1]).to include(
+    expect(transport.calls[8][1]).to include(
       authorization: 'service-key',
       key: 'build',
       token: lease.token
@@ -2242,6 +2259,24 @@ RSpec.describe Volcano::Client do
     end
 
     expect(client.storage.from('assets').list.next_cursor).to be_nil
+  end
+
+  it 'removes one storage path and freezes the returned snapshot' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    removed = client.storage.from('assets').remove('archive/a.txt')
+
+    expect(removed).to eq(['archive/a.txt'])
+    expect(removed).to be_frozen
+  end
+
+  it 'rejects an empty storage path before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+
+    expect { client.storage.from('assets').remove(['']) }
+      .to raise_error(ArgumentError, 'storage paths must be non-empty strings')
+    expect(transport.calls).to eq(calls_after_sign_in)
   end
 
   it 'keeps query chains immutable and reads the latest session at execution time' do

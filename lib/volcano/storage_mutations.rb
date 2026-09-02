@@ -23,6 +23,19 @@ module Volcano
       storage_object(Transport.body(response, 200))
     end
 
+    def copy(from_path, to_path)
+      source, destination = removal_paths([from_path, to_path])
+      response = Transport.invoke do
+        @transport.copy_storage_object(
+          authorization: @client.session_token,
+          bucket_name: @name,
+          from_path: source,
+          to_path: destination
+        )
+      end
+      storage_object(Transport.body(response, 201))
+    end
+
     private
 
     def removal_paths(paths)

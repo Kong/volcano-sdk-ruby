@@ -323,6 +323,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:move, bucket, request]
       [FakeGeneratedModel.new(name: request.to), 200, {}]
     end
+
+    def copy_storage_object_with_http_info(bucket, request)
+      @calls << [:copy, bucket, request]
+      [FakeGeneratedModel.new(name: request.to), 201, {}]
+    end
   end
 
   class FakeLocksApi
@@ -518,6 +523,21 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request).to be_a(InternalGenerated::StorageMoveRequest)
     expect(request.to_hash).to eq(from: 'drafts/a.txt', to: 'published/a.txt')
     expect(response.body).to eq('name' => 'published/a.txt')
+  end
+
+  it 'builds copies with the generated storage request model' do
+    response = transport.copy_storage_object(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      from_path: 'templates/a.txt',
+      to_path: 'drafts/a.txt'
+    )
+
+    _, bucket, request = apis.storage.calls.last
+    expect(bucket).to eq('assets')
+    expect(request).to be_a(InternalGenerated::StorageCopyRequest)
+    expect(request.to_hash).to eq(from: 'templates/a.txt', to: 'drafts/a.txt')
+    expect(response.body).to eq('name' => 'drafts/a.txt')
   end
 
   it 'builds updates with the generated database request model' do

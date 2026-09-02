@@ -48,6 +48,15 @@ module Volcano
       end
     end
 
+    def copy_storage_object(authorization:, bucket_name:, from_path:, to_path:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::StorageCopyRequest.new(from: from_path, to: to_path)
+        data, status, headers = apis.storage.copy_storage_object_with_http_info(bucket_name, request)
+        response(data, status, headers)
+      end
+    end
+
     private
 
     def with_upload_file(path, data)

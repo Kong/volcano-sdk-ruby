@@ -131,11 +131,12 @@ end
 When('the client inserts its contract row') do
   row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('insert')
   contract.record do
-    contract.client
-            .database(contract.fixture.fetch('database_name'))
-            .from(contract.fixture.fetch('table_name'))
-            .insert(row)
-            .execute
+    table = contract.client
+                    .database(contract.fixture.fetch('database_name'))
+                    .from(contract.fixture.fetch('table_name'))
+    result = table.insert(row).execute
+    contract.register_cleanup(-> { table.delete.eq('slug', row.fetch('slug')).execute })
+    result
   end
 end
 
@@ -147,12 +148,18 @@ end
 When('the client updates its contract row') do
   row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('update')
   contract.record do
-    contract.client
-            .database(contract.fixture.fetch('database_name'))
-            .from(contract.fixture.fetch('table_name'))
-            .update('value' => row.fetch('after').fetch('value'))
-            .eq('slug', row.fetch('before').fetch('slug'))
-            .execute
+    table = contract.client
+                    .database(contract.fixture.fetch('database_name'))
+                    .from(contract.fixture.fetch('table_name'))
+    result = table.update('value' => row.fetch('after').fetch('value'))
+                  .eq('slug', row.fetch('before').fetch('slug'))
+                  .execute
+    contract.register_cleanup(lambda do
+      table.update('value' => row.fetch('before').fetch('value'))
+           .eq('slug', row.fetch('before').fetch('slug'))
+           .execute
+    end)
+    result
   end
 end
 
@@ -164,12 +171,12 @@ end
 When('the client deletes its contract row') do
   row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('delete')
   contract.record do
-    contract.client
-            .database(contract.fixture.fetch('database_name'))
-            .from(contract.fixture.fetch('table_name'))
-            .delete
-            .eq('slug', row.fetch('slug'))
-            .execute
+    table = contract.client
+                    .database(contract.fixture.fetch('database_name'))
+                    .from(contract.fixture.fetch('table_name'))
+    result = table.delete.eq('slug', row.fetch('slug')).execute
+    contract.register_cleanup(-> { table.insert(row).execute })
+    result
   end
 end
 

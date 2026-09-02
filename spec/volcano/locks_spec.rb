@@ -111,16 +111,19 @@ RSpec.describe Volcano::Locks do
     release << true if release.empty?
   end
 
-  it 'bounds shutdown when a renewal request stalls' do
+  it 'bounds shutdown without failing a completed block when renewal stalls' do
     stub_const('Volcano::LockAutoRenewal::MAX_RENEWAL_DELAY_SECONDS', 0.01)
     stub_const('Volcano::LockAutoRenewal::RENEWER_SHUTDOWN_TIMEOUT_SECONDS', 0.01)
     entered = Queue.new
     release = Queue.new
     transport.renew_handler = stalled_renewal(entered, release)
 
-    expect do
-      locks.with_lock('build', ttl: 30) { entered.pop }
-    end.to raise_error(Timeout::Error, 'lock renewal did not stop before cleanup')
+    result = locks.with_lock('build', ttl: 30) do
+      entered.pop
+      :completed
+    end
+
+    expect(result).to eq(:completed)
     expect(call_names.last).to eq(:release_project_lock)
   ensure
     release << true if release.empty?
@@ -136,6 +139,19 @@ RSpec.describe Volcano::Locks do
     guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
 
     expect(guard.__send__(:expiry_delay)).to be_between(0, 5).exclusive
+  end
+
+  it 'records expiry before stopping a starved watcher' do
+    lease = Volcano::LockLease.new(
+      key: 'build', token: 'token', expires_at: Time.now.utc + 30, fencing_token: 7
+    )
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) - 6
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
+
+    guard.stop_expiry_watch
+
+    expect(guard).to be_lost
+    expect(guard.failure).to be_a(Timeout::Error)
   end
 
   def call_names

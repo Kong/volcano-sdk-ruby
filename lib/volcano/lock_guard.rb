@@ -69,6 +69,7 @@ module Volcano
 
     def stop_expiry_watch
       @mutex.synchronize do
+        record_expiry if monotonic_now >= @lease_deadline && !@failure
         @expiry_stopped = true
         @changed.broadcast
       end

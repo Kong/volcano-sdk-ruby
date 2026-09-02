@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
-require 'timeout'
-
 module Volcano
   # Renews one guarded lease until its block exits or ownership is lost.
   class LockRenewer
-    SHUTDOWN_MESSAGE = 'lock renewal did not stop before cleanup'
     Config = Data.define(:ttl, :delay, :shutdown_timeout)
 
     def initialize(locks, key, guard, config)
@@ -26,9 +23,9 @@ module Volcano
     def stop
       request_stop
       return unless @thread
-      return if @thread.join(@config.shutdown_timeout)
 
-      @guard.mark_lost(Timeout::Error.new(SHUTDOWN_MESSAGE))
+      # Renew requires current token ownership, so a late request cannot resurrect a released lease.
+      @thread.join(@config.shutdown_timeout)
     end
 
     private

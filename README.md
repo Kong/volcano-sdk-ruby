@@ -453,6 +453,13 @@ upload_session = bucket.create_upload_session(
   part_size: 8_388_608
 )
 puts [upload_session.session_id, upload_session.total_parts]
+part = bucket.upload_part(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id,
+  part_number: 1,
+  data: "first part".b
+)
+puts part.etag
 
 page = bucket.list("avatars", limit: 100)
 page.objects.each { |object| puts object.name }
@@ -475,6 +482,8 @@ earlier paths have already been deleted.
 Pass an HTTP byte range to download only part of an object.
 `create_upload_session` returns the immutable server-selected part size, part
 count, and expiration time for a resumable upload.
+`upload_part` returns immutable part metadata and can safely retry the same part
+number to replace that part.
 Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.

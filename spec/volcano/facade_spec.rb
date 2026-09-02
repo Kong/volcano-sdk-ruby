@@ -477,6 +477,17 @@ RSpec.describe Volcano::Client do
       }
       Response.new(status: 201, body: body, headers: {}, data: nil)
     end
+
+    def upload_part(**arguments)
+      @calls << [:upload_part, arguments]
+      request = arguments.fetch(:request)
+      body = {
+        'part_number' => request.part_number,
+        'etag' => 'etag-part-1',
+        'size' => request.data.bytesize
+      }
+      Response.new(status: 200, body: body, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2288,6 +2299,23 @@ RSpec.describe Volcano::Client do
     expect(arguments.fetch(:request)).to have_attributes(
       path: 'videos/demo.mp4', content_type: 'video/mp4',
       total_size: 20_000_000, part_size: 8_388_608
+    )
+  end
+
+  it 'uploads a part and returns immutable metadata' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    part = client.storage.from('assets').upload_part(
+      'videos/demo.mp4', session_id: 'session-123', part_number: 1, data: "chunk\x00".b
+    )
+
+    expect(part).to eq(Volcano::UploadPart.new(part_number: 1, etag: 'etag-part-1', size: 6))
+    expect(part.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:upload_part)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123', part_number: 1, data: "chunk\x00".b
     )
   end
 

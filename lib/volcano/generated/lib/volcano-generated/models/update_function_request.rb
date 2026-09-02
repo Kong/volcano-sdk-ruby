@@ -18,10 +18,42 @@ module Volcano::Generated
     # Function visibility for anon-key invocation. - `false` (default): private function - `true`: public function (anon keys with `functions.invoke` can invoke) 
     attr_accessor :is_public
 
+    attr_accessor :invocation_mode
+
+    attr_accessor :http_auth_mode
+
+    # OpenAPI 3.0 or 3.1 metadata for HTTP mode. Send null to clear it.
+    attr_accessor :openapi_spec
+
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'is_public' => :'is_public'
+        :'is_public' => :'is_public',
+        :'invocation_mode' => :'invocation_mode',
+        :'http_auth_mode' => :'http_auth_mode',
+        :'openapi_spec' => :'openapi_spec'
       }
     end
 
@@ -38,13 +70,17 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'is_public' => :'Boolean'
+        :'is_public' => :'Boolean',
+        :'invocation_mode' => :'FunctionInvocationMode',
+        :'http_auth_mode' => :'FunctionHTTPAuthMode',
+        :'openapi_spec' => :'Hash<String, Object>'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'openapi_spec'
       ])
     end
 
@@ -66,8 +102,20 @@ module Volcano::Generated
 
       if attributes.key?(:'is_public')
         self.is_public = attributes[:'is_public']
-      else
-        self.is_public = nil
+      end
+
+      if attributes.key?(:'invocation_mode')
+        self.invocation_mode = attributes[:'invocation_mode']
+      end
+
+      if attributes.key?(:'http_auth_mode')
+        self.http_auth_mode = attributes[:'http_auth_mode']
+      end
+
+      if attributes.key?(:'openapi_spec')
+        if (value = attributes[:'openapi_spec']).is_a?(Hash)
+          self.openapi_spec = value
+        end
       end
     end
 
@@ -76,10 +124,6 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @is_public.nil?
-        invalid_properties.push('invalid value for "is_public", is_public cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -87,18 +131,7 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @is_public.nil?
       true
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] is_public Value to be assigned
-    def is_public=(is_public)
-      if is_public.nil?
-        fail ArgumentError, 'is_public cannot be nil'
-      end
-
-      @is_public = is_public
     end
 
     # Checks equality by comparing each attribute.
@@ -106,7 +139,10 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          is_public == o.is_public
+          is_public == o.is_public &&
+          invocation_mode == o.invocation_mode &&
+          http_auth_mode == o.http_auth_mode &&
+          openapi_spec == o.openapi_spec
     end
 
     # @see the `==` method
@@ -118,7 +154,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [is_public].hash
+      [is_public, invocation_mode, http_auth_mode, openapi_spec].hash
     end
 
     # Builds the object from hash

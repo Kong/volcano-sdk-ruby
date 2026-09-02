@@ -14,27 +14,28 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class GitRepository < ApiModelBase
-    # Stable GitHub repository id (repository.id), unchanged by renames.
-    attr_accessor :id
+  class AuthPageAppearanceOptions < ApiModelBase
+    attr_accessor :pages
 
-    attr_accessor :full_name
+    attr_accessor :fonts
 
-    attr_accessor :default_branch
+    attr_accessor :scales
 
-    attr_accessor :private
+    attr_accessor :densities
 
-    # Whether the repository has no commits and can receive an initial source export.
-    attr_accessor :is_empty
+    attr_accessor :radii
+
+    attr_accessor :layouts
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'id' => :'id',
-        :'full_name' => :'full_name',
-        :'default_branch' => :'default_branch',
-        :'private' => :'private',
-        :'is_empty' => :'is_empty'
+        :'pages' => :'pages',
+        :'fonts' => :'fonts',
+        :'scales' => :'scales',
+        :'densities' => :'densities',
+        :'radii' => :'radii',
+        :'layouts' => :'layouts'
       }
     end
 
@@ -51,11 +52,12 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'id' => :'Integer',
-        :'full_name' => :'String',
-        :'default_branch' => :'String',
-        :'private' => :'Boolean',
-        :'is_empty' => :'Boolean'
+        :'pages' => :'Array<HostedAuthPageType>',
+        :'fonts' => :'Array<AuthPageFont>',
+        :'scales' => :'Array<AuthPageScale>',
+        :'densities' => :'Array<AuthPageDensity>',
+        :'radii' => :'Array<AuthPageRadius>',
+        :'layouts' => :'Array<AuthPageLayout>'
       }
     end
 
@@ -69,46 +71,64 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::GitRepository` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::AuthPageAppearanceOptions` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::GitRepository`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::AuthPageAppearanceOptions`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'id')
-        self.id = attributes[:'id']
+      if attributes.key?(:'pages')
+        if (value = attributes[:'pages']).is_a?(Array)
+          self.pages = value
+        end
       else
-        self.id = nil
+        self.pages = nil
       end
 
-      if attributes.key?(:'full_name')
-        self.full_name = attributes[:'full_name']
+      if attributes.key?(:'fonts')
+        if (value = attributes[:'fonts']).is_a?(Array)
+          self.fonts = value
+        end
       else
-        self.full_name = nil
+        self.fonts = nil
       end
 
-      if attributes.key?(:'default_branch')
-        self.default_branch = attributes[:'default_branch']
+      if attributes.key?(:'scales')
+        if (value = attributes[:'scales']).is_a?(Array)
+          self.scales = value
+        end
       else
-        self.default_branch = nil
+        self.scales = nil
       end
 
-      if attributes.key?(:'private')
-        self.private = attributes[:'private']
+      if attributes.key?(:'densities')
+        if (value = attributes[:'densities']).is_a?(Array)
+          self.densities = value
+        end
       else
-        self.private = nil
+        self.densities = nil
       end
 
-      if attributes.key?(:'is_empty')
-        self.is_empty = attributes[:'is_empty']
+      if attributes.key?(:'radii')
+        if (value = attributes[:'radii']).is_a?(Array)
+          self.radii = value
+        end
       else
-        self.is_empty = nil
+        self.radii = nil
+      end
+
+      if attributes.key?(:'layouts')
+        if (value = attributes[:'layouts']).is_a?(Array)
+          self.layouts = value
+        end
+      else
+        self.layouts = nil
       end
     end
 
@@ -117,24 +137,28 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @id.nil?
-        invalid_properties.push('invalid value for "id", id cannot be nil.')
+      if @pages.nil?
+        invalid_properties.push('invalid value for "pages", pages cannot be nil.')
       end
 
-      if @full_name.nil?
-        invalid_properties.push('invalid value for "full_name", full_name cannot be nil.')
+      if @fonts.nil?
+        invalid_properties.push('invalid value for "fonts", fonts cannot be nil.')
       end
 
-      if @default_branch.nil?
-        invalid_properties.push('invalid value for "default_branch", default_branch cannot be nil.')
+      if @scales.nil?
+        invalid_properties.push('invalid value for "scales", scales cannot be nil.')
       end
 
-      if @private.nil?
-        invalid_properties.push('invalid value for "private", private cannot be nil.')
+      if @densities.nil?
+        invalid_properties.push('invalid value for "densities", densities cannot be nil.')
       end
 
-      if @is_empty.nil?
-        invalid_properties.push('invalid value for "is_empty", is_empty cannot be nil.')
+      if @radii.nil?
+        invalid_properties.push('invalid value for "radii", radii cannot be nil.')
+      end
+
+      if @layouts.nil?
+        invalid_properties.push('invalid value for "layouts", layouts cannot be nil.')
       end
 
       invalid_properties
@@ -144,62 +168,73 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @id.nil?
-      return false if @full_name.nil?
-      return false if @default_branch.nil?
-      return false if @private.nil?
-      return false if @is_empty.nil?
+      return false if @pages.nil?
+      return false if @fonts.nil?
+      return false if @scales.nil?
+      return false if @densities.nil?
+      return false if @radii.nil?
+      return false if @layouts.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] id Value to be assigned
-    def id=(id)
-      if id.nil?
-        fail ArgumentError, 'id cannot be nil'
+    # @param [Object] pages Value to be assigned
+    def pages=(pages)
+      if pages.nil?
+        fail ArgumentError, 'pages cannot be nil'
       end
 
-      @id = id
+      @pages = pages
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] full_name Value to be assigned
-    def full_name=(full_name)
-      if full_name.nil?
-        fail ArgumentError, 'full_name cannot be nil'
+    # @param [Object] fonts Value to be assigned
+    def fonts=(fonts)
+      if fonts.nil?
+        fail ArgumentError, 'fonts cannot be nil'
       end
 
-      @full_name = full_name
+      @fonts = fonts
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] default_branch Value to be assigned
-    def default_branch=(default_branch)
-      if default_branch.nil?
-        fail ArgumentError, 'default_branch cannot be nil'
+    # @param [Object] scales Value to be assigned
+    def scales=(scales)
+      if scales.nil?
+        fail ArgumentError, 'scales cannot be nil'
       end
 
-      @default_branch = default_branch
+      @scales = scales
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] private Value to be assigned
-    def private=(private)
-      if private.nil?
-        fail ArgumentError, 'private cannot be nil'
+    # @param [Object] densities Value to be assigned
+    def densities=(densities)
+      if densities.nil?
+        fail ArgumentError, 'densities cannot be nil'
       end
 
-      @private = private
+      @densities = densities
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] is_empty Value to be assigned
-    def is_empty=(is_empty)
-      if is_empty.nil?
-        fail ArgumentError, 'is_empty cannot be nil'
+    # @param [Object] radii Value to be assigned
+    def radii=(radii)
+      if radii.nil?
+        fail ArgumentError, 'radii cannot be nil'
       end
 
-      @is_empty = is_empty
+      @radii = radii
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] layouts Value to be assigned
+    def layouts=(layouts)
+      if layouts.nil?
+        fail ArgumentError, 'layouts cannot be nil'
+      end
+
+      @layouts = layouts
     end
 
     # Checks equality by comparing each attribute.
@@ -207,11 +242,12 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          id == o.id &&
-          full_name == o.full_name &&
-          default_branch == o.default_branch &&
-          private == o.private &&
-          is_empty == o.is_empty
+          pages == o.pages &&
+          fonts == o.fonts &&
+          scales == o.scales &&
+          densities == o.densities &&
+          radii == o.radii &&
+          layouts == o.layouts
     end
 
     # @see the `==` method
@@ -223,7 +259,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, full_name, default_branch, private, is_empty].hash
+      [pages, fonts, scales, densities, radii, layouts].hash
     end
 
     # Builds the object from hash

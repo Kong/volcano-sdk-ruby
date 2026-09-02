@@ -745,22 +745,22 @@ module Volcano::Generated
     end
 
     # Call OAuth provider API
-    # Make an authenticated request to an OAuth provider's API on behalf of the user. The user's stored access token is automatically used and refreshed if needed.  The request is always sent to the provider's fixed API base URL joined with the caller-supplied `endpoint`. `endpoint` must be a relative path beginning with `/` (optionally with a query string); it cannot change the target host. Absolute URLs, protocol-relative `//host` values, or userinfo (`@host`) are rejected with `400` so the request can never be redirected to another host.  Examples of `endpoint`: - Google userinfo: `/oauth2/v1/userinfo` - GitHub repositories: `/user/repos` - Microsoft Graph profile: `/me`  The response wraps the provider's raw JSON value with request metadata. 
+    # Make an authenticated request to an OAuth provider's API on behalf of the user. The user's stored access token is automatically used and refreshed if needed.  The request is always sent to the provider's fixed API base URL joined with the caller-supplied `endpoint`. `endpoint` must be a relative path beginning with `/` (optionally with a query string); it cannot change the target host. Absolute URLs, protocol-relative `//host` values, or userinfo (`@host`) are rejected with `400` so the request can never be redirected to another host.  Examples of `endpoint`: - Google userinfo: `/oauth2/v1/userinfo` - GitHub repositories: `/user/repos` - Microsoft Graph profile: `/me`  The response is the raw JSON response from the provider's API. 
     # @param provider [String] 
     # @param call_o_auth_provider_api_request [CallOAuthProviderAPIRequest] 
     # @param [Hash] opts the optional parameters
-    # @return [CallOAuthProviderAPI200Response]
+    # @return [Hash<String, Object>]
     def call_o_auth_provider_api(provider, call_o_auth_provider_api_request, opts = {})
       data, _status_code, _headers = call_o_auth_provider_api_with_http_info(provider, call_o_auth_provider_api_request, opts)
       data
     end
 
     # Call OAuth provider API
-    # Make an authenticated request to an OAuth provider&#39;s API on behalf of the user. The user&#39;s stored access token is automatically used and refreshed if needed.  The request is always sent to the provider&#39;s fixed API base URL joined with the caller-supplied &#x60;endpoint&#x60;. &#x60;endpoint&#x60; must be a relative path beginning with &#x60;/&#x60; (optionally with a query string); it cannot change the target host. Absolute URLs, protocol-relative &#x60;//host&#x60; values, or userinfo (&#x60;@host&#x60;) are rejected with &#x60;400&#x60; so the request can never be redirected to another host.  Examples of &#x60;endpoint&#x60;: - Google userinfo: &#x60;/oauth2/v1/userinfo&#x60; - GitHub repositories: &#x60;/user/repos&#x60; - Microsoft Graph profile: &#x60;/me&#x60;  The response wraps the provider&#39;s raw JSON value with request metadata. 
+    # Make an authenticated request to an OAuth provider&#39;s API on behalf of the user. The user&#39;s stored access token is automatically used and refreshed if needed.  The request is always sent to the provider&#39;s fixed API base URL joined with the caller-supplied &#x60;endpoint&#x60;. &#x60;endpoint&#x60; must be a relative path beginning with &#x60;/&#x60; (optionally with a query string); it cannot change the target host. Absolute URLs, protocol-relative &#x60;//host&#x60; values, or userinfo (&#x60;@host&#x60;) are rejected with &#x60;400&#x60; so the request can never be redirected to another host.  Examples of &#x60;endpoint&#x60;: - Google userinfo: &#x60;/oauth2/v1/userinfo&#x60; - GitHub repositories: &#x60;/user/repos&#x60; - Microsoft Graph profile: &#x60;/me&#x60;  The response is the raw JSON response from the provider&#39;s API. 
     # @param provider [String] 
     # @param call_o_auth_provider_api_request [CallOAuthProviderAPIRequest] 
     # @param [Hash] opts the optional parameters
-    # @return [Array<(CallOAuthProviderAPI200Response, Integer, Hash)>] CallOAuthProviderAPI200Response data, response status code and response headers
+    # @return [Array<(Hash<String, Object>, Integer, Hash)>] Hash<String, Object> data, response status code and response headers
     def call_o_auth_provider_api_with_http_info(provider, call_o_auth_provider_api_request, opts = {})
       if @api_client.config.debugging
         @api_client.config.logger.debug 'Calling API: OAuthAuthenticationApi.call_o_auth_provider_api ...'
@@ -801,7 +801,7 @@ module Volcano::Generated
       post_body = opts[:debug_body] || @api_client.object_to_http_body(call_o_auth_provider_api_request)
 
       # return_type
-      return_type = opts[:debug_return_type] || 'CallOAuthProviderAPI200Response'
+      return_type = opts[:debug_return_type] || 'Hash<String, Object>'
 
       # auth_names
       auth_names = opts[:debug_auth_names] || ['AuthUserAccessToken']

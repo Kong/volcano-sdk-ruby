@@ -466,7 +466,7 @@ module Volcano::Generated
     end
 
     # Rotate a branch's password
-    # Issues a new password for the branch and invalidates the previous connection string. Existing connections are not interrupted; new ones must use the returned string.  The parent database's credentials are untouched. 
+    # Issues a new password for the branch and invalidates the previous connection string. Existing connections are not interrupted; new ones must use the returned string. Proxies pick the rotation up within a few seconds, so the previous password can still open new connections until then.  The parent database's credentials are untouched. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param branch_name [String] Branch name (unique within the parent database, lowercase letters, numbers, and underscores only)
@@ -478,7 +478,7 @@ module Volcano::Generated
     end
 
     # Rotate a branch&#39;s password
-    # Issues a new password for the branch and invalidates the previous connection string. Existing connections are not interrupted; new ones must use the returned string.  The parent database&#39;s credentials are untouched. 
+    # Issues a new password for the branch and invalidates the previous connection string. Existing connections are not interrupted; new ones must use the returned string. Proxies pick the rotation up within a few seconds, so the previous password can still open new connections until then.  The parent database&#39;s credentials are untouched. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param branch_name [String] Branch name (unique within the parent database, lowercase letters, numbers, and underscores only)

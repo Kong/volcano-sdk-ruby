@@ -20,11 +20,23 @@ module Volcano::Generated
 
     attr_accessor :reset_password
 
+    attr_accessor :signup
+
+    attr_accessor :forgot_password
+
+    attr_accessor :device
+
+    attr_accessor :verify_email
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'login' => :'login',
-        :'reset_password' => :'reset_password'
+        :'reset_password' => :'reset_password',
+        :'signup' => :'signup',
+        :'forgot_password' => :'forgot_password',
+        :'device' => :'device',
+        :'verify_email' => :'verify_email'
       }
     end
 
@@ -42,7 +54,11 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'login' => :'ProjectConfigHostedPage',
-        :'reset_password' => :'ProjectConfigHostedPage'
+        :'reset_password' => :'ProjectConfigHostedPage',
+        :'signup' => :'ProjectConfigHostedPage',
+        :'forgot_password' => :'ProjectConfigHostedPage',
+        :'device' => :'ProjectConfigHostedPage',
+        :'verify_email' => :'ProjectConfigHostedPage'
       }
     end
 
@@ -75,6 +91,22 @@ module Volcano::Generated
       if attributes.key?(:'reset_password')
         self.reset_password = attributes[:'reset_password']
       end
+
+      if attributes.key?(:'signup')
+        self.signup = attributes[:'signup']
+      end
+
+      if attributes.key?(:'forgot_password')
+        self.forgot_password = attributes[:'forgot_password']
+      end
+
+      if attributes.key?(:'device')
+        self.device = attributes[:'device']
+      end
+
+      if attributes.key?(:'verify_email')
+        self.verify_email = attributes[:'verify_email']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -98,7 +130,11 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           login == o.login &&
-          reset_password == o.reset_password
+          reset_password == o.reset_password &&
+          signup == o.signup &&
+          forgot_password == o.forgot_password &&
+          device == o.device &&
+          verify_email == o.verify_email
     end
 
     # @see the `==` method
@@ -110,7 +146,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [login, reset_password].hash
+      [login, reset_password, signup, forgot_password, device, verify_email].hash
     end
 
     # Builds the object from hash

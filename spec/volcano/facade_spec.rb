@@ -6,6 +6,45 @@ require 'time'
 
 RSpec.describe Volcano::Client do
   CallbackAbort = Exception unless const_defined?(:CallbackAbort)
+  unless const_defined?(:BoundedReadIO)
+    BoundedReadIO = Class.new(StringIO) do
+      attr_reader :read_lengths
+
+      def initialize(value)
+        super
+        @read_lengths = []
+      end
+
+      def read(length = nil, output = nil)
+        raise 'unbounded read' if length.nil?
+
+        @read_lengths << length
+        super
+      end
+    end
+  end
+  unless const_defined?(:BoundedNonSeekableIO)
+    BoundedNonSeekableIO = Class.new do
+      attr_reader :read_lengths
+
+      def initialize(value)
+        @value = value.b
+        @offset = 0
+        @read_lengths = []
+      end
+
+      def read(length = nil)
+        raise 'unbounded read' if length.nil?
+
+        @read_lengths << length
+        return if @offset >= @value.bytesize
+
+        chunk = @value.byteslice(@offset, length)
+        @offset += chunk.bytesize
+        chunk
+      end
+    end
+  end
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   def access_token_with_session_id(session_id)
@@ -2474,6 +2513,33 @@ RSpec.describe Volcano::Client do
       %w[abcd efgh ij]
     )
     expect(object.name).to eq('videos/demo.mp4')
+  end
+
+  it 'streams seekable IO with bounded server-selected reads' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = BoundedReadIO.new('abcdefghij')
+
+    client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
+
+    expect(source.read_lengths).to eq([4, 4, 4])
+    upload_calls = transport.calls_for(:upload_part)
+    expect(upload_calls.map { |call| call.last.fetch(:request).data }).to eq(%w[abcd efgh ij])
+  end
+
+  it 'spools non-seekable IO with bounded reads' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = BoundedNonSeekableIO.new('abcdefghij')
+
+    client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
+
+    expect(source.read_lengths).not_to be_empty
+    expect(source.read_lengths).to all(be_between(1, 1_048_576))
+    upload_calls = transport.calls_for(:upload_part)
+    expect(upload_calls.map { |call| call.last.fetch(:request).data }).to eq(%w[abcd efgh ij])
   end
 
   it 'aborts after a part failure without masking the error' do

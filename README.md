@@ -500,8 +500,9 @@ Pass an HTTP byte range to download only part of an object.
 `create_upload_session` returns the immutable server-selected part size, part
 count, and expiration time for a resumable upload.
 `upload_resumable` creates a session, chunks the data using the server-selected
-part size, and completes the upload. If a part fails, it makes a best-effort
-abort and raises the original error.
+part size, and completes the upload. It streams seekable `IO` values directly;
+non-seekable inputs are spooled to a temporary file with bounded reads. If a
+part fails, it makes a best-effort abort and raises the original error.
 `upload_part` returns immutable part metadata and can safely retry the same part
 number to replace that part.
 `get_upload_session` returns immutable progress and uploaded-part metadata for

@@ -9,7 +9,7 @@ module Volcano
       case value
       when Hash then value.to_h { |key, item| [immutable_json(key), immutable_json(item)] }.freeze
       when Array then value.map { |item| immutable_json(item) }.freeze
-      when String then value.dup.freeze
+      when Time, String then value.dup.freeze
       else value
       end
     end

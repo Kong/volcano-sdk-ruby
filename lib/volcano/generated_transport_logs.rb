@@ -8,8 +8,10 @@ module Volcano
         invoke do
           apis = @api_factory.call(authorization)
           body = Generated::LogSearchRequest.new(deep_symbolize(request))
-          data, status, headers = apis.logs.search_project_logs_with_http_info(project_id, body)
-          response(data, status, headers)
+          data, status, headers = apis.logs.search_project_logs_with_http_info(
+            project_id, body, debug_return_type: 'String'
+          )
+          response(parse_body(data), status, headers)
         end
       end
 
@@ -18,9 +20,9 @@ module Volcano
           apis = @api_factory.call(authorization)
           body = Generated::LogActivityRequest.new(deep_symbolize(request))
           data, status, headers = apis.logs.get_project_log_activity_with_http_info(
-            project_id, body
+            project_id, body, debug_return_type: 'String'
           )
-          response(data, status, headers)
+          response(parse_body(data), status, headers)
         end
       end
     end

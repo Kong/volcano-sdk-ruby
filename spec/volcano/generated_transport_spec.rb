@@ -453,24 +453,24 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls = []
     end
 
-    def search_project_logs_with_http_info(project_id, request)
-      @calls << [:search, project_id, request]
-      result = FakeGeneratedModel.new(
+    def search_project_logs_with_http_info(project_id, request, options = {})
+      @calls << [:search, project_id, request, options]
+      result = {
         data: [
           {
-            id: 'event-1', timestamp: '2026-09-02T12:00:00Z', body: 'ready',
+            id: 'event-1', timestamp: '2026-09-02T12:00:00Z',
+            body: { message: 'ready', values: [1, 2], count: 2 },
             resource: { type: 'function', id: 'function-1' }
           }
         ],
         limit: 25, has_more: false
-      )
-      [result, 200, {}]
+      }
+      [JSON.generate(result), 200, {}]
     end
 
-    def get_project_log_activity_with_http_info(project_id, request)
-      @calls << [:activity, project_id, request]
-      result = FakeGeneratedModel.new(data: [], total: 0)
-      [result, 200, {}]
+    def get_project_log_activity_with_http_info(project_id, request, options = {})
+      @calls << [:activity, project_id, request, options]
+      [JSON.generate(data: [], total: 0), 200, {}]
     end
   end
 
@@ -624,18 +624,23 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       request: resource.merge('bucket_count' => 12)
     )
 
-    expect(search.body.fetch('data').first.fetch('id')).to eq('event-1')
+    expect(search.body.fetch('data').first).to include(
+      'id' => 'event-1',
+      'body' => { 'message' => 'ready', 'values' => [1, 2], 'count' => 2 }
+    )
     expect(activity.body.fetch('total')).to eq(0)
     search_call = apis.logs.calls.fetch(0)
     activity_call = apis.logs.calls.fetch(1)
     expect(search_call.first(2)).to eq([:search, project_id])
-    expect(search_call.last.to_hash).to eq(
+    expect(search_call.fetch(2).to_hash).to eq(
       resource: { type: 'function' }, limit: 25
     )
+    expect(search_call.last).to eq(debug_return_type: 'String')
     expect(activity_call.first(2)).to eq([:activity, project_id])
-    expect(activity_call.last.to_hash).to eq(
+    expect(activity_call.fetch(2).to_hash).to eq(
       resource: { type: 'function' }, bucket_count: 12
     )
+    expect(activity_call.last).to eq(debug_return_type: 'String')
   end
 
   it 'reads a lock through the generated API' do

@@ -4,8 +4,10 @@ require 'spec_helper'
 
 RSpec.describe Volcano::Client do
   let(:calls) { [] }
+  let(:event_time) { Time.utc(2026, 9, 2, 12) }
   let(:transport) do
     call_log = calls
+    timestamp = event_time
     Object.new.tap do |fake|
       fake.define_singleton_method(:search_project_logs) do |**arguments|
         call_log << [:search_project_logs, arguments]
@@ -15,7 +17,7 @@ RSpec.describe Volcano::Client do
             'data' => [
               {
                 'id' => 'event-1',
-                'timestamp' => '2026-09-02T12:00:00Z',
+                'timestamp' => timestamp,
                 'body' => { 'message' => 'ready' },
                 'resource' => { 'type' => 'function', 'id' => 'function-1' }
               }
@@ -64,6 +66,8 @@ RSpec.describe Volcano::Client do
 
     expect(result).to have_attributes(limit: 25, has_more: true, next_cursor: 'cursor-2')
     expect(result.data.first.fetch('body')).to eq('message' => 'ready').and be_frozen
+    expect(result.data.first.fetch('timestamp')).to eq(event_time).and be_frozen
+    expect(result.data.first.fetch('timestamp')).not_to equal(event_time)
     expect(result.data).to be_frozen
     expect(calls).to eq(
       [[

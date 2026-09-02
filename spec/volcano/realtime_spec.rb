@@ -263,6 +263,94 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'removes an inactive channel without connecting', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+
+    Async do
+      channel = client.realtime.channel('contract')
+
+      expect(client.realtime.remove_channel('contract')).to be_nil
+
+      expect(client.realtime.channel('contract')).not_to be(channel)
+      expect(client.realtime).not_to be_connected
+    end.wait
+
+    expect(socket.commands).to be_empty
+  end
+
+  it 'continues removing channels after one removal fails' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do
+      first = client.realtime.channel('first')
+      second = client.realtime.channel('second')
+      first.subscribe
+      second.subscribe
+      socket.on_write = lambda do |command|
+        next unless command.dig('unsubscribe', 'channel') == 'broadcast:first'
+
+        socket.reject(command.fetch('id'), 'unsubscribe failed')
+        :defer
+      end
+
+      expect { client.realtime.remove_all_channels }.to raise_error(
+        Volcano::Realtime::ServerError,
+        'unsubscribe failed'
+      )
+      expect(client.realtime.channel('first')).to be(first)
+      expect(client.realtime.channel('second')).not_to be(second)
+      socket.on_write = nil
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'waits for removal before looking up the same channel' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      old_channel = client.realtime.channel('contract')
+      old_channel.subscribe
+      socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        entered.enqueue(true)
+        release.dequeue
+      end
+      removing = task.async { client.realtime.remove_channel('contract') }
+      entered.dequeue
+      lookup_finished = false
+      lookup = task.async do
+        client.realtime.channel('contract').tap { lookup_finished = true }
+      end
+      task.yield
+
+      expect(lookup_finished).to be(false)
+      release.enqueue(true)
+      removing.wait
+      expect(lookup.wait).not_to be(old_channel)
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'preserves the API base path in the realtime endpoint' do
     socket = FacadeSocket.new
     addresses = []

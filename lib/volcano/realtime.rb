@@ -14,17 +14,20 @@ module Volcano
       @socket_factory = socket_factory || method(:open_socket)
       @protocol = nil
       @protocol_lock = nil
+      @channel_lock = nil
       @channels = {}
       @closed = false
     end
 
     def channel(name)
-      ensure_open!
-      @channels["broadcast:#{name}"] ||= Channel.new(
-        self,
-        method(:protocol),
-        "broadcast:#{name}"
-      )
+      channel_lock.acquire do
+        ensure_open!
+        @channels["broadcast:#{name}"] ||= Channel.new(
+          self,
+          method(:protocol),
+          "broadcast:#{name}"
+        )
+      end
     end
 
     def protocol
@@ -71,6 +74,11 @@ module Volcano
     def protocol_lock
       require 'async/semaphore'
       @protocol_lock ||= Async::Semaphore.new(1)
+    end
+
+    def channel_lock
+      require 'async/semaphore'
+      @channel_lock ||= Async::Semaphore.new(1)
     end
 
     def connect_protocol
@@ -172,9 +180,7 @@ module Volcano
       def remove
         with_lifecycle_lock do
           ensure_open!
-          protocol = @protocol_provider.call
-          protocol.unsubscribe(channel: @name) if @subscribed
-          detach_publication_handler(protocol)
+          detach_from_protocol
           mark_removed
         end
         nil
@@ -199,6 +205,14 @@ module Volcano
       def detach_publication_handler(protocol)
         protocol.off_publication(@name, @publication_handler) if @publication_handler
         @publication_handler = nil
+      end
+
+      def detach_from_protocol
+        return unless @subscribed || @publication_handler
+
+        protocol = @protocol_provider.call
+        protocol.unsubscribe(channel: @name) if @subscribed
+        detach_publication_handler(protocol)
       end
 
       def mark_removed

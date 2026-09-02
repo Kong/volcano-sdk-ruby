@@ -649,7 +649,7 @@ end.wait
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
-same `type:` to `remove_channel` for presence channels. Reconnect, recovery, and
+same `type:` to `remove_channel` for every non-broadcast channel. Reconnect, recovery, and
 automatic fetching for lightweight database-change notifications are out of
 scope.
 Connection callbacks receive immutable contexts and run outside protocol

@@ -203,10 +203,11 @@ RSpec.describe Volcano::Realtime do
         'record' => { 'id' => 1 }, 'timestamp' => '2026-09-02T12:00:00Z'
       }
       socket.publication(channel: 'project-id:postgres:public:other:user-id', data: payload)
+      socket.publication(channel: 'project-id:postgres:public:messages', data: payload)
       socket.publication(
         channel: 'project-id:postgres:public:messages:extra:user-id', data: payload
       )
-      task.yield
+      task.sleep(0.01)
 
       expect(received).to be_empty
       client.realtime.disconnect

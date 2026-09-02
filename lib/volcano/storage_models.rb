@@ -87,4 +87,35 @@ module Volcano
       super(part_number: part_number, etag: etag.dup.freeze, size: size)
     end
   end
+
+  UPLOAD_SESSION_STATUS_ATTRIBUTES = %i[
+    session_id status path content_type total_size part_size total_parts parts_uploaded
+    bytes_uploaded parts expires_at created_at
+  ].freeze
+  private_constant :UPLOAD_SESSION_STATUS_ATTRIBUTES
+
+  UploadSessionStatus = Data.define(*UPLOAD_SESSION_STATUS_ATTRIBUTES) do
+    def initialize(**attributes)
+      unknown = attributes.keys - UPLOAD_SESSION_STATUS_ATTRIBUTES
+      raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
+
+      missing = UPLOAD_SESSION_STATUS_ATTRIBUTES - attributes.keys
+      raise ArgumentError, "missing keywords: #{missing.join(', ')}" unless missing.empty?
+
+      values = UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
+        [name, immutable_value(attributes.fetch(name))]
+      end
+      super(**values)
+    end
+
+    private
+
+    def immutable_value(value)
+      case value
+      when Array then value.to_a.dup.freeze
+      when String then value.dup.freeze
+      else value.frozen? ? value : value.dup.freeze
+      end
+    end
+  end
 end

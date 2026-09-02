@@ -515,12 +515,17 @@ Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.
 
-### Acquire and release a lock
+### Inspect, acquire, and release a lock
 
 ```ruby
+state = client.locks.get("build")
+puts state.held
 lease = client.locks.acquire("build", ttl: 30)
 client.locks.release("build", lease)
 ```
+
+`locks.get` returns immutable lock availability, expiry, and fencing-token
+state without acquiring the lock.
 
 ### Broadcast over realtime
 

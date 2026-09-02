@@ -11,6 +11,15 @@ module Volcano
       @transport = transport
     end
 
+    def get(key)
+      payload = Transport.body(get_response(key), 200)
+      LockState.new(
+        held: payload.fetch('held'),
+        expires_at: parse_time(payload['expires_at']),
+        fencing_token: payload['fencing_token']
+      )
+    end
+
     def acquire(key, ttl:)
       token = SecureRandom.uuid
       payload = Transport.body(acquire_response(key, ttl, token), 201)
@@ -35,6 +44,15 @@ module Volcano
     end
 
     private
+
+    def get_response(key)
+      Transport.invoke do
+        @transport.get_project_lock(
+          authorization: @client.service_token,
+          key: key
+        )
+      end
+    end
 
     def acquire_response(key, ttl, token)
       Transport.invoke do

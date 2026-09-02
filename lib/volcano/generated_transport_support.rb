@@ -52,35 +52,13 @@ module Volcano
 
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
+      include UploadSessionStorageApi
+
       UPLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.upload_storage_object',
         header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' }.freeze,
         auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
         return_type: 'StorageObject'
-      }.freeze
-      CREATE_UPLOAD_SESSION_OPTIONS = {
-        operation: :'StorageObjectsApi.upload_storage_object',
-        header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze,
-        auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
-        return_type: 'CreateUploadSessionResponse'
-      }.freeze
-      UPLOAD_PART_OPTIONS = {
-        operation: :'StorageObjectsApi.upload_part',
-        header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/octet-stream' }.freeze,
-        auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
-        return_type: 'UploadSessionPart'
-      }.freeze
-      COMPLETE_UPLOAD_SESSION_OPTIONS = {
-        operation: :'StorageObjectsApi.upload_storage_object',
-        header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze,
-        auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
-        return_type: 'CompleteUploadSessionResponse'
-      }.freeze
-      UPLOAD_SESSION_STATUS_OPTIONS = {
-        operation: :'StorageObjectsApi.download_storage_object',
-        header_params: { 'Accept' => 'application/json' }.freeze,
-        auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
-        return_type: 'UploadSessionStatusResponse'
       }.freeze
       DOWNLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.download_storage_object',
@@ -103,37 +81,6 @@ module Volcano
       def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
         options = opts.merge(UPLOAD_OPTIONS).merge(form_params: { 'file' => file })
         call_storage_api(:POST, bucket_name, path, options)
-      end
-
-      def create_upload_session_with_http_info(bucket_name, path, request)
-        options = CREATE_UPLOAD_SESSION_OPTIONS.merge(body: api_client.object_to_http_body(request))
-        call_storage_api(:POST, bucket_name, path, options)
-      end
-
-      def upload_part_with_http_info(bucket_name, path, session_id, part_number, data)
-        headers = UPLOAD_PART_OPTIONS.fetch(:header_params).merge(
-          'X-Upload-Session' => session_id,
-          'X-Part-Number' => part_number.to_s
-        )
-        options = UPLOAD_PART_OPTIONS.merge(header_params: headers, body: data)
-        call_storage_api(:PUT, bucket_name, path, options)
-      end
-
-      def complete_upload_session_with_http_info(bucket_name, path, session_id)
-        headers = COMPLETE_UPLOAD_SESSION_OPTIONS.fetch(:header_params).merge(
-          'X-Upload-Session' => session_id,
-          'X-Upload-Complete' => 'true'
-        )
-        options = COMPLETE_UPLOAD_SESSION_OPTIONS.merge(header_params: headers, body: JSON.generate({}))
-        call_storage_api(:POST, bucket_name, path, options)
-      end
-
-      def get_upload_session_with_http_info(bucket_name, path, session_id)
-        headers = UPLOAD_SESSION_STATUS_OPTIONS.fetch(:header_params).merge(
-          'X-Upload-Session' => session_id
-        )
-        options = UPLOAD_SESSION_STATUS_OPTIONS.merge(header_params: headers)
-        call_storage_api(:GET, bucket_name, path, options)
       end
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})

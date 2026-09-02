@@ -17,6 +17,7 @@ end
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :Generated
+  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_support'
   require_relative 'generated_transport_auth'
   require_relative 'generated_transport_anonymous'

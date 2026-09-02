@@ -499,6 +499,8 @@ number to replace that part.
 resuming an interrupted upload.
 `complete_upload_session` assembles the uploaded parts and returns the stored
 object.
+`abort_upload_session(path, session_id: ...)` abandons a session and discards
+its uploaded parts.
 Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.

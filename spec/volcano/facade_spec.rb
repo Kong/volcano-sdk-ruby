@@ -523,6 +523,13 @@ RSpec.describe Volcano::Client do
       }
       Response.new(status: 200, body: body, headers: {}, data: nil)
     end
+
+    def abort_upload_session(**arguments)
+      @calls << [:abort_upload_session, arguments]
+      Response.new(
+        status: 200, body: { 'message' => 'upload session aborted' }, headers: {}, data: nil
+      )
+    end
   end
 
   class FakeContractTransport
@@ -2415,6 +2422,22 @@ RSpec.describe Volcano::Client do
     status = client.storage.from('assets').send(:upload_session_status, payload)
 
     expect(status.parts).to eq([]).and be_frozen
+  end
+
+  it 'aborts an upload session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    result = client.storage.from('assets').abort_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(result).to be_nil
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:abort_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
+    )
   end
 
   it 'routes the facade calls through the contract operations', :aggregate_failures do

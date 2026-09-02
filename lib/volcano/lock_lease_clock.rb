@@ -3,24 +3,27 @@
 module Volcano
   # Tracks lease age across wall-clock changes and host suspension.
   class LockLeaseClock
-    def initialize(ttl:, started_at:, wall_started_at:)
+    MAX_LEASE_LIFETIME_SECONDS = 7_776_000
+    CLOCK_ID = if Process.const_defined?(:CLOCK_BOOTTIME)
+                 Process.const_get(:CLOCK_BOOTTIME)
+               else
+                 Process::CLOCK_MONOTONIC
+               end
+
+    def self.now = Process.clock_gettime(CLOCK_ID)
+
+    def initialize(ttl:, started_at:)
       @ttl = ttl
-      reset(started_at, wall_started_at)
+      @absolute_deadline = started_at + MAX_LEASE_LIFETIME_SECONDS
+      reset(started_at)
     end
 
-    def reset(started_at, wall_started_at)
-      @monotonic_deadline = started_at + @ttl
-      @wall_deadline = wall_started_at + @ttl
+    def reset(started_at)
+      @deadline = [started_at + @ttl, @absolute_deadline].min
     end
 
-    def remaining
-      monotonic_remaining = @monotonic_deadline - monotonic_now
-      wall_remaining = @wall_deadline - Time.now
-      [monotonic_remaining, wall_remaining].min.clamp(0.0, Float::INFINITY)
-    end
+    def remaining = (@deadline - monotonic_now).clamp(0.0, Float::INFINITY)
 
-    def monotonic_now
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    end
+    def monotonic_now = self.class.now
   end
 end

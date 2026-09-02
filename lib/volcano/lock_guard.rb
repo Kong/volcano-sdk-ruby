@@ -6,14 +6,15 @@ module Volcano
   # Exposes the latest lease and reports asynchronous lease loss.
   class LockGuard
     EXPIRY_MESSAGE = 'lock lease expired before renewal completed'
+    MAX_EXPIRY_POLL_SECONDS = 1.0
     UNSAFE_RENEWAL_MESSAGE = 'lock renewal returned no safe lease window'
 
     attr_reader :ttl
 
-    def initialize(lease, ttl:, started_at:, wall_started_at:)
+    def initialize(lease, ttl:, started_at:)
       @lease = lease
       @ttl = ttl
-      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at, wall_started_at: wall_started_at)
+      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at)
       @mutex = Mutex.new
       @changed = ConditionVariable.new
       @failure = nil
@@ -32,12 +33,12 @@ module Volcano
 
     def wait_lost(timeout: nil) = @mutex.synchronize { wait_for_failure?(wait_deadline(timeout)) }
 
-    def replace_lease(lease, started_at:, wall_started_at:)
+    def replace_lease(lease, started_at:)
       @mutex.synchronize do
         return false if @failure
 
         @lease = lease
-        @lease_clock.reset(started_at, wall_started_at)
+        @lease_clock.reset(started_at)
         @changed.broadcast
         true
       end
@@ -88,12 +89,12 @@ module Volcano
     end
 
     def wait_duration(deadline)
-      return expiry_delay unless deadline
+      return [expiry_delay, MAX_EXPIRY_POLL_SECONDS].min unless deadline
 
       caller_remaining = deadline - @lease_clock.monotonic_now
       return if caller_remaining <= 0
 
-      [expiry_delay, caller_remaining].min
+      [expiry_delay, caller_remaining, MAX_EXPIRY_POLL_SECONDS].min
     end
 
     def expiry_loop
@@ -109,7 +110,7 @@ module Volcano
       delay = expiry_delay
       return record_expiry if delay <= 0
 
-      @changed.wait(@mutex, delay)
+      @changed.wait(@mutex, [delay, MAX_EXPIRY_POLL_SECONDS].min)
       :waiting
     end
 

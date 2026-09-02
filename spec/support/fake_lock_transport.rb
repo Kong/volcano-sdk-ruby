@@ -18,13 +18,14 @@ module SpecSupport
 
   # Configurable lock transport for renewal lifecycle tests.
   class FakeLockTransport
-    attr_accessor :acquire_expires_at, :renew_handler
+    attr_accessor :acquire_expires_at, :release_handler, :renew_handler
     attr_reader :calls
 
     def initialize
       @calls = []
       @acquire_expires_at = Time.now.utc + 30
       @renew_handler = nil
+      @release_handler = nil
     end
 
     def acquire_project_lock(**arguments)
@@ -41,6 +42,8 @@ module SpecSupport
 
     def release_project_lock(**arguments)
       @calls << [:release_project_lock, arguments]
+      return release_handler.call(arguments) if release_handler
+
       response(204, nil)
     end
 

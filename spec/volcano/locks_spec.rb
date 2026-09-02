@@ -131,30 +131,20 @@ RSpec.describe Volcano::Locks do
     release << true if release.empty?
   end
 
-  it 'uses elapsed ttl despite a constant wall-clock offset' do
+  it 'ignores wall-clock corrections when measuring lease age' do
     lease = Volcano::LockLease.new(
       key: 'build', token: 'token', expires_at: Time.now.utc + 5, fencing_token: 7
     )
-    real_time = Time.now
-    allow(Time).to receive(:now).and_return(real_time + 10)
-    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    wall_started_at = Time.now
-
-    guard = Volcano::LockGuard.new(
-      lease, ttl: 5, started_at: started_at, wall_started_at: wall_started_at
-    )
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_clock_class.now)
+    allow(Time).to receive(:now).and_return(Time.now + 10)
 
     expect(guard.__send__(:expiry_delay)).to be_between(0, 5).exclusive
   end
 
-  it 'treats wall-clock elapsed time as lease age after host suspension' do
+  it 'uses the suspend-aware lease clock for expiry' do
     lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
-    wall_started_at = Time.now
-    guard = Volcano::LockGuard.new(
-      lease, ttl: 5, started_at: Process.clock_gettime(Process::CLOCK_MONOTONIC),
-             wall_started_at: wall_started_at
-    )
-    allow(Time).to receive(:now).and_return(wall_started_at + 6)
+    allow(lease_clock_class).to receive(:now).and_return(6.0)
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: 0.0)
 
     expect(guard).to be_lost
     expect(guard.failure).to be_a(Timeout::Error)
@@ -164,10 +154,8 @@ RSpec.describe Volcano::Locks do
     lease = Volcano::LockLease.new(
       key: 'build', token: 'token', expires_at: Time.now.utc + 30, fencing_token: 7
     )
-    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) - 6
-    guard = Volcano::LockGuard.new(
-      lease, ttl: 5, started_at: started_at, wall_started_at: Time.now - 6
-    )
+    started_at = lease_clock_class.now - 6
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
 
     guard.stop_expiry_watch
 
@@ -177,13 +165,34 @@ RSpec.describe Volcano::Locks do
 
   it 'observes expiry synchronously when the watcher has not run' do
     lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
-    guard = Volcano::LockGuard.new(
-      lease, ttl: 5, started_at: Process.clock_gettime(Process::CLOCK_MONOTONIC) - 6,
-             wall_started_at: Time.now - 6
-    )
+    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: lease_clock_class.now - 6)
 
     expect(guard).to be_lost
     expect(guard.wait_lost(timeout: 0)).to be(true)
+  end
+
+  it 'preserves the absolute acquisition deadline across renewals' do
+    lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
+    allow(lease_clock_class).to receive(:now).and_return(0.0)
+    guard = Volcano::LockGuard.new(lease, ttl: 7_776_000, started_at: 0.0)
+
+    guard.replace_lease(lease, started_at: 7_775_999.0)
+    allow(lease_clock_class).to receive(:now).and_return(7_775_999.0)
+
+    expect(guard.__send__(:expiry_delay)).to eq(1.0)
+  end
+
+  it 'does not synthesize expiry while a completed block waits for release' do
+    clock = SpecSupport::FakeLeaseClock.new
+    stub_lease_clock(clock)
+    transport.release_handler = lambda do |_arguments|
+      clock.advance(31)
+      transport.response(204, nil)
+    end
+
+    result = locks.with_lock('build', ttl: 30) { :completed }
+
+    expect(result).to eq(:completed)
   end
 
   it 'reports lease loss across a nonlocal block return' do
@@ -216,9 +225,10 @@ RSpec.describe Volcano::Locks do
   end
 
   def stub_lease_clock(clock)
-    allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC) { clock.monotonic }
-    allow(Time).to receive(:now) { clock.wall }
+    allow(lease_clock_class).to receive(:now) { clock.monotonic }
   end
+
+  def lease_clock_class = Volcano.const_get(:LockLeaseClock)
 
   def advance_after_acquire(clock)
     allow(transport).to receive(:acquire_project_lock).and_wrap_original do |method, **arguments|

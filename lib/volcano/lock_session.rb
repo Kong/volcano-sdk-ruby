@@ -27,12 +27,9 @@ module Volcano
     def prepare
       return unless @guard.renewal_delay(@delay).zero?
 
-      started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      wall_started_at = Time.now
+      started_at = LockLeaseClock.now
       lease = @locks.renew(@key, @guard.lease, ttl: @guard.ttl)
-      replaced = @guard.replace_lease(
-        lease, started_at: started_at, wall_started_at: wall_started_at
-      )
+      replaced = @guard.replace_lease(lease, started_at: started_at)
       return if replaced && @guard.renewal_delay(@delay).positive?
 
       failure = Timeout::Error.new(LockGuard::UNSAFE_RENEWAL_MESSAGE)
@@ -50,14 +47,14 @@ module Volcano
       @renewer.stop if @renewer_started
     ensure
       @guard.stop_expiry_watch
-      finish(completed)
+      finish(completed, @guard.failure)
     end
 
-    def finish(completed)
+    def finish(completed, failure)
       release_error = release_safely
       return unless completed
 
-      raise @guard.failure if @guard.failure
+      raise failure if failure
       raise release_error if release_error
     end
 

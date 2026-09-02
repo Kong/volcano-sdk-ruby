@@ -12,11 +12,8 @@ module Volcano
 
     def with_lock(key, ttl:, &)
       validate_ttl(ttl)
-      started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      wall_started_at = Time.now
-      guard = LockGuard.new(
-        acquire(key, ttl: ttl), ttl: ttl, started_at: started_at, wall_started_at: wall_started_at
-      )
+      started_at = LockLeaseClock.now
+      guard = LockGuard.new(acquire(key, ttl: ttl), ttl: ttl, started_at: started_at)
       renewer = lock_renewer(key, guard, ttl)
       LockSession.new(self, key, guard, renewer, method(:renewal_delay)).run(&)
     end

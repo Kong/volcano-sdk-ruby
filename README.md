@@ -523,12 +523,15 @@ puts state.held
 lease = client.locks.acquire("build", ttl: 30)
 lease = client.locks.renew("build", lease, ttl: 30)
 client.locks.release("build", lease)
+client.locks.force_release("stale-build")
 ```
 
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
 `locks.renew` returns a new immutable lease and leaves the previous value
 unchanged.
+`locks.force_release` drops any current lease without an ownership token. Use
+it only for administrative recovery behind fencing-token enforcement.
 
 ### Broadcast over realtime
 

@@ -9,6 +9,7 @@ module Volcano
       case value
       when String then value.dup.freeze
       when Array then value.map { |item| capture(item) }.freeze
+      when Hash then value.to_h { |key, item| [capture(key), capture(item)] }.freeze
       else value
       end
     end
@@ -97,6 +98,8 @@ module Volcano
       add_filter(column, 'in', values)
     end
 
+    def insert(values) = InsertBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
+
     def order(column, ascending: true)
       clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze
       copy(order: [*@order, clause])
@@ -158,6 +161,27 @@ module Volcano
         body['limit'] = @limit unless @limit.nil?
         body['offset'] = @offset unless @offset.nil?
       end
+    end
+  end
+
+  # Builds and executes an immutable database insert.
+  class InsertBuilder
+    def initialize(context, table, values)
+      @context = context
+      @table = table
+      @values = values
+      freeze
+    end
+
+    def execute
+      response = Transport.invoke do
+        @context.transport.query_database_insert(
+          authorization: @context.client.session_token,
+          database_name: @context.database_name,
+          body: { 'table' => @table, 'values' => @values }
+        )
+      end
+      Transport.body(response, 200).fetch('data')
     end
   end
 end

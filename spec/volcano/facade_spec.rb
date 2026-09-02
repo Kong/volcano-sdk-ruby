@@ -333,7 +333,23 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  # Implements the database operations used by the facade test transport.
+  module FakeDatabaseTransport
+    def query_database_select(**arguments)
+      @calls << [:query_database_select, arguments]
+      Response.new(status: 200, body: { 'data' => [{ 'slug' => 'a' }] }, headers: {}, data: nil)
+    end
+
+    def query_database_insert(**arguments)
+      @calls << [:query_database_insert, arguments]
+      values = arguments.fetch(:body).fetch('values')
+      Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
+    end
+  end
+
   class FakeContractTransport
+    include FakeDatabaseTransport
+
     include FakeCallLog
     include FakeEmailChangeTransport
     include FakeAnonymousTransport
@@ -414,11 +430,6 @@ RSpec.describe Volcano::Client do
     def auth_signup(**arguments)
       @calls << [:auth_signup, arguments]
       @signup_response
-    end
-
-    def query_database_select(**arguments)
-      @calls << [:query_database_select, arguments]
-      Response.new(status: 200, body: { 'data' => [{ 'slug' => 'a' }] }, headers: {}, data: nil)
     end
 
     def upload_storage_object(**arguments)
@@ -2266,6 +2277,39 @@ RSpec.describe Volcano::Client do
           ]
         },
         { 'table' => 'items' }
+      ]
+    )
+  end
+
+  it 'inserts a captured row using the current session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    values = {
+      'name' => +'Volcano',
+      'metadata' => { 'labels' => [+'sdk'] }
+    }
+
+    insert = client.database('main').from('items').insert(values)
+    values['name'].replace('Lava')
+    values['metadata']['labels'].first.replace('mutated')
+    transport.access_token = 'access-token-2'
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(insert.execute).to eq(
+      [{ 'name' => 'Volcano', 'metadata' => { 'labels' => ['sdk'] } }]
+    )
+    expect(transport.calls_for(:query_database_insert)).to eq(
+      [
+        [
+          :query_database_insert,
+          {
+            authorization: 'access-token-2',
+            database_name: 'main',
+            body: {
+              'table' => 'items',
+              'values' => { 'name' => 'Volcano', 'metadata' => { 'labels' => ['sdk'] } }
+            }
+          }
+        ]
       ]
     )
   end

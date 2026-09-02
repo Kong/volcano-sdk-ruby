@@ -418,6 +418,11 @@ matching_rows = client.database("main")
                       .is("deleted_at", nil)
                       .in("status", %w[draft published])
                       .execute
+
+inserted_rows = client.database("main")
+                      .from("items")
+                      .insert(name: "Volcano", status: "draft")
+                      .execute
 ```
 
 ### Upload and download an object

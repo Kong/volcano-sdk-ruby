@@ -31,6 +31,14 @@ module Volcano
           [@next_id, Async::Queue.new].tap { |id, queue| @pending[id] = queue }
         end
 
+        def write_frame(frame)
+          @write_lock.acquire { @socket.write("#{JSON.generate(frame)}\n") }
+        rescue StandardError => e
+          failure = closed_error(e)
+          close_with(failure, notify_error: true)
+          raise failure
+        end
+
         def await_reply(reply_queue)
           Async::Task.current.with_timeout(
             @request_timeout,

@@ -31,7 +31,8 @@ module Volcano
           secrets: realtime_secrets,
           events: Protocol::Events.new(
             on_close: method(:protocol_closed),
-            on_error: method(:protocol_error)
+            on_error: method(:protocol_error_started),
+            on_failure: method(:protocol_failed)
           )
         )
       end

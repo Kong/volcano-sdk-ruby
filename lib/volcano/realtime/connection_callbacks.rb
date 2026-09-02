@@ -22,13 +22,26 @@ module Volcano
       end
 
       def emit_connection_event(event, context)
-        callbacks = @connection_callbacks.fetch(event).dup
-        return if callbacks.empty?
+        emit_connection_events([[event, context]])
+      end
+
+      def emit_connection_events(events)
+        deliveries = connection_deliveries(events)
+        return if deliveries.empty?
 
         Async::Task.current.async do
-          connection_callback_lock.acquire { dispatch_connection_callbacks(event, context, callbacks) }
+          connection_callback_lock.acquire do
+            deliveries.each { |event, context, callbacks| dispatch_connection_callbacks(event, context, callbacks) }
+          end
         end
         nil
+      end
+
+      def connection_deliveries(events)
+        events.filter_map do |event, context|
+          callbacks = @connection_callbacks.fetch(event).dup
+          [event, context, callbacks] unless callbacks.empty?
+        end
       end
 
       def dispatch_connection_callbacks(event, context, callbacks)
@@ -47,20 +60,43 @@ module Volcano
       end
 
       def protocol_closed(error)
-        reason = @manual_disconnect ? 'manual' : error.message
-        context = DisconnectContext.new(code: nil, reason: immutable_string(reason))
-        emit_connection_event(:disconnect, context)
+        emit_connection_event(:disconnect, disconnect_context(error))
       end
 
       def protocol_error(error)
         @protocol_error_reported = true
-        snapshot = Redaction.exception(error, secrets: []).freeze
-        context = ErrorContext.new(
+        emit_connection_event(:error, error_context(error))
+      end
+
+      def protocol_error_started(_error)
+        @protocol_error_reported = true
+      end
+
+      def protocol_failed(error, disconnected)
+        events = [[:error, error_context(error)]]
+        events << [:disconnect, disconnect_context(error)] if disconnected
+        emit_connection_events(events)
+      end
+
+      def error_context(error)
+        snapshot = immutable_exception(error)
+        ErrorContext.new(
           code: snapshot.respond_to?(:code) ? snapshot.code : nil,
-          message: immutable_string(snapshot.message),
-          error: snapshot
+          message: immutable_string(snapshot.message), error: snapshot
         )
-        emit_connection_event(:error, context)
+      end
+
+      def disconnect_context(error)
+        reason = @manual_disconnect ? 'manual' : error.message
+        DisconnectContext.new(code: nil, reason: immutable_string(reason))
+      end
+
+      def immutable_exception(error)
+        snapshot = Redaction.exception(error, secrets: [])
+        snapshot.message.freeze
+        backtrace = snapshot.backtrace
+        snapshot.set_backtrace(backtrace.map { |line| immutable_string(line) }.freeze) if backtrace
+        snapshot.freeze
       end
 
       def immutable_string(value)

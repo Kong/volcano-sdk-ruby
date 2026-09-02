@@ -218,6 +218,98 @@ RSpec.describe Volcano::Realtime do
     expect(error_context.error).to be_frozen
   end
 
+  it 'prevents one error callback from mutating another callback context' do
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { raise IOError, 'socket open failed' }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    mutation_errors = []
+    observed = []
+
+    Async do |task|
+      client.realtime.on_error do |context|
+        begin
+          context.error.message << 'mutated'
+        rescue StandardError => e
+          mutation_errors << e.class
+        end
+        begin
+          context.error.backtrace << 'mutated'
+        rescue StandardError => e
+          mutation_errors << e.class
+        end
+      end
+      client.realtime.on_error do |context|
+        observed << [context.error.message, context.error.backtrace]
+      end
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Error::TransportError,
+        'socket open failed'
+      )
+      task.with_timeout(0.2) { task.yield until observed.any? }
+    end.wait
+
+    expect(mutation_errors).to eq([FrozenError, FrozenError])
+    expect(observed.first.first).to eq('socket open failed')
+    expect(observed.first.last).not_to include('mutated')
+  end
+
+  it 'closes and reports an established connection when a socket write fails' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    events = []
+
+    Async do |task|
+      client.realtime.on_error { |context| events << [:error, context.message] }
+      client.realtime.on_disconnect { |context| events << [:disconnect, context.reason] }
+      socket.on_write = lambda do |command|
+        raise IOError, 'socket write failed' if command.key?('subscribe')
+      end
+
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        'socket write failed'
+      )
+      task.with_timeout(0.2) { task.yield until events.length == 2 }
+    end.wait
+
+    expect(events).to eq(
+      [[:error, 'socket write failed'], [:disconnect, 'socket write failed']]
+    )
+    expect(client.realtime).not_to be_connected
+    expect(socket).to be_closed
+  end
+
+  it 'finishes transport shutdown before an error callback disconnects again' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    disconnected = []
+
+    Async do |task|
+      client.realtime.on_error { client.realtime.disconnect }
+      client.realtime.on_disconnect { |context| disconnected << context }
+      client.realtime.channel('contract').subscribe
+
+      socket.fail_read(IOError.new('socket read failed'))
+      task.with_timeout(0.2) { task.yield until disconnected.any? }
+    end.wait
+
+    expect(disconnected.map(&:reason)).to eq(['socket read failed'])
+    expect(socket).to be_closed
+  end
+
   it 'does not report a connection after the protocol closes while handling its reply' do
     socket = FacadeSocket.new
     socket.on_write = lambda do |command|

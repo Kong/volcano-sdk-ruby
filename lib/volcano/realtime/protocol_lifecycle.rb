@@ -29,7 +29,11 @@ module Volcano
           close_state(error)
           notify_protocol_error(error) if notify_error
           stop_protocol(error)
-          notify_protocol_close(error) if was_connected
+          if notify_error
+            notify_protocol_failure(error, was_connected)
+          elsif was_connected
+            notify_protocol_close(error)
+          end
         end
 
         def close_state(error)
@@ -46,6 +50,7 @@ module Volcano
         end
 
         def notify_protocol_error(error) = @events&.on_error&.call(error)
+        def notify_protocol_failure(error, disconnected) = @events&.on_failure&.call(error, disconnected)
         def notify_protocol_close(error) = @events&.on_close&.call(error)
       end
       private_constant :Lifecycle

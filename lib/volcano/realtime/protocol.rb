@@ -24,7 +24,7 @@ module Volcano
       include Lifecycle
 
       Failure = Data.define(:error)
-      Events = Data.define(:on_close, :on_error)
+      Events = Data.define(:on_close, :on_error, :on_failure)
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
       DEFAULT_MAX_CALLBACK_QUEUE = 128
@@ -86,6 +86,8 @@ module Volcano
       end
 
       def close
+        return nil if @closed
+
         close_with(ClosedError.new('realtime connection closed'))
         @reader_task.stop && nil
       end
@@ -131,8 +133,6 @@ module Volcano
       end
 
       def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
-
-      def write_frame(frame) = @write_lock.acquire { @socket.write("#{JSON.generate(frame)}\n") }
 
       def close_socket
         @socket.close

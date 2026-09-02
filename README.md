@@ -423,7 +423,15 @@ inserted_rows = client.database("main")
                       .from("items")
                       .insert(name: "Volcano", status: "draft")
                       .execute
+
+updated_rows = client.database("main")
+                     .from("items")
+                     .update(status: "published")
+                     .eq("name", "Volcano")
+                     .execute
 ```
+
+Updates require at least one filter; Volcano rejects filterless updates.
 
 ### Upload and download an object
 

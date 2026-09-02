@@ -185,11 +185,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeDatabaseApi
-    attr_reader :calls, :insert_calls
+    attr_reader :calls, :insert_calls, :update_calls
 
     def initialize
       @calls = []
       @insert_calls = []
+      @update_calls = []
     end
 
     def query_database_select_with_http_info(name, body)
@@ -200,6 +201,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def query_database_insert_with_http_info(name, body)
       @insert_calls << [name, body]
       [FakeGeneratedModel.new(data: [{ slug: 'new' }]), 200, {}]
+    end
+
+    def query_database_update_with_http_info(name, body)
+      @update_calls << [name, body]
+      [FakeGeneratedModel.new(data: [{ slug: 'updated' }]), 200, {}]
     end
   end
 
@@ -461,6 +467,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(database_name).to eq('main')
     expect(request).to be_a(InternalGenerated::DatabaseInsertRequest)
     expect(request.to_hash).to eq(table: 'items', values: { slug: 'new' })
+  end
+
+  it 'builds updates with the generated database request model' do
+    response = transport.query_database_update(
+      authorization: 'access-token', database_name: 'main',
+      body: {
+        'table' => 'items', 'values' => { 'slug' => 'updated' },
+        'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'new' }]
+      }
+    )
+    database_name, request = apis.database.update_calls.fetch(0)
+
+    expect(response.body).to eq('data' => [{ 'slug' => 'updated' }])
+    expect(database_name).to eq('main')
+    expect(request).to be_a(InternalGenerated::DatabaseUpdateRequest)
+    expect(request.to_hash).to eq(
+      table: 'items', values: { slug: 'updated' },
+      filters: [{ column: 'slug', operator: 'eq', value: 'new' }]
+    )
   end
 
   it 'builds the generated sign-up request with metadata' do

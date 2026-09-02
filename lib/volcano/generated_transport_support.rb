@@ -69,6 +69,12 @@ module Volcano
         header_params: { 'Accept' => 'application/json' }.freeze,
         auth_names: %w[ServiceRoleKey AuthUserAccessToken].freeze
       }.freeze
+      VISIBILITY_OPTIONS = {
+        operation: :'StorageObjectsApi.update_storage_object_visibility',
+        header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze,
+        auth_names: %w[ServiceRoleKey AuthUserAccessToken].freeze,
+        return_type: 'StorageObject'
+      }.freeze
 
       def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
         options = opts.merge(UPLOAD_OPTIONS).merge(form_params: { 'file' => file })
@@ -83,15 +89,20 @@ module Volcano
         call_storage_api(:DELETE, bucket_name, path, opts.merge(DELETE_OPTIONS))
       end
 
+      def update_storage_object_visibility_with_http_info(bucket_name, path, request, opts = {})
+        options = opts.merge(VISIBILITY_OPTIONS).merge(body: api_client.object_to_http_body(request))
+        call_storage_api(:PATCH, bucket_name, path, options, suffix: '/visibility')
+      end
+
       private
 
-      def call_storage_api(method, bucket_name, path, options)
+      def call_storage_api(method, bucket_name, path, options, suffix: '')
         raise ArgumentError, 'bucket_name is required' if bucket_name.nil?
         raise ArgumentError, 'path is required' if path.nil?
 
         bucket = CGI.escapeURIComponent(bucket_name.to_s)
         object_path = CGI.escapeURIComponent(path.to_s).gsub('%2F', '/')
-        api_client.call_api(method, "/storage/#{bucket}/#{object_path}", options)
+        api_client.call_api(method, "/storage/#{bucket}/#{object_path}#{suffix}", options)
       end
     end
 

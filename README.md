@@ -454,12 +454,16 @@ next_page = bucket.list("avatars", limit: 100, cursor: page.next_cursor) if page
 removed_paths = bucket.remove(["archive/a.txt", "archive/b.txt"])
 moved = bucket.move("drafts/a.txt", "published/a.txt")
 copied = bucket.copy("templates/a.txt", "drafts/a.txt")
+public_object = bucket.update_visibility("avatars/a.png", public: true)
+puts public_object.public_url
 ```
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for
 the next page. Removals run in input order; a failed request raises after any
 earlier paths have already been deleted.
+Visibility updates return the server-confirmed object; `public_url` is set only
+when the object is public.
 
 ### Acquire and release a lock
 

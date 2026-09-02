@@ -36,6 +36,20 @@ module Volcano
       storage_object(Transport.body(response, 201))
     end
 
+    def update_visibility(path, public:)
+      object_path = removal_paths(path).fetch(0)
+      visibility = visibility_value(public)
+      response = Transport.invoke do
+        @transport.update_storage_object_visibility(
+          authorization: @client.session_token,
+          bucket_name: @name,
+          path: object_path,
+          is_public: visibility
+        )
+      end
+      storage_object(Transport.body(response, 200))
+    end
+
     private
 
     def removal_paths(paths)
@@ -56,6 +70,12 @@ module Volcano
         )
       end
       Transport.body(response, 200)
+    end
+
+    def visibility_value(value)
+      return value if [true, false].include?(value)
+
+      raise ArgumentError, 'public must be true or false'
     end
   end
 end

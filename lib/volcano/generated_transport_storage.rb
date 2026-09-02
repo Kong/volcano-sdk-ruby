@@ -57,6 +57,18 @@ module Volcano
       end
     end
 
+    def update_storage_object_visibility(authorization:, bucket_name:, path:, is_public:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::StorageVisibilityRequest.new(is_public: is_public)
+        result = apis.storage.update_storage_object_visibility_with_http_info(
+          bucket_name, path, request
+        )
+        data, status, headers = result
+        response(data, status, headers)
+      end
+    end
+
     private
 
     def with_upload_file(path, data)

@@ -98,7 +98,6 @@ lib/volcano-generated/models/ban_auth_user_request.rb
 lib/volcano-generated/models/ban_user_response.rb
 lib/volcano-generated/models/batch_function_deploy_failure.rb
 lib/volcano-generated/models/batch_function_deploy_response.rb
-lib/volcano-generated/models/call_o_auth_provider_api200_response.rb
 lib/volcano-generated/models/call_o_auth_provider_api_request.rb
 lib/volcano-generated/models/complete_upload_session_response.rb
 lib/volcano-generated/models/configure_auth_methods_request.rb
@@ -288,6 +287,7 @@ lib/volcano-generated/models/project_deployment_summary.rb
 lib/volcano-generated/models/project_frontend_custom_domain.rb
 lib/volcano-generated/models/project_frontend_custom_domain_all_of_frontend.rb
 lib/volcano-generated/models/project_git_connection.rb
+lib/volcano-generated/models/project_git_connection_summary.rb
 lib/volcano-generated/models/project_git_deploy_settings.rb
 lib/volcano-generated/models/project_health_category.rb
 lib/volcano-generated/models/project_health_check.rb
@@ -297,6 +297,7 @@ lib/volcano-generated/models/project_health_resource.rb
 lib/volcano-generated/models/project_health_response.rb
 lib/volcano-generated/models/project_health_scope.rb
 lib/volcano-generated/models/project_health_status.rb
+lib/volcano-generated/models/project_health_summary.rb
 lib/volcano-generated/models/project_import_action.rb
 lib/volcano-generated/models/project_import_action_code.rb
 lib/volcano-generated/models/project_import_destination.rb

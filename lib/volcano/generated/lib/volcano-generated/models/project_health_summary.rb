@@ -14,16 +14,8 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # OAuth provider API response envelope
-  class CallOAuthProviderAPI200Response < ApiModelBase
-    attr_accessor :provider
-
-    attr_accessor :endpoint
-
-    attr_accessor :status_code
-
-    # Raw provider JSON value, or null when the provider returns no body
-    attr_accessor :data
+  class ProjectHealthSummary < ApiModelBase
+    attr_accessor :status
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -50,10 +42,7 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'provider' => :'provider',
-        :'endpoint' => :'endpoint',
-        :'status_code' => :'status_code',
-        :'data' => :'data'
+        :'status' => :'status'
       }
     end
 
@@ -70,17 +59,13 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'provider' => :'String',
-        :'endpoint' => :'String',
-        :'status_code' => :'Integer',
-        :'data' => :'Object'
+        :'status' => :'ProjectHealthStatus'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
-        :'data'
       ])
     end
 
@@ -88,40 +73,22 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::CallOAuthProviderAPI200Response` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectHealthSummary` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::CallOAuthProviderAPI200Response`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectHealthSummary`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'provider')
-        self.provider = attributes[:'provider']
+      if attributes.key?(:'status')
+        self.status = attributes[:'status']
       else
-        self.provider = nil
-      end
-
-      if attributes.key?(:'endpoint')
-        self.endpoint = attributes[:'endpoint']
-      else
-        self.endpoint = nil
-      end
-
-      if attributes.key?(:'status_code')
-        self.status_code = attributes[:'status_code']
-      else
-        self.status_code = nil
-      end
-
-      if attributes.key?(:'data')
-        self.data = attributes[:'data']
-      else
-        self.data = nil
+        self.status = nil
       end
     end
 
@@ -130,24 +97,8 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @provider.nil?
-        invalid_properties.push('invalid value for "provider", provider cannot be nil.')
-      end
-
-      if @endpoint.nil?
-        invalid_properties.push('invalid value for "endpoint", endpoint cannot be nil.')
-      end
-
-      if @status_code.nil?
-        invalid_properties.push('invalid value for "status_code", status_code cannot be nil.')
-      end
-
-      if @status_code > 599
-        invalid_properties.push('invalid value for "status_code", must be smaller than or equal to 599.')
-      end
-
-      if @status_code < 100
-        invalid_properties.push('invalid value for "status_code", must be greater than or equal to 100.')
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
       invalid_properties
@@ -157,52 +108,18 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @provider.nil?
-      provider_validator = EnumAttributeValidator.new('String', ["google", "github", "microsoft", "apple"])
-      return false unless provider_validator.valid?(@provider)
-      return false if @endpoint.nil?
-      return false if @status_code.nil?
-      return false if @status_code > 599
-      return false if @status_code < 100
+      return false if @status.nil?
       true
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] provider Object to be assigned
-    def provider=(provider)
-      validator = EnumAttributeValidator.new('String', ["google", "github", "microsoft", "apple"])
-      unless validator.valid?(provider)
-        fail ArgumentError, "invalid value for \"provider\", must be one of #{validator.allowable_values}."
-      end
-      @provider = provider
-    end
-
     # Custom attribute writer method with validation
-    # @param [Object] endpoint Value to be assigned
-    def endpoint=(endpoint)
-      if endpoint.nil?
-        fail ArgumentError, 'endpoint cannot be nil'
+    # @param [Object] status Value to be assigned
+    def status=(status)
+      if status.nil?
+        fail ArgumentError, 'status cannot be nil'
       end
 
-      @endpoint = endpoint
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] status_code Value to be assigned
-    def status_code=(status_code)
-      if status_code.nil?
-        fail ArgumentError, 'status_code cannot be nil'
-      end
-
-      if status_code > 599
-        fail ArgumentError, 'invalid value for "status_code", must be smaller than or equal to 599.'
-      end
-
-      if status_code < 100
-        fail ArgumentError, 'invalid value for "status_code", must be greater than or equal to 100.'
-      end
-
-      @status_code = status_code
+      @status = status
     end
 
     # Checks equality by comparing each attribute.
@@ -210,10 +127,7 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          provider == o.provider &&
-          endpoint == o.endpoint &&
-          status_code == o.status_code &&
-          data == o.data
+          status == o.status
     end
 
     # @see the `==` method
@@ -225,7 +139,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [provider, endpoint, status_code, data].hash
+      [status].hash
     end
 
     # Builds the object from hash

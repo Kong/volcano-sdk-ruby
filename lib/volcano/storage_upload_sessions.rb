@@ -66,6 +66,19 @@ module Volcano
       upload_session_status(Transport.body(response, 200))
     end
 
+    def abort_upload_session(path, session_id:)
+      request = UploadSessionReference.new(path: path, session_id: session_id)
+      response = Transport.invoke do
+        @transport.abort_upload_session(
+          authorization: @client.session_token,
+          bucket_name: @name,
+          request: request
+        )
+      end
+      Transport.body(response, 200)
+      nil
+    end
+
     private
 
     def upload_session(payload)

@@ -439,15 +439,22 @@ deleted_rows = client.database("main")
 
 Updates and deletes require at least one filter; Volcano rejects filterless mutations.
 
-### Upload and download an object
+### Upload, download, and list objects
 
 ```ruby
-client.storage.from("assets").upload("a.txt", "hello".b)
-bytes = client.storage.from("assets").download("a.txt")
+bucket = client.storage.from("assets")
+bucket.upload("a.txt", "hello".b)
+bytes = bucket.download("a.txt")
+
+page = bucket.list("avatars", limit: 100)
+page.objects.each { |object| puts object.name }
+
+next_page = bucket.list("avatars", limit: 100, cursor: page.next_cursor) if page.next_cursor
 ```
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary
-`String`.
+`String`. Listing returns immutable object metadata and an optional cursor for
+the next page.
 
 ### Acquire and release a lock
 

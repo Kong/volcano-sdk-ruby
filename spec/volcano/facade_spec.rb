@@ -358,8 +358,50 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  # Implements the storage operations used by the facade test transport.
+  module FakeStorageTransport
+    def upload_storage_object(**arguments)
+      @calls << [:upload_storage_object, arguments]
+      Response.new(status: 201, body: { 'name' => 'a.txt', 'size' => 5 }, headers: {}, data: nil)
+    end
+
+    def download_storage_object(**arguments)
+      @calls << [:download_storage_object, arguments]
+      Response.new(status: 200, body: nil, headers: {}, data: "hello\x00".b)
+    end
+
+    def list_storage_objects(**arguments)
+      @calls << [:list_storage_objects, arguments]
+      Response.new(status: 200, body: storage_page_body, headers: {}, data: nil)
+    end
+
+    private
+
+    def storage_page_body
+      {
+        'objects' => [
+          {
+            'id' => '00000000-0000-4000-8000-000000000020',
+            'bucket_id' => '00000000-0000-4000-8000-000000000030',
+            'name' => 'avatars/a.png',
+            'size' => 5,
+            'mime_type' => 'image/png',
+            'is_public' => false,
+            'owner_id' => '00000000-0000-4000-8000-000000000010',
+            'etag' => 'etag-1',
+            'metadata' => { 'width' => 32, 'labels' => ['profile'] },
+            'created_at' => '2026-08-26T12:00:00Z',
+            'updated_at' => '2026-08-26T12:01:00Z'
+          }
+        ],
+        'next_cursor' => 'cursor-2'
+      }
+    end
+  end
+
   class FakeContractTransport
     include FakeDatabaseTransport
+    include FakeStorageTransport
 
     include FakeCallLog
     include FakeEmailChangeTransport
@@ -443,16 +485,6 @@ RSpec.describe Volcano::Client do
       @signup_response
     end
 
-    def upload_storage_object(**arguments)
-      @calls << [:upload_storage_object, arguments]
-      Response.new(status: 201, body: { 'name' => 'a.txt', 'size' => 5 }, headers: {}, data: nil)
-    end
-
-    def download_storage_object(**arguments)
-      @calls << [:download_storage_object, arguments]
-      Response.new(status: 200, body: nil, headers: {}, data: "hello\x00".b)
-    end
-
     def acquire_project_lock(**arguments)
       @calls << [:acquire_project_lock, arguments]
       Response.new(
@@ -484,6 +516,7 @@ RSpec.describe Volcano::Client do
     rows = client.database('main').from('items').select('*').eq('slug', 'a').execute
     uploaded = client.storage.from('assets').upload('a.txt', StringIO.new("hello\x00".b))
     downloaded = client.storage.from('assets').download('a.txt')
+    page = client.storage.from('assets').list('avatars', limit: 25, cursor: 'cursor-1')
     lease = client.locks.acquire('build', ttl: 30)
     released = client.locks.release('build', lease)
     {
@@ -491,6 +524,7 @@ RSpec.describe Volcano::Client do
       rows: rows,
       uploaded: uploaded,
       downloaded: downloaded,
+      page: page,
       lease: lease,
       released: released
     }
@@ -2107,6 +2141,27 @@ RSpec.describe Volcano::Client do
     expect(results.fetch(:uploaded)).to eq({ 'name' => 'a.txt', 'size' => 5 })
     expect(results.fetch(:downloaded)).to eq("hello\x00".b)
     expect(results.fetch(:downloaded).encoding).to eq(Encoding::BINARY)
+    expect(results.fetch(:page)).to eq(
+      Volcano::StoragePage.new(
+        objects: [
+          Volcano::StorageObject.new(
+            id: '00000000-0000-4000-8000-000000000020',
+            bucket_id: '00000000-0000-4000-8000-000000000030',
+            name: 'avatars/a.png',
+            size: 5,
+            mime_type: 'image/png',
+            is_public: false,
+            owner_id: '00000000-0000-4000-8000-000000000010',
+            etag: 'etag-1',
+            metadata: { 'width' => 32, 'labels' => ['profile'] },
+            created_at: Time.iso8601('2026-08-26T12:00:00Z'),
+            updated_at: Time.iso8601('2026-08-26T12:01:00Z')
+          )
+        ],
+        next_cursor: 'cursor-2'
+      )
+    )
+    expect(results.fetch(:page).objects.first.metadata['labels']).to be_frozen
     expect(results.fetch(:lease)).to eq(
       Volcano::LockLease.new(
         key: 'build',
@@ -2118,7 +2173,7 @@ RSpec.describe Volcano::Client do
     expect(results.fetch(:released)).to be_nil
   end
 
-  it 'routes the facade calls through the six contract operations', :aggregate_failures do
+  it 'routes the facade calls through the contract operations', :aggregate_failures do
     lease = results.fetch(:lease)
     expect(transport.calls.map(&:first)).to eq(
       %i[
@@ -2126,6 +2181,7 @@ RSpec.describe Volcano::Client do
         query_database_select
         upload_storage_object
         download_storage_object
+        list_storage_objects
         acquire_project_lock
         release_project_lock
       ]
@@ -2154,13 +2210,20 @@ RSpec.describe Volcano::Client do
       bucket_name: 'assets',
       path: 'a.txt'
     )
-    expect(transport.calls[4][1]).to include(
+    expect(transport.calls[4][1]).to eq(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      prefix: 'avatars',
+      limit: 25,
+      cursor: 'cursor-1'
+    )
+    expect(transport.calls[5][1]).to include(
       authorization: 'service-key',
       key: 'build',
       ttl: 30,
       token: lease.token
     )
-    expect(transport.calls[5][1]).to include(
+    expect(transport.calls[6][1]).to include(
       authorization: 'service-key',
       key: 'build',
       token: lease.token

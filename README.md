@@ -581,6 +581,7 @@ Realtime calls are asynchronous and must run in an Async reactor:
 ```ruby
 Async do
   channel = client.realtime.channel("deployments")
+  raise "unexpected channel" unless channel.name == "broadcast:deployments"
   channel.on("message") { |message| puts message.fetch("value") }
   channel.subscribe
   raise "not connected" unless client.realtime.connected?

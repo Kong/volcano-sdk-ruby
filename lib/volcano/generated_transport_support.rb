@@ -188,7 +188,8 @@ module Volcano
           oauth: Generated::OAuthAuthenticationApi.new(api_client),
           database: Generated::DatabaseQueriesApi.new(api_client),
           storage: StorageApi.new(api_client),
-          locks: Generated::LocksApi.new(api_client)
+          locks: Generated::LocksApi.new(api_client),
+          functions: Generated::FunctionsApi.new(api_client)
         )
       end
 

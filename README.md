@@ -391,6 +391,22 @@ session. It succeeds without a request when no session exists. If revocation
 fails, the SDK still clears that session and raises the typed error. A session
 established while sign-out is pending remains current.
 
+### Invoke a function
+
+```ruby
+result = client.functions.invoke(
+  "send-welcome",
+  { user_id: session.user_id }
+)
+puts [result.status, result.version, result.data]
+```
+
+`invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
+active user session when present, then a configured service key, then the
+anonymous key. The immutable result includes the response body, status,
+headers, and `X-Volcano-Version`. A function's own non-2xx response is returned
+when the version header proves it ran; platform failures raise typed SDK errors.
+
 ### Query a database
 
 ```ruby

@@ -429,9 +429,15 @@ updated_rows = client.database("main")
                      .update(status: "published")
                      .eq("name", "Volcano")
                      .execute
+
+deleted_rows = client.database("main")
+                     .from("items")
+                     .delete
+                     .eq("name", "Volcano")
+                     .execute
 ```
 
-Updates require at least one filter; Volcano rejects filterless updates.
+Updates and deletes require at least one filter; Volcano rejects filterless mutations.
 
 ### Upload and download an object
 

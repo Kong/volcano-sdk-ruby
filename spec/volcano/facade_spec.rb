@@ -2194,4 +2194,42 @@ RSpec.describe Volcano::Client do
       )
     end
   end
+
+  it 'keeps ordered query chains immutable' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+
+    source.order('priority', ascending: false).order('id').execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        {
+          'table' => 'items',
+          'order' => [
+            { 'column' => 'priority', 'ascending' => false },
+            { 'column' => 'id', 'ascending' => true }
+          ]
+        },
+        { 'table' => 'items' }
+      ]
+    )
+  end
+
+  it 'keeps paginated query chains immutable' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+
+    source.limit(10).offset(20).execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        { 'table' => 'items', 'limit' => 10, 'offset' => 20 },
+        { 'table' => 'items' }
+      ]
+    )
+  end
 end

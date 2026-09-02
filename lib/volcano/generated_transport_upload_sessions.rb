@@ -33,5 +33,15 @@ module Volcano
         response(data, status, headers)
       end
     end
+
+    def complete_upload_session(authorization:, bucket_name:, request:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.storage.complete_upload_session_with_http_info(
+          bucket_name, request.path, request.session_id
+        )
+        response(data, status, headers)
+      end
+    end
   end
 end

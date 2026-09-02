@@ -42,6 +42,18 @@ module Volcano
       upload_part_metadata(Transport.body(response, 200))
     end
 
+    def complete_upload_session(path, session_id:)
+      request = UploadSessionReference.new(path: path, session_id: session_id)
+      response = Transport.invoke do
+        @transport.complete_upload_session(
+          authorization: @client.session_token,
+          bucket_name: @name,
+          request: request
+        )
+      end
+      storage_object(Transport.body(response, 200).fetch('object'))
+    end
+
     private
 
     def upload_session(payload)

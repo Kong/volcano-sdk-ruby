@@ -488,6 +488,21 @@ RSpec.describe Volcano::Client do
       }
       Response.new(status: 200, body: body, headers: {}, data: nil)
     end
+
+    def complete_upload_session(**arguments)
+      @calls << [:complete_upload_session, arguments]
+      request = arguments.fetch(:request)
+      object = {
+        'id' => '00000000-0000-4000-8000-000000000020',
+        'bucket_id' => '00000000-0000-4000-8000-000000000030',
+        'name' => request.path,
+        'size' => 20_000_000,
+        'mime_type' => 'video/mp4',
+        'is_public' => false,
+        'etag' => 'etag-complete'
+      }
+      Response.new(status: 200, body: { 'object' => object }, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2316,6 +2331,30 @@ RSpec.describe Volcano::Client do
     expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
     expect(arguments.fetch(:request)).to have_attributes(
       path: 'videos/demo.mp4', session_id: 'session-123', part_number: 1, data: "chunk\x00".b
+    )
+  end
+
+  it 'completes an upload session and returns the immutable object' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    object = client.storage.from('assets').complete_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(object).to eq(
+      Volcano::StorageObject.new(
+        id: '00000000-0000-4000-8000-000000000020',
+        bucket_id: '00000000-0000-4000-8000-000000000030',
+        name: 'videos/demo.mp4', size: 20_000_000, mime_type: 'video/mp4',
+        is_public: false, etag: 'etag-complete'
+      )
+    )
+    expect(object.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:complete_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
     )
   end
 

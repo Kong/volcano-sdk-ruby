@@ -2195,6 +2195,81 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  { like: 'like', ilike: 'ilike' }.each do |method_name, operator|
+    it "keeps #{method_name} pattern filters immutable" do
+      client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      database_name = +'main'
+      table = +'items'
+      selected_column = +'id'
+      filter_column = +'name'
+      pattern = +'%volcano%'
+      source = client.database(database_name).from(table).select(selected_column)
+
+      query = source.public_send(method_name, filter_column, pattern)
+      [database_name, table, selected_column, filter_column, pattern]
+        .zip(%w[other other_items other_id other_name %lava%]) { |value, replacement| value.replace(replacement) }
+      query.execute
+
+      query_calls = transport.calls_for(:query_database_select)
+      expect(query_calls.map { |_, arguments| arguments[:database_name] }).to eq(['main'])
+      expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+        [
+          {
+            'table' => 'items',
+            'select' => ['id'],
+            'filters' => [
+              { 'column' => 'name', 'operator' => operator, 'value' => '%volcano%' }
+            ]
+          }
+        ]
+      )
+    end
+  end
+
+  it 'keeps null filters immutable' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+
+    source.is('deleted_at', nil).execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        {
+          'table' => 'items',
+          'filters' => [{ 'column' => 'deleted_at', 'operator' => 'is', 'value' => nil }]
+        },
+        { 'table' => 'items' }
+      ]
+    )
+  end
+
+  it 'copies membership filter values' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = client.database('main').from('items').select('*')
+    statuses = [+'draft', +'published']
+
+    query = source.in('status', statuses)
+    statuses.first.replace('review')
+    statuses << 'archived'
+    query.execute
+    source.execute
+
+    query_calls = transport.calls_for(:query_database_select)
+    expect(query_calls.map { |_, arguments| arguments[:body] }).to eq(
+      [
+        {
+          'table' => 'items',
+          'filters' => [
+            { 'column' => 'status', 'operator' => 'in', 'value' => %w[draft published] }
+          ]
+        },
+        { 'table' => 'items' }
+      ]
+    )
+  end
+
   it 'keeps ordered query chains immutable' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     source = client.database('main').from('items').select('*')

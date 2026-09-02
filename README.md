@@ -410,6 +410,14 @@ rows = base_query
        .limit(10)
        .offset(20)
        .execute
+
+matching_rows = client.database("main")
+                      .from("items")
+                      .select("*")
+                      .ilike("name", "%volcano%")
+                      .is("deleted_at", nil)
+                      .in("status", %w[draft published])
+                      .execute
 ```
 
 ### Upload and download an object

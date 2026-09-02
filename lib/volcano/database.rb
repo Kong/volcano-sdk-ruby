@@ -1,6 +1,20 @@
 # frozen_string_literal: true
 
 module Volcano
+  # Captures caller-owned query values before storing them in immutable builders.
+  module ImmutableQueryValue
+    module_function
+
+    def capture(value)
+      case value
+      when String then value.dup.freeze
+      when Array then value.map { |item| capture(item) }.freeze
+      else value
+      end
+    end
+  end
+  private_constant :ImmutableQueryValue
+
   QueryContext = Data.define(:client, :transport, :database_name)
   private_constant :QueryContext
   QueryState = Data.define(:columns, :filters, :order, :limit, :offset)
@@ -17,7 +31,8 @@ module Volcano
   # Creates immutable queries scoped to one project database.
   class Database
     def initialize(client, transport, name)
-      @context = QueryContext.new(client:, transport:, database_name: name)
+      database_name = ImmutableQueryValue.capture(name)
+      @context = QueryContext.new(client:, transport:, database_name:)
     end
 
     def from(table)
@@ -29,7 +44,7 @@ module Volcano
   class QueryBuilder
     def initialize(context, table, state: EMPTY_QUERY_STATE)
       @context = context
-      @table = table
+      @table = ImmutableQueryValue.capture(table)
       @columns = state.columns
       @filters = state.filters
       @order = state.order
@@ -39,7 +54,7 @@ module Volcano
     end
 
     def select(*columns)
-      copy(columns:)
+      copy(columns: ImmutableQueryValue.capture(columns))
     end
 
     def eq(column, value)
@@ -66,8 +81,24 @@ module Volcano
       add_filter(column, 'lte', value)
     end
 
+    def like(column, pattern)
+      add_filter(column, 'like', pattern)
+    end
+
+    def ilike(column, pattern)
+      add_filter(column, 'ilike', pattern)
+    end
+
+    def is(column, value)
+      add_filter(column, 'is', value)
+    end
+
+    def in(column, values)
+      add_filter(column, 'in', values)
+    end
+
     def order(column, ascending: true)
-      clause = { 'column' => column, 'ascending' => ascending }.freeze
+      clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze
       copy(order: [*@order, clause])
     end
 
@@ -93,6 +124,8 @@ module Volcano
     private
 
     def add_filter(column, operator, value)
+      column = ImmutableQueryValue.capture(column)
+      value = ImmutableQueryValue.capture(value)
       condition = { 'column' => column, 'operator' => operator, 'value' => value }.freeze
       copy(filters: [*@filters, condition])
     end

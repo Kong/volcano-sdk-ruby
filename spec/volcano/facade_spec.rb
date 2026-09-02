@@ -2361,6 +2361,21 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'preserves filters applied before update' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    client.database('main').from('items').eq('tenant_id', 'tenant-1')
+          .update(status: 'published').eq('id', 'item-1').execute
+
+    filters = transport.calls_for(:query_database_update).fetch(0).fetch(1).fetch(:body).fetch('filters')
+    expect(filters).to eq(
+      [
+        { 'column' => 'tenant_id', 'operator' => 'eq', 'value' => 'tenant-1' },
+        { 'column' => 'id', 'operator' => 'eq', 'value' => 'item-1' }
+      ]
+    )
+  end
+
   it 'keeps ordered query chains immutable' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     source = client.database('main').from('items').select('*')

@@ -2438,6 +2438,31 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to be_empty
   end
 
+  it 'preserves a trailing separator in a public URL path' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    public_url = local_client.storage.from('assets').get_public_url('folder/')
+
+    expect(public_url).to end_with('/public/project-123/assets/folder/')
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects dot segments in a public URL path' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    ['.', 'avatars/../secret.txt'].each do |path|
+      expect { local_client.storage.from('assets').get_public_url(path) }
+        .to raise_error(ArgumentError, /dot segments/)
+    end
+    expect(transport.calls).to be_empty
+  end
+
   it 'keeps query chains immutable and reads the latest session at execution time' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     base = client.database('main').from('items').select('*')

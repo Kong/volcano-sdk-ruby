@@ -8,11 +8,12 @@ module Volcano
   # Local public URL construction for one storage bucket.
   class StorageBucket
     INVALID_PUBLIC_URL_ANON_KEY = 'Anon key must contain a project ID'
-    private_constant :INVALID_PUBLIC_URL_ANON_KEY
+    INVALID_PUBLIC_URL_PATH = 'Public URL paths cannot contain dot segments'
+    private_constant :INVALID_PUBLIC_URL_ANON_KEY, :INVALID_PUBLIC_URL_PATH
 
     def get_public_url(path)
       object_path = storage_paths(path).fetch(0)
-      segments = [project_id, @name, *object_path.split('/')]
+      segments = [project_id, @name, *public_url_path_segments(object_path)]
       "#{@api_url}/public/#{segments.map { |segment| encode_segment(segment) }.join('/')}".freeze
     end
 
@@ -40,6 +41,13 @@ module Volcano
 
     def pad_base64(encoded)
       encoded + ('=' * (-encoded.length % 4))
+    end
+
+    def public_url_path_segments(path)
+      segments = path.split('/', -1)
+      raise ArgumentError, INVALID_PUBLIC_URL_PATH if segments.intersect?(%w[. ..])
+
+      segments
     end
 
     def encode_segment(segment)

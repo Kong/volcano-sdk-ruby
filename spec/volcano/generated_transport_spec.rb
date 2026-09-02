@@ -318,6 +318,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:delete, bucket, path]
       [nil, 200, {}]
     end
+
+    def move_storage_object_with_http_info(bucket, request)
+      @calls << [:move, bucket, request]
+      [FakeGeneratedModel.new(name: request.to), 200, {}]
+    end
   end
 
   class FakeLocksApi
@@ -498,6 +503,21 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(database_name).to eq('main')
     expect(request).to be_a(InternalGenerated::DatabaseInsertRequest)
     expect(request.to_hash).to eq(table: 'items', values: { slug: 'new' })
+  end
+
+  it 'builds moves with the generated storage request model' do
+    response = transport.move_storage_object(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      from_path: 'drafts/a.txt',
+      to_path: 'published/a.txt'
+    )
+
+    _, bucket, request = apis.storage.calls.last
+    expect(bucket).to eq('assets')
+    expect(request).to be_a(InternalGenerated::StorageMoveRequest)
+    expect(request.to_hash).to eq(from: 'drafts/a.txt', to: 'published/a.txt')
+    expect(response.body).to eq('name' => 'published/a.txt')
   end
 
   it 'builds updates with the generated database request model' do

@@ -380,6 +380,23 @@ RSpec.describe Volcano::Client do
       Response.new(status: 200, body: nil, headers: {}, data: nil)
     end
 
+    def move_storage_object(**arguments)
+      @calls << [:move_storage_object, arguments]
+      Response.new(
+        status: 200,
+        body: {
+          'id' => '00000000-0000-4000-8000-000000000020',
+          'bucket_id' => '00000000-0000-4000-8000-000000000030',
+          'name' => arguments.fetch(:to_path),
+          'size' => 5,
+          'mime_type' => 'text/plain',
+          'is_public' => false
+        },
+        headers: {},
+        data: nil
+      )
+    end
+
     private
 
     def storage_page_body
@@ -2279,6 +2296,23 @@ RSpec.describe Volcano::Client do
         .to raise_error(ArgumentError, 'storage paths must be non-empty strings')
     end
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'moves an object and returns its destination metadata' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    moved = client.storage.from('assets').move('drafts/a.txt', 'published/a.txt')
+
+    expect(moved.name).to eq('published/a.txt')
+    expect(transport.calls.last).to eq(
+      [
+        :move_storage_object,
+        {
+          authorization: 'access-token', bucket_name: 'assets',
+          from_path: 'drafts/a.txt', to_path: 'published/a.txt'
+        }
+      ]
+    )
   end
 
   it 'keeps query chains immutable and reads the latest session at execution time' do

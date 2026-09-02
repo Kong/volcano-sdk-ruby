@@ -25,6 +25,7 @@ module Volcano
   require_relative 'generated_transport_sessions'
   require_relative 'generated_transport_oauth'
   require_relative 'generated_transport_database'
+  require_relative 'generated_transport_storage'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
@@ -37,48 +38,6 @@ module Volcano
       @api_url = api_url
       @timeout = timeout
       @api_factory = api_factory || method(:build_apis)
-    end
-
-    def upload_storage_object(authorization:, bucket_name:, path:, data:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        with_upload_file(path, data) do |file|
-          result = apis.storage.upload_storage_object_with_http_info(bucket_name, path, file)
-          data_value, status, headers = result
-          return response(data_value, status, headers)
-        end
-      end
-    end
-
-    def download_storage_object(authorization:, bucket_name:, path:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.storage.download_storage_object_with_http_info(bucket_name, path)
-        response(nil, status, headers, binary: binary_data(data))
-      end
-    end
-
-    def list_storage_objects(authorization:, bucket_name:, prefix:, limit:, cursor:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        options = { prefix: prefix.empty? ? nil : prefix, limit: limit, cursor: cursor }.compact
-        data, status, headers = apis.storage.list_storage_objects_with_http_info(
-          bucket_name,
-          options
-        )
-        response(data, status, headers)
-      end
-    end
-
-    def delete_storage_object(authorization:, bucket_name:, path:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.storage.delete_storage_object_with_http_info(
-          bucket_name,
-          path
-        )
-        response(data, status, headers)
-      end
     end
 
     def acquire_project_lock(authorization:, key:, ttl:, token:)
@@ -104,14 +63,6 @@ module Volcano
     end
 
     private
-
-    def with_upload_file(path, data)
-      Tempfile.create(['volcano-sdk-upload', File.extname(path)], binmode: true) do |file|
-        file.write(data)
-        file.flush
-        yield file
-      end
-    end
 
     def invoke
       yield

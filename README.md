@@ -447,6 +447,12 @@ bucket.upload("a.txt", "hello".b)
 bytes = bucket.download("a.txt")
 first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
 video = "demo video".b
+uploaded = bucket.upload_resumable(
+  "videos/automatic.mp4",
+  video,
+  content_type: "video/mp4"
+)
+puts uploaded.name
 upload_session = bucket.create_upload_session(
   "videos/demo.mp4",
   total_size: video.bytesize,
@@ -493,6 +499,10 @@ earlier paths have already been deleted.
 Pass an HTTP byte range to download only part of an object.
 `create_upload_session` returns the immutable server-selected part size, part
 count, and expiration time for a resumable upload.
+`upload_resumable` creates a session, chunks the data using the server-selected
+part size, and completes the upload. It streams seekable `IO` values directly;
+non-seekable inputs are spooled to a temporary file with bounded reads. If a
+part fails, it makes a best-effort abort and raises the original error.
 `upload_part` returns immutable part metadata and can safely retry the same part
 number to replace that part.
 `get_upload_session` returns immutable progress and uploaded-part metadata for

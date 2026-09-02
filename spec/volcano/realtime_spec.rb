@@ -69,6 +69,11 @@ RSpec.describe Volcano::Realtime do
       @incoming.enqueue('{')
     end
 
+    def connect_then_invalid(id)
+      reply = JSON.generate('id' => id, 'result' => { 'client' => 'client-123' })
+      @incoming.enqueue("#{reply}\n{")
+    end
+
     def close
       return if @closed
 
@@ -201,6 +206,64 @@ RSpec.describe Volcano::Realtime do
     expect(error_context.message).to include('invalid realtime frame')
     expect(error_context.error).to be_a(Volcano::Realtime::ClosedError)
     expect(error_context).to be_frozen
+    expect(error_context.error).to be_frozen
+  end
+
+  it 'does not report a connection after the protocol closes while handling its reply' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('connect')
+
+      socket.connect_then_invalid(command.fetch('id'))
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    events = []
+
+    Async do |task|
+      client.realtime.on_connect { |context| events << [:connect, context] }
+      client.realtime.on_disconnect { |context| events << [:disconnect, context] }
+      client.realtime.on_error { |context| events << [:error, context] }
+
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        /invalid realtime frame/
+      )
+      task.with_timeout(0.2) { task.yield until events.any? }
+    end.wait
+
+    expect(events.map(&:first)).to eq([:error])
+    expect(client.realtime).not_to be_connected
+  end
+
+  it 'reports a redacted error when opening the transport fails' do
+    anon_key = 'anon key/fixture-secret'
+    encoded_key = 'anon%20key%2Ffixture-secret'
+    client = Volcano::Client.new(
+      api_url: 'https://api.test.volcano.dev',
+      anon_key: anon_key,
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(address) { raise IOError, "failed to open #{address}" }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    errors = []
+
+    Async do |task|
+      client.realtime.on_error { |context| errors << context }
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Error::TransportError
+      )
+      task.with_timeout(0.2) { task.yield until errors.any? }
+    end.wait
+
+    expect(errors.first.message).to include('apikey=[REDACTED]')
+    expect(errors.first.message).not_to include(anon_key, encoded_key)
+    expect(errors.first.error).to be_frozen
   end
 
   it 'runs connection callbacks outside protocol processing' do

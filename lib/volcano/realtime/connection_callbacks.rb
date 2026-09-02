@@ -53,7 +53,13 @@ module Volcano
       end
 
       def protocol_error(error)
-        context = ErrorContext.new(code: nil, message: immutable_string(error.message), error: error)
+        @reported_protocol_error = error
+        snapshot = Redaction.exception(error, secrets: []).freeze
+        context = ErrorContext.new(
+          code: nil,
+          message: immutable_string(snapshot.message),
+          error: snapshot
+        )
         emit_connection_event(:error, context)
       end
 

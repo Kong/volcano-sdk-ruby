@@ -13,9 +13,15 @@ module Volcano
         @protocol = protocol
         protocol_connected(result)
         protocol
-      rescue StandardError
+      rescue StandardError => e
+        handle_connection_failure(socket, e)
+      end
+
+      def handle_connection_failure(socket, error)
+        failure = public_error(error)
+        protocol_error(failure) unless @reported_protocol_error.equal?(error)
         close_socket(socket)
-        raise
+        raise failure, cause: nil
       end
 
       def build_protocol(socket)

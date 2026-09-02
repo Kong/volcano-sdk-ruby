@@ -55,7 +55,10 @@ module Volcano
       end
 
       def connect(token:)
-        request { |id| self.class.connect(id: id, token: token) }.tap { @connected = true }
+        result = request { |id| self.class.connect(id: id, token: token) }
+        ensure_open!
+        @connected = true
+        result
       end
 
       def subscribe(channel:)

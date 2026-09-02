@@ -580,6 +580,14 @@ Realtime calls are asynchronous and must run in an Async reactor:
 
 ```ruby
 Async do
+  stop_connect = client.realtime.on_connect do |context|
+    puts "connected #{context.client}"
+  end
+  client.realtime.on_disconnect do |context|
+    puts "disconnected #{context.reason}"
+  end
+  client.realtime.on_error { |context| warn context.message }
+
   channel = client.realtime.channel("deployments")
   raise "unexpected channel" unless channel.name == "broadcast:deployments"
   channel.on("message") { |message| puts message.fetch("value") }
@@ -590,6 +598,7 @@ Async do
   raise "disconnected" unless client.realtime.connected?
   client.realtime.disconnect
   raise "still connected" if client.realtime.connected?
+  stop_connect.call
 end.wait
 ```
 
@@ -597,6 +606,9 @@ end.wait
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Reconnect,
 recovery, presence, and database-change subscriptions are out of scope.
+Connection callbacks receive immutable contexts and run outside protocol
+processing. Each registration returns an idempotent callable that stops future
+delivery.
 
 ## Generated boundary
 

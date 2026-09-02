@@ -24,6 +24,7 @@ module Volcano
       include Lifecycle
 
       Failure = Data.define(:error)
+      Events = Data.define(:on_close, :on_error)
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
       DEFAULT_MAX_CALLBACK_QUEUE = 128
@@ -41,17 +42,21 @@ module Volcano
         socket:,
         task: nil,
         secrets: [],
+        events: nil,
         **limits
       )
         load_async
         @socket = socket
         @secrets = secrets.freeze
+        @events = events
         configure_limits(limits)
         initialize_state
         start_tasks(task || Async::Task.current)
       end
 
-      def connect(token:) = request { |id| self.class.connect(id: id, token: token) }
+      def connect(token:)
+        request { |id| self.class.connect(id: id, token: token) }.tap { @connected = true }
+      end
 
       def subscribe(channel:)
         @subscription_lock.acquire do
@@ -106,7 +111,7 @@ module Volcano
         @subscription_lock = Async::Semaphore.new(1)
         @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
         @callback_queue = Async::Queue.new
-        @callback_stopping = @closed = false
+        @callback_stopping = @connected = @closed = false
         @subscriptions = Set.new
         @closed_error = nil
       end
@@ -120,17 +125,6 @@ module Volcano
         raise @closed_error if @closed
 
         self
-      end
-
-      def close_with(error)
-        return if @closed
-
-        @closed = true
-        @closed_error = error
-        @subscriptions.clear
-        reject_pending(error)
-        stop_callback_task
-        close_socket
       end
 
       def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }

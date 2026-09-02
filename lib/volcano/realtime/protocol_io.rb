@@ -44,9 +44,9 @@ module Volcano
             process_message(message)
           end
         rescue JSON::ParserError => e
-          close_with(ClosedError.new(invalid_frame_message(e)))
+          close_with(ClosedError.new(invalid_frame_message(e)), notify_error: true)
         rescue StandardError => e
-          close_with(closed_error(e))
+          close_with(closed_error(e), notify_error: true)
         ensure
           close_with(ClosedError.new('realtime connection closed'))
         end

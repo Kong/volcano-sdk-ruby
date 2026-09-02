@@ -38,7 +38,8 @@ RSpec.describe Volcano::Realtime do
       @commands << command
       return if on_write&.call(command) == :defer
 
-      respond(command.fetch('id'))
+      result = command.key?('connect') ? { 'client' => 'client-123' } : {}
+      respond(command.fetch('id'), result: result)
     end
 
     def read
@@ -56,12 +57,16 @@ RSpec.describe Volcano::Realtime do
       )
     end
 
-    def respond(id)
-      @incoming.enqueue(JSON.generate('id' => id, 'result' => {}))
+    def respond(id, result: {})
+      @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
     end
 
     def reject(id, message)
       @incoming.enqueue(JSON.generate('id' => id, 'error' => { 'message' => message }))
+    end
+
+    def invalid_frame
+      @incoming.enqueue('{')
     end
 
     def close
@@ -128,6 +133,99 @@ RSpec.describe Volcano::Realtime do
       'event' => 'message',
       'value' => 'contract'
     )
+  end
+
+  it 'reports connection lifecycle with immutable contexts', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    connected = []
+    disconnected = []
+    errors = []
+
+    Async do |task|
+      stop_connect = client.realtime.on_connect { |context| connected << context }
+      client.realtime.on_disconnect { |context| disconnected << context }
+      stop_error = client.realtime.on_error { |context| errors << context }
+
+      client.realtime.channel('contract').subscribe
+      task.with_timeout(0.2) { task.yield until connected.any? }
+      expect(connected).to eq(
+        [Volcano::Realtime::ConnectContext.new(client: 'client-123')]
+      )
+      expect(connected.first).to be_frozen
+      expect(connected.first.client).to be_frozen
+
+      stop_connect.call
+      stop_connect.call
+      stop_error.call
+      client.realtime.disconnect
+      task.with_timeout(0.2) { task.yield until disconnected.any? }
+    end.wait
+
+    expect(disconnected).to eq(
+      [Volcano::Realtime::DisconnectContext.new(code: nil, reason: 'manual')]
+    )
+    expect(disconnected.first).to be_frozen
+    expect(disconnected.first.reason).to be_frozen
+    expect(errors).to be_empty
+  end
+
+  it 'reports transport errors before peer disconnection', :aggregate_failures do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    events = []
+
+    Async do |task|
+      client.realtime.on_error { |context| events << [:error, context] }
+      client.realtime.on_disconnect { |context| events << [:disconnect, context] }
+      client.realtime.channel('contract').subscribe
+
+      socket.invalid_frame
+      task.with_timeout(0.2) { task.yield until events.length == 2 }
+    end.wait
+
+    expect(events.map(&:first)).to eq(%i[error disconnect])
+    error_context = events.first.last
+    expect(error_context).to be_a(Volcano::Realtime::ErrorContext)
+    expect(error_context.code).to be_nil
+    expect(error_context.message).to include('invalid realtime frame')
+    expect(error_context.error).to be_a(Volcano::Realtime::ClosedError)
+    expect(error_context).to be_frozen
+  end
+
+  it 'runs connection callbacks outside protocol processing' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      started = Async::Queue.new
+      release = Async::Queue.new
+      client.realtime.on_connect do
+        started.enqueue(true)
+        release.dequeue
+      end
+
+      subscribing = task.async { client.realtime.channel('contract').subscribe }
+      started.dequeue
+      expect(task.with_timeout(0.2) { subscribing.wait }).to be_nil
+      release.enqueue(true)
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'reports connection state and removes one channel', :aggregate_failures do

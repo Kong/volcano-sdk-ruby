@@ -445,6 +445,7 @@ Updates and deletes require at least one filter; Volcano rejects filterless muta
 bucket = client.storage.from("assets")
 bucket.upload("a.txt", "hello".b)
 bytes = bucket.download("a.txt")
+first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
 
 page = bucket.list("avatars", limit: 100)
 page.objects.each { |object| puts object.name }
@@ -464,6 +465,7 @@ Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for
 the next page. Removals run in input order; a failed request raises after any
 earlier paths have already been deleted.
+Pass an HTTP byte range to download only part of an object.
 Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.

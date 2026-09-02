@@ -46,15 +46,17 @@ module Volcano
       Transport.body(response, 201)
     end
 
-    def download(path)
+    def download(path, range: nil)
       response = Transport.invoke do
         @transport.download_storage_object(
           authorization: @client.session_token,
           bucket_name: @name,
-          path: path
+          path: path,
+          byte_range: range
         )
       end
-      Transport.body(response, 200)
+      expected_status = range && response.status == 206 ? 206 : 200
+      Transport.body(response, expected_status)
       response.data.b
     end
 

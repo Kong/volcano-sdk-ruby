@@ -373,7 +373,8 @@ RSpec.describe Volcano::Client do
 
     def download_storage_object(**arguments)
       @calls << [:download_storage_object, arguments]
-      Response.new(status: 200, body: nil, headers: {}, data: "hello\x00".b)
+      status = arguments[:byte_range] ? @range_download_status : 200
+      Response.new(status: status, body: nil, headers: {}, data: "hello\x00".b)
     end
 
     def list_storage_objects(**arguments)
@@ -476,11 +477,12 @@ RSpec.describe Volcano::Client do
     include FakeUserTransport
 
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response,
-                  :signup_response
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :range_download_status,
+                  :refresh_response, :signup_response
 
     def initialize
       @access_token = 'access-token'
+      @range_download_status = 206
       @signup_response = Response.new(
         status: 201,
         body: {
@@ -580,7 +582,7 @@ RSpec.describe Volcano::Client do
     session = client.auth.sign_in(email: 'user@example.com', password: 'secret')
     rows = client.database('main').from('items').select('*').eq('slug', 'a').execute
     uploaded = client.storage.from('assets').upload('a.txt', StringIO.new("hello\x00".b))
-    downloaded = client.storage.from('assets').download('a.txt')
+    downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
     page = client.storage.from('assets').list('avatars', limit: 25, cursor: 'cursor-1')
     removed = client.storage.from('assets').remove(['archive/a.txt', 'archive/b.txt'])
     lease = client.locks.acquire('build', ttl: 30)
@@ -2242,6 +2244,15 @@ RSpec.describe Volcano::Client do
     expect(results.fetch(:released)).to be_nil
   end
 
+  it 'accepts a full response when a byte range is ignored' do
+    transport.range_download_status = 200
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
+
+    expect(downloaded).to eq("hello\x00".b)
+  end
+
   it 'routes the facade calls through the contract operations', :aggregate_failures do
     lease = results.fetch(:lease)
     expect(transport.calls.map(&:first)).to eq(
@@ -2279,7 +2290,8 @@ RSpec.describe Volcano::Client do
     expect(transport.calls[3][1]).to eq(
       authorization: 'access-token',
       bucket_name: 'assets',
-      path: 'a.txt'
+      path: 'a.txt',
+      byte_range: 'bytes=0-4'
     )
     expect(transport.calls[4][1]).to eq(
       authorization: 'access-token',

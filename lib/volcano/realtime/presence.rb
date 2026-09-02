@@ -34,6 +34,7 @@ module Volcano
         @tracked_state = Immutable.call({})
         @presence_handler = nil
         @presence_lock = nil
+        @subscription_epoch = 0
       end
 
       def presence? = @type == :presence
@@ -44,69 +45,67 @@ module Volcano
         raise ArgumentError, 'operation is only available for presence channels'
       end
 
-      def register_presence_handler(protocol)
-        return unless presence? && !@presence_handler
+      def register_presence_handler(protocol, epoch)
+        return unless presence?
 
+        detach_presence_handler(protocol)
         @presence_handler = protocol.on_presence(@name) do |event, info|
-          presence_event(event, info)
+          presence_event(event, info, epoch)
         end
       end
 
-      def sync_presence(protocol)
+      def sync_presence(protocol, epoch)
         return unless presence?
 
-        presence_lock.acquire do
-          result = protocol.presence(channel: @name)
-          replace_presence(result['presence'])
-        end
-      rescue ServerError => e
-        presence_lock.acquire { replace_presence({}) }
+        emit_presence_sync(fetch_presence_state(protocol, epoch))
+      rescue StandardError => e
+        emit_presence_sync(clear_failed_presence(epoch))
         @realtime.__send__(:report_channel_error, e)
       end
 
-      def replace_presence(clients)
-        clients = {} unless clients.is_a?(Hash)
-        @presence_state = clients.to_h do |client_id, info|
-          [client_id.to_s.freeze, presence_info(info, client_id)]
-        end.freeze
-        emit('presence_sync', @presence_state)
-      end
-
-      def presence_event(event, info)
-        return unless info.is_a?(Hash)
-
+      def fetch_presence_state(protocol, epoch)
         presence_lock.acquire do
-          snapshot = presence_info(info, info['client'])
-          next_state = @presence_state.dup
-          event == 'join' ? next_state[snapshot.client] = snapshot : next_state.delete(snapshot.client)
-          @presence_state = next_state.freeze
-          emit(event, snapshot)
-          emit('presence_sync', @presence_state)
+          next unless active_presence_epoch?(epoch)
+
+          result = protocol.presence(channel: @name)
+          replace_presence(result['presence']) if active_presence_epoch?(epoch)
         end
       end
 
-      def presence_info(info, fallback_client)
-        data = info['conn_info'].is_a?(Hash) ? info.fetch('conn_info') : {}
-        PresenceInfo.new(
-          client: info.fetch('client', fallback_client).to_s,
-          user: info['user']&.to_s,
-          data: data
-        )
+      def presence_event(event, info, epoch)
+        return sync_presence(@protocol_provider.call, epoch) if event == 'sync_required'
+
+        delivery = apply_presence_event(event, info, epoch)
+        return unless delivery
+
+        snapshot, state = delivery
+        emit(event, snapshot)
+        emit('presence_sync', state)
       end
 
-      def clear_presence
+      def clear_failed_presence(epoch)
+        presence_lock.acquire do
+          replace_presence({}) if active_presence_epoch?(epoch)
+        end
+      end
+
+      def emit_presence_sync(state)
+        emit('presence_sync', state) if state
+      end
+
+      def next_presence_epoch
+        @subscription_epoch += 1
+      end
+
+      def active_presence_epoch?(epoch)
+        @subscribed && epoch == @subscription_epoch
+      end
+
+      def invalidate_presence_subscription(protocol)
         return unless presence?
 
-        presence_lock.acquire do
-          @presence_state = Immutable.call({})
-          @tracked_state = Immutable.call({})
-          emit('presence_sync', @presence_state)
-        end
-      end
-
-      def reset_presence
-        @presence_state = Immutable.call({})
-        @tracked_state = Immutable.call({})
+        @subscription_epoch += 1
+        detach_presence_handler(protocol)
       end
 
       def detach_presence_handler(protocol)

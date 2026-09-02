@@ -58,7 +58,11 @@ module Volcano
         channel = matching_channel(@presence_handlers, push['channel'].to_s)
         info = push.dig(event, 'info')
         return unless channel && info.is_a?(Hash)
-        return if @callback_queue.size >= @max_callback_queue
+
+        if @callback_queue.size >= @max_callback_queue
+          @pending_presence_resyncs[channel] = @presence_handlers.fetch(channel).dup
+          return
+        end
 
         @callback_queue.enqueue([@presence_handlers.fetch(channel).dup, event, info])
       end
@@ -72,14 +76,28 @@ module Volcano
       def dispatch_callbacks
         until @callback_stopping
           handlers, event, data = @callback_queue.dequeue
-          handlers.each do |handler|
-            break if @callback_stopping
-
-            handler.call(event, data)
-          rescue StandardError
-            next
-          end
+          dispatch_callback_delivery(handlers, event, data)
+          enqueue_pending_presence_resync
         end
+      end
+
+      def dispatch_callback_delivery(handlers, event, data)
+        handlers.each do |handler|
+          break if @callback_stopping
+
+          handler.call(event, data)
+        rescue StandardError
+          next
+        end
+      end
+
+      def enqueue_pending_presence_resync
+        return if @callback_queue.size >= @max_callback_queue
+
+        channel, handlers = @pending_presence_resyncs.shift
+        return unless channel
+
+        @callback_queue.enqueue([handlers, 'sync_required', {}])
       end
     end
   end

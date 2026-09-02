@@ -140,6 +140,36 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'requests a presence resync when join and leave pushes overflow the callback queue' do
+    Async do |task|
+      socket = FakeSocket.new
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      events = Async::Queue.new
+      protocol.on_presence('presence:lobby') do |event, info|
+        entered.enqueue(true) if event == 'join' && info['client'] == 'client-1'
+        release.dequeue if event == 'join' && info['client'] == 'client-1'
+        events.enqueue(event)
+      end
+
+      push = lambda do |client|
+        JSON.generate('push' => {
+                        'channel' => 'project:presence:lobby',
+                        'join' => { 'info' => { 'client' => client } }
+                      })
+      end
+      socket.receive(push.call('client-1'))
+      entered.dequeue
+      socket.receive(push.call('client-2'), push.call('client-3'))
+      release.enqueue(true)
+
+      received = task.with_timeout(0.2) { [events.dequeue, events.dequeue, events.dequeue] }
+      expect(received).to eq(%w[join join sync_required])
+      protocol.close
+    end.wait
+  end
+
   it 'correlates distinct concurrent replies that arrive in reverse ID order' do
     Async do |task|
       socket = FakeSocket.new

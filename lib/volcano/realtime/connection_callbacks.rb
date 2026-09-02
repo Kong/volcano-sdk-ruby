@@ -60,6 +60,7 @@ module Volcano
       end
 
       def protocol_closed(error)
+        close_channels_after_protocol_loss
         emit_connection_event(:disconnect, disconnect_context(error))
       end
 
@@ -73,6 +74,7 @@ module Volcano
       end
 
       def protocol_failed(error, disconnected)
+        close_channels_after_protocol_loss if disconnected
         events = [[:error, error_context(error)]]
         events << [:disconnect, disconnect_context(error)] if disconnected
         emit_connection_events(events)
@@ -108,6 +110,11 @@ module Volcano
       def connection_callback_lock
         require 'async/semaphore'
         @connection_callback_lock ||= Async::Semaphore.new(1)
+      end
+
+      def close_channels_after_protocol_loss
+        @closed = true
+        @channels.each_value(&:mark_closed)
       end
     end
     private_constant :ConnectionCallbacks

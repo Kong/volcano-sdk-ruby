@@ -4,6 +4,7 @@ require 'uri'
 require_relative 'realtime/connection_callbacks'
 require_relative 'realtime/connection'
 require_relative 'realtime/lifecycle'
+require_relative 'realtime/presence_state'
 require_relative 'realtime/presence'
 require_relative 'realtime/channel_callbacks'
 
@@ -136,6 +137,7 @@ module Volcano
 
     # Represents one realtime broadcast channel.
     class Channel
+      include PresenceState
       include Presence
       include ChannelCallbacks
 
@@ -149,6 +151,7 @@ module Volcano
         @handler_registered = @subscribed = @closed = false
         @publication_handler = nil
         @lifecycle_lock = nil
+        @callback_lock = nil
         initialize_presence(type)
       end
 
@@ -158,10 +161,7 @@ module Volcano
           raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
 
           protocol = @protocol_provider.call
-          register_handlers(protocol)
-          protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
-          @subscribed = true
-          sync_presence(protocol)
+          subscribe_protocol(protocol)
         end
         nil
       end
@@ -183,8 +183,10 @@ module Volcano
           ensure_open!
           next unless @subscribed
 
-          @protocol_provider.call.unsubscribe(channel: @name)
+          protocol = @protocol_provider.call
+          protocol.unsubscribe(channel: @name)
           @subscribed = false
+          invalidate_presence_subscription(protocol)
           clear_presence
         end
         nil
@@ -202,14 +204,22 @@ module Volcano
 
       def mark_closed
         @closed = true
-        action = lambda do
-          @subscribed = false
-          reset_presence
-        end
-        @lifecycle_lock ? @lifecycle_lock.acquire(&action) : action.call
+        @subscribed = false
+        reset_presence
       end
 
       private
+
+      def subscribe_protocol(protocol)
+        epoch = next_presence_epoch
+        register_handlers(protocol, epoch)
+        protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
+        @subscribed = true
+        sync_presence(protocol, epoch)
+      rescue StandardError
+        invalidate_presence_subscription(protocol)
+        raise
+      end
 
       def detach_from_protocol
         return unless @subscribed || @publication_handler

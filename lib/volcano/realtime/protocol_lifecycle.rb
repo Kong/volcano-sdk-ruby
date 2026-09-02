@@ -30,6 +30,7 @@ module Volcano
           handlers = @presence_handlers[channel]
           handlers.delete(handler)
           @presence_handlers.delete(channel) if handlers.empty?
+          @pending_presence_resyncs.delete(channel)
           nil
         end
 
@@ -53,6 +54,7 @@ module Volcano
         def initialize_handlers
           @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
           @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
+          @pending_presence_resyncs = {}
           @callback_queue = Async::Queue.new
         end
 

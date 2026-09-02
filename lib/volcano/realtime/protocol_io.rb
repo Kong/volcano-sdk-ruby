@@ -31,8 +31,10 @@ module Volcano
           [@next_id, Async::Queue.new].tap { |id, queue| @pending[id] = queue }
         end
 
-        def write_frame(frame)
-          @write_lock.acquire { @socket.write("#{JSON.generate(frame)}\n") }
+        def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
+
+        def write_serialized_frame(frame)
+          @write_lock.acquire { @socket.write(frame) }
         rescue StandardError => e
           failure = closed_error(e)
           close_with(failure, notify_error: true)

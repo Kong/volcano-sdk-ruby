@@ -10,7 +10,10 @@ module Volcano
     class ServerError < StandardError
       attr_reader :code
 
-      def initialize(message, code: nil) = super(message).tap { @code = code }
+      def initialize(message, code: nil)
+        super(message)
+        @code = code.is_a?(String) ? code.dup.freeze : code
+      end
     end
 
     class ClosedError < StandardError; end

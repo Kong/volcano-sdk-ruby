@@ -287,6 +287,71 @@ RSpec.describe Volcano::Realtime do
     expect(socket).to be_closed
   end
 
+  it 'keeps the connection open when a publication cannot be serialized' do
+    socket = FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    events = []
+
+    Async do
+      client.realtime.on_error { |context| events << context }
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+
+      expect { channel.send(event: 'message', value: Float::NAN) }.to raise_error(
+        JSON::GeneratorError
+      )
+      expect(channel.send(event: 'message', value: 'valid')).to be_nil
+      client.realtime.disconnect
+    end.wait
+
+    expect(events).to be_empty
+    expect(socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe publish]
+    )
+  end
+
+  it 'freezes string error codes before delivering shared contexts' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('connect')
+
+      socket.reject(command.fetch('id'), 'permission denied', code: 'permission')
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    mutation_errors = []
+    observed = []
+
+    Async do |task|
+      client.realtime.on_error do |context|
+        [context.code, context.error.code].each do |code|
+          code << '-mutated'
+        rescue StandardError => e
+          mutation_errors << e.class
+        end
+      end
+      client.realtime.on_error { |context| observed << context.code }
+
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ServerError
+      )
+      task.with_timeout(0.2) { task.yield until observed.any? }
+    end.wait
+
+    expect(mutation_errors).to eq([FrozenError, FrozenError])
+    expect(observed).to eq(['permission'])
+  end
+
   it 'finishes transport shutdown before an error callback disconnects again' do
     socket = FacadeSocket.new
     client = Volcano::Client.new(

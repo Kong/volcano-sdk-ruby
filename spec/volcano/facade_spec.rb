@@ -2434,7 +2434,7 @@ RSpec.describe Volcano::Client do
     )
 
     expect { local_client.storage.from('assets').get_public_url('') }
-      .to raise_error(ArgumentError, 'storage paths must be non-empty strings')
+      .to raise_error(ArgumentError, 'storage path must be a non-empty string')
     expect(transport.calls).to be_empty
   end
 
@@ -2460,6 +2460,17 @@ RSpec.describe Volcano::Client do
       expect { local_client.storage.from('assets').get_public_url(path) }
         .to raise_error(ArgumentError, /dot segments/)
     end
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects multiple public URL paths' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    expect { local_client.storage.from('assets').get_public_url(%w[first.txt second.txt]) }
+      .to raise_error(ArgumentError, 'storage path must be a non-empty string')
     expect(transport.calls).to be_empty
   end
 

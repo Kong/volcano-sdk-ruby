@@ -195,7 +195,8 @@ module Volcano
           database: Generated::DatabaseQueriesApi.new(api_client),
           storage: StorageApi.new(api_client),
           locks: Generated::LocksApi.new(api_client),
-          functions: Generated::FunctionsApi.new(api_client)
+          functions: Generated::FunctionsApi.new(api_client),
+          logs: Generated::LogsApi.new(api_client)
         )
       end
 

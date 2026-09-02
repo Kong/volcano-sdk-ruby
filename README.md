@@ -453,6 +453,7 @@ next_page = bucket.list("avatars", limit: 100, cursor: page.next_cursor) if page
 
 removed_paths = bucket.remove(["archive/a.txt", "archive/b.txt"])
 moved = bucket.move("drafts/a.txt", "published/a.txt")
+copied = bucket.copy("templates/a.txt", "drafts/a.txt")
 ```
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary

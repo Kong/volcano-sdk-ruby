@@ -397,6 +397,23 @@ RSpec.describe Volcano::Client do
       )
     end
 
+    def copy_storage_object(**arguments)
+      @calls << [:copy_storage_object, arguments]
+      Response.new(
+        status: 201,
+        body: {
+          'id' => '00000000-0000-4000-8000-000000000021',
+          'bucket_id' => '00000000-0000-4000-8000-000000000030',
+          'name' => arguments.fetch(:to_path),
+          'size' => 5,
+          'mime_type' => 'text/plain',
+          'is_public' => false
+        },
+        headers: {},
+        data: nil
+      )
+    end
+
     private
 
     def storage_page_body
@@ -2312,6 +2329,18 @@ RSpec.describe Volcano::Client do
           from_path: 'drafts/a.txt', to_path: 'published/a.txt'
         }
       ]
+    )
+  end
+
+  it 'copies an object and returns its destination metadata' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    copied = client.storage.from('assets').copy('templates/a.txt', 'drafts/a.txt')
+
+    expect(copied.name).to eq('drafts/a.txt')
+    expect(transport.calls.last.first).to eq(:copy_storage_object)
+    expect(transport.calls.last.last).to include(
+      from_path: 'templates/a.txt', to_path: 'drafts/a.txt'
     )
   end
 

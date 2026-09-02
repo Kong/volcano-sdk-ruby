@@ -639,7 +639,7 @@ notification, `record` is `nil` and the change retains its `id` and `mode`:
 Async do
   changes = client.realtime.channel("public:messages", type: :postgres)
   changes.on_postgres_changes("INSERT", schema: "public", table: "messages") do |change|
-    puts change.record.fetch("body")
+    puts change.record&.fetch("body") || "changed row #{change.id}"
   end
   changes.subscribe
   client.realtime.disconnect
@@ -650,7 +650,8 @@ end.wait
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
 same `type:` to `remove_channel` for presence channels. Reconnect, recovery, and
-database-change subscriptions are out of scope.
+automatic fetching for lightweight database-change notifications are out of
+scope.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.

@@ -125,10 +125,12 @@ module Volcano
 
     # Represents one realtime broadcast channel.
     class Channel
+      attr_reader :name
+
       def initialize(realtime, protocol_provider, name)
         @realtime = realtime
         @protocol_provider = protocol_provider
-        @name = name
+        @name = name.freeze
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
         @publication_handler = nil

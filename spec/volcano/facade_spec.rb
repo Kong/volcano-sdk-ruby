@@ -2230,6 +2230,20 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'normalizes an empty terminal storage cursor to nil' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    transport.define_singleton_method(:list_storage_objects) do |**_arguments|
+      Response.new(
+        status: 200,
+        body: { 'objects' => [], 'next_cursor' => '' },
+        headers: {},
+        data: nil
+      )
+    end
+
+    expect(client.storage.from('assets').list.next_cursor).to be_nil
+  end
+
   it 'keeps query chains immutable and reads the latest session at execution time' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     base = client.database('main').from('items').select('*')

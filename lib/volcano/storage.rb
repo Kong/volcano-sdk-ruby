@@ -59,9 +59,10 @@ module Volcano
         )
       end
       payload = Transport.body(response, 200)
+      next_cursor = payload['next_cursor']
       StoragePage.new(
         objects: payload.fetch('objects', []).map { |object| storage_object(object) },
-        next_cursor: payload['next_cursor']
+        next_cursor: next_cursor == '' ? nil : next_cursor
       )
     end
 

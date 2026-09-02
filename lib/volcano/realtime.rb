@@ -185,6 +185,7 @@ module Volcano
         end
         nil
       end
+      private :remove
 
       def mark_closed
         @closed = true
@@ -211,7 +212,7 @@ module Volcano
         return unless @subscribed || @publication_handler
 
         protocol = @protocol_provider.call
-        protocol.unsubscribe(channel: @name) if @subscribed
+        protocol.unsubscribe(channel: @name) if @subscribed && protocol.connected?
         detach_publication_handler(protocol)
       end
 

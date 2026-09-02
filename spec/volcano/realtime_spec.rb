@@ -253,14 +253,27 @@ RSpec.describe Volcano::Realtime do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
     Async do
-      client.realtime.channel('contract').subscribe
+      channel = client.realtime.channel('contract')
+      channel.subscribe
       expect(client.realtime).to be_connected
 
       socket.close
       Async::Task.current.yield while client.realtime.connected?
 
       expect(client.realtime).not_to be_connected
+      expect(client.realtime.remove_channel('contract')).to be_nil
+      expect(client.realtime.channel('contract')).not_to be(channel)
     end.wait
+  end
+
+  it 'keeps channel teardown private' do
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { FacadeSocket.new }
+    )
+
+    expect { client.realtime.channel('contract').remove }.to raise_error(NoMethodError)
   end
 
   it 'removes an inactive channel without connecting', :aggregate_failures do

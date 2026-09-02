@@ -28,12 +28,12 @@ module Volcano
         channel = @channels[name]
         return unless channel
 
-        channel.remove
+        channel.__send__(:remove)
         @channels.delete(name)
       end
 
       def remove_channel_entry(name, channel)
-        channel.remove
+        channel.__send__(:remove)
         @channels.delete(name)
         nil
       rescue StandardError => e

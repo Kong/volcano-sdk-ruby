@@ -2439,6 +2439,24 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'deep-freezes independent lock lease values' do
+    raw_key = +'build'
+    raw_token = +'00000000-0000-4000-8000-000000000001'
+    raw_expiry = Time.iso8601('2026-08-26T12:00:30Z')
+    lease = Volcano::LockLease.new(
+      key: raw_key, token: raw_token, expires_at: raw_expiry, fencing_token: 7
+    )
+    copy = Volcano::LockLease.new(**lease.to_h)
+
+    expect(lease.to_h.values + copy.to_h.values).to all(be_frozen)
+    expect(
+      [
+        lease.key.equal?(raw_key), lease.token.equal?(raw_token), lease.expires_at.equal?(raw_expiry),
+        copy.key.equal?(lease.key), copy.token.equal?(lease.token), copy.expires_at.equal?(lease.expires_at)
+      ]
+    ).to all(be(false))
+  end
+
   it 'creates an immutable upload session' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 

@@ -414,6 +414,26 @@ RSpec.describe Volcano::Client do
       )
     end
 
+    def update_storage_object_visibility(**arguments)
+      @calls << [:update_storage_object_visibility, arguments]
+      Response.new(
+        status: 200,
+        body: {
+          'id' => '00000000-0000-4000-8000-000000000020',
+          'bucket_id' => '00000000-0000-4000-8000-000000000030',
+          'name' => arguments.fetch(:path),
+          'size' => 5,
+          'mime_type' => 'image/png',
+          'is_public' => arguments.fetch(:is_public),
+          'public_url' => if arguments.fetch(:is_public)
+                            'https://api.test.volcano.dev/public/project/assets/avatars/a.png'
+                          end
+        },
+        headers: {},
+        data: nil
+      )
+    end
+
     private
 
     def storage_page_body
@@ -2342,6 +2362,37 @@ RSpec.describe Volcano::Client do
     expect(transport.calls.last.last).to include(
       from_path: 'templates/a.txt', to_path: 'drafts/a.txt'
     )
+  end
+
+  it 'updates object visibility and returns server-confirmed metadata' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    updated = client.storage.from('assets').update_visibility('avatars/a.png', public: true)
+
+    expect(updated).to have_attributes(
+      is_public: true,
+      public_url: 'https://api.test.volcano.dev/public/project/assets/avatars/a.png'
+    )
+    expect(transport.calls.last).to eq(
+      [
+        :update_storage_object_visibility,
+        {
+          authorization: 'access-token', bucket_name: 'assets',
+          path: 'avatars/a.png', is_public: true
+        }
+      ]
+    )
+  end
+
+  it 'rejects invalid visibility inputs before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+
+    [['', true], ['avatars/a.png', 1], ['avatars/a.png', nil]].each do |path, is_public|
+      expect { client.storage.from('assets').update_visibility(path, public: is_public) }
+        .to raise_error(ArgumentError)
+    end
+    expect(transport.calls).to eq(calls_after_sign_in)
   end
 
   it 'keeps query chains immutable and reads the latest session at execution time' do

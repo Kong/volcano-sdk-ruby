@@ -328,6 +328,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:copy, bucket, request]
       [FakeGeneratedModel.new(name: request.to), 201, {}]
     end
+
+    def update_storage_object_visibility_with_http_info(bucket, path, request)
+      @calls << [:visibility, bucket, path, request]
+      [FakeGeneratedModel.new(name: path, is_public: request.is_public), 200, {}]
+    end
   end
 
   class FakeLocksApi
@@ -538,6 +543,22 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request).to be_a(InternalGenerated::StorageCopyRequest)
     expect(request.to_hash).to eq(from: 'templates/a.txt', to: 'drafts/a.txt')
     expect(response.body).to eq('name' => 'drafts/a.txt')
+  end
+
+  it 'builds visibility updates with the generated storage request model' do
+    response = transport.update_storage_object_visibility(
+      authorization: 'access-token',
+      bucket_name: 'assets',
+      path: 'avatars/a.png',
+      is_public: true
+    )
+
+    _, bucket, path, request = apis.storage.calls.last
+    expect(bucket).to eq('assets')
+    expect(path).to eq('avatars/a.png')
+    expect(request).to be_a(InternalGenerated::StorageVisibilityRequest)
+    expect(request.to_hash).to eq(is_public: true)
+    expect(response.body).to eq('name' => 'avatars/a.png', 'is_public' => true)
   end
 
   it 'builds updates with the generated database request model' do
@@ -1023,6 +1044,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(calls.map { |call| call.fetch(1) }).to eq(expected_paths)
   ensure
     file&.close!
+  end
+
+  it 'preserves nested object paths when updating visibility' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+    request = InternalGenerated::StorageVisibilityRequest.new(is_public: true)
+
+    storage.update_storage_object_visibility_with_http_info(
+      'assets', 'folder/payload with space.txt', request
+    )
+
+    expect(calls.fetch(0).first(2)).to eq(
+      [:PATCH, '/storage/assets/folder/payload%20with%20space.txt/visibility']
+    )
   end
 
   it 'deserializes internal models while the generated namespace is private' do

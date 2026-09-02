@@ -1,12 +1,20 @@
 # frozen_string_literal: true
 
 require 'uri'
+require_relative 'realtime/connection_callbacks'
+require_relative 'realtime/connection'
 require_relative 'realtime/lifecycle'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
   class Realtime
     include Lifecycle
+    include ConnectionCallbacks
+    include Connection
+
+    ConnectContext = Data.define(:client)
+    DisconnectContext = Data.define(:code, :reason)
+    ErrorContext = Data.define(:code, :message, :error)
 
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
@@ -16,6 +24,8 @@ module Volcano
       @protocol_lock = nil
       @channel_lock = nil
       @channels = {}
+      @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
+      @next_connection_callback_id = 0
       @closed = false
     end
 
@@ -54,8 +64,10 @@ module Volcano
 
       @closed = true
       begin
+        @manual_disconnect = true
         @protocol&.close
       ensure
+        @manual_disconnect = false
         @channels.each_value(&:mark_closed)
       end
       nil
@@ -79,48 +91,6 @@ module Volcano
     def channel_lock
       require 'async/semaphore'
       @channel_lock ||= Async::Semaphore.new(1)
-    end
-
-    def connect_protocol
-      socket = @socket_factory.call(address)
-      Protocol.new(socket: socket, secrets: realtime_secrets).tap do |protocol|
-        protocol.connect(token: @client.session_token)
-      end
-    rescue StandardError
-      close_socket(socket)
-      raise
-    end
-
-    def close_socket(socket)
-      socket&.close
-    rescue StandardError
-      nil
-    end
-
-    def address
-      uri = URI(@api_url)
-      uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-      uri.path = "#{uri.path.delete_suffix('/')}/realtime/v1/websocket"
-      encoded_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
-      uri.query = "apikey=#{encoded_key}"
-      uri.to_s
-    end
-
-    def open_socket(address)
-      require 'async/http/endpoint'
-      require 'async/websocket/client'
-      Async::WebSocket::Client.connect(Async::HTTP::Endpoint.parse(address))
-    end
-
-    def realtime_secrets = [@client.anon_token, @client.current_session&.access_token]
-
-    def public_error(error)
-      redacted = Redaction.exception(error, secrets: realtime_secrets)
-      return redacted unless Transport::NETWORK_ERRORS.any? { |type| error.is_a?(type) }
-
-      transport_error = Error::TransportError.new(redacted.message)
-      transport_error.set_backtrace(redacted.backtrace)
-      transport_error
     end
 
     # Represents one realtime broadcast channel.

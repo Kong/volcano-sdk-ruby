@@ -31,6 +31,16 @@ module Volcano
           [@next_id, Async::Queue.new].tap { |id, queue| @pending[id] = queue }
         end
 
+        def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
+
+        def write_serialized_frame(frame)
+          @write_lock.acquire { @socket.write(frame) }
+        rescue StandardError => e
+          failure = closed_error(e)
+          close_with(failure, notify_error: true)
+          raise failure
+        end
+
         def await_reply(reply_queue)
           Async::Task.current.with_timeout(
             @request_timeout,
@@ -44,9 +54,9 @@ module Volcano
             process_message(message)
           end
         rescue JSON::ParserError => e
-          close_with(ClosedError.new(invalid_frame_message(e)))
+          close_with(ClosedError.new(invalid_frame_message(e)), notify_error: true)
         rescue StandardError => e
-          close_with(closed_error(e))
+          close_with(closed_error(e), notify_error: true)
         ensure
           close_with(ClosedError.new('realtime connection closed'))
         end

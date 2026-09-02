@@ -391,6 +391,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:release, key, token, request_id]
       [nil, 204, {}]
     end
+
+    def get_project_lock_with_http_info(key, request_id)
+      @calls << [:get, key, request_id]
+      state = FakeGeneratedModel.new(
+        held: true,
+        expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
+        fencing_token: 7
+      )
+      [state, 200, {}]
+    end
   end
 
   let(:apis) do
@@ -500,6 +510,20 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       )
     end
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+  end
+
+  it 'reads a lock through the generated API' do
+    response = transport.get_project_lock(authorization: 'service-key', key: 'build:queue')
+
+    expect(response.body).to eq(
+      'held' => true,
+      'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'),
+      'fencing_token' => 7
+    )
+    operation, key, request_id = apis.locks.calls.last
+    expect([operation, key]).to eq([:get, 'build:queue'])
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(authorizations).to eq(['service-key'])
   end
 
   it 'routes only the ten POC operations through generated API classes', :aggregate_failures do

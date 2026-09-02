@@ -52,6 +52,17 @@ module Volcano
       end
     end
 
+    def get_project_lock(authorization:, key:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.locks.get_project_lock_with_http_info(
+          key,
+          SecureRandom.uuid
+        )
+        response(data, status, headers)
+      end
+    end
+
     def release_project_lock(authorization:, key:, token:)
       invoke do
         apis = @api_factory.call(authorization)

@@ -587,8 +587,39 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  module FakeLockTransport
+    def acquire_project_lock(**arguments)
+      @calls << [:acquire_project_lock, arguments]
+      Response.new(
+        status: 201,
+        body: { 'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7 },
+        headers: {},
+        data: nil
+      )
+    end
+
+    def release_project_lock(**arguments)
+      @calls << [:release_project_lock, arguments]
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
+    end
+
+    def get_project_lock(**arguments)
+      @calls << [:get_project_lock, arguments]
+      Response.new(
+        status: 200,
+        body: {
+          'held' => true,
+          'expires_at' => '2026-08-26T12:00:30Z',
+          'fencing_token' => 7
+        },
+        headers: {}, data: nil
+      )
+    end
+  end
+
   class FakeContractTransport
     include FakeDatabaseTransport
+    include FakeLockTransport
     include FakeStorageTransport
     include FakeUploadSessionTransport
 
@@ -673,21 +704,6 @@ RSpec.describe Volcano::Client do
     def auth_signup(**arguments)
       @calls << [:auth_signup, arguments]
       @signup_response
-    end
-
-    def acquire_project_lock(**arguments)
-      @calls << [:acquire_project_lock, arguments]
-      Response.new(
-        status: 201,
-        body: { 'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7 },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def release_project_lock(**arguments)
-      @calls << [:release_project_lock, arguments]
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
     end
   end
 
@@ -2374,6 +2390,22 @@ RSpec.describe Volcano::Client do
     downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
 
     expect(downloaded).to eq("hello\x00".b)
+  end
+
+  it 'gets immutable current lock state' do
+    state = client.locks.get('build')
+
+    expect(state).to eq(
+      Volcano::LockState.new(
+        held: true,
+        expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
+        fencing_token: 7
+      )
+    )
+    expect(state.to_h.values).to all(be_frozen)
+    expect(transport.calls).to eq(
+      [[:get_project_lock, { authorization: 'service-key', key: 'build' }]]
+    )
   end
 
   it 'creates an immutable upload session' do

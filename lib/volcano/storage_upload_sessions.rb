@@ -54,6 +54,18 @@ module Volcano
       storage_object(Transport.body(response, 200).fetch('object'))
     end
 
+    def get_upload_session(path, session_id:)
+      request = UploadSessionReference.new(path: path, session_id: session_id)
+      response = Transport.invoke do
+        @transport.get_upload_session(
+          authorization: @client.session_token,
+          bucket_name: @name,
+          request: request
+        )
+      end
+      upload_session_status(Transport.body(response, 200))
+    end
+
     private
 
     def upload_session(payload)
@@ -71,6 +83,16 @@ module Volcano
         etag: payload.fetch('etag'),
         size: payload.fetch('size')
       )
+    end
+
+    def upload_session_status(payload)
+      attributes = UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
+        [name, payload.fetch(name.to_s)]
+      end
+      attributes[:parts] = attributes.fetch(:parts).map { |part| upload_part_metadata(part) }
+      attributes[:expires_at] = parse_time(attributes.fetch(:expires_at))
+      attributes[:created_at] = parse_time(attributes.fetch(:created_at))
+      UploadSessionStatus.new(**attributes)
     end
   end
 end

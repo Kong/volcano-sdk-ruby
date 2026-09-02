@@ -76,6 +76,12 @@ module Volcano
         auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
         return_type: 'CompleteUploadSessionResponse'
       }.freeze
+      UPLOAD_SESSION_STATUS_OPTIONS = {
+        operation: :'StorageObjectsApi.download_storage_object',
+        header_params: { 'Accept' => 'application/json' }.freeze,
+        auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
+        return_type: 'UploadSessionStatusResponse'
+      }.freeze
       DOWNLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.download_storage_object',
         header_params: { 'Accept' => 'application/octet-stream, application/json' }.freeze,
@@ -120,6 +126,14 @@ module Volcano
         )
         options = COMPLETE_UPLOAD_SESSION_OPTIONS.merge(header_params: headers, body: JSON.generate({}))
         call_storage_api(:POST, bucket_name, path, options)
+      end
+
+      def get_upload_session_with_http_info(bucket_name, path, session_id)
+        headers = UPLOAD_SESSION_STATUS_OPTIONS.fetch(:header_params).merge(
+          'X-Upload-Session' => session_id
+        )
+        options = UPLOAD_SESSION_STATUS_OPTIONS.merge(header_params: headers)
+        call_storage_api(:GET, bucket_name, path, options)
       end
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})

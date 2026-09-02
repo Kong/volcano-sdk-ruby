@@ -503,6 +503,26 @@ RSpec.describe Volcano::Client do
       }
       Response.new(status: 200, body: { 'object' => object }, headers: {}, data: nil)
     end
+
+    def get_upload_session(**arguments)
+      @calls << [:get_upload_session, arguments]
+      request = arguments.fetch(:request)
+      body = {
+        'session_id' => request.session_id,
+        'status' => 'uploading',
+        'path' => request.path,
+        'content_type' => 'video/mp4',
+        'total_size' => 20_000_000,
+        'part_size' => 8_388_608,
+        'total_parts' => 3,
+        'parts_uploaded' => 1,
+        'bytes_uploaded' => 8_388_608,
+        'parts' => [{ 'part_number' => 1, 'etag' => 'etag-part-1', 'size' => 8_388_608 }],
+        'expires_at' => '2026-09-09T12:00:00Z',
+        'created_at' => '2026-09-02T12:00:00Z'
+      }
+      Response.new(status: 200, body: body, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2352,6 +2372,32 @@ RSpec.describe Volcano::Client do
     expect(object.to_h.values).to all(be_frozen)
     operation, arguments = transport.calls.last
     expect(operation).to eq(:complete_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
+    )
+  end
+
+  it 'gets immutable upload session status' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    status = client.storage.from('assets').get_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(status).to eq(
+      Volcano::UploadSessionStatus.new(
+        session_id: 'session-123', status: 'uploading', path: 'videos/demo.mp4',
+        content_type: 'video/mp4', total_size: 20_000_000, part_size: 8_388_608,
+        total_parts: 3, parts_uploaded: 1, bytes_uploaded: 8_388_608,
+        parts: [Volcano::UploadPart.new(part_number: 1, etag: 'etag-part-1', size: 8_388_608)],
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z'),
+        created_at: Time.iso8601('2026-09-02T12:00:00Z')
+      )
+    )
+    expect([status.to_h.values.all?(&:frozen?), status.parts.frozen?]).to eq([true, true])
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:get_upload_session)
     expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
     expect(arguments.fetch(:request)).to have_attributes(
       path: 'videos/demo.mp4', session_id: 'session-123'

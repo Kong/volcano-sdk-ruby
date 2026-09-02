@@ -461,6 +461,11 @@ part = bucket.upload_part(
   data: video
 )
 puts part.etag
+status = bucket.get_upload_session(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id
+)
+puts [status.parts_uploaded, status.bytes_uploaded]
 completed = bucket.complete_upload_session(
   "videos/demo.mp4",
   session_id: upload_session.session_id
@@ -490,6 +495,8 @@ Pass an HTTP byte range to download only part of an object.
 count, and expiration time for a resumable upload.
 `upload_part` returns immutable part metadata and can safely retry the same part
 number to replace that part.
+`get_upload_session` returns immutable progress and uploaded-part metadata for
+resuming an interrupted upload.
 `complete_upload_session` assembles the uploaded parts and returns the stored
 object.
 Visibility updates return the server-confirmed object; `public_url` is set only

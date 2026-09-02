@@ -55,7 +55,8 @@ module Volcano
           byte_range: range
         )
       end
-      Transport.body(response, range ? 206 : 200)
+      expected_status = range && response.status == 206 ? 206 : 200
+      Transport.body(response, expected_status)
       response.data.b
     end
 

@@ -39,4 +39,27 @@ module Volcano
       super(objects: objects.to_a.dup.freeze, next_cursor: cursor)
     end
   end
+
+  UploadSessionRequest = Data.define(:path, :content_type, :total_size, :part_size) do
+    def initialize(path:, content_type:, total_size:, part_size: nil)
+      super(
+        path: path.dup.freeze,
+        content_type: content_type.dup.freeze,
+        total_size: total_size,
+        part_size: part_size
+      )
+    end
+  end
+  private_constant :UploadSessionRequest
+
+  UploadSession = Data.define(:session_id, :part_size, :total_parts, :expires_at) do
+    def initialize(session_id:, part_size:, total_parts:, expires_at:)
+      super(
+        session_id: session_id.dup.freeze,
+        part_size: part_size,
+        total_parts: total_parts,
+        expires_at: expires_at.dup.freeze
+      )
+    end
+  end
 end

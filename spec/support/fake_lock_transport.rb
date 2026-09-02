@@ -1,6 +1,21 @@
 # frozen_string_literal: true
 
 module SpecSupport
+  # Controllable paired clock for lease lifecycle tests.
+  class FakeLeaseClock
+    attr_reader :monotonic, :wall
+
+    def initialize
+      @monotonic = 0.0
+      @wall = Time.now
+    end
+
+    def advance(seconds)
+      @monotonic += seconds
+      @wall += seconds
+    end
+  end
+
   # Configurable lock transport for renewal lifecycle tests.
   class FakeLockTransport
     attr_accessor :acquire_expires_at, :renew_handler

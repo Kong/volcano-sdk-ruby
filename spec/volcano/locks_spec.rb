@@ -10,7 +10,7 @@ RSpec.describe Volcano::Locks do
   let(:transport) { SpecSupport::FakeLockTransport.new }
 
   it 'renews before yielding a lease without a safe remaining window' do
-    transport.acquire_expires_at = Time.now.utc - 1
+    advance_acquire_past_ttl
     yielded = false
 
     locks.with_lock('build', ttl: 30) do |guard|
@@ -23,7 +23,7 @@ RSpec.describe Volcano::Locks do
   end
 
   it 'does not yield when the synchronous renewal loses ownership' do
-    transport.acquire_expires_at = Time.now.utc - 1
+    advance_acquire_past_ttl
     transport.renew_handler = lambda do |_arguments|
       transport.response(409, 'message' => 'lock ownership lost')
     end
@@ -34,8 +34,9 @@ RSpec.describe Volcano::Locks do
   end
 
   it 'does not yield when a renewal response has no safe window' do
-    transport.acquire_expires_at = Time.now.utc - 1
+    clock = advance_acquire_past_ttl
     transport.renew_handler = lambda do |_arguments|
+      clock.advance(31)
       transport.response(200, 'expires_at' => (Time.now.utc - 1).iso8601)
     end
 
@@ -92,6 +93,7 @@ RSpec.describe Volcano::Locks do
   end
 
   it 'marks a stalled renewal lost when the lease expires' do
+    stub_const('Volcano::LockAutoRenewal::MIN_LOCK_TTL_SECONDS', 1)
     stub_const('Volcano::LockAutoRenewal::MAX_RENEWAL_DELAY_SECONDS', 0.01)
     stub_const('Volcano::LockAutoRenewal::RENEWAL_SAFETY_MARGIN_SECONDS', 0.0)
     stub_const('Volcano::LockAutoRenewal::RENEWAL_REQUEST_BUDGET_SECONDS', 0.0)
@@ -101,9 +103,9 @@ RSpec.describe Volcano::Locks do
     transport.renew_handler = stalled_renewal(entered, release)
 
     expect do
-      locks.with_lock('build', ttl: 30) do |guard|
+      locks.with_lock('build', ttl: 1) do |guard|
         entered.pop
-        expect(guard.wait_lost(timeout: 1)).to be(true)
+        expect(guard.wait_lost(timeout: 2)).to be(true)
         release << true
       end
     end.to raise_error(Timeout::Error, 'lock lease expired before renewal completed')
@@ -129,16 +131,33 @@ RSpec.describe Volcano::Locks do
     release << true if release.empty?
   end
 
-  it 'caps expiry by the monotonic ttl when the wall clock is behind' do
+  it 'uses elapsed ttl despite a constant wall-clock offset' do
     lease = Volcano::LockLease.new(
       key: 'build', token: 'token', expires_at: Time.now.utc + 5, fencing_token: 7
     )
+    real_time = Time.now
+    allow(Time).to receive(:now).and_return(real_time + 10)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    allow(Time).to receive(:now).and_return(Time.now - 10)
+    wall_started_at = Time.now
 
-    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5, started_at: started_at, wall_started_at: wall_started_at
+    )
 
     expect(guard.__send__(:expiry_delay)).to be_between(0, 5).exclusive
+  end
+
+  it 'treats wall-clock elapsed time as lease age after host suspension' do
+    lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
+    wall_started_at = Time.now
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5, started_at: Process.clock_gettime(Process::CLOCK_MONOTONIC),
+             wall_started_at: wall_started_at
+    )
+    allow(Time).to receive(:now).and_return(wall_started_at + 6)
+
+    expect(guard).to be_lost
+    expect(guard.failure).to be_a(Timeout::Error)
   end
 
   it 'records expiry before stopping a starved watcher' do
@@ -146,12 +165,35 @@ RSpec.describe Volcano::Locks do
       key: 'build', token: 'token', expires_at: Time.now.utc + 30, fencing_token: 7
     )
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) - 6
-    guard = Volcano::LockGuard.new(lease, ttl: 5, started_at: started_at)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5, started_at: started_at, wall_started_at: Time.now - 6
+    )
 
     guard.stop_expiry_watch
 
     expect(guard).to be_lost
     expect(guard.failure).to be_a(Timeout::Error)
+  end
+
+  it 'observes expiry synchronously when the watcher has not run' do
+    lease = Volcano::LockLease.new(key: 'build', token: 'token', expires_at: nil, fencing_token: 7)
+    guard = Volcano::LockGuard.new(
+      lease, ttl: 5, started_at: Process.clock_gettime(Process::CLOCK_MONOTONIC) - 6,
+             wall_started_at: Time.now - 6
+    )
+
+    expect(guard).to be_lost
+    expect(guard.wait_lost(timeout: 0)).to be(true)
+  end
+
+  it 'reports lease loss across a nonlocal block return' do
+    stub_const('Volcano::LockAutoRenewal::MAX_RENEWAL_DELAY_SECONDS', 0.01)
+    transport.renew_handler = lambda do |_arguments|
+      transport.response(500, 'message' => 'renewal failed')
+    end
+
+    expect { return_after_loss(locks) }
+      .to raise_error(Volcano::Error::ServerError, 'renewal failed')
   end
 
   def call_names
@@ -163,6 +205,33 @@ RSpec.describe Volcano::Locks do
       entered << true
       release.pop
       transport.response(200, 'expires_at' => (Time.now.utc + 30).iso8601)
+    end
+  end
+
+  def advance_acquire_past_ttl
+    clock = SpecSupport::FakeLeaseClock.new
+    stub_lease_clock(clock)
+    advance_after_acquire(clock)
+    clock
+  end
+
+  def stub_lease_clock(clock)
+    allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC) { clock.monotonic }
+    allow(Time).to receive(:now) { clock.wall }
+  end
+
+  def advance_after_acquire(clock)
+    allow(transport).to receive(:acquire_project_lock).and_wrap_original do |method, **arguments|
+      response = method.call(**arguments)
+      clock.advance(31)
+      response
+    end
+  end
+
+  def return_after_loss(locks)
+    locks.with_lock('build', ttl: 30) do |guard|
+      guard.wait_lost(timeout: 1)
+      return :completed
     end
   end
 end

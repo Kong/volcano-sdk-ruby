@@ -50,8 +50,12 @@ module Volcano
 
     def renew
       started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      wall_started_at = Time.now
       lease = @locks.renew(@key, @guard.lease, ttl: @config.ttl)
-      return if @guard.replace_lease(lease, started_at: started_at) && renewal_safe?
+      replaced = @guard.replace_lease(
+        lease, started_at: started_at, wall_started_at: wall_started_at
+      )
+      return if replaced && renewal_safe?
 
       @guard.mark_lost(Timeout::Error.new(LockGuard::UNSAFE_RENEWAL_MESSAGE))
     rescue StandardError => e

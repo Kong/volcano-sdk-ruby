@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'English'
+
 module Volcano
   # Owns renewal and cleanup for one block-scoped lock lease.
   class LockSession
@@ -13,14 +15,11 @@ module Volcano
     end
 
     def run
-      completed = false
       prepare
       start
-      result = yield @guard
-      completed = true
-      result
+      yield @guard
     ensure
-      cleanup(completed)
+      cleanup($ERROR_INFO.nil?)
     end
 
     private
@@ -29,8 +28,11 @@ module Volcano
       return unless @guard.renewal_delay(@delay).zero?
 
       started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      wall_started_at = Time.now
       lease = @locks.renew(@key, @guard.lease, ttl: @guard.ttl)
-      replaced = @guard.replace_lease(lease, started_at: started_at)
+      replaced = @guard.replace_lease(
+        lease, started_at: started_at, wall_started_at: wall_started_at
+      )
       return if replaced && @guard.renewal_delay(@delay).positive?
 
       failure = Timeout::Error.new(LockGuard::UNSAFE_RENEWAL_MESSAGE)

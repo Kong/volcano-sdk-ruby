@@ -10,10 +10,10 @@ module Volcano
 
     attr_reader :ttl
 
-    def initialize(lease, ttl:, started_at:)
+    def initialize(lease, ttl:, started_at:, wall_started_at:)
       @lease = lease
       @ttl = ttl
-      @lease_deadline = lease_deadline(lease, started_at)
+      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at, wall_started_at: wall_started_at)
       @mutex = Mutex.new
       @changed = ConditionVariable.new
       @failure = nil
@@ -21,25 +21,23 @@ module Volcano
       @expiry_thread = nil
     end
 
-    def lease
-      @mutex.synchronize { @lease }
-    end
+    def lease = @mutex.synchronize { @lease }
 
     def lost?
-      @mutex.synchronize { !@failure.nil? }
+      @mutex.synchronize do
+        record_expiry_if_needed
+        !@failure.nil?
+      end
     end
 
-    def wait_lost(timeout: nil)
-      deadline = timeout && (monotonic_now + timeout)
-      @mutex.synchronize { wait_for_failure?(deadline) }
-    end
+    def wait_lost(timeout: nil) = @mutex.synchronize { wait_for_failure?(wait_deadline(timeout)) }
 
-    def replace_lease(lease, started_at:)
+    def replace_lease(lease, started_at:, wall_started_at:)
       @mutex.synchronize do
         return false if @failure
 
         @lease = lease
-        @lease_deadline = lease_deadline(lease, started_at)
+        @lease_clock.reset(started_at, wall_started_at)
         @changed.broadcast
         true
       end
@@ -53,14 +51,13 @@ module Volcano
     end
 
     def failure
-      @mutex.synchronize { @failure }
-    end
-
-    def renewal_delay(delay)
       @mutex.synchronize do
-        delay.call(@ttl, @lease, deadline: @lease_deadline)
+        record_expiry_if_needed
+        @failure
       end
     end
+
+    def renewal_delay(delay) = @mutex.synchronize { delay.call(@ttl, remaining: remaining_time) }
 
     def start_expiry_watch
       @mutex.synchronize { @expiry_stopped = false }
@@ -69,7 +66,7 @@ module Volcano
 
     def stop_expiry_watch
       @mutex.synchronize do
-        record_expiry if monotonic_now >= @lease_deadline && !@failure
+        record_expiry_if_needed
         @expiry_stopped = true
         @changed.broadcast
       end
@@ -79,13 +76,24 @@ module Volcano
     private
 
     def wait_for_failure?(deadline)
-      until @failure
-        remaining = deadline && (deadline - monotonic_now)
-        break if remaining&.<=(0)
+      loop do
+        record_expiry_if_needed
+        return true if @failure
 
-        @changed.wait(@mutex, remaining)
+        wait = wait_duration(deadline)
+        return false unless wait
+
+        @changed.wait(@mutex, wait)
       end
-      !@failure.nil?
+    end
+
+    def wait_duration(deadline)
+      return expiry_delay unless deadline
+
+      caller_remaining = deadline - @lease_clock.monotonic_now
+      return if caller_remaining <= 0
+
+      [expiry_delay, caller_remaining].min
     end
 
     def expiry_loop
@@ -105,9 +113,7 @@ module Volcano
       :waiting
     end
 
-    def expiry_delay
-      [0.0, @lease_deadline - monotonic_now].max
-    end
+    def expiry_delay = remaining_time
 
     def record_expiry
       @failure ||= Timeout::Error.new(EXPIRY_MESSAGE)
@@ -115,16 +121,14 @@ module Volcano
       :finished
     end
 
-    def monotonic_now
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    def record_expiry_if_needed
+      record_expiry if !@failure && remaining_time <= 0
     end
 
-    def lease_deadline(lease, started_at)
-      request_deadline = started_at + ttl
-      return request_deadline unless lease.expires_at
+    def remaining_time = @lease_clock.remaining
 
-      wall_remaining = [0.0, lease.expires_at - Time.now].max
-      [request_deadline, monotonic_now + wall_remaining].min
+    def wait_deadline(timeout)
+      timeout && (@lease_clock.monotonic_now + timeout)
     end
   end
 end

@@ -467,12 +467,15 @@ RSpec.describe Volcano::Client do
 
   # Implements resumable storage session creation for the facade test transport.
   module FakeUploadSessionTransport
+    attr_accessor :fail_abort_upload, :fail_upload_part_number,
+                  :upload_session_part_size, :upload_session_total_parts
+
     def create_upload_session(**arguments)
       @calls << [:create_upload_session, arguments]
       body = {
         'session_id' => 'session-123',
-        'part_size' => 8_388_608,
-        'total_parts' => 3,
+        'part_size' => upload_session_part_size || 8_388_608,
+        'total_parts' => upload_session_total_parts || 3,
         'expires_at' => '2026-09-09T12:00:00Z'
       }
       Response.new(status: 201, body: body, headers: {}, data: nil)
@@ -481,6 +484,11 @@ RSpec.describe Volcano::Client do
     def upload_part(**arguments)
       @calls << [:upload_part, arguments]
       request = arguments.fetch(:request)
+      if request.part_number == fail_upload_part_number
+        return Response.new(
+          status: 500, body: { 'error' => 'part upload failed' }, headers: {}, data: nil
+        )
+      end
       body = {
         'part_number' => request.part_number,
         'etag' => 'etag-part-1',
@@ -526,9 +534,17 @@ RSpec.describe Volcano::Client do
 
     def abort_upload_session(**arguments)
       @calls << [:abort_upload_session, arguments]
+      return failed_abort_response if fail_abort_upload
+
       Response.new(
         status: 200, body: { 'message' => 'upload session aborted' }, headers: {}, data: nil
       )
+    end
+
+    private
+
+    def failed_abort_response
+      Response.new(status: 500, body: { 'error' => 'abort failed' }, headers: {}, data: nil)
     end
   end
 
@@ -2437,6 +2453,41 @@ RSpec.describe Volcano::Client do
     expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
     expect(arguments.fetch(:request)).to have_attributes(
       path: 'videos/demo.mp4', session_id: 'session-123'
+    )
+  end
+
+  it 'uploads bytes with server-selected chunks' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    object = client.storage.from('assets').upload_resumable(
+      'videos/demo.mp4', 'abcdefghij', content_type: 'video/mp4', part_size: 6
+    )
+
+    storage_calls = transport.calls.drop(1)
+    expect(storage_calls.map(&:first)).to eq(
+      %i[create_upload_session upload_part upload_part upload_part complete_upload_session]
+    )
+    expect(storage_calls.first.last.fetch(:request)).to have_attributes(total_size: 10, part_size: 6)
+    expect(storage_calls[1..3].map { |call| call.last.fetch(:request).data }).to eq(
+      %w[abcd efgh ij]
+    )
+    expect(object.name).to eq('videos/demo.mp4')
+  end
+
+  it 'aborts after a part failure without masking the error' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 2
+    transport.fail_upload_part_number = 2
+    transport.fail_abort_upload = true
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect do
+      client.storage.from('assets').upload_resumable('file.bin', 'abcdefgh')
+    end.to raise_error(Volcano::Error::ServerError, 'part upload failed')
+    expect(transport.calls.drop(1).map(&:first)).to eq(
+      %i[create_upload_session upload_part upload_part abort_upload_session]
     )
   end
 

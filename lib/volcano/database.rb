@@ -79,7 +79,8 @@ module Volcano
     end
 
     def in(column, values)
-      add_filter(column, 'in', values.dup.freeze)
+      copied_values = values.map { |value| value.is_a?(String) ? value.dup.freeze : value }.freeze
+      add_filter(column, 'in', copied_values)
     end
 
     def order(column, ascending: true)

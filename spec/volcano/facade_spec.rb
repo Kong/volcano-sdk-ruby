@@ -2240,9 +2240,10 @@ RSpec.describe Volcano::Client do
   it 'copies membership filter values' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     source = client.database('main').from('items').select('*')
-    statuses = %w[draft published]
+    statuses = [+'draft', +'published']
 
     query = source.in('status', statuses)
+    statuses.first.replace('review')
     statuses << 'archived'
     query.execute
     source.execute

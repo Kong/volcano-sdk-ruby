@@ -402,7 +402,14 @@ Database builders are immutable, so a base query can be reused safely. Chain
 
 ```ruby
 base_query = client.database("main").from("items").select("id", "priority")
-rows = base_query.gte("priority", 3).lt("priority", 10).execute
+rows = base_query
+       .gte("priority", 3)
+       .lt("priority", 10)
+       .order("priority", ascending: false)
+       .order("id")
+       .limit(10)
+       .offset(20)
+       .execute
 ```
 
 ### Upload and download an object

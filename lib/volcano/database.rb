@@ -3,6 +3,16 @@
 module Volcano
   QueryContext = Data.define(:client, :transport, :database_name)
   private_constant :QueryContext
+  QueryState = Data.define(:columns, :filters, :order, :limit, :offset)
+  private_constant :QueryState
+  EMPTY_QUERY_STATE = QueryState.new(
+    columns: [].freeze,
+    filters: [].freeze,
+    order: [].freeze,
+    limit: nil,
+    offset: nil
+  )
+  private_constant :EMPTY_QUERY_STATE
 
   # Creates immutable queries scoped to one project database.
   class Database
@@ -17,21 +27,19 @@ module Volcano
 
   # Builds and executes immutable database select queries.
   class QueryBuilder
-    def initialize(context, table, columns: [], filters: [])
+    def initialize(context, table, state: EMPTY_QUERY_STATE)
       @context = context
       @table = table
-      @columns = columns.freeze
-      @filters = filters.freeze
+      @columns = state.columns
+      @filters = state.filters
+      @order = state.order
+      @limit = state.limit
+      @offset = state.offset
       freeze
     end
 
     def select(*columns)
-      self.class.new(
-        @context,
-        @table,
-        columns: columns,
-        filters: @filters
-      )
+      copy(columns:)
     end
 
     def eq(column, value)
@@ -58,6 +66,19 @@ module Volcano
       add_filter(column, 'lte', value)
     end
 
+    def order(column, ascending: true)
+      clause = { 'column' => column, 'ascending' => ascending }.freeze
+      copy(order: [*@order, clause])
+    end
+
+    def limit(count)
+      copy(limit: count)
+    end
+
+    def offset(count)
+      copy(offset: count)
+    end
+
     def execute
       response = Transport.invoke do
         @context.transport.query_database_select(
@@ -73,11 +94,26 @@ module Volcano
 
     def add_filter(column, operator, value)
       condition = { 'column' => column, 'operator' => operator, 'value' => value }.freeze
+      copy(filters: [*@filters, condition])
+    end
+
+    def copy(
+      columns: @columns,
+      filters: @filters,
+      order: @order,
+      limit: @limit,
+      offset: @offset
+    )
       self.class.new(
         @context,
         @table,
-        columns: @columns,
-        filters: [*@filters, condition]
+        state: QueryState.new(
+          columns: columns.freeze,
+          filters: filters.freeze,
+          order: order.freeze,
+          limit:,
+          offset:
+        )
       )
     end
 
@@ -85,6 +121,9 @@ module Volcano
       { 'table' => @table }.tap do |body|
         body['select'] = @columns unless @columns.empty? || @columns == ['*']
         body['filters'] = @filters unless @filters.empty?
+        body['order'] = @order unless @order.empty?
+        body['limit'] = @limit unless @limit.nil?
+        body['offset'] = @offset unless @offset.nil?
       end
     end
   end

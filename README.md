@@ -446,9 +446,10 @@ bucket = client.storage.from("assets")
 bucket.upload("a.txt", "hello".b)
 bytes = bucket.download("a.txt")
 first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
+video = "demo video".b
 upload_session = bucket.create_upload_session(
   "videos/demo.mp4",
-  total_size: 20_000_000,
+  total_size: video.bytesize,
   content_type: "video/mp4",
   part_size: 8_388_608
 )
@@ -457,9 +458,14 @@ part = bucket.upload_part(
   "videos/demo.mp4",
   session_id: upload_session.session_id,
   part_number: 1,
-  data: "x".b * upload_session.part_size
+  data: video
 )
 puts part.etag
+completed = bucket.complete_upload_session(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id
+)
+puts completed.name
 
 page = bucket.list("avatars", limit: 100)
 page.objects.each { |object| puts object.name }
@@ -484,6 +490,8 @@ Pass an HTTP byte range to download only part of an object.
 count, and expiration time for a resumable upload.
 `upload_part` returns immutable part metadata and can safely retry the same part
 number to replace that part.
+`complete_upload_session` assembles the uploaded parts and returns the stored
+object.
 Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.

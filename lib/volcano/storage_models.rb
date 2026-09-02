@@ -64,6 +64,13 @@ module Volcano
   end
   private_constant :UploadPartRequest
 
+  UploadSessionReference = Data.define(:path, :session_id) do
+    def initialize(path:, session_id:)
+      super(path: path.dup.freeze, session_id: session_id.dup.freeze)
+    end
+  end
+  private_constant :UploadSessionReference
+
   UploadSession = Data.define(:session_id, :part_size, :total_parts, :expires_at) do
     def initialize(session_id:, part_size:, total_parts:, expires_at:)
       super(

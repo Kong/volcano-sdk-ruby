@@ -2404,6 +2404,19 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'defaults omitted upload parts to an empty immutable snapshot' do
+    payload = {
+      'session_id' => 'session-123', 'status' => 'pending', 'path' => 'videos/demo.mp4',
+      'content_type' => 'video/mp4', 'total_size' => 20_000_000, 'part_size' => 8_388_608,
+      'total_parts' => 3, 'parts_uploaded' => 0, 'bytes_uploaded' => 0,
+      'expires_at' => '2026-09-09T12:00:00Z', 'created_at' => '2026-09-02T12:00:00Z'
+    }
+
+    status = client.storage.from('assets').send(:upload_session_status, payload)
+
+    expect(status.parts).to eq([]).and be_frozen
+  end
+
   it 'routes the facade calls through the contract operations', :aggregate_failures do
     lease = results.fetch(:lease)
     expect(transport.calls.map(&:first)).to eq(

@@ -86,13 +86,18 @@ module Volcano
     end
 
     def upload_session_status(payload)
-      attributes = UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
-        [name, payload.fetch(name.to_s)]
-      end
+      attributes = upload_session_status_attributes(payload)
       attributes[:parts] = attributes.fetch(:parts).map { |part| upload_part_metadata(part) }
       attributes[:expires_at] = parse_time(attributes.fetch(:expires_at))
       attributes[:created_at] = parse_time(attributes.fetch(:created_at))
       UploadSessionStatus.new(**attributes)
+    end
+
+    def upload_session_status_attributes(payload)
+      UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
+        value = name == :parts ? payload.fetch(name.to_s, []) : payload.fetch(name.to_s)
+        [name, value]
+      end
     end
   end
 end

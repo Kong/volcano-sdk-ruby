@@ -465,9 +465,24 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  # Implements resumable storage session creation for the facade test transport.
+  module FakeUploadSessionTransport
+    def create_upload_session(**arguments)
+      @calls << [:create_upload_session, arguments]
+      body = {
+        'session_id' => 'session-123',
+        'part_size' => 8_388_608,
+        'total_parts' => 3,
+        'expires_at' => '2026-09-09T12:00:00Z'
+      }
+      Response.new(status: 201, body: body, headers: {}, data: nil)
+    end
+  end
+
   class FakeContractTransport
     include FakeDatabaseTransport
     include FakeStorageTransport
+    include FakeUploadSessionTransport
 
     include FakeCallLog
     include FakeEmailChangeTransport
@@ -2251,6 +2266,29 @@ RSpec.describe Volcano::Client do
     downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
 
     expect(downloaded).to eq("hello\x00".b)
+  end
+
+  it 'creates an immutable upload session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    session = client.storage.from('assets').create_upload_session(
+      'videos/demo.mp4', total_size: 20_000_000, content_type: 'video/mp4', part_size: 8_388_608
+    )
+
+    expect(session).to eq(
+      Volcano::UploadSession.new(
+        session_id: 'session-123', part_size: 8_388_608, total_parts: 3,
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z')
+      )
+    )
+    expect(session.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:create_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', content_type: 'video/mp4',
+      total_size: 20_000_000, part_size: 8_388_608
+    )
   end
 
   it 'routes the facade calls through the contract operations', :aggregate_failures do

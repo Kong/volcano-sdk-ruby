@@ -308,6 +308,15 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
     end
 
+    def create_upload_session_with_http_info(bucket, path, request)
+      @calls << [:create_session, bucket, path, request]
+      session = FakeGeneratedModel.new(
+        session_id: 'session-123', part_size: 8_388_608, total_parts: 3,
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z')
+      )
+      [session, 201, {}]
+    end
+
     def list_storage_objects_with_http_info(bucket, options)
       @calls << [:list, bucket, options]
       page = FakeGeneratedModel.new(objects: [], next_cursor: 'cursor-2')
@@ -1015,6 +1024,26 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
   end
 
+  it 'creates an upload session through the stable transport' do
+    response = transport.create_upload_session(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadSessionRequest, false).new(
+        path: 'videos/demo.mp4', content_type: 'video/mp4',
+        total_size: 20_000_000, part_size: 8_388_608
+      )
+    )
+
+    expect(response.body).to include(
+      'session_id' => 'session-123', 'part_size' => 8_388_608, 'total_parts' => 3
+    )
+    operation, bucket, path, request = apis.storage.calls.last
+    expect([operation, bucket, path]).to eq([:create_session, 'assets', 'videos/demo.mp4'])
+    expect(request).to have_attributes(
+      object_path: 'videos/demo.mp4', content_type: 'video/mp4',
+      total_size: 20_000_000, part_size: 8_388_608
+    )
+  end
+
   it 'converts the public timeout in seconds to Typhoeus milliseconds' do
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
     configuration = transport.send(:generated_configuration, 'access-token')
@@ -1055,6 +1084,25 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     options, = storage.download_storage_object_with_http_info('assets', 'payload.txt', range: 'bytes=0-4')
 
     expect(options.fetch(:header_params).fetch('Range')).to eq('bytes=0-4')
+  end
+
+  it 'serializes upload session creation as JSON through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 201, {}] }
+    storage = described_class::StorageApi.new(api_client)
+    request = InternalGenerated::CreateUploadSessionRequest.new(
+      object_path: 'videos/demo.mp4', content_type: 'video/mp4', total_size: 20_000_000
+    )
+
+    options, = storage.create_upload_session_with_http_info('assets', 'videos/demo.mp4', request)
+
+    expect(options.fetch(:header_params).fetch('Content-Type')).to eq('application/json')
+    expect(JSON.parse(options.fetch(:body))).to eq(
+      'object_path' => 'videos/demo.mp4',
+      'content_type' => 'video/mp4',
+      'total_size' => 20_000_000
+    )
+    expect(options.fetch(:return_type)).to eq('CreateUploadSessionResponse')
   end
 
   it 'preserves nested object paths when updating visibility' do

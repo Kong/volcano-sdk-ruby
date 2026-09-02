@@ -87,7 +87,10 @@ module Volcano
     end
 
     def insert(values) = InsertBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
-    def update(values) = UpdateBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
+
+    def update(values)
+      UpdateBuilder.new(@context, @table, ImmutableQueryValue.capture(values), filters: @filters)
+    end
 
     def order(column, ascending: true)
       clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze

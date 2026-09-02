@@ -185,12 +185,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   class FakeDatabaseApi
-    attr_reader :calls, :insert_calls, :update_calls
+    attr_reader :calls, :delete_calls, :insert_calls, :update_calls
 
     def initialize
       @calls = []
       @insert_calls = []
       @update_calls = []
+      @delete_calls = []
     end
 
     def query_database_select_with_http_info(name, body)
@@ -206,6 +207,11 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def query_database_update_with_http_info(name, body)
       @update_calls << [name, body]
       [FakeGeneratedModel.new(data: [{ slug: 'updated' }]), 200, {}]
+    end
+
+    def query_database_delete_with_http_info(name, body)
+      @delete_calls << [name, body]
+      [FakeGeneratedModel.new(data: [{ slug: 'deleted' }]), 200, {}]
     end
   end
 
@@ -485,6 +491,24 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request.to_hash).to eq(
       table: 'items', values: { slug: 'updated' },
       filters: [{ column: 'slug', operator: 'eq', value: 'new' }]
+    )
+  end
+
+  it 'builds deletes with the generated database request model' do
+    response = transport.query_database_delete(
+      authorization: 'access-token', database_name: 'main',
+      body: {
+        'table' => 'items',
+        'filters' => [{ 'column' => 'slug', 'operator' => 'eq', 'value' => 'old' }]
+      }
+    )
+    database_name, request = apis.database.delete_calls.fetch(0)
+
+    expect(response.body).to eq('data' => [{ 'slug' => 'deleted' }])
+    expect(database_name).to eq('main')
+    expect(request).to be_a(InternalGenerated::DatabaseDeleteRequest)
+    expect(request.to_hash).to eq(
+      table: 'items', filters: [{ column: 'slug', operator: 'eq', value: 'old' }]
     )
   end
 

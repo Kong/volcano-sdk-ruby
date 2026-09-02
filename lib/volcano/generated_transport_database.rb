@@ -38,5 +38,17 @@ module Volcano
         response(data, status, headers)
       end
     end
+
+    def query_database_delete(authorization:, database_name:, body:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::DatabaseDeleteRequest.new(deep_symbolize(body))
+        data, status, headers = apis.database.query_database_delete_with_http_info(
+          database_name,
+          request
+        )
+        response(data, status, headers)
+      end
+    end
   end
 end

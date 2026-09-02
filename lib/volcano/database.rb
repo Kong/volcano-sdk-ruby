@@ -92,6 +92,10 @@ module Volcano
       UpdateBuilder.new(@context, @table, ImmutableQueryValue.capture(values), filters: @filters)
     end
 
+    def delete
+      DeleteBuilder.new(@context, @table, filters: @filters)
+    end
+
     def order(column, ascending: true)
       clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze
       copy(order: [*@order, clause])
@@ -197,6 +201,35 @@ module Volcano
 
     def copy(filters:)
       self.class.new(@context, @table, @values, filters: filters.freeze)
+    end
+  end
+
+  # Builds and executes an immutable filtered database delete.
+  class DeleteBuilder
+    include FilterMethods
+
+    def initialize(context, table, filters: [].freeze)
+      @context = context
+      @table = table
+      @filters = filters
+      freeze
+    end
+
+    def execute
+      response = Transport.invoke do
+        @context.transport.query_database_delete(
+          authorization: @context.client.session_token,
+          database_name: @context.database_name,
+          body: { 'table' => @table, 'filters' => @filters }
+        )
+      end
+      Transport.body(response, 200).fetch('data')
+    end
+
+    private
+
+    def copy(filters:)
+      self.class.new(@context, @table, filters: filters.freeze)
     end
   end
 end

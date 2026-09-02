@@ -351,6 +351,11 @@ RSpec.describe Volcano::Client do
       values = arguments.fetch(:body).fetch('values')
       Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
     end
+
+    def query_database_delete(**arguments)
+      @calls << [:query_database_delete, arguments]
+      Response.new(status: 200, body: { 'data' => [{ 'id' => 'item-1' }] }, headers: {}, data: nil)
+    end
   end
 
   class FakeContractTransport
@@ -2372,6 +2377,35 @@ RSpec.describe Volcano::Client do
       [
         { 'column' => 'tenant_id', 'operator' => 'eq', 'value' => 'tenant-1' },
         { 'column' => 'id', 'operator' => 'eq', 'value' => 'item-1' }
+      ]
+    )
+  end
+
+  it 'deletes using captured filters and the current session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    statuses = [+'draft', +'archived']
+
+    delete = client.database('main').from('items').eq('tenant_id', 'tenant-1')
+                   .delete.in('status', statuses)
+    statuses.first.replace('review')
+    statuses << 'published'
+    transport.access_token = 'access-token-2'
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect(delete.execute).to eq([{ 'id' => 'item-1' }])
+    expect(transport.calls_for(:query_database_delete)).to contain_exactly(
+      [
+        :query_database_delete,
+        {
+          authorization: 'access-token-2', database_name: 'main',
+          body: {
+            'table' => 'items',
+            'filters' => [
+              { 'column' => 'tenant_id', 'operator' => 'eq', 'value' => 'tenant-1' },
+              { 'column' => 'status', 'operator' => 'in', 'value' => %w[draft archived] }
+            ]
+          }
+        }
       ]
     )
   end

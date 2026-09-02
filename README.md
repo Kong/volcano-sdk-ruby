@@ -452,6 +452,7 @@ page.objects.each { |object| puts object.name }
 next_page = bucket.list("avatars", limit: 100, cursor: page.next_cursor) if page.next_cursor
 
 removed_paths = bucket.remove(["archive/a.txt", "archive/b.txt"])
+moved = bucket.move("drafts/a.txt", "published/a.txt")
 ```
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary

@@ -13,6 +13,12 @@ RSpec.describe Volcano::Client do
     "header.#{payload}.signature"
   end
 
+  def anon_key_with_project_id(project_id)
+    claims = project_id ? { project_id: project_id } : {}
+    payload = [JSON.generate(claims)].pack('m0').tr('+/', '-_').delete('=')
+    "header.#{payload}.signature"
+  end
+
   module FakeUserTransport
     attr_accessor :on_get_user, :on_update_user, :update_user_response, :user_response
 
@@ -2393,6 +2399,79 @@ RSpec.describe Volcano::Client do
         .to raise_error(ArgumentError)
     end
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'constructs an encoded public URL locally' do
+    local_client = described_class.new(
+      api_url: 'https://api.test.volcano.dev/',
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    public_url = local_client.storage.from('assets').get_public_url('avatars/Ada photo.png')
+
+    expect(public_url).to eq(
+      'https://api.test.volcano.dev/public/project-123/assets/avatars/Ada%20photo.png'
+    )
+    expect(public_url).to be_frozen
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects invalid anon keys when constructing public URLs' do
+    ['not-a-jwt', anon_key_with_project_id(nil), 'header.%%%.signature'].each do |anon_key|
+      local_client = described_class.new(anon_key: anon_key, _transport: transport)
+
+      expect { local_client.storage.from('assets').get_public_url('avatars/a.png') }
+        .to raise_error(ArgumentError, /project ID/)
+    end
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects an empty public URL path before transport' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    expect { local_client.storage.from('assets').get_public_url('') }
+      .to raise_error(ArgumentError, 'storage path must be a non-empty string')
+    expect(transport.calls).to be_empty
+  end
+
+  it 'preserves a trailing separator in a public URL path' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    public_url = local_client.storage.from('assets').get_public_url('folder/')
+
+    expect(public_url).to end_with('/public/project-123/assets/folder/')
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects dot segments in a public URL path' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    ['.', 'avatars/../secret.txt'].each do |path|
+      expect { local_client.storage.from('assets').get_public_url(path) }
+        .to raise_error(ArgumentError, /dot segments/)
+    end
+    expect(transport.calls).to be_empty
+  end
+
+  it 'rejects multiple public URL paths' do
+    local_client = described_class.new(
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    expect { local_client.storage.from('assets').get_public_url(%w[first.txt second.txt]) }
+      .to raise_error(ArgumentError, 'storage path must be a non-empty string')
+    expect(transport.calls).to be_empty
   end
 
   it 'keeps query chains immutable and reads the latest session at execution time' do

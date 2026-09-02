@@ -78,7 +78,7 @@ module Volcano
 
     def initialize_facades(socket_factory)
       @auth = Auth.new(self, @transport, api_url: @api_url)
-      @storage = Storage.new(self, @transport)
+      @storage = Storage.new(self, @transport, api_url: @api_url, anon_key: @anon_key)
       @locks = Locks.new(self, @transport)
       @realtime = Realtime.new(
         self,

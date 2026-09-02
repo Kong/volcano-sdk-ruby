@@ -4,14 +4,14 @@ module Volcano
   # Mutation operations for one storage bucket.
   class StorageBucket
     def remove(paths)
-      deleted = removal_paths(paths)
+      deleted = storage_paths(paths)
       authorization = @client.session_token
       deleted.each { |path| delete_path(path, authorization) }
       deleted
     end
 
     def move(from_path, to_path)
-      source, destination = removal_paths([from_path, to_path])
+      source, destination = storage_paths([from_path, to_path])
       response = Transport.invoke do
         @transport.move_storage_object(
           authorization: @client.session_token,
@@ -24,7 +24,7 @@ module Volcano
     end
 
     def copy(from_path, to_path)
-      source, destination = removal_paths([from_path, to_path])
+      source, destination = storage_paths([from_path, to_path])
       response = Transport.invoke do
         @transport.copy_storage_object(
           authorization: @client.session_token,
@@ -37,7 +37,7 @@ module Volcano
     end
 
     def update_visibility(path, public:)
-      object_path = removal_paths(path).fetch(0)
+      object_path = storage_paths(path).fetch(0)
       visibility = visibility_value(public)
       response = Transport.invoke do
         @transport.update_storage_object_visibility(
@@ -52,7 +52,7 @@ module Volcano
 
     private
 
-    def removal_paths(paths)
+    def storage_paths(paths)
       path_list = paths.is_a?(String) ? [paths] : paths.to_a
       if path_list.empty? || !path_list.all? { |path| path.is_a?(String) && !path.empty? }
         raise ArgumentError, 'storage paths must be non-empty strings'

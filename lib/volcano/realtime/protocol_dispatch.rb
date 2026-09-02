@@ -69,11 +69,11 @@ module Volcano
 
       def matching_channel(handlers, channel)
         handlers.each_key.select do |candidate|
-          channel == candidate || if candidate.start_with?('postgres:')
-                                    postgres_channel?(candidate, channel)
-                                  else
-                                    channel.end_with?(":#{candidate}")
-                                  end
+          if candidate.start_with?('postgres:')
+            postgres_channel?(candidate, channel)
+          else
+            channel == candidate || channel.end_with?(":#{candidate}")
+          end
         end.max_by(&:length)
       end
 

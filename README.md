@@ -636,12 +636,18 @@ callbacks by event, schema, and table. When the server sends only a lightweight
 notification, `record` is `nil` and the change retains its `id` and `mode`:
 
 ```ruby
+require "async/queue"
+
 Async do
+  received = Async::Queue.new
   changes = client.realtime.channel("public:messages", type: :postgres)
   changes.on_postgres_changes("INSERT", schema: "public", table: "messages") do |change|
-    puts change.record&.fetch("body") || "changed row #{change.id}"
+    received.enqueue(change)
   end
   changes.subscribe
+
+  change = received.dequeue # Wait for an INSERT from another client.
+  puts change.record&.fetch("body") || "changed row #{change.id}"
   client.realtime.disconnect
 end.wait
 ```
@@ -649,9 +655,9 @@ end.wait
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
-same `type:` to `remove_channel` for every non-broadcast channel. Reconnect, recovery, and
-automatic fetching for lightweight database-change notifications are out of
-scope.
+same `type:` to `remove_channel` for every non-broadcast channel. Reconnect,
+recovery, and automatic fetching for lightweight database-change notifications
+are out of scope.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.

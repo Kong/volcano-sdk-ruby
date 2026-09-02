@@ -1,27 +1,33 @@
 # frozen_string_literal: true
 
 require 'uri'
+require_relative 'realtime/lifecycle'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
   class Realtime
+    include Lifecycle
+
     def initialize(client, api_url:, socket_factory: nil)
       @client = client
       @api_url = api_url
       @socket_factory = socket_factory || method(:open_socket)
       @protocol = nil
       @protocol_lock = nil
+      @channel_lock = nil
       @channels = {}
       @closed = false
     end
 
     def channel(name)
-      ensure_open!
-      @channels["broadcast:#{name}"] ||= Channel.new(
-        self,
-        method(:protocol),
-        "broadcast:#{name}"
-      )
+      channel_lock.acquire do
+        ensure_open!
+        @channels["broadcast:#{name}"] ||= Channel.new(
+          self,
+          method(:protocol),
+          "broadcast:#{name}"
+        )
+      end
     end
 
     def protocol
@@ -68,6 +74,11 @@ module Volcano
     def protocol_lock
       require 'async/semaphore'
       @protocol_lock ||= Async::Semaphore.new(1)
+    end
+
+    def channel_lock
+      require 'async/semaphore'
+      @channel_lock ||= Async::Semaphore.new(1)
     end
 
     def connect_protocol
@@ -120,6 +131,7 @@ module Volcano
         @name = name
         @callbacks = []
         @handler_registered = @subscribed = @closed = false
+        @publication_handler = nil
         @lifecycle_lock = nil
       end
 
@@ -165,6 +177,16 @@ module Volcano
         nil
       end
 
+      def remove
+        with_lifecycle_lock do
+          ensure_open!
+          detach_from_protocol
+          mark_removed
+        end
+        nil
+      end
+      private :remove
+
       def mark_closed
         @closed = true
         @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
@@ -175,10 +197,29 @@ module Volcano
       def register_handler(protocol)
         return if @handler_registered
 
-        protocol.on_publication(@name) do |event, data|
+        @publication_handler = protocol.on_publication(@name) do |event, data|
           @callbacks.each { |callback| callback.call(data) } if event == 'message'
         end
         @handler_registered = true
+      end
+
+      def detach_publication_handler(protocol)
+        protocol.off_publication(@name, @publication_handler) if @publication_handler
+        @publication_handler = nil
+      end
+
+      def detach_from_protocol
+        return unless @subscribed || @publication_handler
+
+        protocol = @protocol_provider.call
+        protocol.unsubscribe(channel: @name) if @subscribed && protocol.connected?
+        detach_publication_handler(protocol)
+      end
+
+      def mark_removed
+        @callbacks.clear
+        @handler_registered = @subscribed = false
+        @closed = true
       end
 
       def with_lifecycle_lock(&)

@@ -2,6 +2,7 @@
 
 require 'json'
 require_relative 'protocol_dispatch'
+require_relative 'protocol_lifecycle'
 
 module Volcano
   class Realtime
@@ -20,6 +21,7 @@ module Volcano
     # Implements the Centrifuge request and publication protocol.
     class Protocol
       include ProtocolDispatch
+      include Lifecycle
 
       Failure = Data.define(:error)
       DEFAULT_REQUEST_TIMEOUT = 10
@@ -74,8 +76,6 @@ module Volcano
           result
         end
       end
-
-      def on_publication(channel, &block) = ensure_open!.tap { @publication_handlers[channel] << block }
 
       def close
         close_with(ClosedError.new('realtime connection closed'))

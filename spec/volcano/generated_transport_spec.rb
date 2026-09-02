@@ -307,6 +307,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:download, bucket, path]
       ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
     end
+
+    def list_storage_objects_with_http_info(bucket, options)
+      @calls << [:list, bucket, options]
+      page = FakeGeneratedModel.new(objects: [], next_cursor: 'cursor-2')
+      [page, 200, {}]
+    end
   end
 
   class FakeLocksApi
@@ -391,6 +397,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         bucket_name: 'assets',
         path: 'a.txt'
       ),
+      list: transport.list_storage_objects(
+        authorization: 'access-token',
+        bucket_name: 'assets',
+        prefix: 'avatars',
+        limit: 25,
+        cursor: 'cursor-1'
+      ),
       acquire: transport.acquire_project_lock(
         authorization: 'service-key',
         key: 'build',
@@ -425,7 +438,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   it 'routes only the ten POC operations through generated API classes', :aggregate_failures do
     responses
-    expected_authorizations = Array.new(4, 'anon-key') + Array.new(4, 'access-token') + Array.new(2, 'service-key')
+    expected_authorizations = Array.new(4, 'anon-key') + Array.new(5, 'access-token') + Array.new(2, 'service-key')
     expect(authorizations).to eq(expected_authorizations)
     expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
@@ -444,7 +457,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           "hello\x00".b,
           {}
         ],
-        [:download, 'assets', 'a.txt']
+        [:download, 'assets', 'a.txt'],
+        [:list, 'assets', { prefix: 'avatars', limit: 25, cursor: 'cursor-1' }]
       ]
     )
     expect(apis.locks.calls[0][0..2]).to eq([:acquire, 'build', 'ownership-token'])

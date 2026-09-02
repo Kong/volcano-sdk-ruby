@@ -58,6 +58,18 @@ module Volcano
       end
     end
 
+    def list_storage_objects(authorization:, bucket_name:, prefix:, limit:, cursor:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        options = { prefix: prefix.empty? ? nil : prefix, limit: limit, cursor: cursor }.compact
+        data, status, headers = apis.storage.list_storage_objects_with_http_info(
+          bucket_name,
+          options
+        )
+        response(data, status, headers)
+      end
+    end
+
     def acquire_project_lock(authorization:, key:, ttl:, token:)
       invoke do
         apis = @api_factory.call(authorization)

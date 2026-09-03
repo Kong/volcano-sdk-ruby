@@ -78,6 +78,9 @@ RSpec.describe Volcano do
     expect { described_class.database_connection_string('databases/app') }.to raise_error(
       ArgumentError, 'database_connection_string: base_connection_string is not a valid connection URL'
     )
+    expect { described_class.database_connection_string('https://db.example.com/app') }.to raise_error(
+      ArgumentError, 'database_connection_string: base_connection_string is not a valid connection URL'
+    )
     expect do
       described_class.database_connection_string('postgres://db.example.com/%')
     end.to raise_error(

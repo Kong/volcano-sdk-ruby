@@ -6,7 +6,7 @@ require 'uri'
 module Volcano
   FULL_ACCESS_APP_NAME = 'volcano_full_access'
   USER_ACCESS_APP_NAME = 'volcano_user_access'
-  CONNECTION_URI_PREFIX = %r{\A[a-z][a-z0-9+.-]*://}i
+  CONNECTION_URI_PREFIX = %r{\Apostgres(?:ql)?://}
   INVALID_PERCENT_ENCODING = /%(?![0-9A-Fa-f]{2})/
   private_constant :FULL_ACCESS_APP_NAME, :USER_ACCESS_APP_NAME,
                    :CONNECTION_URI_PREFIX, :INVALID_PERCENT_ENCODING

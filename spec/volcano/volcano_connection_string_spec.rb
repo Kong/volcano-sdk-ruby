@@ -41,6 +41,12 @@ RSpec.describe Volcano do
     expect(result).to end_with('application_name=volcano_full_access')
   end
 
+  it 'preserves hostless URI authority' do
+    expect(described_class.database_connection_string('postgresql:///app')).to eq(
+      'postgresql:///app?application_name=volcano_full_access'
+    )
+  end
+
   it 'rejects missing, relative, and malformed connection URLs' do
     expect { described_class.database_connection_string(nil) }.to raise_error(
       ArgumentError, 'database_connection_string: base_connection_string (DATABASE_URL) is required'

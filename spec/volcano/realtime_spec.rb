@@ -2420,9 +2420,14 @@ RSpec.describe Volcano::Realtime do
     restored_socket.on_write = lambda do |command|
       next unless command.key?('subscribe')
 
+      publications = if command.dig('subscribe', 'offset') == 2
+                       [{ 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }]
+                     else
+                       []
+                     end
       restored_socket.respond(
         command.fetch('id'),
-        result: { 'epoch' => 'epoch-1', 'offset' => 3, 'publications' => [] }
+        result: { 'epoch' => 'epoch-1', 'offset' => 3, 'publications' => publications }
       )
       :defer
     end
@@ -2452,15 +2457,16 @@ RSpec.describe Volcano::Realtime do
       :defer
     end
     client = reconnecting_realtime_client([socket, restored_socket])
-    offset_two_started, release_offset_two, offset_three_admitted = Array.new(3) { Async::Queue.new }
-    received = []
-    post_resubscribe_position = nil
+    offset_two_started, release_offset_two, offset_three_admitted, restored_live =
+      Array.new(4) { Async::Queue.new }
+    results = { received: [] }
 
     Async do |task|
       channel = client.realtime.channel('contract')
       channel.on('message') do |message|
         value = message.fetch('value')
-        received << value
+        results.fetch(:received) << value
+        restored_live.enqueue(true) if value == 4
         next unless value == 2
 
         offset_two_started.enqueue(true)
@@ -2490,20 +2496,27 @@ RSpec.describe Volcano::Realtime do
         release_offset_two.enqueue(true)
         released = true
         task.with_timeout(0.2) { 2.times { offset_three_admitted.dequeue } }
-        post_resubscribe_position = client.realtime.send(:protocol).position('broadcast:contract')
+        results[:position] = client.realtime.send(:protocol).position('broadcast:contract')
 
         socket.fail_read(IOError.new('socket failed'))
         task.with_timeout(0.2) do
           task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
         end
+        restored_socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 4 },
+          epoch: 'epoch-1',
+          offset: 4
+        )
+        task.with_timeout(0.2) { restored_live.dequeue }
       ensure
         release_offset_two.enqueue(true) unless released
         client.realtime.disconnect
       end
     end.wait
 
-    expect(received).to eq([2, 3])
-    expect(post_resubscribe_position).to eq(epoch: 'epoch-1', offset: 3)
+    expect(results.fetch(:received)).to eq([2, 3, 4])
+    expect(results.fetch(:position)).to eq(epoch: 'epoch-1', offset: 3)
     restored_subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
     expect(restored_subscribe.fetch('subscribe')).to include('epoch' => 'epoch-1', 'offset' => 3)
   end

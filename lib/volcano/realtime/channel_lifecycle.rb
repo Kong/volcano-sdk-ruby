@@ -35,12 +35,13 @@ module Volcano
 
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch
+        begin_postgres_delivery
         register_handlers(protocol, epoch)
         protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
         @subscribed = true
-        begin_postgres_delivery
         [protocol, epoch]
       rescue StandardError
+        end_postgres_delivery
         invalidate_presence_subscription(protocol)
         raise
       end

@@ -63,6 +63,10 @@ module Volcano
       @auth_state.capture
     end
 
+    def capture_session_binding
+      @auth_state.capture_binding
+    end
+
     def store_session_if_current?(session, generation, event: :signed_in)
       @auth_state.store_if_current?(session, generation, event: event)
     end

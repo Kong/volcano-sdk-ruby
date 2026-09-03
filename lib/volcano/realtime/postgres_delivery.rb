@@ -3,7 +3,7 @@
 module Volcano
   class Realtime
     PostgresDeliveryRequest = Data.define(
-      :change, :database_name, :access_token, :session_generation, :subscription_epoch
+      :change, :database_name, :access_token, :session_lineage, :subscription_epoch
     )
     private_constant :PostgresDeliveryRequest
 
@@ -23,6 +23,7 @@ module Volcano
         @postgres_worker = nil
         @postgres_epoch = 0
         @postgres_session_generation = 0
+        @postgres_session_lineage = 0
         @postgres_access_token = @postgres_user_id = nil
       end
 
@@ -36,8 +37,9 @@ module Volcano
         return unless postgres?
 
         @postgres_epoch += 1
-        generation, session = @realtime.__send__(:capture_session)
+        generation, lineage, session = @realtime.__send__(:capture_protocol_session)
         @postgres_session_generation = generation
+        @postgres_session_lineage = lineage
         @postgres_access_token = session&.access_token
         @postgres_user_id = session&.user_id
       end
@@ -67,7 +69,7 @@ module Volcano
           PostgresDeliveryRequest.new(
             change:, database_name: fetch ? database_name : nil,
             access_token: fetch ? @postgres_access_token : nil,
-            session_generation: @postgres_session_generation,
+            session_lineage: @postgres_session_lineage,
             subscription_epoch: @postgres_epoch
           )
         )
@@ -115,9 +117,9 @@ module Volcano
       end
 
       def current_postgres_request?(request)
-        generation, = @realtime.__send__(:capture_session)
+        _, lineage, = @realtime.__send__(:capture_session_binding)
         @subscribed && request.subscription_epoch == @postgres_epoch &&
-          request.session_generation == generation
+          request.session_lineage == lineage
       end
     end
     private_constant :PostgresDelivery

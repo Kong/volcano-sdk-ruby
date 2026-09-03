@@ -8,6 +8,7 @@ require_relative 'realtime/channel_lifecycle'
 require_relative 'realtime/presence_state'
 require_relative 'realtime/presence'
 require_relative 'realtime/postgres_database'
+require_relative 'realtime/blocking_call'
 require_relative 'realtime/postgres_changes'
 require_relative 'realtime/postgres_expansion'
 require_relative 'realtime/postgres_delivery'
@@ -67,6 +68,7 @@ module Volcano
       @channels = {}
       @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
       @next_connection_callback_id = 0
+      @protocol_user_id = nil
       @closed = false
     end
     private :initialize_realtime_state
@@ -102,27 +104,11 @@ module Volcano
       raise public_error(e), cause: nil
     end
 
-    def close_protocol
-      return nil if @closed
-
-      @closed = true
-      begin
-        @manual_disconnect = true
-        @protocol&.close
-      ensure
-        @manual_disconnect = false
-        @channels.each_value(&:mark_closed)
-      end
-      nil
-    end
-
     def ensure_open!
       raise ClosedError, 'realtime connection closed' if @closed
 
       self
     end
-
-    private :close_protocol
 
     private
 

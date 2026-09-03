@@ -403,9 +403,11 @@ puts [result.status, result.version, result.data]
 
 `invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
 active user session when present, then a configured service key, then the
-anonymous key. The immutable result includes the response body, status,
-headers, and `X-Volcano-Version`. A function's own non-2xx response is returned
-when the version header proves it ran; platform failures raise typed SDK errors.
+anonymous key. An anonymous key can invoke a public function without a user
+session; the function receives no user identity. The immutable result includes
+the response body, status, headers, and `X-Volcano-Version`. A function's own
+non-2xx response is returned when the version header proves it ran; platform
+failures raise typed SDK errors.
 
 ### Read project logs
 

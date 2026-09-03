@@ -2454,6 +2454,64 @@ RSpec.describe Volcano::Realtime do
     expect(subscribe.dig('subscribe', 'offset')).to eq(1)
   end
 
+  it 'does not checkpoint a skipped Postgres change ahead of queued delivery' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: transport,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { nil }
+      channel.subscribe
+      first_socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-03T12:00:00Z'
+        },
+        offset: 2
+      )
+      task.with_timeout(0.2) { transport.started.dequeue }
+      first_socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'UPDATE', 'schema' => 'public', 'table' => 'messages',
+          'record' => { 'id' => 42 }, 'timestamp' => '2026-09-03T12:00:01Z'
+        },
+        offset: 3
+      )
+      task.sleep(0.01)
+      first_socket.fail_read(IOError.new('socket failed'))
+      transport.release.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.dig('subscribe', 'offset')).to eq(1)
+  end
+
   it 'does not deadlock unsubscribe against a completing Postgres delivery' do
     socket = FacadeSocket.new
     unsubscribe_started = Async::Queue.new
@@ -2783,6 +2841,48 @@ RSpec.describe Volcano::Realtime do
       values = Array.new(2) { task.with_timeout(0.2) { received.dequeue } }
       task.sleep(0.01)
       expect(values).to eq([2, 3])
+      expect(received).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'suppresses a publication whose subscription expires before callback dispatch' do
+    socket = FacadeSocket.new
+    unsubscribe_started = Async::Queue.new
+    unsubscribe_id = nil
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        socket.respond(
+          command.fetch('id'),
+          result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+        )
+        :defer
+      elsif command.key?('unsubscribe')
+        unsubscribe_id = command.fetch('id')
+        unsubscribe_started.enqueue(true)
+        :defer
+      end
+    end
+    client = realtime_client(socket)
+
+    Async do |task|
+      received = Async::Queue.new
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message) }
+      channel.subscribe
+      unsubscribe_task = task.async { channel.unsubscribe }
+      task.with_timeout(0.2) { unsubscribe_started.dequeue }
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'stale' },
+        offset: 2
+      )
+      task.sleep(0.01)
+      socket.respond(unsubscribe_id)
+      task.with_timeout(0.2) { unsubscribe_task.wait }
+      task.sleep(0.01)
+
       expect(received).to be_empty
     ensure
       client.realtime.disconnect

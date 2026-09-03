@@ -70,6 +70,7 @@ module Volcano
 
       def deliver_postgres_batch(requests)
         return unless current_postgres_request?(requests.first)
+        return complete_publication_delivery(requests.first.context) unless requests.first.change
 
         changes = expanded_postgres_changes(requests)
         requests.zip(changes).each do |request, change|

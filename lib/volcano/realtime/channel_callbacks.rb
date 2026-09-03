@@ -47,13 +47,14 @@ module Volcano
       end
 
       def complete_publication_delivery(context)
-        return unless context&.protocol && context.publication
+        return false unless context&.protocol && context.publication
 
         with_lifecycle_lock do
-          next unless context.generation == @publication_generation
+          next false unless context.generation == @publication_generation
 
           position = context.protocol.complete_publication(@name, context.publication)
           @stream_position = position if position
+          true
         end
       end
 
@@ -102,7 +103,8 @@ module Volcano
 
       def dispatch_deferred_callbacks
         event, data, callbacks, before_delivery = @deferred_callback_deliveries.shift
-        before_delivery&.call
+        return if before_delivery && !before_delivery.call
+
         dispatch_callbacks(event, data, callbacks)
       end
 

@@ -90,7 +90,7 @@ module Volcano
 
       def postgres_delivery_request(change, context)
         database_name = @realtime.__send__(:database_name)
-        fetch = fetch_postgres_change?(change, database_name)
+        fetch = change && fetch_postgres_change?(change, database_name)
         PostgresDeliveryRequest.new(
           change:, database_name: fetch ? database_name : nil,
           session_lineage: @postgres_session_lineage,

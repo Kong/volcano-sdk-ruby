@@ -35,9 +35,9 @@ module Volcano
 
       def dispatch_postgres_change(data, context = nil)
         change = postgres_change(data)
-        return complete_publication_delivery(context) unless change && postgres_listener?(change)
+        deliverable = change if change && postgres_listener?(change)
 
-        queued = enqueue_postgres_delivery(change, context)
+        queued = enqueue_postgres_delivery(deliverable, context)
         context&.protocol&.drop_publication(@name, context.publication) unless queued == :queued
       end
 

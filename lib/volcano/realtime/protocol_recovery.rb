@@ -36,7 +36,7 @@ module Volcano
 
           @position_gaps.delete(channel)
           remember_recovery_start(channel, result, publications)
-          publications.each { |publication| dispatch_recovered_publication(channel, publication) }
+          enqueue_recovered_publications(channel, publications)
           remember_subscription_position(channel, result) if publications.empty?
         end
 
@@ -49,12 +49,6 @@ module Volcano
 
           position = immutable_position(result['epoch'], first_offset - 1)
           @stream_positions[channel] = position if position
-        end
-
-        def dispatch_recovered_publication(channel, publication)
-          dispatch_publication(
-            { 'channel' => channel, 'pub' => publication }, recovered: true, enforce_limit: false
-          )
         end
 
         def remember_subscription_position(channel, result)

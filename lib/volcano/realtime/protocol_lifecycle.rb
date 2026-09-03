@@ -36,6 +36,12 @@ module Volcano
 
         private
 
+        def start_tasks(task)
+          @callback_task = task.async { dispatch_callbacks }
+          @publication_producer_task = task.async { dispatch_ordered_publications }
+          @reader_task = task.async { read_loop }
+        end
+
         def initialize_state
           @next_id = 0
           @pending = {}
@@ -57,6 +63,7 @@ module Volcano
           @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
           @pending_presence_resyncs = {}
           @callback_queue = Async::LimitedQueue.new(@max_callback_queue)
+          initialize_ordered_publication_dispatch
         end
 
         def reject_pending(error)
@@ -71,7 +78,11 @@ module Volcano
 
         def stop_callback_task
           @callback_stopping = true
-          @callback_task.stop unless @callback_task == Async::Task.current
+          @publication_producer_stopping = true
+          current = Async::Task.current
+          [@callback_task, @publication_producer_task].each do |task|
+            task.stop unless task.equal?(current)
+          end
         end
 
         def close_with(error, notify_error: false)

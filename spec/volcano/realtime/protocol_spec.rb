@@ -374,6 +374,65 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'keeps command replies flowing while retained publications backpressure callbacks' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        if command.key?('subscribe')
+          reply = JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1',
+              'offset' => 3,
+              'publications' => [
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 1 } },
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } },
+                { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }
+              ]
+            }
+          )
+          live = JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => {
+                'offset' => 4,
+                'data' => { 'event' => 'message', 'value' => 4 }
+              }
+            }
+          )
+          socket.receive_raw("#{reply}\n#{live}")
+        else
+          socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
+        end
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      command_completed = Async::Queue.new
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        value = data.fetch('value')
+        if value == 1
+          protocol.publish(channel: 'broadcast:contract', data: { 'event' => 'callback-command' })
+          command_completed.enqueue(true)
+        end
+        received.enqueue(value)
+      end
+
+      subscription = task.async do
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+      end
+
+      begin
+        expect(task.with_timeout(0.2) { command_completed.dequeue }).to be(true)
+        expect(task.with_timeout(0.2) { subscription.wait }).to include(
+          'epoch' => 'epoch-1', 'offset' => 3
+        )
+        expect(task.with_timeout(0.2) { Array.new(3) { received.dequeue } }).to eq([1, 2, 3])
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'does not advance past a dropped live publication' do
     Async do |task|
       socket = FakeSocket.new
@@ -487,7 +546,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
-  it 'backpressures retained publications when the callback queue is full' do
+  it 'queues retained publications behind callback work without blocking subscribe' do
     Async do |task|
       socket = FakeSocket.new
       socket.on_write = lambda do |command|
@@ -536,9 +595,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
       end
 
       begin
-        expect do
-          task.with_timeout(0.02) { subscription_returned.dequeue }
-        end.to raise_error(Async::TimeoutError)
+        expect(task.with_timeout(0.2) { subscription_returned.dequeue }).to be(true)
 
         release.enqueue(true)
         task.with_timeout(0.2) { subscription.wait }

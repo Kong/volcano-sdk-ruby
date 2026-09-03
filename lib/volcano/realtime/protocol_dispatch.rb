@@ -43,28 +43,6 @@ module Volcano
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
-      def dispatch_publication(push, recovered: false, enforce_limit: true)
-        channel = push['channel'].to_s
-        publication = push['pub']
-        data = publication&.fetch('data', nil)
-        return unless data.is_a?(Hash)
-
-        event = data['event']
-        registered_channel = matching_channel(@publication_handlers, channel)
-        return unless registered_channel
-        return if drop_live_publication?(registered_channel, publication, enforce_limit)
-
-        handlers = @publication_handlers.fetch(registered_channel).dup
-        @callback_queue.enqueue([handlers, event, data, publication, recovered])
-      end
-
-      def drop_live_publication?(channel, publication, enforce_limit)
-        return false unless enforce_limit && @callback_queue.size >= @max_callback_queue
-
-        drop_publication(channel, publication)
-        true
-      end
-
       def dispatch_presence(push, event)
         channel = matching_channel(@presence_handlers, push['channel'].to_s)
         info = push.dig(event, 'info')

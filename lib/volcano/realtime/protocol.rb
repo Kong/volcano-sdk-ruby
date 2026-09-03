@@ -2,6 +2,8 @@
 
 require 'json'
 require_relative 'protocol_dispatch'
+require_relative 'protocol_publication_dispatch'
+require_relative 'protocol_recovery_dispatch'
 require_relative 'protocol_lifecycle'
 require_relative 'protocol_recovery'
 
@@ -25,6 +27,8 @@ module Volcano
     # Implements the Centrifuge request and publication protocol.
     class Protocol
       include ProtocolDispatch
+      include ProtocolPublicationDispatch
+      include ProtocolRecoveryDispatch
       include Lifecycle
       include ProtocolRecovery
 
@@ -135,11 +139,6 @@ module Volcano
         @request_timeout = limits.fetch(:request_timeout, DEFAULT_REQUEST_TIMEOUT)
         @max_pending = limits.fetch(:max_pending, DEFAULT_MAX_PENDING)
         @max_callback_queue = limits.fetch(:max_callback_queue, DEFAULT_MAX_CALLBACK_QUEUE)
-      end
-
-      def start_tasks(task)
-        @callback_task = task.async { dispatch_callbacks }
-        @reader_task = task.async { read_loop }
       end
 
       def ensure_open!

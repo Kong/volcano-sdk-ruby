@@ -43,26 +43,6 @@ module Volcano
         @handler_registered = true
       end
 
-      def deliver_broadcast(event, data, context)
-        return context.protocol.drop_publication(@name, context.publication) unless
-          event == 'message' && @callbacks['message'].any?
-
-        emit('message', data, before_delivery: -> { complete_broadcast_publication(context) })
-      end
-
-      def complete_broadcast_publication(context)
-        admitted = false
-        with_lifecycle_lock do
-          next false unless context.generation == @publication_generation
-
-          context.protocol.complete_publication(@name, context.publication)
-          @stream_position = context.protocol.position(@name) || @stream_position
-          admitted = true
-        end
-      ensure
-        context.protocol.drop_publication(@name, context.publication) unless admitted
-      end
-
       def deliver_publication(event, data)
         if postgres?
           dispatch_postgres_change(data)

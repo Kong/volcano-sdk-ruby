@@ -247,6 +247,19 @@ RSpec.describe Volcano::Realtime do
     channel.singleton_class.prepend(observer)
   end
 
+  def observe_broadcast_delivery(channel, offset:, completed:)
+    observer = Module.new do
+      define_method(:deliver_broadcast) do |event, data, context|
+        observed = context.publication['offset'] == offset
+        super(event, data, context)
+      ensure
+        completed.enqueue(true) if observed
+      end
+      private :deliver_broadcast
+    end
+    channel.singleton_class.prepend(observer)
+  end
+
   def observe_publication_drop(protocol, offset:, completed:)
     observer = Module.new do
       define_method(:drop_publication) do |channel, publication|
@@ -2351,13 +2364,22 @@ RSpec.describe Volcano::Realtime do
     end
     client = realtime_client(socket)
     received = []
+    drops = []
 
     Async do |task|
       channel = client.realtime.channel('contract')
       channel.on('message') { |message| received << message.fetch('value') }
       channel.subscribe
-      dropped = Async::Queue.new
-      observe_publication_drop(client.realtime.send(:protocol), offset: 2, completed: dropped)
+      admission_completed = Async::Queue.new
+      observe_broadcast_admission(channel, offset: 2, completed: admission_completed)
+      protocol = client.realtime.send(:protocol)
+      drop_observer = Module.new do
+        define_method(:drop_publication) do |name, publication|
+          drops << publication.fetch('offset') if name == 'broadcast:contract'
+          super(name, publication)
+        end
+      end
+      protocol.singleton_class.prepend(drop_observer)
       observe_blocked_lifecycle_acquisition(
         channel,
         waiting: admission_waiting,
@@ -2380,7 +2402,7 @@ RSpec.describe Volcano::Realtime do
         allowed = true
         task.with_timeout(0.2) { unsubscribing.wait }
         task.with_timeout(0.2) { admission_resumed.dequeue }
-        task.with_timeout(0.2) { dropped.dequeue }
+        task.with_timeout(0.2) { admission_completed.dequeue }
       ensure
         allow_unsubscribe.enqueue(true) unless allowed
         unsubscribing.stop if unsubscribing&.running?
@@ -2389,10 +2411,21 @@ RSpec.describe Volcano::Realtime do
     end.wait
 
     expect(received).to be_empty
+    expect(drops).to be_empty
   end
 
   it 'does not duplicate a queued broadcast after explicit resubscribe' do
     socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      restored_socket.respond(
+        command.fetch('id'),
+        result: { 'epoch' => 'epoch-1', 'offset' => 3, 'publications' => [] }
+      )
+      :defer
+    end
     subscribe_count = 0
     reader_passed_offset_three = Async::Queue.new
     socket.on_write = lambda do |command|
@@ -2418,11 +2451,10 @@ RSpec.describe Volcano::Realtime do
       end
       :defer
     end
-    client = realtime_client(socket)
-    offset_two_started = Async::Queue.new
-    release_offset_two = Async::Queue.new
-    offset_three_admitted = Async::Queue.new
+    client = reconnecting_realtime_client([socket, restored_socket])
+    offset_two_started, release_offset_two, offset_three_admitted = Array.new(3) { Async::Queue.new }
     received = []
+    post_resubscribe_position = nil
 
     Async do |task|
       channel = client.realtime.channel('contract')
@@ -2458,6 +2490,12 @@ RSpec.describe Volcano::Realtime do
         release_offset_two.enqueue(true)
         released = true
         task.with_timeout(0.2) { 2.times { offset_three_admitted.dequeue } }
+        post_resubscribe_position = client.realtime.send(:protocol).position('broadcast:contract')
+
+        socket.fail_read(IOError.new('socket failed'))
+        task.with_timeout(0.2) do
+          task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+        end
       ensure
         release_offset_two.enqueue(true) unless released
         client.realtime.disconnect
@@ -2465,6 +2503,101 @@ RSpec.describe Volcano::Realtime do
     end.wait
 
     expect(received).to eq([2, 3])
+    expect(post_resubscribe_position).to eq(epoch: 'epoch-1', offset: 3)
+    restored_subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(restored_subscribe.fetch('subscribe')).to include('epoch' => 'epoch-1', 'offset' => 3)
+  end
+
+  it 'does not let queued work mutate a permanently recreated channel' do
+    socket = FacadeSocket.new
+    subscribe_count = 0
+    reader_passed_offset_three = Async::Queue.new
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        subscribe_count += 1
+        result = if subscribe_count == 1
+                   { 'epoch' => 'epoch-1', 'offset' => 1, 'publications' => [] }
+                 else
+                   { 'epoch' => 'epoch-2', 'offset' => 10, 'publications' => [] }
+                 end
+        socket.respond(command.fetch('id'), result: result)
+      elsif command.empty?
+        reader_passed_offset_three.enqueue(true)
+      else
+        socket.respond(command.fetch('id')) unless command.key?('connect')
+        next if command.key?('connect')
+      end
+      :defer
+    end
+    client = realtime_client(socket)
+    offset_two_started = Async::Queue.new
+    release_offset_two = Async::Queue.new
+    old_offset_three_processed = Async::Queue.new
+    old_received = []
+    new_received = Async::Queue.new
+    final_position = final_gaps = nil
+
+    Async do |task|
+      old_channel = client.realtime.channel('contract')
+      old_channel.on('message') do |message|
+        value = message.fetch('value')
+        old_received << value
+        next unless value == 2
+
+        offset_two_started.enqueue(true)
+        release_offset_two.dequeue
+      end
+      old_channel.subscribe
+      observe_broadcast_delivery(
+        old_channel,
+        offset: 3,
+        completed: old_offset_three_processed
+      )
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 2 },
+        epoch: 'epoch-1',
+        offset: 2
+      )
+      task.with_timeout(0.2) { offset_two_started.dequeue }
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 3 },
+        epoch: 'epoch-1',
+        offset: 3
+      )
+      socket.receive_raw('{}')
+
+      released = false
+      begin
+        task.with_timeout(0.2) { reader_passed_offset_three.dequeue }
+        client.realtime.remove_channel('contract')
+        new_channel = client.realtime.channel('contract')
+        new_channel.on('message') { |message| new_received.enqueue(message.fetch('value')) }
+        new_channel.subscribe
+
+        release_offset_two.enqueue(true)
+        released = true
+        task.with_timeout(0.2) { old_offset_three_processed.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 11 },
+          epoch: 'epoch-2',
+          offset: 11
+        )
+        expect(task.with_timeout(0.2) { new_received.dequeue }).to eq(11)
+        protocol = client.realtime.send(:protocol)
+        final_position = protocol.position('broadcast:contract')
+        final_gaps = protocol.instance_variable_get(:@position_gaps).dup
+      ensure
+        release_offset_two.enqueue(true) unless released
+        client.realtime.disconnect
+      end
+    end.wait
+
+    expect(old_received).to eq([2])
+    expect(final_position).to eq(epoch: 'epoch-2', offset: 11)
+    expect(final_gaps).not_to include('broadcast:contract')
   end
 
   it 'retains the delivered initial recovery position for the next reconnect' do

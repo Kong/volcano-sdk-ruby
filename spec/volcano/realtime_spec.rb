@@ -2502,6 +2502,73 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'does not deadlock channel removal against a completing Postgres delivery' do
+    socket = FacadeSocket.new
+    unsubscribe_started = Async::Queue.new
+    unsubscribe_id = nil
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        socket.respond(
+          command.fetch('id'),
+          result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+        )
+        :defer
+      elsif command.key?('unsubscribe')
+        unsubscribe_id = command.fetch('id')
+        unsubscribe_started.enqueue(true)
+        :defer
+      end
+    end
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      removal_task = nil
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { nil }
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-03T12:00:00Z'
+        },
+        offset: 2
+      )
+      task.with_timeout(0.2) { transport.started.dequeue }
+      removal_task = task.async do
+        client.realtime.remove_channel('public:messages', type: :postgres)
+      end
+      task.with_timeout(0.2) { unsubscribe_started.dequeue }
+      transport.release.enqueue(true)
+      task.sleep(0.01)
+      socket.respond(unsubscribe_id)
+
+      expect { task.with_timeout(0.2) { removal_task.wait } }.not_to raise_error
+    ensure
+      removal_task&.stop
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'isolates Postgres delivery queues between subscription generations' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+
+    Async do
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.subscribe
+      first_queue = channel.instance_variable_get(:@postgres_queue)
+      channel.unsubscribe
+      channel.subscribe
+
+      expect(channel.instance_variable_get(:@postgres_queue)).not_to equal(first_queue)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'does not checkpoint a publication blocked by another lifecycle operation' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new

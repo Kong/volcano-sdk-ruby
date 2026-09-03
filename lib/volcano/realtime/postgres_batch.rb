@@ -22,18 +22,18 @@ module Volcano
     module PostgresBatch
       private
 
-      def collect_postgres_batch(first)
+      def collect_postgres_batch(first, queue)
         return [[first], nil] unless first.database_name
 
         deadline = monotonic_time + (@postgres_batch_config.batch_window_ms / 1000.0)
         requests = [first]
-        pending = collect_compatible_requests(requests, deadline)
+        pending = collect_compatible_requests(requests, deadline, queue)
         [requests, pending]
       end
 
-      def collect_compatible_requests(requests, deadline)
+      def collect_compatible_requests(requests, deadline, queue)
         while requests.length < @postgres_batch_config.max_batch_size
-          request = dequeue_postgres_before(deadline)
+          request = dequeue_postgres_before(deadline, queue)
           return unless request
           return request unless compatible_postgres_request?(requests.first, request)
 
@@ -42,11 +42,11 @@ module Volcano
         nil
       end
 
-      def dequeue_postgres_before(deadline)
+      def dequeue_postgres_before(deadline, queue)
         remaining = deadline - monotonic_time
         return unless remaining.positive?
 
-        Async::Task.current.with_timeout(remaining) { @postgres_queue.dequeue }
+        Async::Task.current.with_timeout(remaining) { queue.dequeue }
       rescue Async::TimeoutError
         nil
       end

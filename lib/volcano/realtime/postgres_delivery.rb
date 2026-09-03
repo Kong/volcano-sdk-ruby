@@ -20,7 +20,7 @@ module Volcano
         require 'async/queue'
         @postgres_batch_config = batch_config
         @postgres_filters = {}
-        @postgres_queue = Async::LimitedQueue.new(QUEUE_LIMIT)
+        @postgres_queue = nil
         @postgres_worker = nil
         @postgres_epoch = 0
         @postgres_session_lineage = 0
@@ -39,6 +39,8 @@ module Volcano
         return unless postgres?
 
         @postgres_epoch += 1
+        @postgres_queue = Async::LimitedQueue.new(QUEUE_LIMIT)
+        @postgres_worker = nil
         _, lineage, = @realtime.__send__(:capture_protocol_session)
         @postgres_session_lineage = lineage
       end
@@ -47,14 +49,20 @@ module Volcano
         return unless postgres?
 
         @postgres_epoch += 1
-        @postgres_queue.dequeue until @postgres_queue.empty?
-        worker = @postgres_worker
+        queue, worker = detach_postgres_worker
         return unless worker
 
-        @postgres_queue.enqueue(STOP)
-        @postgres_worker = nil
+        queue.enqueue(STOP)
         wait_postgres_delivery(worker) if wait
         worker
+      end
+
+      def detach_postgres_worker
+        queue = @postgres_queue
+        worker = @postgres_worker
+        @postgres_queue = @postgres_worker = nil
+        queue.dequeue until !queue || queue.empty?
+        [queue, worker]
       end
 
       def wait_postgres_delivery(worker)
@@ -103,16 +111,17 @@ module Volcano
       def start_postgres_worker
         return if @postgres_worker
 
-        @postgres_worker = Async::Task.current.async { run_postgres_worker }
+        queue = @postgres_queue
+        @postgres_worker = Async::Task.current.async { run_postgres_worker(queue) }
       end
 
-      def run_postgres_worker
+      def run_postgres_worker(queue)
         pending = nil
         loop do
-          request = pending || @postgres_queue.dequeue
+          request = pending || queue.dequeue
           break if postgres_stop?(request)
 
-          requests, pending = collect_postgres_batch(request)
+          requests, pending = collect_postgres_batch(request, queue)
           deliver_postgres_batch(requests)
         end
       ensure

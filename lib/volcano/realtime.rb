@@ -218,11 +218,12 @@ module Volcano
       end
 
       def remove
-        with_lifecycle_lock do
+        worker = with_lifecycle_lock do
           ensure_open!
           detach_from_protocol
           mark_removed
         end
+        wait_postgres_delivery(worker)
         nil
       end
       private :remove

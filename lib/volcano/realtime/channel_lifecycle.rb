@@ -95,9 +95,10 @@ module Volcano
       def mark_removed
         @callbacks.each_value(&:clear)
         @handler_registered = @subscription_desired = @subscribed = false
-        end_postgres_delivery
+        worker = end_postgres_delivery(wait: false)
         reset_presence
         @closed = true
+        worker
       end
     end
     private_constant :ChannelLifecycle

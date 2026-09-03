@@ -6,8 +6,10 @@ require 'uri'
 module Volcano
   FULL_ACCESS_APP_NAME = 'volcano_full_access'
   USER_ACCESS_APP_NAME = 'volcano_user_access'
+  CONNECTION_URI_PREFIX = %r{\A[a-z][a-z0-9+.-]*://}i
   INVALID_PERCENT_ENCODING = /%(?![0-9A-Fa-f]{2})/
-  private_constant :FULL_ACCESS_APP_NAME, :USER_ACCESS_APP_NAME, :INVALID_PERCENT_ENCODING
+  private_constant :FULL_ACCESS_APP_NAME, :USER_ACCESS_APP_NAME,
+                   :CONNECTION_URI_PREFIX, :INVALID_PERCENT_ENCODING
 
   module_function
 
@@ -17,32 +19,37 @@ module Volcano
             'database_connection_string: base_connection_string (DATABASE_URL) is required'
     end
 
-    uri = database_connection_uri(base_connection_string)
-    parameters = database_query_parameters(uri.query)
+    target, query = database_connection_parts(base_connection_string)
+    parameters = database_query_parameters(query)
     parameters << "application_name=#{database_application_name_query_value(user_id)}"
-    uri.query = parameters.join('&')
-    uri.to_s
+    "#{target}?#{parameters.join('&')}"
   end
 
-  def database_connection_uri(value)
-    uri = URI.parse(value)
-    raise URI::InvalidURIError if !uri.absolute? || uri.fragment || INVALID_PERCENT_ENCODING.match?(value)
+  def database_connection_parts(value)
+    prefix = CONNECTION_URI_PREFIX.match(value)
+    raise ArgumentError unless prefix && !INVALID_PERCENT_ENCODING.match?(value)
 
-    uri
-  rescue URI::InvalidURIError
+    userinfo_end = value.index('@', prefix.end(0))
+    query_start = value.index('?', userinfo_end ? userinfo_end + 1 : prefix.end(0))
+    return [value, nil] unless query_start
+
+    [value[0...query_start], value[(query_start + 1)..]]
+  rescue ArgumentError
     raise ArgumentError,
           'database_connection_string: base_connection_string is not a valid connection URL',
           cause: nil
   end
-  private_class_method :database_connection_uri
+  private_class_method :database_connection_parts
 
   def database_query_parameters(query)
     return [] unless query
 
-    query.split('&', -1).reject do |parameter|
+    parameters = query.split('&', -1).reject do |parameter|
       encoded_name = parameter.partition('=').first
       URI::DEFAULT_PARSER.unescape(encoded_name) == 'application_name'
     end
+    parameters.pop while parameters.last == ''
+    parameters
   end
   private_class_method :database_query_parameters
 

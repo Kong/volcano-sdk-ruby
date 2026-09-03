@@ -47,6 +47,24 @@ RSpec.describe Volcano do
     )
   end
 
+  it 'preserves libpq-compatible reserved characters in credentials' do
+    expect(described_class.database_connection_string('postgres://u:pa?ss#word@host/db')).to eq(
+      'postgres://u:pa?ss#word@host/db?application_name=volcano_full_access'
+    )
+  end
+
+  it 'accepts multi-host IPv6 connection URIs' do
+    expect(described_class.database_connection_string('postgresql://[::1],[::2]/db')).to eq(
+      'postgresql://[::1],[::2]/db?application_name=volcano_full_access'
+    )
+  end
+
+  it 'drops a trailing query separator before appending' do
+    expect(described_class.database_connection_string('postgresql://host/db?sslmode=require&')).to eq(
+      'postgresql://host/db?sslmode=require&application_name=volcano_full_access'
+    )
+  end
+
   it 'rejects missing, relative, and malformed connection URLs' do
     expect { described_class.database_connection_string(nil) }.to raise_error(
       ArgumentError, 'database_connection_string: base_connection_string (DATABASE_URL) is required'
@@ -56,11 +74,6 @@ RSpec.describe Volcano do
     )
     expect do
       described_class.database_connection_string('postgres://db.example.com/%')
-    end.to raise_error(
-      ArgumentError, 'database_connection_string: base_connection_string is not a valid connection URL'
-    )
-    expect do
-      described_class.database_connection_string('postgres://db.example.com/app#target')
     end.to raise_error(
       ArgumentError, 'database_connection_string: base_connection_string is not a valid connection URL'
     )

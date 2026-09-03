@@ -489,6 +489,8 @@ connection_string = Volcano.database_connection_string(
 
 Pass a user ID to enforce that user's Row-Level Security policies. Omit
 `user_id:` for full service access.
+The helper preserves libpq connection syntax, including hostless and multi-host
+targets, and leaves unrelated query values unchanged.
 
 ### Upload, download, and list objects
 

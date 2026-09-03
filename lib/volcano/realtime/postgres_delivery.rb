@@ -60,11 +60,12 @@ module Volcano
         return unless @subscribed
 
         refresh_postgres_session_binding
-        fetch = fetch_postgres_change?(change)
+        database_name = @realtime.__send__(:database_name)
+        fetch = fetch_postgres_change?(change, database_name)
         start_postgres_worker
         @postgres_queue.enqueue(
           PostgresDeliveryRequest.new(
-            change:, database_name: fetch ? @realtime.__send__(:database_name) : nil,
+            change:, database_name: fetch ? database_name : nil,
             access_token: fetch ? @postgres_access_token : nil,
             session_generation: @postgres_session_generation,
             subscription_epoch: @postgres_epoch
@@ -75,15 +76,15 @@ module Volcano
       def refresh_postgres_session_binding
         generation, session = @realtime.__send__(:capture_session)
         return if generation == @postgres_session_generation
-        return unless session&.user_id == @postgres_user_id
+        return unless session && session.user_id == @postgres_user_id
 
         @postgres_session_generation = generation
         @postgres_access_token = session.access_token
       end
 
-      def fetch_postgres_change?(change)
+      def fetch_postgres_change?(change, database_name)
         change.mode == 'lightweight' && change.type != 'DELETE' && @auto_fetch &&
-          @realtime.__send__(:database_name) && @postgres_access_token
+          database_name && @postgres_access_token
       end
 
       def start_postgres_worker

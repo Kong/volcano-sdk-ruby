@@ -11,6 +11,7 @@ require_relative 'realtime/postgres_database'
 require_relative 'realtime/blocking_call'
 require_relative 'realtime/postgres_changes'
 require_relative 'realtime/postgres_expansion'
+require_relative 'realtime/postgres_batch'
 require_relative 'realtime/postgres_delivery'
 require_relative 'realtime/channel_callbacks'
 
@@ -147,6 +148,7 @@ module Volcano
       include Presence
       include PostgresChanges
       include PostgresExpansion
+      include PostgresBatch
       include PostgresDelivery
       include ChannelCallbacks
 

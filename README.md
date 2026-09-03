@@ -663,11 +663,13 @@ end.wait
 ```
 
 Auto-fetch is enabled by default and uses the authenticated session captured
-for the subscription. Deliveries remain ordered while row lookups run. DELETE
-notifications are expanded locally from `old_record` or `id`. If a lookup
-fails, the error callback runs and the original lightweight change is
-delivered. Use `auto_fetch: false` when creating the channel to receive
-lightweight notifications without database requests.
+for the subscription. Lookups for the same table that arrive within 20
+milliseconds are grouped into one request, up to 50 rows. Deliveries remain
+ordered, including repeated notifications for the same row. DELETE notifications
+are expanded locally from `old_record` or `id`. If a lookup fails, the error
+callback runs and the original lightweight change is delivered. Use
+`auto_fetch: false` when creating the channel to receive lightweight
+notifications without database requests.
 
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared

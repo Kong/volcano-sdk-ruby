@@ -22,16 +22,37 @@ module Volcano
 
       def publication_delivery(push, recovered)
         publication = push['pub']
-        data = publication.is_a?(Hash) ? publication['data'] : nil
-        return unless data.is_a?(Hash)
-
-        channel = matching_channel(@publication_handlers, push['channel'].to_s)
+        channel = matching_publication_channel(push['channel'].to_s)
         return unless channel
 
+        data = validated_publication_data(channel, publication)
+        handlers = registered_publication_handlers(channel, publication)
+        return unless data && handlers
+
         PublicationDelivery.new(
-          channel:, handlers: @publication_handlers.fetch(channel).dup,
+          channel:, handlers: handlers.dup,
           event: data['event'], data:, publication:, recovered:
         )
+      end
+
+      def matching_publication_channel(channel)
+        handler_channel = matching_channel(@publication_handlers, channel)
+        position_channel = matching_channel(@stream_positions, channel)
+        [handler_channel, position_channel].compact.max_by(&:length)
+      end
+
+      def validated_publication_data(channel, publication)
+        data = publication.is_a?(Hash) ? publication['data'] : nil
+        return data if data.is_a?(Hash)
+
+        drop_publication(channel, publication)
+      end
+
+      def registered_publication_handlers(channel, publication)
+        handlers = @publication_handlers.fetch(channel, [])
+        return handlers unless handlers.empty?
+
+        drop_publication(channel, publication)
       end
 
       def admit_publication(delivery, enforce_limit:)

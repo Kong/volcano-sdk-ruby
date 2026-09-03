@@ -506,6 +506,47 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'does not advance after admitted publication metadata is malformed' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        protocol.complete_publication('broadcast:contract', publication)
+        received.enqueue(data.fetch('value'))
+      end
+
+      publication = lambda do |offset, value|
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => {
+              'epoch' => 'epoch-1', 'offset' => offset,
+              'data' => { 'event' => 'message', 'value' => value }
+            }
+          }
+        )
+      end
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        socket.receive(publication.call('malformed', 1), publication.call(2, 2))
+        expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([1, 2])
+        expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'delivers retained publications despite live callback queue pressure' do
     Async do |task|
       socket = FakeSocket.new

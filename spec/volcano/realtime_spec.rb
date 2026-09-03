@@ -188,6 +188,17 @@ RSpec.describe Volcano::Realtime do
     client
   end
 
+  def reconnecting_realtime_client(sockets)
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    client
+  end
+
   def presence_info(client, user, display_name)
     {
       'client' => client,
@@ -234,6 +245,18 @@ RSpec.describe Volcano::Realtime do
       private :complete_broadcast_publication
     end
     channel.singleton_class.prepend(observer)
+  end
+
+  def observe_publication_drop(protocol, offset:, completed:)
+    observer = Module.new do
+      define_method(:drop_publication) do |channel, publication|
+        observed = publication.is_a?(Hash) && publication['offset'] == offset
+        super(channel, publication)
+      ensure
+        completed.enqueue(true) if observed
+      end
+    end
+    protocol.singleton_class.prepend(observer)
   end
 
   it 'exposes the canonical channel name' do
@@ -2150,6 +2173,134 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'does not recover past a malformed broadcast publication' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(command.fetch('id'), result: { 'epoch' => 'epoch-1', 'offset' => 0 })
+      :defer
+    end
+    client = reconnecting_realtime_client([first_socket, restored_socket])
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: 'malformed', epoch: 'epoch-1', offset: 1
+      )
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 2 }, epoch: 'epoch-1', offset: 2
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq(2)
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.fetch('subscribe')).to include(
+      'epoch' => 'epoch-1', 'offset' => 0
+    )
+  end
+
+  it 'does not recover past a broadcast received without a message listener' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(command.fetch('id'), result: { 'epoch' => 'epoch-1', 'offset' => 0 })
+      :defer
+    end
+    client = reconnecting_realtime_client([first_socket, restored_socket])
+    dropped = Async::Queue.new
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      protocol = client.realtime.send(:protocol)
+      observe_publication_drop(protocol, offset: 1, completed: dropped)
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 1 }, epoch: 'epoch-1', offset: 1
+      )
+      task.with_timeout(0.2) { dropped.dequeue }
+
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 2 }, epoch: 'epoch-1', offset: 2
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq(2)
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.fetch('subscribe')).to include(
+      'epoch' => 'epoch-1', 'offset' => 0
+    )
+  end
+
+  it 'does not recover past an unsupported broadcast event' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(command.fetch('id'), result: { 'epoch' => 'epoch-1', 'offset' => 0 })
+      :defer
+    end
+    client = reconnecting_realtime_client([first_socket, restored_socket])
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'unsupported', 'value' => 1 }, epoch: 'epoch-1', offset: 1
+      )
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 2 }, epoch: 'epoch-1', offset: 2
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq(2)
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.fetch('subscribe')).to include(
+      'epoch' => 'epoch-1', 'offset' => 0
+    )
+  end
+
   it 'subscription expires before callback dispatch' do
     socket = FacadeSocket.new
     unsubscribe_started = Async::Queue.new
@@ -2175,6 +2326,8 @@ RSpec.describe Volcano::Realtime do
       channel = client.realtime.channel('contract')
       channel.on('message') { |message| received << message.fetch('value') }
       channel.subscribe
+      dropped = Async::Queue.new
+      observe_publication_drop(client.realtime.send(:protocol), offset: 2, completed: dropped)
       observe_blocked_lifecycle_acquisition(
         channel,
         waiting: admission_waiting,
@@ -2197,6 +2350,7 @@ RSpec.describe Volcano::Realtime do
         allowed = true
         task.with_timeout(0.2) { unsubscribing.wait }
         task.with_timeout(0.2) { admission_resumed.dequeue }
+        task.with_timeout(0.2) { dropped.dequeue }
       ensure
         allow_unsubscribe.enqueue(true) unless allowed
         unsubscribing.stop if unsubscribing&.running?

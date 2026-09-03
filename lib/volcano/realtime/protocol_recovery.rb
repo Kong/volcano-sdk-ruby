@@ -12,8 +12,10 @@ module Volcano
           return unless current
 
           position = publication_position(publication, current)
-          return unless position
-          return unless position.fetch(:epoch) == current.fetch(:epoch)
+          unless position && position.fetch(:epoch) == current.fetch(:epoch)
+            mark_publication_gap(channel, publication)
+            return
+          end
           return if position_blocked_by_gap?(channel, position)
 
           @stream_positions[channel] = position

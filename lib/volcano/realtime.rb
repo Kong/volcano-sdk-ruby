@@ -222,6 +222,7 @@ module Volcano
         with_lifecycle_lock do
           ensure_open!
           detach_from_protocol
+          clear_protocol_recovery_state
           mark_removed
         end
         nil

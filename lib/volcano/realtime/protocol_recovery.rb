@@ -23,6 +23,12 @@ module Volcano
 
         def drop_publication(channel, publication) = mark_publication_gap(channel, publication)
 
+        def delete_recovery_state(channel)
+          @stream_positions.delete(channel)
+          @position_gaps.delete(channel)
+          nil
+        end
+
         private
 
         def initialize_recovery

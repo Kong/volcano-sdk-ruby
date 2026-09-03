@@ -1869,6 +1869,36 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'clears protocol recovery state only when a broadcast channel is removed' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      socket.respond(command.fetch('id'), result: { 'epoch' => 'epoch-1', 'offset' => 0 })
+      :defer
+    end
+    client = realtime_client(socket)
+
+    Async do
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      protocol = client.realtime.send(:protocol)
+      protocol.drop_publication(
+        'broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 1
+      )
+
+      channel.unsubscribe
+      expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+      expect(protocol.instance_variable_get(:@position_gaps)).to include('broadcast:contract')
+
+      client.realtime.remove_channel('contract')
+      expect(protocol.position('broadcast:contract')).to be_nil
+      expect(protocol.instance_variable_get(:@position_gaps)).not_to include('broadcast:contract')
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'removes all channels without disconnecting', :aggregate_failures do
     socket = FacadeSocket.new
     client = Volcano::Client.new(

@@ -7,6 +7,7 @@ module Volcano
       def mark_closed
         @closed = true
         @subscription_desired = @subscribed = false
+        @recovery_protocol = nil
         end_postgres_delivery
         reset_presence
       end
@@ -16,6 +17,7 @@ module Volcano
         @subscribed = false
         end_postgres_delivery
         detach_publication_handler(protocol)
+        @recovery_protocol = nil if @recovery_protocol.equal?(protocol)
         @handler_registered = false
         reset_presence
       end
@@ -91,7 +93,15 @@ module Volcano
       def remember_stream_position(protocol)
         return unless broadcast?
 
+        @recovery_protocol = protocol
         @stream_position = protocol.position(@name) || @stream_position
+      end
+
+      def clear_protocol_recovery_state
+        return unless broadcast?
+
+        @recovery_protocol&.delete_recovery_state(@name)
+        @recovery_protocol = nil
       end
 
       def mark_removed

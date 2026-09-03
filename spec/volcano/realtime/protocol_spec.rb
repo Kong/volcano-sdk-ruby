@@ -374,6 +374,37 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  [
+    [
+      'a null retained-publication collection',
+      { 'epoch' => 'epoch-1', 'offset' => 1, 'publications' => nil }
+    ],
+    [
+      'a non-array retained-publication collection',
+      { 'epoch' => 'epoch-1', 'offset' => 1, 'publications' => { 'offset' => 2 } }
+    ],
+    [
+      'a non-hash retained publication',
+      { 'epoch' => 'epoch-1', 'offset' => 1, 'publications' => ['invalid'] }
+    ],
+    ['a non-object subscription result', 'invalid']
+  ].each do |description, result|
+    it "keeps the connection usable after #{description}" do
+      Async do |task|
+        socket = FakeSocket.new
+        socket.on_write = lambda do |command|
+          reply = command.key?('subscribe') ? result : {}
+          socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => reply))
+        end
+        protocol = described_class.new(socket: socket, task: task)
+
+        expect(protocol.subscribe(channel: 'broadcast:contract', recovery: {})).to eq(result)
+        expect(protocol.publish(channel: 'broadcast:contract', data: {})).to eq({})
+        protocol.close
+      end.wait
+    end
+  end
+
   it 'retains replies that arrive while the socket write yields' do
     Async do |task|
       socket = FakeSocket.new

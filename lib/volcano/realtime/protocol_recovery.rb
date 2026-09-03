@@ -25,8 +25,12 @@ module Volcano
         end
 
         def process_subscription_result(channel, result)
-          @position_gaps.delete(channel)
+          return unless result.is_a?(Hash)
+
           publications = result.fetch('publications', [])
+          return unless publications.is_a?(Array) && publications.all?(Hash)
+
+          @position_gaps.delete(channel)
           remember_recovery_start(channel, result, publications)
           publications.each { |publication| dispatch_recovered_publication(channel, publication) }
           remember_subscription_position(channel, result) if publications.empty?

@@ -2181,10 +2181,11 @@ RSpec.describe Volcano::Realtime do
         resumed: admission_resumed
       )
 
-      unsubscribing = task.async { channel.unsubscribe }
-      unsubscribe_started.dequeue
+      unsubscribing = nil
       allowed = false
       begin
+        unsubscribing = task.async { channel.unsubscribe }
+        task.with_timeout(0.2) { unsubscribe_started.dequeue }
         socket.publication(
           channel: 'project-id:broadcast:contract',
           data: { 'event' => 'message', 'value' => 2 },
@@ -2198,6 +2199,7 @@ RSpec.describe Volcano::Realtime do
         task.with_timeout(0.2) { admission_resumed.dequeue }
       ensure
         allow_unsubscribe.enqueue(true) unless allowed
+        unsubscribing.stop if unsubscribing&.running?
         client.realtime.disconnect
       end
     end.wait

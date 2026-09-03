@@ -65,6 +65,12 @@ RSpec.describe Volcano do
     )
   end
 
+  it 'does not treat an at sign in a query value as user-info' do
+    expect(described_class.database_connection_string('postgresql://host/db?options=foo@bar')).to eq(
+      'postgresql://host/db?options=foo@bar&application_name=volcano_full_access'
+    )
+  end
+
   it 'rejects missing, relative, and malformed connection URLs' do
     expect { described_class.database_connection_string(nil) }.to raise_error(
       ArgumentError, 'database_connection_string: base_connection_string (DATABASE_URL) is required'

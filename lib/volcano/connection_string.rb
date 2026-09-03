@@ -26,20 +26,39 @@ module Volcano
   end
 
   def database_connection_parts(value)
-    prefix = CONNECTION_URI_PREFIX.match(value)
-    raise ArgumentError unless prefix && !INVALID_PERCENT_ENCODING.match?(value)
-
-    userinfo_end = value.index('@', prefix.end(0))
-    query_start = value.index('?', userinfo_end ? userinfo_end + 1 : prefix.end(0))
+    prefix_end = database_connection_prefix_end(value)
+    query_start = database_query_start(value, prefix_end)
     return [value, nil] unless query_start
 
     [value[0...query_start], value[(query_start + 1)..]]
-  rescue ArgumentError
+  end
+  private_class_method :database_connection_parts
+
+  def database_connection_prefix_end(value)
+    prefix = CONNECTION_URI_PREFIX.match(value)
+    return prefix.end(0) if prefix && !INVALID_PERCENT_ENCODING.match?(value)
+
     raise ArgumentError,
           'database_connection_string: base_connection_string is not a valid connection URL',
           cause: nil
   end
-  private_class_method :database_connection_parts
+  private_class_method :database_connection_prefix_end
+
+  def database_query_start(value, prefix_end)
+    userinfo_end = database_userinfo_end(value, prefix_end)
+    value.index('?', userinfo_end ? userinfo_end + 1 : prefix_end)
+  end
+  private_class_method :database_query_start
+
+  def database_userinfo_end(value, prefix_end)
+    authority_end = value.index('/', prefix_end)
+    userinfo_end = value.index('@', prefix_end)
+    return unless userinfo_end
+    return userinfo_end unless authority_end
+
+    userinfo_end if userinfo_end < authority_end
+  end
+  private_class_method :database_userinfo_end
 
   def database_query_parameters(query)
     return [] unless query

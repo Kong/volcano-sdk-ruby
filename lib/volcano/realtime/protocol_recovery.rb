@@ -1,0 +1,70 @@
+# frozen_string_literal: true
+
+module Volcano
+  class Realtime
+    class Protocol
+      # Tracks recoverable stream positions for active subscriptions.
+      module ProtocolRecovery
+        def position(channel) = @stream_positions[channel]
+
+        def complete_publication(channel, publication)
+          current = @stream_positions[channel]
+          return unless current
+
+          position = publication_position(publication, current)
+          @stream_positions[channel] = position if position
+        end
+
+        def drop_publication(_channel, _publication) = nil
+
+        private
+
+        def initialize_recovery
+          @stream_positions = {}
+          @position_gaps = {}
+        end
+
+        def process_subscription_result(channel, result)
+          @position_gaps.delete(channel)
+          publications = result.fetch('publications', [])
+          remember_recovery_start(channel, result, publications)
+          publications.each { |publication| dispatch_recovered_publication(channel, publication) }
+          remember_subscription_position(channel, result) if publications.empty?
+        end
+
+        def remember_recovery_start(channel, result, publications)
+          first_publication = publications.first
+          return unless first_publication.is_a?(Hash)
+
+          first_offset = first_publication['offset']
+          return unless first_offset.is_a?(Integer) && first_offset.positive?
+
+          position = immutable_position(result['epoch'], first_offset - 1)
+          @stream_positions[channel] = position if position
+        end
+
+        def dispatch_recovered_publication(channel, publication)
+          dispatch_publication({ 'channel' => channel, 'pub' => publication }, recovered: true)
+        end
+
+        def remember_subscription_position(channel, result)
+          position = immutable_position(result['epoch'], result['offset'])
+          @stream_positions[channel] = position if position
+        end
+
+        def publication_position(publication, current)
+          return unless publication.is_a?(Hash) && publication.key?('offset')
+
+          immutable_position(publication.fetch('epoch', current.fetch(:epoch)), publication.fetch('offset'))
+        end
+
+        def immutable_position(epoch, offset)
+          return unless epoch.is_a?(String) && offset.is_a?(Integer) && !offset.negative?
+
+          { epoch: epoch.dup.freeze, offset: offset }.freeze
+        end
+      end
+      private_constant :ProtocolRecovery
+    end
+  end
+end

@@ -328,6 +328,52 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'dispatches recovered publications before a same-frame live push' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        next unless command.key?('subscribe')
+
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1',
+              'offset' => 3,
+              'publications' => [
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'recovered-2' } },
+                { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 'recovered-3' } }
+              ]
+            }
+          ),
+          JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => { 'offset' => 4, 'data' => { 'event' => 'message', 'value' => 'live-4' } }
+            }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      received = []
+      protocol.on_publication('broadcast:contract') do |_event, data, publication = nil, recovered: false|
+        received << [data.fetch('value'), publication&.fetch('offset'), recovered]
+      end
+
+      protocol.subscribe(channel: 'broadcast:contract', recovery: { epoch: 'epoch-1', offset: 1 })
+      task.with_timeout(0.2) { task.yield until received.any? }
+
+      expect(received).to eq(
+        [
+          ['recovered-2', 2, true],
+          ['recovered-3', 3, true],
+          ['live-4', 4, false]
+        ]
+      )
+      protocol.close
+    end.wait
+  end
+
   it 'retains replies that arrive while the socket write yields' do
     Async do |task|
       socket = FakeSocket.new

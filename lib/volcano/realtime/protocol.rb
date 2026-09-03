@@ -3,6 +3,7 @@
 require 'json'
 require_relative 'protocol_dispatch'
 require_relative 'protocol_lifecycle'
+require_relative 'protocol_recovery'
 
 module Volcano
   class Realtime
@@ -25,6 +26,7 @@ module Volcano
     class Protocol
       include ProtocolDispatch
       include Lifecycle
+      include ProtocolRecovery
 
       Failure = Data.define(:error)
       Events = Data.define(:on_close, :on_error, :on_failure)
@@ -81,7 +83,7 @@ module Volcano
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = request do |id|
+          result = request(on_reply: ->(reply) { process_subscription_result(channel, reply) }) do |id|
             self.class.subscribe(
               id: id,
               channel: channel,

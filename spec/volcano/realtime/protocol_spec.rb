@@ -328,6 +328,182 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'drops malformed publication data once without invoking its handler' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        result = if command.key?('subscribe')
+                   { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+                 else
+                   {}
+                 end
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      drops = []
+      drop_observer = Module.new do
+        define_method(:drop_publication) do |channel, publication|
+          drops << [channel, publication]
+          super(channel, publication)
+        end
+      end
+      protocol.singleton_class.prepend(drop_observer)
+      invoked_offsets = []
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        invoked_offsets << publication.fetch('offset')
+        protocol.complete_publication('broadcast:contract', publication)
+        received.enqueue(data.fetch('value'))
+      end
+      protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+
+      malformed = JSON.generate(
+        'push' => {
+          'channel' => 'broadcast:contract',
+          'pub' => { 'epoch' => 'epoch-1', 'offset' => 1, 'data' => 'malformed' }
+        }
+      )
+      valid = JSON.generate(
+        'push' => {
+          'channel' => 'broadcast:contract',
+          'pub' => {
+            'epoch' => 'epoch-1', 'offset' => 2,
+            'data' => { 'event' => 'message', 'value' => 'valid' }
+          }
+        }
+      )
+
+      begin
+        socket.receive_raw("#{malformed}\n#{valid}")
+        expect(task.with_timeout(0.2) { received.dequeue }).to eq('valid')
+        expect(invoked_offsets).to eq([2])
+        expect(drops.map { |channel, publication| [channel, publication.fetch('offset')] }).to eq(
+          [['broadcast:contract', 1]]
+        )
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
+  [
+    ['malformed metadata', { 'epoch' => 'epoch-1', 'offset' => 'malformed' }],
+    ['out-of-epoch metadata', { 'epoch' => 'epoch-2', 'offset' => 1 }]
+  ].each do |description, metadata|
+    it "keeps the connection usable after malformed data with #{description}" do
+      Async do |task|
+        socket = FakeSocket.new
+        socket.on_write = lambda do |command|
+          result = if command.key?('subscribe')
+                     { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+                   else
+                     {}
+                   end
+          socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+        end
+        protocol = described_class.new(socket: socket, task: task)
+        received = Async::Queue.new
+        protocol.on_publication('broadcast:contract') do |_event, data|
+          received.enqueue(data.fetch('value'))
+        end
+        protocol.connect(token: 'access')
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+
+        malformed = JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => metadata.merge('data' => 'malformed')
+          }
+        )
+        valid = JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => {
+              'epoch' => 'epoch-1', 'offset' => 2,
+              'data' => { 'event' => 'message', 'value' => 'valid' }
+            }
+          }
+        )
+
+        begin
+          socket.receive_raw("#{malformed}\n#{valid}")
+          expect(task.with_timeout(0.2) { received.dequeue }).to eq('valid')
+          expect(protocol.publish(channel: 'broadcast:contract', data: {})).to eq({})
+          expect(protocol).to be_connected
+        ensure
+          protocol.close
+        end
+      end.wait
+    end
+  end
+
+  it 'does not admit a handlerless publication from recovery gap state' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        result = if command.key?('subscribe')
+                   { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+                 else
+                   {}
+                 end
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      dropped = Async::Queue.new
+      admitted_offsets = []
+      observer = Module.new do
+        define_method(:drop_publication) do |channel, publication|
+          super(channel, publication)
+        ensure
+          dropped.enqueue(true) if publication.is_a?(Hash) && publication['offset'] == 1
+        end
+
+        define_method(:admit_publication) do |delivery, enforce_limit:|
+          admitted_offsets << delivery.publication.fetch('offset')
+          super(delivery, enforce_limit:)
+        end
+        private :admit_publication
+      end
+      protocol.singleton_class.prepend(observer)
+      protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+
+      socket.receive(
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => {
+              'epoch' => 'epoch-1', 'offset' => 1,
+              'data' => { 'event' => 'message', 'value' => 'handlerless' }
+            }
+          }
+        )
+      )
+      task.with_timeout(0.2) { dropped.dequeue }
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        received.enqueue(data.fetch('value'))
+      end
+
+      begin
+        socket.receive(
+          JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => {
+                'epoch' => 'epoch-1', 'offset' => 2,
+                'data' => { 'event' => 'message', 'value' => 'valid' }
+              }
+            }
+          )
+        )
+        expect(task.with_timeout(0.2) { received.dequeue }).to eq('valid')
+        expect(admitted_offsets).to eq([2])
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'dispatches recovered publications before a same-frame live push' do
     Async do |task|
       socket = FakeSocket.new

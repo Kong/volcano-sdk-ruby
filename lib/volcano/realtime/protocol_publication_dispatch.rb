@@ -26,8 +26,10 @@ module Volcano
         return unless channel
 
         data = validated_publication_data(channel, publication)
+        return unless data
+
         handlers = registered_publication_handlers(channel, publication)
-        return unless data && handlers
+        return unless handlers
 
         PublicationDelivery.new(
           channel:, handlers: handlers.dup,
@@ -46,6 +48,7 @@ module Volcano
         return data if data.is_a?(Hash)
 
         drop_publication(channel, publication)
+        nil
       end
 
       def registered_publication_handlers(channel, publication)
@@ -53,6 +56,7 @@ module Volcano
         return handlers unless handlers.empty?
 
         drop_publication(channel, publication)
+        nil
       end
 
       def admit_publication(delivery, enforce_limit:)

@@ -85,25 +85,19 @@ module Volcano
       end
 
       def run_postgres_worker
+        pending = nil
         loop do
-          request = @postgres_queue.dequeue
-          break if request.equal?(STOP)
+          request = pending || @postgres_queue.dequeue
+          break if postgres_stop?(request)
 
-          deliver_postgres_change(request)
+          requests, pending = collect_postgres_batch(request)
+          deliver_postgres_batch(requests)
         end
       ensure
         @postgres_worker = nil if @postgres_worker.equal?(Async::Task.current)
       end
 
-      def deliver_postgres_change(request)
-        return unless current_postgres_request?(request)
-
-        change = expanded_postgres_change(request)
-        return unless current_postgres_request?(request)
-
-        emit(change.type, change)
-        emit('*', change) if current_postgres_request?(request)
-      end
+      def postgres_stop?(request) = request.equal?(STOP)
 
       def current_postgres_request?(request)
         _, lineage, = @realtime.__send__(:capture_session_binding)

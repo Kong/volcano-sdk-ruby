@@ -336,11 +336,86 @@ RSpec.describe Volcano::Realtime do
         database_name: 'app',
         body: {
           'table' => 'messages',
-          'filters' => [{ 'column' => 'id', 'operator' => 'eq', 'value' => 42 }],
-          'limit' => 1
+          'filters' => [{ 'column' => 'id', 'operator' => 'in', 'value' => [42] }]
         }
       )
       expect(transport.query_threads).not_to include(reactor_thread)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'batches lightweight row lookups and preserves duplicate deliveries' do
+    socket = FacadeSocket.new
+    transport = RealtimeDatabaseTransport.new(
+      [
+        { 'id' => 2, 'body' => 'second' },
+        { 'id' => 1, 'body' => 'first' }
+      ]
+    )
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      [1, 1, 2].each do |id|
+        socket.publication(
+          channel: 'project-id:postgres:public:messages:user-id',
+          data: {
+            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+            'id' => id, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+          }
+        )
+      end
+      changes = Array.new(3) { task.with_timeout(0.2) { received.dequeue } }
+
+      expect(changes.map { |change| change.record.fetch('id') }).to eq([1, 1, 2])
+      expect(transport.queries).to contain_exactly(
+        authorization: 'access-token',
+        database_name: 'app',
+        body: {
+          'table' => 'messages',
+          'filters' => [{ 'column' => 'id', 'operator' => 'in', 'value' => [1, 2] }]
+        }
+      )
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'flushes a row lookup batch when it reaches 50 changes' do
+    socket = FacadeSocket.new
+    rows = Array.new(51) { |index| { 'id' => index + 1 } }
+    transport = RealtimeDatabaseTransport.new(rows)
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      rows.each do |row|
+        socket.publication(
+          channel: 'project-id:postgres:public:messages:user-id',
+          data: {
+            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+            'id' => row.fetch('id'), 'mode' => 'lightweight',
+            'timestamp' => '2026-09-02T12:00:00Z'
+          }
+        )
+      end
+      changes = Array.new(51) { task.with_timeout(0.2) { received.dequeue } }
+
+      expect(changes.map { |change| change.record.fetch('id') }).to eq((1..51).to_a)
+      expect(transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }).to eq(
+        [(1..50).to_a, [51]]
+      )
       client.realtime.disconnect
     end.wait
   end
@@ -589,7 +664,7 @@ RSpec.describe Volcano::Realtime do
         channel: 'project-id:postgres:public:messages:user-id',
         data: {
           'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
-          'id' => 43, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:01Z'
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:01Z'
         }
       )
       task.with_timeout(0.2) { task.yield until received.length == 1 }
@@ -711,16 +786,17 @@ RSpec.describe Volcano::Realtime do
         received.enqueue(change)
       end
       channel.subscribe
-      2.times do
-        socket.publication(
-          channel: 'project-id:postgres:public:messages:user-id',
-          data: {
-            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
-            'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
-          }
-        )
-      end
+      change = {
+        'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+        'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+      }
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id', data: change
+      )
       task.with_timeout(0.2) { transport.started.dequeue }
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id', data: change
+      )
       client.store_session(
         Volcano::Session.new(
           access_token: 'access-refreshed', refresh_token: 'refresh-token', user_id: 'user-123'

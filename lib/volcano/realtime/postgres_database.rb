@@ -43,12 +43,12 @@ module Volcano
         raise Error::SessionChangedError
       end
 
-      def fetch_postgres_row(change, database_name, access_token)
+      def fetch_postgres_rows(change, ids, database_name, access_token)
         table = change.schema == 'public' ? change.table : "#{change.schema}.#{change.table}"
         postgres_fetch_semaphore.acquire do
           BlockingCall.call do
             @client.__send__(:database_with_token, database_name, access_token)
-                   .from(table).select('*').eq('id', change.id).limit(1).execute.first
+                   .from(table).select('*').in('id', ids).execute
           end
         end
       end

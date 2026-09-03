@@ -114,12 +114,15 @@ RSpec.describe Volcano::Realtime do
       value
     end
 
-    def publication(channel:, data:)
+    def publication(channel:, data:, epoch: nil, offset: nil)
+      publication = { 'data' => data }
+      publication['epoch'] = epoch if epoch
+      publication['offset'] = offset if offset
       @incoming.enqueue(
         JSON.generate(
           'push' => {
             'channel' => channel,
-            'pub' => { 'data' => data }
+            'pub' => publication
           }
         )
       )
@@ -2067,6 +2070,182 @@ RSpec.describe Volcano::Realtime do
       ]
     )
     expect(sockets).to be_empty
+  end
+
+  it 'recovers a broadcast from its last delivered position' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(command.fetch('id'), result: { 'epoch' => 'epoch-1', 'offset' => 1 })
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message) }
+      channel.subscribe
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'live' },
+        epoch: 'epoch-1',
+        offset: 2
+      )
+      task.with_timeout(0.2) { received.dequeue }
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.fetch('subscribe')).to include(
+      'channel' => 'broadcast:contract',
+      'recover' => true,
+      'epoch' => 'epoch-1',
+      'offset' => 2
+    )
+  end
+
+  it 'retains the delivered initial recovery position for the next reconnect' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: {
+          'epoch' => 'epoch-1',
+          'offset' => 3,
+          'publications' => [
+            { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'retained-2' } },
+            { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 'retained-3' } }
+          ]
+        }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message) }
+      channel.subscribe
+      task.with_timeout(0.2) { Array.new(2) { received.dequeue } }
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    initial_subscribe = first_socket.commands.find { |command| command.key?('subscribe') }
+    expect(initial_subscribe.fetch('subscribe')).to eq(
+      'channel' => 'broadcast:contract',
+      'recover' => true,
+      'positioned' => true,
+      'recoverable' => true
+    )
+    restored_subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(restored_subscribe.fetch('subscribe')).to include(
+      'channel' => 'broadcast:contract',
+      'recover' => true,
+      'epoch' => 'epoch-1',
+      'offset' => 3
+    )
+  end
+
+  it 'delivers recovered broadcasts before a same-frame live broadcast' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      reply = JSON.generate(
+        'id' => command.fetch('id'),
+        'result' => {
+          'epoch' => 'epoch-1',
+          'offset' => 3,
+          'publications' => [
+            { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } },
+            { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }
+          ]
+        }
+      )
+      live = JSON.generate(
+        'push' => {
+          'channel' => 'project-id:broadcast:contract',
+          'pub' => {
+            'epoch' => 'epoch-1',
+            'offset' => 4,
+            'data' => { 'event' => 'message', 'value' => 4 }
+          }
+        }
+      )
+      socket.receive_raw("#{reply}\n#{live}")
+      :defer
+    end
+    client = realtime_client(socket)
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+
+      expect(task.with_timeout(0.2) { Array.new(3) { received.dequeue } }).to eq([2, 3, 4])
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'preserves exact non-broadcast subscription commands' do
+    presence_socket = FacadeSocket.new
+    postgres_socket = FacadeSocket.new
+    presence_client = realtime_client(presence_socket)
+    postgres_client = realtime_client(postgres_socket)
+
+    Async do
+      presence_client.realtime.channel('lobby', type: :presence).subscribe
+      postgres_client.realtime.channel('public:messages', type: :postgres).subscribe
+      presence_client.realtime.disconnect
+      postgres_client.realtime.disconnect
+    end.wait
+
+    presence_subscribe = presence_socket.commands.find { |command| command.key?('subscribe') }
+    expect(presence_subscribe).to eq(
+      'id' => 2,
+      'subscribe' => {
+        'channel' => 'presence:lobby',
+        'recoverable' => true,
+        'join_leave' => true
+      }
+    )
+    postgres_subscribe = postgres_socket.commands.find { |command| command.key?('subscribe') }
+    expect(postgres_subscribe).to eq(
+      'id' => 2,
+      'subscribe' => { 'channel' => 'postgres:public:messages' }
+    )
   end
 
   it 'does not restore a channel unsubscribed during an outage' do

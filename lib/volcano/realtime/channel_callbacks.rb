@@ -16,6 +16,7 @@ module Volcano
       def initialize_callback_dispatch
         @callbacks = Hash.new { |hash, key| hash[key] = [] }
         @publication_handler = @callback_lock = @callback_task = nil
+        @publication_generation = 0
         @deferred_callback_deliveries = []
       end
 
@@ -32,8 +33,30 @@ module Volcano
       def register_publication_handler(protocol)
         return if @handler_registered
 
-        @publication_handler = protocol.on_publication(@name) { |event, data| deliver_publication(event, data) }
+        generation = @publication_generation
+        @publication_handler = protocol.on_publication(@name) do |event, data, publication, recovered:|
+          next deliver_publication(event, data) unless broadcast?
+
+          context = PublicationContext.new(protocol:, publication:, generation:, recovered:)
+          deliver_broadcast(event, data, context)
+        end
         @handler_registered = true
+      end
+
+      def deliver_broadcast(event, data, context)
+        return unless event == 'message'
+
+        emit('message', data, before_delivery: -> { complete_broadcast_publication(context) })
+      end
+
+      def complete_broadcast_publication(context)
+        with_lifecycle_lock do
+          next false unless context.generation == @publication_generation
+
+          context.protocol.complete_publication(@name, context.publication)
+          @stream_position = context.protocol.position(@name) || @stream_position
+          true
+        end
       end
 
       def deliver_publication(event, data)
@@ -44,11 +67,11 @@ module Volcano
         end
       end
 
-      def emit(event, data)
+      def emit(event, data, before_delivery: nil)
         callbacks = @callbacks[event].dup
         return if callbacks.empty?
 
-        delivery = [event, data, callbacks]
+        delivery = [event, data, callbacks, before_delivery]
         return defer_callback_delivery(delivery) if callback_dispatching?
 
         callback_lock.acquire { dispatch_callback_delivery(delivery) }
@@ -73,7 +96,9 @@ module Volcano
       end
 
       def dispatch_deferred_callbacks
-        event, data, callbacks = @deferred_callback_deliveries.shift
+        event, data, callbacks, before_delivery = @deferred_callback_deliveries.shift
+        return if before_delivery && !before_delivery.call
+
         dispatch_callbacks(event, data, callbacks)
       end
 
@@ -88,7 +113,10 @@ module Volcano
       end
 
       def detach_publication_handler(protocol)
-        protocol.off_publication(@name, @publication_handler) if @publication_handler
+        if @publication_handler
+          protocol.off_publication(@name, @publication_handler)
+          @publication_generation += 1 if broadcast?
+        end
         detach_presence_handler(protocol)
         @publication_handler = nil
       end

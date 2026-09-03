@@ -28,6 +28,8 @@ module Volcano
     ConnectContext = Data.define(:client)
     DisconnectContext = Data.define(:code, :reason)
     ErrorContext = Data.define(:code, :message, :error)
+    PublicationContext = Data.define(:protocol, :publication, :generation, :recovered)
+    private_constant :PublicationContext
 
     # Recursively snapshots JSON-compatible values for callback and state safety.
     module Immutable
@@ -171,6 +173,8 @@ module Volcano
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
         @lifecycle_lock = nil
+        @stream_position = {}.freeze
+        @stream_lineage = nil
         initialize_callback_dispatch
         initialize_presence(type)
         initialize_postgres_delivery(batch_config)

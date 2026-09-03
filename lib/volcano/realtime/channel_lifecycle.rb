@@ -12,6 +12,7 @@ module Volcano
       end
 
       def protocol_lost(protocol)
+        remember_stream_position(protocol)
         @subscribed = false
         end_postgres_delivery
         detach_publication_handler(protocol)
@@ -41,9 +42,9 @@ module Volcano
 
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch
-        begin_postgres_delivery
-        register_handlers(protocol, epoch)
-        protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
+        prepare_protocol_subscription(protocol, epoch)
+        protocol.subscribe(channel: @name, **subscription_options)
+        remember_stream_position(protocol)
         @subscribed = true
         [protocol, epoch]
       rescue StandardError
@@ -52,12 +53,40 @@ module Volcano
         raise
       end
 
+      def prepare_protocol_subscription(protocol, epoch)
+        begin_postgres_delivery
+        register_handlers(protocol, epoch)
+      end
+
       def detach_from_protocol
         return unless @subscribed || @publication_handler
 
         protocol = @protocol_provider.call
         protocol.unsubscribe(channel: @name) if @subscribed && protocol.connected?
         detach_publication_handler(protocol)
+      end
+
+      def recovery_position
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
+        unless @stream_lineage == lineage
+          @stream_position = {}.freeze
+          @stream_lineage = lineage
+        end
+        @stream_position
+      end
+
+      def subscription_options
+        {
+          recovery: broadcast? ? recovery_position : nil,
+          recoverable: presence?,
+          join_leave: presence?
+        }
+      end
+
+      def remember_stream_position(protocol)
+        return unless broadcast?
+
+        @stream_position = protocol.position(@name) || @stream_position
       end
 
       def mark_removed

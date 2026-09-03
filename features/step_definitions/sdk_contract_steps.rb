@@ -8,6 +8,66 @@ def contract
   @contract
 end
 
+Given('a managed custom-domain TLS request') do
+  generated = Volcano.const_get(:Generated, false)
+  tls = generated::ManagedFrontendCustomDomainTLSConfig.new(mode: 'managed')
+  @contract.managed_tls_request = generated::CreateFrontendCustomDomainRequest.new(
+    domain: 'app.example.com',
+    tls: tls
+  )
+end
+
+When('the client encodes the request and decodes a pending verification response') do
+  generated = Volcano.const_get(:Generated, false)
+  @contract.managed_tls_wire = @contract.managed_tls_request.to_hash
+  @contract.managed_tls_response = generated::FrontendCustomDomainResponse.build_from_hash(
+    domain: 'app.example.com',
+    tls_mode: 'managed',
+    domain_status: 'pending_verification',
+    verification_status: 'pending',
+    verification_records: [
+      {
+        name: '_token.app.example.com',
+        type: 'CNAME',
+        value: '_validation.volcano.dev'
+      }
+    ],
+    required_routing_record: {
+      record_type: 'CNAME',
+      zone_apex_record_type: 'ALIAS',
+      name: 'app.example.com',
+      value: 'frontend.frontends.volcano.dev'
+    },
+    effective_urls: ['https://frontend.frontends.volcano.dev/'],
+    created_at: '2026-09-02T12:00:00Z',
+    updated_at: '2026-09-02T12:00:00Z'
+  )
+end
+
+Then('the request selects managed TLS without certificate material') do
+  expect(@contract.managed_tls_wire).to eq(
+    domain: 'app.example.com',
+    tls: { mode: 'managed' }
+  )
+end
+
+Then('the response exposes the managed lifecycle and DNS records') do
+  response = @contract.managed_tls_response
+  expect(response.domain_status).to eq('pending_verification')
+  expect(response.verification_status).to eq('pending')
+  expect(response.verification_records.first.to_hash).to eq(
+    name: '_token.app.example.com',
+    type: 'CNAME',
+    value: '_validation.volcano.dev'
+  )
+  expect(response.required_routing_record.to_hash).to eq(
+    record_type: 'CNAME',
+    zone_apex_record_type: 'ALIAS',
+    name: 'app.example.com',
+    value: 'frontend.frontends.volcano.dev'
+  )
+end
+
 Given('the confirmed contract user') do
   raise 'fixture user is missing' if contract.fixture.fetch('user_id').to_s.empty?
 end

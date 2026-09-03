@@ -42,7 +42,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'domain' => :'String',
-        :'tls' => :'FrontendCustomDomainTLSConfig'
+        :'tls' => :'CreateFrontendCustomDomainTLSConfig'
       }
     end
 

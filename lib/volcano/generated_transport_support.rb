@@ -20,7 +20,19 @@ module Volcano
     end
     private_constant :ModelDeserialization
 
+    # Enforces the BYOC certificate-pair constraint omitted by the generator.
+    module BYOCProjectConfigValidation
+      def valid?
+        return false unless super
+
+        material_present = [certificate_pem, private_key_pem, certificate_chain_pem].any? { |value| !value.nil? }
+        !material_present || (!certificate_pem.nil? && !private_key_pem.nil?)
+      end
+    end
+    private_constant :BYOCProjectConfigValidation
+
     Generated::ApiModelBase.singleton_class.prepend(ModelDeserialization)
+    Generated::BYOCProjectConfigFrontendCustomDomainTLSConfig.prepend(BYOCProjectConfigValidation)
 
     # Corrects generated content negotiation and private model lookup.
     class ApiClient < Generated::ApiClient

@@ -241,7 +241,7 @@ module Volcano::Generated
       domain_status_validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed", "deleted"])
       return false unless domain_status_validator.valid?(@domain_status)
       return false if @verification_status.nil?
-      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       return false unless verification_status_validator.valid?(@verification_status)
       return false if @effective_urls.nil?
       return false if @created_at.nil?
@@ -283,7 +283,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] verification_status Object to be assigned
     def verification_status=(verification_status)
-      validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       unless validator.valid?(verification_status)
         fail ArgumentError, "invalid value for \"verification_status\", must be one of #{validator.allowable_values}."
       end

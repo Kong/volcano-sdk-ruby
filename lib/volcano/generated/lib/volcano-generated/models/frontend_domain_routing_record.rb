@@ -15,7 +15,11 @@ require 'time'
 
 module Volcano::Generated
   class FrontendDomainRoutingRecord < ApiModelBase
+    # Use this record type when the hostname is not the apex of your DNS zone.
     attr_accessor :record_type
+
+    # At the apex of your DNS zone, use your provider's ALIAS, ANAME, or CNAME-flattening equivalent instead of a literal CNAME.
+    attr_accessor :zone_apex_record_type
 
     attr_accessor :name
 
@@ -47,6 +51,7 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'record_type' => :'record_type',
+        :'zone_apex_record_type' => :'zone_apex_record_type',
         :'name' => :'name',
         :'value' => :'value'
       }
@@ -66,6 +71,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'record_type' => :'String',
+        :'zone_apex_record_type' => :'String',
         :'name' => :'String',
         :'value' => :'String'
       }
@@ -99,6 +105,12 @@ module Volcano::Generated
         self.record_type = nil
       end
 
+      if attributes.key?(:'zone_apex_record_type')
+        self.zone_apex_record_type = attributes[:'zone_apex_record_type']
+      else
+        self.zone_apex_record_type = nil
+      end
+
       if attributes.key?(:'name')
         self.name = attributes[:'name']
       else
@@ -121,6 +133,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "record_type", record_type cannot be nil.')
       end
 
+      if @zone_apex_record_type.nil?
+        invalid_properties.push('invalid value for "zone_apex_record_type", zone_apex_record_type cannot be nil.')
+      end
+
       if @name.nil?
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
@@ -139,6 +155,9 @@ module Volcano::Generated
       return false if @record_type.nil?
       record_type_validator = EnumAttributeValidator.new('String', ["CNAME"])
       return false unless record_type_validator.valid?(@record_type)
+      return false if @zone_apex_record_type.nil?
+      zone_apex_record_type_validator = EnumAttributeValidator.new('String', ["ALIAS"])
+      return false unless zone_apex_record_type_validator.valid?(@zone_apex_record_type)
       return false if @name.nil?
       return false if @value.nil?
       true
@@ -152,6 +171,16 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for \"record_type\", must be one of #{validator.allowable_values}."
       end
       @record_type = record_type
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] zone_apex_record_type Object to be assigned
+    def zone_apex_record_type=(zone_apex_record_type)
+      validator = EnumAttributeValidator.new('String', ["ALIAS"])
+      unless validator.valid?(zone_apex_record_type)
+        fail ArgumentError, "invalid value for \"zone_apex_record_type\", must be one of #{validator.allowable_values}."
+      end
+      @zone_apex_record_type = zone_apex_record_type
     end
 
     # Custom attribute writer method with validation
@@ -180,6 +209,7 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           record_type == o.record_type &&
+          zone_apex_record_type == o.zone_apex_record_type &&
           name == o.name &&
           value == o.value
     end
@@ -193,7 +223,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [record_type, name, value].hash
+      [record_type, zone_apex_record_type, name, value].hash
     end
 
     # Builds the object from hash

@@ -87,6 +87,9 @@ lib/volcano-generated/models/ban_auth_user_request.rb
 lib/volcano-generated/models/ban_user_response.rb
 lib/volcano-generated/models/batch_function_deploy_failure.rb
 lib/volcano-generated/models/batch_function_deploy_response.rb
+lib/volcano-generated/models/byoc_frontend_custom_domain_tls_config.rb
+lib/volcano-generated/models/byoc_project_config_frontend_custom_domain_tls_config.rb
+lib/volcano-generated/models/byoc_project_config_frontend_custom_domain_tls_config_not.rb
 lib/volcano-generated/models/call_o_auth_provider_api200_response.rb
 lib/volcano-generated/models/call_o_auth_provider_api_request.rb
 lib/volcano-generated/models/complete_upload_session_response.rb
@@ -98,6 +101,7 @@ lib/volcano-generated/models/create_database_branch_request.rb
 lib/volcano-generated/models/create_database_request.rb
 lib/volcano-generated/models/create_email_template_request.rb
 lib/volcano-generated/models/create_frontend_custom_domain_request.rb
+lib/volcano-generated/models/create_frontend_custom_domain_tls_config.rb
 lib/volcano-generated/models/create_function_scheduler_request.rb
 lib/volcano-generated/models/create_o_auth_config_request.rb
 lib/volcano-generated/models/create_project_request.rb
@@ -198,6 +202,8 @@ lib/volcano-generated/models/log_search_event.rb
 lib/volcano-generated/models/log_search_request.rb
 lib/volcano-generated/models/log_search_response.rb
 lib/volcano-generated/models/log_stream_request.rb
+lib/volcano-generated/models/managed_frontend_custom_domain_tls_config.rb
+lib/volcano-generated/models/managed_project_config_frontend_custom_domain_tls_config.rb
 lib/volcano-generated/models/metric_usage_data.rb
 lib/volcano-generated/models/o_auth_config.rb
 lib/volcano-generated/models/o_auth_error_response.rb
@@ -242,6 +248,7 @@ lib/volcano-generated/models/project_config_database.rb
 lib/volcano-generated/models/project_config_email_template.rb
 lib/volcano-generated/models/project_config_email_templates.rb
 lib/volcano-generated/models/project_config_frontend.rb
+lib/volcano-generated/models/project_config_frontend_custom_domain_tls_config.rb
 lib/volcano-generated/models/project_config_function.rb
 lib/volcano-generated/models/project_config_hosted_page.rb
 lib/volcano-generated/models/project_config_hosted_pages.rb

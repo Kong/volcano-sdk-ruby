@@ -14,29 +14,26 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Resource selectors for project log reads.
-  module LogRequestResource
+  module CreateFrontendCustomDomainTLSConfig
     class << self
       # List of class defined in oneOf (OpenAPI v3)
       def openapi_one_of
         [
-          :'LogDatabaseRequestResource',
-          :'LogFrontendRequestResource',
-          :'LogFunctionRequestResource'
+          :'BYOCFrontendCustomDomainTLSConfig',
+          :'ManagedFrontendCustomDomainTLSConfig'
         ]
       end
 
       # Discriminator's property name (OpenAPI v3)
       def openapi_discriminator_name
-        :'type'
+        :'mode'
       end
 
       # Discriminator's mapping (OpenAPI v3)
       def openapi_discriminator_mapping
         {
-          :'database' => :'LogDatabaseRequestResource',
-          :'frontend' => :'LogFrontendRequestResource',
-          :'function' => :'LogFunctionRequestResource'
+          :'byoc' => :'BYOCFrontendCustomDomainTLSConfig',
+          :'managed' => :'ManagedFrontendCustomDomainTLSConfig'
         }
       end
 

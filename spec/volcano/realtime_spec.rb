@@ -2124,6 +2124,54 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'does not reuse a recovery position after the authenticated user changes' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    reconnect_started = Async::Queue.new
+    reconnect_release = Async::Queue.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 42 }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: lambda do |_attempt|
+        reconnect_started.enqueue(true)
+        reconnect_release.dequeue
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) { reconnect_started.dequeue }
+      client.store_session(
+        Volcano::Session.new(
+          access_token: 'other-access', refresh_token: 'other-refresh', user_id: 'other-user'
+        )
+      )
+      reconnect_release.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.fetch('subscribe')).not_to include('epoch', 'offset')
+  end
+
   it 'retains the position of publications returned by an initial subscription' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new
@@ -2406,6 +2454,54 @@ RSpec.describe Volcano::Realtime do
     expect(subscribe.dig('subscribe', 'offset')).to eq(1)
   end
 
+  it 'does not deadlock unsubscribe against a completing Postgres delivery' do
+    socket = FacadeSocket.new
+    unsubscribe_started = Async::Queue.new
+    unsubscribe_id = nil
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        socket.respond(
+          command.fetch('id'),
+          result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+        )
+        :defer
+      elsif command.key?('unsubscribe')
+        unsubscribe_id = command.fetch('id')
+        unsubscribe_started.enqueue(true)
+        :defer
+      end
+    end
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      unsubscribe_task = nil
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { nil }
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-03T12:00:00Z'
+        },
+        offset: 2
+      )
+      task.with_timeout(0.2) { transport.started.dequeue }
+      unsubscribe_task = task.async { channel.unsubscribe }
+      task.with_timeout(0.2) { unsubscribe_started.dequeue }
+      transport.release.enqueue(true)
+      task.sleep(0.01)
+      socket.respond(unsubscribe_id)
+
+      expect { task.with_timeout(0.2) { unsubscribe_task.wait } }.not_to raise_error
+    ensure
+      unsubscribe_task&.stop
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'does not checkpoint a publication blocked by another lifecycle operation' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new
@@ -2452,6 +2548,62 @@ RSpec.describe Volcano::Realtime do
         task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
       end
       send_task.wait
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.dig('subscribe', 'offset')).to eq(1)
+  end
+
+  it 'does not checkpoint a publication blocked by callback serialization' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      started = Async::Queue.new
+      release = Async::Queue.new
+      blocked = false
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.on_presence_sync do
+        next if blocked
+
+        blocked = true
+        started.enqueue(true)
+        release.dequeue
+      end
+      channel.on('message') { nil }
+      subscribe_task = task.async { channel.subscribe }
+      task.with_timeout(0.2) { started.dequeue }
+      first_socket.publication(
+        channel: 'project-id:presence:lobby',
+        data: { 'event' => 'message', 'value' => 'blocked' },
+        offset: 2
+      )
+      task.yield
+      first_socket.fail_read(IOError.new('socket failed'))
+      release.enqueue(true)
+      subscribe_task.wait
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
     ensure
       client.realtime.disconnect
     end.wait

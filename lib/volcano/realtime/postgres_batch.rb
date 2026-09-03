@@ -80,15 +80,14 @@ module Volcano
       def deliver_expanded_postgres_change(request, change)
         return unless current_postgres_request?(request)
 
-        complete_postgres_delivery(request)
-        emit(change.type, change)
+        emit(change.type, change, before_delivery: postgres_completion(request))
         emit('*', change) if current_postgres_request?(request)
       end
 
-      def complete_postgres_delivery(request)
-        return unless request.protocol && request.publication
+      def postgres_completion(request)
+        return unless request.context
 
-        complete_publication_delivery(request.protocol, request.publication)
+        -> { complete_publication_delivery(request.context) }
       end
     end
     private_constant :PostgresBatch

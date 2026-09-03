@@ -24,7 +24,7 @@ module Volcano
 
       def unsubscribe_protocol
         ensure_open!
-        return clear_subscription_intent unless @subscribed
+        return [clear_subscription_intent, nil] unless @subscribed
 
         protocol = @protocol_provider.call
         protocol.unsubscribe(channel: @name)
@@ -36,11 +36,11 @@ module Volcano
       def complete_unsubscribe(protocol)
         remember_protocol_position(protocol)
         @subscription_desired = @subscribed = false
-        end_postgres_delivery
+        worker = end_postgres_delivery(wait: false)
         detach_publication_handler(protocol)
         @handler_registered = false
         invalidate_presence_subscription(protocol)
-        clear_presence
+        [clear_presence, worker]
       end
 
       def subscribe_protocol(protocol)
@@ -65,10 +65,18 @@ module Volcano
       def request_subscription(protocol)
         protocol.subscribe(
           channel: @name,
-          recovery: @stream_position,
+          recovery: recovery_position,
           recoverable: presence?,
           join_leave: presence?
         )
+      end
+
+      def recovery_position
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
+        return @stream_position if @stream_lineage == lineage
+
+        @stream_lineage = lineage
+        @stream_position = {}.freeze
       end
 
       def remember_protocol_position(protocol)

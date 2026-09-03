@@ -171,6 +171,7 @@ module Volcano
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
         @stream_position = {}.freeze
+        @stream_lineage = nil
         @lifecycle_lock = nil
         initialize_callback_dispatch
         initialize_presence(type)
@@ -196,7 +197,8 @@ module Volcano
       end
 
       def unsubscribe
-        state = with_lifecycle_lock { unsubscribe_protocol }
+        state, worker = with_lifecycle_lock { unsubscribe_protocol }
+        wait_postgres_delivery(worker)
         emit_presence_sync(state)
         nil
       end

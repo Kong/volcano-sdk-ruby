@@ -3,7 +3,8 @@
 module Volcano
   class Realtime
     PostgresDeliveryRequest = Data.define(
-      :change, :database_name, :session_lineage, :subscription_epoch, :protocol, :publication
+      :change, :database_name, :session_lineage, :subscription_epoch,
+      :context
     )
     private_constant :PostgresDeliveryRequest
 
@@ -42,7 +43,7 @@ module Volcano
         @postgres_session_lineage = lineage
       end
 
-      def end_postgres_delivery
+      def end_postgres_delivery(wait: true)
         return unless postgres?
 
         @postgres_epoch += 1
@@ -52,14 +53,19 @@ module Volcano
 
         @postgres_queue.enqueue(STOP)
         @postgres_worker = nil
-        worker.wait unless worker.equal?(Async::Task.current)
+        wait_postgres_delivery(worker) if wait
+        worker
       end
 
-      def enqueue_postgres_delivery(change, protocol = nil, publication = nil, recovered: false)
+      def wait_postgres_delivery(worker)
+        worker&.wait unless worker.equal?(Async::Task.current)
+      end
+
+      def enqueue_postgres_delivery(change, context = nil)
         return :rejected unless @subscribed
 
-        request = postgres_delivery_request(change, protocol, publication)
-        capacity = postgres_capacity(recovered)
+        request = postgres_delivery_request(change, context)
+        capacity = postgres_capacity(context&.recovered || false)
         return capacity if capacity
 
         start_postgres_worker
@@ -74,13 +80,13 @@ module Volcano
         :rejected
       end
 
-      def postgres_delivery_request(change, protocol, publication)
+      def postgres_delivery_request(change, context)
         database_name = @realtime.__send__(:database_name)
         fetch = fetch_postgres_change?(change, database_name)
         PostgresDeliveryRequest.new(
           change:, database_name: fetch ? database_name : nil,
           session_lineage: @postgres_session_lineage,
-          subscription_epoch: @postgres_epoch, protocol:, publication:
+          subscription_epoch: @postgres_epoch, context:
         )
       end
 

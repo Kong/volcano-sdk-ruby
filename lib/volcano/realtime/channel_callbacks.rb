@@ -2,6 +2,9 @@
 
 module Volcano
   class Realtime
+    PublicationContext = Data.define(:protocol, :publication, :generation, :recovered)
+    private_constant :PublicationContext
+
     # Registers channel callbacks and connects them to protocol pushes.
     module ChannelCallbacks
       def on(event, callback = nil, &block)
@@ -37,34 +40,43 @@ module Volcano
         @publication_handler = protocol.on_publication(@name) do |event, data, publication, recovered:|
           next unless generation == @publication_generation
 
-          deliver_publication(event, data, protocol, publication, recovered:)
+          context = PublicationContext.new(protocol:, publication:, generation:, recovered:)
+          deliver_publication(event, data, context)
         end
         @handler_registered = true
       end
 
-      def complete_publication_delivery(protocol, publication)
-        return unless protocol && publication
+      def complete_publication_delivery(context)
+        return unless context&.protocol && context.publication
 
         with_lifecycle_lock do
-          position = protocol.complete_publication(@name, publication)
+          next unless context.generation == @publication_generation
+
+          position = context.protocol.complete_publication(@name, context.publication)
           @stream_position = position if position
         end
       end
 
-      def deliver_publication(event, data, protocol, publication, recovered:)
+      def deliver_publication(event, data, context)
         if postgres?
-          dispatch_postgres_change(data, protocol, publication, recovered:)
+          dispatch_postgres_change(data, context)
         else
-          complete_publication_delivery(protocol, publication)
-          emit('message', data) if event == 'message'
+          deliver_message(event, data, context)
         end
       end
 
-      def emit(event, data)
-        callbacks = @callbacks[event].dup
-        return if callbacks.empty?
+      def deliver_message(event, data, context)
+        return complete_publication_delivery(context) unless event == 'message'
 
-        delivery = [event, data, callbacks]
+        completion = -> { complete_publication_delivery(context) }
+        emit('message', data, before_delivery: completion)
+      end
+
+      def emit(event, data, before_delivery: nil)
+        callbacks = @callbacks[event].dup
+        return if callbacks.empty? && !before_delivery
+
+        delivery = [event, data, callbacks, before_delivery]
         return defer_callback_delivery(delivery) if callback_dispatching?
 
         callback_lock.acquire { dispatch_callback_delivery(delivery) }
@@ -89,7 +101,8 @@ module Volcano
       end
 
       def dispatch_deferred_callbacks
-        event, data, callbacks = @deferred_callback_deliveries.shift
+        event, data, callbacks, before_delivery = @deferred_callback_deliveries.shift
+        before_delivery&.call
         dispatch_callbacks(event, data, callbacks)
       end
 

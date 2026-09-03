@@ -62,6 +62,7 @@ module Volcano
       def protocol_closed(error)
         reset_after_protocol_loss
         emit_connection_event(:disconnect, disconnect_context(error))
+        start_reconnect
       end
 
       def protocol_error(error)
@@ -78,6 +79,7 @@ module Volcano
         events = [[:error, error_context(error)]]
         events << [:disconnect, disconnect_context(error)] if disconnected
         emit_connection_events(events)
+        start_reconnect if disconnected
       end
 
       def error_context(error)

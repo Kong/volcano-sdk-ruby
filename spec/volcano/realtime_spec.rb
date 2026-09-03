@@ -140,6 +140,10 @@ RSpec.describe Volcano::Realtime do
       @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
     end
 
+    def receive_raw(frame)
+      @incoming.enqueue(frame)
+    end
+
     def reject(id, message, code: nil)
       error = { 'message' => message }
       error['code'] = code if code
@@ -386,7 +390,7 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
-  it 'flushes a row lookup batch when it reaches 50 changes' do
+  it 'limits a row lookup batch to 50 changes' do
     socket = FacadeSocket.new
     rows = Array.new(51) { |index| { 'id' => index + 1 } }
     transport = RealtimeDatabaseTransport.new(rows)
@@ -413,9 +417,9 @@ RSpec.describe Volcano::Realtime do
       changes = Array.new(51) { task.with_timeout(0.2) { received.dequeue } }
 
       expect(changes.map { |change| change.record.fetch('id') }).to eq((1..51).to_a)
-      expect(transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }).to eq(
-        [(1..50).to_a, [51]]
-      )
+      query_ids = transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }
+      expect(query_ids.flatten).to eq((1..51).to_a)
+      expect(query_ids.map(&:length)).to all(be <= 50)
       client.realtime.disconnect
     end.wait
   end
@@ -1321,6 +1325,7 @@ RSpec.describe Volcano::Realtime do
       task.with_timeout(0.2) { task.yield until errors.any? }
 
       expect(errors.length).to eq(1)
+      client.realtime.disconnect
     end.wait
   end
 
@@ -1338,6 +1343,7 @@ RSpec.describe Volcano::Realtime do
       task.with_timeout(0.2) { task.yield until channel.presence_state.empty? }
 
       expect(channel.presence_state).to be_empty
+      client.realtime.disconnect
     end.wait
   end
 
@@ -1471,6 +1477,7 @@ RSpec.describe Volcano::Realtime do
 
       socket.invalid_frame
       task.with_timeout(0.2) { task.yield until events.length == 2 }
+      client.realtime.disconnect
     end.wait
 
     expect(events.map(&:first)).to eq(%i[error disconnect])
@@ -1543,6 +1550,7 @@ RSpec.describe Volcano::Realtime do
         'socket write failed'
       )
       task.with_timeout(0.2) { task.yield until events.length == 2 }
+      client.realtime.disconnect
     end.wait
 
     expect(events).to eq(
@@ -1895,6 +1903,90 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'restores a channel after its unsubscribe request is rejected' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      first_socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        first_socket.reject(command.fetch('id'), 'unsubscribe failed')
+        :defer
+      end
+
+      expect { channel.unsubscribe }.to raise_error(
+        Volcano::Realtime::ServerError,
+        'unsubscribe failed'
+      )
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
+  it 'restores a channel when its unsubscribe request loses the transport' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    unsubscribe_started = Async::Queue.new
+    lose_transport = Async::Queue.new
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      first_socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        unsubscribe_started.enqueue(true)
+        lose_transport.dequeue
+        first_socket.fail_read(IOError.new('socket failed'))
+        :defer
+      end
+
+      unsubscribing = task.async do
+        channel.unsubscribe
+      rescue StandardError => e
+        e
+      end
+      unsubscribe_started.dequeue
+      expect(channel).to be_subscription_desired
+      lose_transport.enqueue(true)
+      expect(unsubscribing.wait).to be_a(Volcano::Realtime::ClosedError)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
   it 'reports a peer-closed transport as disconnected' do
     socket = FacadeSocket.new
     client = Volcano::Client.new(
@@ -1916,6 +2008,317 @@ RSpec.describe Volcano::Realtime do
       expect(client.realtime.remove_channel('contract')).to be_nil
       expect(client.realtime.channel('contract')).not_to be(channel)
     end.wait
+  end
+
+  it 'reconnects and restores subscribed channels after transport loss' do
+    first_socket = FacadeSocket.new
+    second_socket = FacadeSocket.new
+    third_socket = FacadeSocket.new
+    sockets = [first_socket, second_socket, third_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    received = []
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received << message }
+      channel.subscribe
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until second_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      second_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'restored' }
+      )
+      task.with_timeout(0.2) { task.yield until received.any? }
+
+      second_socket.fail_read(IOError.new('socket failed again'))
+      task.with_timeout(0.2) do
+        task.yield until third_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      third_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'restored-again' }
+      )
+      task.with_timeout(0.2) { task.yield until received.length == 2 }
+      client.realtime.disconnect
+    end.wait
+
+    expect(first_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(second_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(third_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(received).to eq(
+      [
+        { 'event' => 'message', 'value' => 'restored' },
+        { 'event' => 'message', 'value' => 'restored-again' }
+      ]
+    )
+    expect(sockets).to be_empty
+  end
+
+  it 'does not restore a channel unsubscribed during an outage' do
+    first_socket = FacadeSocket.new
+    second_socket = FacadeSocket.new
+    reconnect_waiting = Async::Queue.new
+    allow_reconnect = Async::Queue.new
+    sockets = [first_socket, second_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: lambda do |_attempt|
+        reconnect_waiting.enqueue(true)
+        allow_reconnect.dequeue
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      retained = client.realtime.channel('retained')
+      channel.subscribe
+      retained.subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      reconnect_waiting.dequeue
+
+      channel.unsubscribe
+      allow_reconnect.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until second_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(second_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(second_socket.commands.last.dig('subscribe', 'channel')).to eq('broadcast:retained')
+  end
+
+  it 'retries a failed reconnect with increasing backoff attempts' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    attempts = []
+    opened = 0
+    factory = lambda do |_address|
+      opened += 1
+      next first_socket if opened == 1
+      raise IOError, 'reconnect failed' if opened == 2
+
+      restored_socket
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory,
+      _realtime_reconnect_delay: lambda do |attempt|
+        attempts << attempt
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(attempts).to eq([0, 1])
+    expect(opened).to eq(3)
+  end
+
+  it 'retries when the replacement transport fails during restoration' do
+    first_socket = FacadeSocket.new
+    failed_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    failed_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      failed_socket.fail_read(IOError.new('restore failed'))
+      :defer
+    end
+    sockets = [first_socket, failed_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(failed_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
+  it 'allows channel creation while another channel is being restored' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    restore_started = Async::Queue.new
+    allow_restore = Async::Queue.new
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      restore_started.enqueue(true)
+      allow_restore.dequeue
+      nil
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      restore_started.dequeue
+      created = task.async do
+        client.realtime.channel('new')
+      rescue StandardError => e
+        e
+      end
+      allow_restore.enqueue(true)
+
+      expect(task.with_timeout(0.2) { created.wait }).to be_a(Volcano::Realtime::Channel)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'restores old channels when a foreground subscription reconnects first' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    reconnect_waiting = Async::Queue.new
+    allow_reconnect = Async::Queue.new
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: lambda do |_attempt|
+        reconnect_waiting.enqueue(true)
+        allow_reconnect.dequeue
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('old').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      reconnect_waiting.dequeue
+      client.realtime.channel('new').subscribe
+      allow_reconnect.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? do |command|
+          command.dig('subscribe', 'channel') == 'broadcast:old'
+        end
+      end
+      client.realtime.disconnect
+    end.wait
+
+    subscribed_channels = restored_socket.commands.filter_map do |command|
+      command.dig('subscribe', 'channel')
+    end
+    expect(subscribed_channels).to contain_exactly('broadcast:new', 'broadcast:old')
+  end
+
+  it 'preserves subscription intent when transport loss follows the reply' do
+    failed_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    failed_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      reply = JSON.generate('id' => command.fetch('id'), 'result' => {})
+      failed_socket.receive_raw("#{reply}\n{")
+      :defer
+    end
+    sockets = [failed_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        /invalid realtime frame/
+      )
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'retries a transient channel rejection on the live replacement transport' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    rejected = false
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe') && !rejected
+
+      rejected = true
+      restored_socket.reject(command.fetch('id'), 'temporarily unavailable')
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.count do |command|
+          command.key?('subscribe')
+        end == 2
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.count { |command| command.key?('connect') }).to eq(1)
   end
 
   it 'keeps channel teardown private' do

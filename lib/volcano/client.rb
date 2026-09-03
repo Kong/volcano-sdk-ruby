@@ -17,13 +17,13 @@ module Volcano
       timeout: 60,
       **adapters
     )
-      transport, socket_factory = extract_adapters(adapters)
+      transport, socket_factory, reconnect_delay = extract_adapters(adapters)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
       @auth_state = AuthState.new
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
-      initialize_facades(socket_factory)
+      initialize_facades(socket_factory, reconnect_delay)
     end
 
     def database(name)
@@ -88,12 +88,13 @@ module Volcano
     def extract_adapters(adapters)
       transport = adapters.delete(:_transport)
       socket_factory = adapters.delete(:_realtime_socket_factory)
+      reconnect_delay = adapters.delete(:_realtime_reconnect_delay)
       raise ArgumentError, "unknown keyword: #{adapters.keys.first}" unless adapters.empty?
 
-      [transport, socket_factory]
+      [transport, socket_factory, reconnect_delay]
     end
 
-    def initialize_facades(socket_factory)
+    def initialize_facades(socket_factory, reconnect_delay)
       @auth = Auth.new(self, @transport, api_url: @api_url)
       @functions = Functions.new(self, @transport)
       @logs = Logs.new(self, @transport)
@@ -102,7 +103,8 @@ module Volcano
       @realtime = Realtime.new(
         self,
         api_url: @api_url,
-        socket_factory: socket_factory
+        socket_factory: socket_factory,
+        reconnect_delay: reconnect_delay
       )
     end
   end

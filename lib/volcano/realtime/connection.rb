@@ -44,6 +44,7 @@ module Volcano
         return nil if @closed
 
         @closed = true
+        stop_reconnect
         close_connected_protocol
         nil
       end

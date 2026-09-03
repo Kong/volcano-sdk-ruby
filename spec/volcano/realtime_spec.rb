@@ -63,6 +63,26 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  class FirstBlockingRealtimeDatabaseTransport < RealtimeDatabaseTransport
+    attr_reader :release, :started
+
+    def initialize
+      super
+      @blocked = false
+      @started = ThreadSignalQueue.new
+      @release = ThreadSignalQueue.new
+    end
+
+    def query_database_select(**arguments)
+      unless @blocked
+        @blocked = true
+        @started.enqueue(true)
+        @release.dequeue
+      end
+      super
+    end
+  end
+
   class ThreadSignalQueue < Queue
     alias dequeue pop
     alias enqueue push
@@ -674,6 +694,78 @@ RSpec.describe Volcano::Realtime do
       expect(task.with_timeout(0.2) { received.dequeue }.record).to eq(
         'id' => 42, 'body' => 'fetched'
       )
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'uses the refreshed token for a queued row lookup' do
+    socket = FacadeSocket.new
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      2.times do
+        socket.publication(
+          channel: 'project-id:postgres:public:messages:user-id',
+          data: {
+            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+            'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+          }
+        )
+      end
+      task.with_timeout(0.2) { transport.started.dequeue }
+      client.store_session(
+        Volcano::Session.new(
+          access_token: 'access-refreshed', refresh_token: 'refresh-token', user_id: 'user-123'
+        ),
+        event: :token_refreshed
+      )
+      transport.release.enqueue(true)
+      task.with_timeout(0.2) { transport.started.dequeue }
+      transport.release.enqueue(true)
+      2.times { task.with_timeout(0.2) { received.dequeue } }
+
+      expect(transport.queries.map { |query| query.fetch(:authorization) }).to eq(
+        %w[access-token access-refreshed]
+      )
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not block publication dispatch when a delivery queue is full' do
+    socket = FacadeSocket.new
+    transport = FirstBlockingRealtimeDatabaseTransport.new
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      reported = Async::Queue.new
+      client.realtime.on_error { |context| reported.enqueue(context) }
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { nil }
+      channel.subscribe
+      change = {
+        'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+        'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+      }
+      channel.__send__(:dispatch_postgres_change, change)
+      task.with_timeout(0.2) { transport.started.dequeue }
+      producer = task.async do
+        129.times { channel.__send__(:dispatch_postgres_change, change) }
+      end
+
+      expect { task.with_timeout(0.2) { producer.wait } }.not_to raise_error
+      expect(task.with_timeout(0.2) { reported.dequeue }.error).to be_a(
+        Volcano::Realtime::PendingLimitError
+      )
+      transport.release.enqueue(true)
       client.realtime.disconnect
     end.wait
   end
@@ -2021,6 +2113,44 @@ RSpec.describe Volcano::Realtime do
       )
       expect(opened).to eq(1)
       client.realtime.disconnect
+    end.wait
+  end
+
+  it 'aborts an opening socket when the authenticated session changes' do
+    socket = FacadeSocket.new
+    entered = Async::Queue.new
+    release = Async::Queue.new
+    factory = lambda do |_address|
+      entered.enqueue(true)
+      release.dequeue
+      socket
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      opening = task.async do
+        client.realtime.channel('contract').subscribe
+      rescue StandardError => e
+        e
+      end
+      entered.dequeue
+      client.store_session(
+        Volcano::Session.new(
+          access_token: 'other-access', refresh_token: 'other-refresh', user_id: 'other-user'
+        )
+      )
+      release.enqueue(true)
+
+      expect(task.with_timeout(0.2) { opening.wait }).to be_a(
+        Volcano::Error::SessionChangedError
+      )
+      expect(socket.commands).to be_empty
+      expect(socket).to be_closed
     end.wait
   end
 

@@ -21,12 +21,13 @@ module Volcano
 
     # Raised when an auth response arrives after the client session changes.
     class SessionChangedError < ConflictError
-      def initialize
-        super(
-          'Session changed during authentication operation',
-          status: 409,
-          code: 'auth_session_changed'
-        )
+      def initialize(
+        message = 'Session changed during authentication operation',
+        status: 409,
+        code: 'auth_session_changed',
+        retry_after: nil
+      )
+        super
       end
     end
 

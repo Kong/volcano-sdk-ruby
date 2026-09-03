@@ -9,7 +9,7 @@ module Volcano
       def expanded_postgres_change(request)
         change = request.change
         return delete_postgres_change(change) if lightweight_delete?(change)
-        return change unless request.database_name && request.access_token
+        return change unless request.database_name
 
         fetch_postgres_change(request)
       rescue Error::VolcanoError, KeyError, TypeError => e
@@ -23,8 +23,11 @@ module Volcano
 
       def fetch_postgres_change(request)
         change = request.change
+        access_token = @realtime.__send__(
+          :access_token_for_protocol_lineage, request.session_lineage
+        )
         row = @realtime.__send__(
-          :fetch_postgres_row, change, request.database_name, request.access_token
+          :fetch_postgres_row, change, request.database_name, access_token
         )
         raise Error::NotFoundError, 'Postgres row not found' unless row
 

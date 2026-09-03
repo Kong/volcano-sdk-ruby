@@ -3,7 +3,7 @@
 module Volcano
   class Realtime
     PostgresDeliveryRequest = Data.define(
-      :change, :database_name, :access_token, :session_lineage, :subscription_epoch
+      :change, :database_name, :session_lineage, :subscription_epoch
     )
     private_constant :PostgresDeliveryRequest
 
@@ -22,9 +22,7 @@ module Volcano
         @postgres_queue = Async::LimitedQueue.new(QUEUE_LIMIT)
         @postgres_worker = nil
         @postgres_epoch = 0
-        @postgres_session_generation = 0
         @postgres_session_lineage = 0
-        @postgres_access_token = @postgres_user_id = nil
       end
 
       def ensure_auto_fetch!(auto_fetch)
@@ -37,18 +35,14 @@ module Volcano
         return unless postgres?
 
         @postgres_epoch += 1
-        generation, lineage, session = @realtime.__send__(:capture_protocol_session)
-        @postgres_session_generation = generation
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
         @postgres_session_lineage = lineage
-        @postgres_access_token = session&.access_token
-        @postgres_user_id = session&.user_id
       end
 
       def end_postgres_delivery
         return unless postgres?
 
         @postgres_epoch += 1
-        @postgres_access_token = @postgres_user_id = nil
         @postgres_queue.dequeue until @postgres_queue.empty?
         worker = @postgres_worker
         return unless worker
@@ -61,32 +55,27 @@ module Volcano
       def enqueue_postgres_delivery(change)
         return unless @subscribed
 
-        refresh_postgres_session_binding
         database_name = @realtime.__send__(:database_name)
         fetch = fetch_postgres_change?(change, database_name)
-        start_postgres_worker
-        @postgres_queue.enqueue(
-          PostgresDeliveryRequest.new(
-            change:, database_name: fetch ? database_name : nil,
-            access_token: fetch ? @postgres_access_token : nil,
-            session_lineage: @postgres_session_lineage,
-            subscription_epoch: @postgres_epoch
-          )
+        request = PostgresDeliveryRequest.new(
+          change:, database_name: fetch ? database_name : nil,
+          session_lineage: @postgres_session_lineage,
+          subscription_epoch: @postgres_epoch
         )
-      end
+        return report_postgres_queue_overflow if @postgres_queue.limited?
 
-      def refresh_postgres_session_binding
-        generation, session = @realtime.__send__(:capture_session)
-        return if generation == @postgres_session_generation
-        return unless session && session.user_id == @postgres_user_id
-
-        @postgres_session_generation = generation
-        @postgres_access_token = session.access_token
+        start_postgres_worker
+        @postgres_queue.enqueue(request)
       end
 
       def fetch_postgres_change?(change, database_name)
         change.mode == 'lightweight' && change.type != 'DELETE' && @auto_fetch &&
-          database_name && @postgres_access_token
+          database_name
+      end
+
+      def report_postgres_queue_overflow
+        error = PendingLimitError.new("realtime Postgres delivery queue limit #{QUEUE_LIMIT} reached")
+        @realtime.__send__(:report_channel_error, error)
       end
 
       def start_postgres_worker

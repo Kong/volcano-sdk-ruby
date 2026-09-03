@@ -35,6 +35,14 @@ module Volcano
         raise Error::SessionChangedError
       end
 
+      def access_token_for_protocol_lineage(expected_lineage)
+        _, lineage, session = capture_session_binding
+        return session.access_token if session && lineage == expected_lineage &&
+                                       session.user_id == @protocol_user_id
+
+        raise Error::SessionChangedError
+      end
+
       def fetch_postgres_row(change, database_name, access_token)
         table = change.schema == 'public' ? change.table : "#{change.schema}.#{change.table}"
         postgres_fetch_semaphore.acquire do

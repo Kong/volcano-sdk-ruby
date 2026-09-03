@@ -420,6 +420,78 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'supports a per-channel row lookup batch size' do
+    socket = FacadeSocket.new
+    rows = Array.new(3) { |index| { 'id' => index + 1 } }
+    transport = RealtimeDatabaseTransport.new(rows)
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel(
+        'public:messages', type: :postgres, fetch_max_batch_size: 2
+      )
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      rows.each do |row|
+        socket.publication(
+          channel: 'project-id:postgres:public:messages:user-id',
+          data: {
+            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+            'id' => row.fetch('id'), 'mode' => 'lightweight',
+            'timestamp' => '2026-09-02T12:00:00Z'
+          }
+        )
+      end
+      Array.new(3) { task.with_timeout(0.2) { received.dequeue } }
+
+      expect(transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }).to eq(
+        [[1, 2], [3]]
+      )
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'validates and preserves cached channel fetch settings' do
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    channel = client.realtime.channel(
+      'public:messages',
+      type: :postgres,
+      fetch_batch_window_ms: 10,
+      fetch_max_batch_size: 25
+    )
+
+    expect(
+      client.realtime.channel(
+        'public:messages',
+        type: :postgres,
+        fetch_batch_window_ms: 10,
+        fetch_max_batch_size: 25
+      )
+    ).to equal(channel)
+    expect do
+      client.realtime.channel(
+        'public:messages',
+        type: :postgres,
+        fetch_batch_window_ms: 20,
+        fetch_max_batch_size: 25
+      )
+    end.to raise_error(ArgumentError, 'conflicting fetch options for postgres:public:messages')
+    expect do
+      client.realtime.channel(
+        'other', type: :postgres, fetch_batch_window_ms: 0
+      )
+    end.to raise_error(ArgumentError, 'fetch_batch_window_ms must be a positive integer')
+    expect do
+      client.realtime.channel(
+        'other', type: :postgres, fetch_max_batch_size: 129
+      )
+    end.to raise_error(ArgumentError, 'fetch_max_batch_size must be between 1 and 128')
+  end
+
   it 'auto-fetches lightweight changes for wildcard Postgres listeners' do
     socket = FacadeSocket.new
     transport = RealtimeDatabaseTransport.new

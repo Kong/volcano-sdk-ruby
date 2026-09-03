@@ -14,17 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
+  # Deprecated compatibility model. Use BYOCFrontendCustomDomainTLSConfig.
   class FrontendCustomDomainTLSConfig < ApiModelBase
-    # BYOC is mandatory for custom domain creation.
     attr_accessor :mode
 
-    # Required. PEM-encoded certificate.
     attr_accessor :certificate_pem
 
-    # Required. PEM-encoded private key.
     attr_accessor :private_key_pem
 
-    # Optional PEM-encoded certificate chain.
     attr_accessor :certificate_chain_pem
 
     class EnumAttributeValidator

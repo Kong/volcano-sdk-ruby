@@ -55,7 +55,7 @@ module VolcanoContract
 
   class World
     attr_accessor :auth_state_sessions, :client, :last_outcome, :previous_session, :signed_out_session,
-                  :subscriber, :publisher
+                  :subscriber, :publisher, :managed_tls_request, :managed_tls_wire, :managed_tls_response
     attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 

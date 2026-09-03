@@ -866,18 +866,32 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     ],
     ['a non-object subscription result', 'invalid']
   ].each do |description, result|
-    it "keeps the connection usable after #{description}" do
+    it "blocks a stale position and stays usable after #{description}" do
       Async do |task|
         socket = FakeSocket.new
+        subscription_results = [
+          { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] },
+          result
+        ]
         socket.on_write = lambda do |command|
-          reply = command.key?('subscribe') ? result : {}
+          reply = command.key?('subscribe') ? subscription_results.shift : {}
           socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => reply))
         end
         protocol = described_class.new(socket: socket, task: task)
 
-        expect(protocol.subscribe(channel: 'broadcast:contract', recovery: {})).to eq(result)
-        expect(protocol.publish(channel: 'broadcast:contract', data: {})).to eq({})
-        protocol.close
+        begin
+          protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+          protocol.unsubscribe(channel: 'broadcast:contract')
+          expect(protocol.subscribe(channel: 'broadcast:contract', recovery: {})).to eq(result)
+          protocol.complete_publication(
+            'broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2
+          )
+
+          expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+          expect(protocol.publish(channel: 'broadcast:contract', data: {})).to eq({})
+        ensure
+          protocol.close
+        end
       end.wait
     end
   end

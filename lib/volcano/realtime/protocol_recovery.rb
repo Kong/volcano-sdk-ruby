@@ -37,10 +37,10 @@ module Volcano
         end
 
         def process_subscription_result(channel, result)
-          return unless result.is_a?(Hash)
+          return mark_invalid_subscription_baseline(channel) unless result.is_a?(Hash)
 
           publications = result.fetch('publications', [])
-          return unless publications.is_a?(Array)
+          return mark_invalid_subscription_baseline(channel) unless publications.is_a?(Array)
 
           replace_subscription_position(channel, result, publications)
           enqueue_recovered_publications(channel, publications)
@@ -49,12 +49,17 @@ module Volcano
         def replace_subscription_position(channel, result, publications)
           position = subscription_position(result, publications)
           unless position
-            @position_gaps[channel] = true if @stream_positions.key?(channel)
+            mark_invalid_subscription_baseline(channel)
             return
           end
 
           @stream_positions[channel] = position
           @position_gaps.delete(channel)
+        end
+
+        def mark_invalid_subscription_baseline(channel)
+          @position_gaps[channel] = true if @stream_positions.key?(channel)
+          nil
         end
 
         def subscription_position(result, publications)

@@ -16,6 +16,7 @@ module Volcano
       def initialize_callback_dispatch
         @callbacks = Hash.new { |hash, key| hash[key] = [] }
         @publication_handler = @callback_lock = @callback_task = nil
+        @publication_generation = 0
         @deferred_callback_deliveries = []
       end
 
@@ -32,29 +33,32 @@ module Volcano
       def register_publication_handler(protocol)
         return if @handler_registered
 
+        generation = @publication_generation += 1
         @publication_handler = protocol.on_publication(@name) do |event, data, publication|
-          deliver_publication(event, data)
-          remember_delivery_position(publication)
+          next unless generation == @publication_generation
+
+          deliver_publication(event, data, protocol, publication)
         end
         @handler_registered = true
       end
 
-      def remember_delivery_position(publication)
-        with_lifecycle_lock do
-          current = @stream_position
-          offset = publication['offset']
-          next unless current.key?(:epoch) && offset.is_a?(Integer) && !offset.negative?
+      def complete_publication_delivery(protocol, publication)
+        return unless protocol && publication
 
-          epoch = publication.fetch('epoch', current.fetch(:epoch))
-          @stream_position = { epoch: epoch.dup.freeze, offset: offset }.freeze if epoch.is_a?(String)
+        position = protocol.complete_publication(@name, publication)
+        return unless position
+
+        with_lifecycle_lock do
+          @stream_position = position
         end
       end
 
-      def deliver_publication(event, data)
+      def deliver_publication(event, data, protocol, publication)
         if postgres?
-          dispatch_postgres_change(data)
-        elsif event == 'message'
-          emit('message', data)
+          dispatch_postgres_change(data, protocol, publication)
+        else
+          complete_publication_delivery(protocol, publication)
+          emit('message', data) if event == 'message'
         end
       end
 
@@ -104,6 +108,7 @@ module Volcano
       def detach_publication_handler(protocol)
         protocol.off_publication(@name, @publication_handler) if @publication_handler
         detach_presence_handler(protocol)
+        @publication_generation += 1
         @publication_handler = nil
       end
 

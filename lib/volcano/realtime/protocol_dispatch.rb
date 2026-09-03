@@ -43,18 +43,23 @@ module Volcano
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
-      def dispatch_publication(push, enforce_limit: true)
+      def dispatch_publication(push, enforce_limit: true, registered_channel: nil)
         channel = push['channel'].to_s
         data = push.dig('pub', 'data')
         return unless data.is_a?(Hash)
 
         event = data['event']
-        registered_channel = matching_channel(@publication_handlers, channel)
+        registered_channel ||= matching_channel(@publication_handlers, channel)
         return unless registered_channel
-        return if enforce_limit && @callback_queue.size >= @max_callback_queue
+
+        return mark_publication_gap(registered_channel, push.fetch('pub')) if publication_queue_full?(enforce_limit)
 
         handlers = @publication_handlers.fetch(registered_channel).dup
-        @callback_queue.enqueue([handlers, event, data, registered_channel, push.fetch('pub')])
+        @callback_queue.enqueue([handlers, event, data, push.fetch('pub')])
+      end
+
+      def publication_queue_full?(enforce_limit)
+        enforce_limit && @callback_queue.size >= @max_callback_queue
       end
 
       def dispatch_presence(push, event)
@@ -89,9 +94,8 @@ module Volcano
 
       def dispatch_callbacks
         until @callback_stopping
-          handlers, event, data, channel, publication = @callback_queue.dequeue
+          handlers, event, data, publication = @callback_queue.dequeue
           dispatch_callback_delivery(handlers, event, data, publication)
-          remember_publication_position(channel, publication) if publication
           enqueue_pending_presence_resync
         end
       end

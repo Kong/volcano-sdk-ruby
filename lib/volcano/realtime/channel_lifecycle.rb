@@ -37,6 +37,8 @@ module Volcano
         remember_protocol_position(protocol)
         @subscription_desired = @subscribed = false
         end_postgres_delivery
+        detach_publication_handler(protocol)
+        @handler_registered = false
         invalidate_presence_subscription(protocol)
         clear_presence
       end
@@ -44,9 +46,9 @@ module Volcano
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch
         prepare_subscription(protocol, epoch)
-        @subscribed = true
         [protocol, epoch]
       rescue StandardError
+        @subscribed = false
         end_postgres_delivery
         invalidate_presence_subscription(protocol)
         raise
@@ -55,6 +57,7 @@ module Volcano
       def prepare_subscription(protocol, epoch)
         begin_postgres_delivery
         register_handlers(protocol, epoch)
+        @subscribed = true
         request_subscription(protocol)
         remember_protocol_position(protocol)
       end

@@ -3,7 +3,7 @@
 module Volcano
   class Realtime
     PostgresDeliveryRequest = Data.define(
-      :change, :database_name, :session_lineage, :subscription_epoch
+      :change, :database_name, :session_lineage, :subscription_epoch, :protocol, :publication
     )
     private_constant :PostgresDeliveryRequest
 
@@ -55,20 +55,28 @@ module Volcano
         worker.wait unless worker.equal?(Async::Task.current)
       end
 
-      def enqueue_postgres_delivery(change)
-        return unless @subscribed
+      def enqueue_postgres_delivery(change, protocol = nil, publication = nil)
+        return :rejected unless @subscribed
 
-        database_name = @realtime.__send__(:database_name)
-        fetch = fetch_postgres_change?(change, database_name)
-        request = PostgresDeliveryRequest.new(
-          change:, database_name: fetch ? database_name : nil,
-          session_lineage: @postgres_session_lineage,
-          subscription_epoch: @postgres_epoch
-        )
-        return report_postgres_queue_overflow if @postgres_queue.limited?
+        request = postgres_delivery_request(change, protocol, publication)
+        if @postgres_queue.limited?
+          report_postgres_queue_overflow
+          return :rejected
+        end
 
         start_postgres_worker
         @postgres_queue.enqueue(request)
+        :queued
+      end
+
+      def postgres_delivery_request(change, protocol, publication)
+        database_name = @realtime.__send__(:database_name)
+        fetch = fetch_postgres_change?(change, database_name)
+        PostgresDeliveryRequest.new(
+          change:, database_name: fetch ? database_name : nil,
+          session_lineage: @postgres_session_lineage,
+          subscription_epoch: @postgres_epoch, protocol:, publication:
+        )
       end
 
       def fetch_postgres_change?(change, database_name)

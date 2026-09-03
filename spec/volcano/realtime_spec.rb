@@ -2124,6 +2124,53 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'retains the position of publications returned by an initial subscription' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: {
+          'recoverable' => true,
+          'epoch' => 'epoch-1',
+          'offset' => 2,
+          'publications' => [
+            { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'retained' } }
+          ]
+        }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      received = Async::Queue.new
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq('retained')
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.dig('subscribe', 'epoch')).to eq('epoch-1')
+    expect(subscribe.dig('subscribe', 'offset')).to eq(2)
+  end
+
   it 'delivers recovered publications before live data batched with the subscribe reply' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new
@@ -2186,6 +2233,131 @@ RSpec.describe Volcano::Realtime do
     expect(received).to eq(%w[recovered-2 recovered-3 live-4])
   end
 
+  it 'routes recovered Postgres publications through the subscribed channel' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+      )
+      :defer
+    end
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      restored_socket.respond(
+        command.fetch('id'),
+        result: {
+          'recoverable' => true,
+          'epoch' => 'epoch-1',
+          'offset' => 2,
+          'recovered' => true,
+          'publications' => [
+            {
+              'offset' => 2,
+              'data' => {
+                'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+                'record' => { 'id' => 42 }, 'timestamp' => '2026-09-03T12:00:00Z'
+              }
+            }
+          ]
+        }
+      )
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      received = Async::Queue.new
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      change = task.with_timeout(0.2) { received.dequeue }
+      expect(change.record).to eq('id' => 42)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'does not advance recovery before asynchronous Postgres delivery completes' do
+    first_socket = FacadeSocket.new
+    recovering_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+      )
+      :defer
+    end
+    recovering_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      recovering_socket.respond(
+        command.fetch('id'),
+        result: {
+          'recoverable' => true,
+          'epoch' => 'epoch-1',
+          'offset' => 2,
+          'recovered' => true,
+          'publications' => [
+            {
+              'offset' => 2,
+              'data' => {
+                'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+                'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-03T12:00:00Z'
+              }
+            }
+          ]
+        }
+      )
+      :defer
+    end
+    sockets = [first_socket, recovering_socket, restored_socket]
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: transport,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { nil }
+      channel.subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) { transport.started.dequeue }
+      recovering_socket.fail_read(IOError.new('socket failed again'))
+      transport.release.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.dig('subscribe', 'offset')).to eq(1)
+  end
+
   it 'resubscribes from the last delivered position after explicit unsubscribe' do
     socket = FacadeSocket.new
     subscribe_count = 0
@@ -2224,6 +2396,76 @@ RSpec.describe Volcano::Realtime do
 
     subscribe = socket.commands.reverse.find { |command| command.key?('subscribe') }
     expect(subscribe.dig('subscribe', 'offset')).to eq(2)
+  end
+
+  it 'does not duplicate a queued publication across unsubscribe and recovery' do
+    socket = FacadeSocket.new
+    subscribe_count = 0
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        subscribe_count += 1
+        result = if subscribe_count == 1
+                   { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+                 else
+                   {
+                     'recoverable' => true,
+                     'epoch' => 'epoch-1',
+                     'offset' => 3,
+                     'recovered' => true,
+                     'publications' => [
+                       { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }
+                     ]
+                   }
+                 end
+        socket.respond(command.fetch('id'), result: result)
+      else
+        socket.respond(command.fetch('id'), result: {})
+      end
+      :defer
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { socket }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      started = Async::Queue.new
+      release = Async::Queue.new
+      received = Async::Queue.new
+      channel = client.realtime.channel('contract')
+      channel.on('message') do |message|
+        value = message.fetch('value')
+        if value == 2
+          started.enqueue(true)
+          release.dequeue
+        end
+        received.enqueue(value)
+      end
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 2 },
+        offset: 2
+      )
+      started.dequeue
+      socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 3 },
+        offset: 3
+      )
+      channel.unsubscribe
+      channel.subscribe
+      release.enqueue(true)
+
+      values = Array.new(2) { task.with_timeout(0.2) { received.dequeue } }
+      task.sleep(0.01)
+      expect(values).to eq([2, 3])
+      expect(received).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'does not advance recovery past a publication lost with its transport' do

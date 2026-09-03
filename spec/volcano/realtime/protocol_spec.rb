@@ -495,6 +495,49 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'does not advance a recovery position past a dropped live publication' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        result = { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 0 }
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      started = Async::Queue.new
+      release = Async::Queue.new
+      delivered = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        protocol.complete_publication('broadcast:contract', publication)
+        if data.fetch('value') == 1
+          started.enqueue(true)
+          release.dequeue
+        end
+        delivered.enqueue(data.fetch('value'))
+      end
+      protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+      frame = lambda do |offset|
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => { 'offset' => offset, 'data' => { 'event' => 'message', 'value' => offset } }
+          }
+        )
+      end
+
+      socket.receive(frame.call(1))
+      started.dequeue
+      socket.receive(frame.call(2), frame.call(3))
+      release.enqueue(true)
+      2.times { task.with_timeout(0.2) { delivered.dequeue } }
+      socket.receive(frame.call(4))
+      expect(task.with_timeout(0.2) { delivered.dequeue }).to eq(4)
+
+      expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 2)
+    ensure
+      protocol&.close
+    end.wait
+  end
+
   it 'closes the reader and socket when a callback closes the protocol' do
     Async do |task|
       socket = FakeSocket.new

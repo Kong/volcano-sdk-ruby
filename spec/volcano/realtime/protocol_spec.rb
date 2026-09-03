@@ -374,6 +374,92 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'does not advance past a dropped live publication' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        protocol.complete_publication('broadcast:contract', publication)
+        entered.enqueue(true) if data.fetch('value') == 1
+        release.dequeue if data.fetch('value') == 1
+        received.enqueue(data.fetch('value'))
+      end
+      protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+
+      publication = lambda do |offset|
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => { 'offset' => offset, 'data' => { 'event' => 'message', 'value' => offset } }
+          }
+        )
+      end
+      socket.receive(publication.call(1))
+      entered.dequeue
+      socket.receive(publication.call(2), publication.call(3))
+      release.enqueue(true)
+      expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([1, 2])
+
+      socket.receive(publication.call(4))
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq(4)
+      expect(protocol.position('broadcast:contract')).to eq(
+        epoch: 'epoch-1', offset: 2
+      )
+      protocol.close
+    end.wait
+  end
+
+  it 'delivers retained publications despite live callback queue pressure' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1',
+              'offset' => 2,
+              'publications' => [
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 1 } },
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } }
+              ]
+            }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        entered.enqueue(true) if data.fetch('value') == 1
+        release.dequeue if data.fetch('value') == 1
+        received.enqueue(data.fetch('value'))
+      end
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        entered.dequeue
+        release.enqueue(true)
+
+        expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([1, 2])
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   [
     [
       'a null retained-publication collection',

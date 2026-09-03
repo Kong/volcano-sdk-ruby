@@ -12,10 +12,13 @@ module Volcano
           return unless current
 
           position = publication_position(publication, current)
-          @stream_positions[channel] = position if position
+          return unless position
+          return if position_blocked_by_gap?(channel, position)
+
+          @stream_positions[channel] = position
         end
 
-        def drop_publication(_channel, _publication) = nil
+        def drop_publication(channel, publication) = mark_publication_gap(channel, publication)
 
         private
 
@@ -48,7 +51,9 @@ module Volcano
         end
 
         def dispatch_recovered_publication(channel, publication)
-          dispatch_publication({ 'channel' => channel, 'pub' => publication }, recovered: true)
+          dispatch_publication(
+            { 'channel' => channel, 'pub' => publication }, recovered: true, enforce_limit: false
+          )
         end
 
         def remember_subscription_position(channel, result)
@@ -60,6 +65,32 @@ module Volcano
           return unless publication.is_a?(Hash) && publication.key?('offset')
 
           immutable_position(publication.fetch('epoch', current.fetch(:epoch)), publication.fetch('offset'))
+        end
+
+        def mark_publication_gap(channel, publication)
+          current = @stream_positions[channel]
+          return unless current
+
+          gap = publication_position(publication, current)
+          return @position_gaps[channel] = true unless gap_for_current_epoch?(gap, current)
+
+          existing_gap = @position_gaps[channel]
+          return if existing_gap == true
+          return if existing_gap && existing_gap.fetch(:offset) <= gap.fetch(:offset)
+
+          @position_gaps[channel] = gap
+        end
+
+        def gap_for_current_epoch?(gap, current)
+          gap && gap.fetch(:epoch) == current.fetch(:epoch)
+        end
+
+        def position_blocked_by_gap?(channel, position)
+          gap = @position_gaps[channel]
+          return true if gap == true
+          return false unless gap
+
+          gap.fetch(:epoch) == position.fetch(:epoch) && position.fetch(:offset) >= gap.fetch(:offset)
         end
 
         def immutable_position(epoch, offset)

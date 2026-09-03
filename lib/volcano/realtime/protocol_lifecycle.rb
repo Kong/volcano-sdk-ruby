@@ -56,7 +56,7 @@ module Volcano
           @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
           @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
           @pending_presence_resyncs = {}
-          @callback_queue = Async::Queue.new
+          @callback_queue = Async::LimitedQueue.new(@max_callback_queue)
         end
 
         def reject_pending(error)

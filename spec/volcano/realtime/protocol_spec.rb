@@ -420,6 +420,33 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'does not advance a recovery cursor across an epoch gap' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.drop_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 1)
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-2', 'offset' => 2)
+
+        expect(protocol.position('broadcast:contract')).to eq(
+          epoch: 'epoch-1', offset: 0
+        )
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'delivers retained publications despite live callback queue pressure' do
     Async do |task|
       socket = FakeSocket.new
@@ -454,6 +481,70 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         release.enqueue(true)
 
         expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([1, 2])
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
+  it 'backpressures retained publications when the callback queue is full' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        next unless command.key?('subscribe')
+
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1',
+              'offset' => 2,
+              'publications' => [
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 'recovered-1' } },
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'recovered-2' } }
+              ]
+            }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      entered = Async::Queue.new
+      release = Async::Queue.new
+      received = Async::Queue.new
+      subscription_returned = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        value = data.fetch('value')
+        entered.enqueue(true) if value == 'live-1'
+        release.dequeue if value == 'live-1'
+        received.enqueue(value)
+      end
+
+      publication = lambda do |value|
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:contract',
+            'pub' => { 'data' => { 'event' => 'message', 'value' => value } }
+          }
+        )
+      end
+      socket.receive(publication.call('live-1'))
+      entered.dequeue
+      socket.receive(publication.call('live-2'))
+      subscription = task.async do
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        subscription_returned.enqueue(true)
+      end
+
+      begin
+        expect do
+          task.with_timeout(0.02) { subscription_returned.dequeue }
+        end.to raise_error(Async::TimeoutError)
+
+        release.enqueue(true)
+        task.with_timeout(0.2) { subscription.wait }
+        expect(task.with_timeout(0.2) { Array.new(4) { received.dequeue } }).to eq(
+          %w[live-1 live-2 recovered-1 recovered-2]
+        )
       ensure
         protocol.close
       end

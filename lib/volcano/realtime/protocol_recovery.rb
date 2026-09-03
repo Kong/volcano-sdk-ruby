@@ -13,6 +13,7 @@ module Volcano
 
           position = publication_position(publication, current)
           return unless position
+          return unless position.fetch(:epoch) == current.fetch(:epoch)
           return if position_blocked_by_gap?(channel, position)
 
           @stream_positions[channel] = position

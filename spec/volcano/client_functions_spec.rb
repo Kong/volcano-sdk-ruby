@@ -104,12 +104,13 @@ RSpec.describe Volcano::Client do
     expect(calls).to be_empty
   end
 
-  it 'uses the anon key without a session or service key' do
-    public_client = described_class.new(anon_key: 'anon-key', _transport: transport)
+  it 'uses the local anon key without a session or service key' do
+    anon_key = 'ak-0000000000000000000000000000000000000000'
+    public_client = described_class.new(anon_key: anon_key, _transport: transport)
 
     public_client.functions.invoke('public-health')
 
     expect(calls.map { |_, arguments| arguments.fetch(:authorization) })
-      .to eq(%w[anon-key anon-key])
+      .to eq([anon_key, anon_key])
   end
 end

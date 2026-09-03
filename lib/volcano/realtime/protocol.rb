@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require 'json'
+require_relative 'protocol_commands'
 require_relative 'protocol_dispatch'
 require_relative 'protocol_lifecycle'
+require_relative 'protocol_recovery'
 
 module Volcano
   class Realtime
@@ -23,30 +25,18 @@ module Volcano
 
     # Implements the Centrifuge request and publication protocol.
     class Protocol
+      extend ProtocolCommands
       include ProtocolDispatch
       include Lifecycle
+      include ProtocolRecovery
 
       Failure = Data.define(:error)
+      Pending = Data.define(:queue, :on_reply)
       Events = Data.define(:on_close, :on_error, :on_failure)
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
       DEFAULT_MAX_CALLBACK_QUEUE = 128
       LIMIT_KEYS = %i[request_timeout max_pending max_callback_queue].freeze
-
-      def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
-
-      def self.subscribe(id:, channel:, recoverable: false, join_leave: false)
-        options = { 'channel' => channel }
-        options['recoverable'] = true if recoverable
-        options['join_leave'] = true if join_leave
-        { 'id' => id, 'subscribe' => options }
-      end
-
-      def self.publish(id:, channel:, data:) = { 'id' => id, 'publish' => { 'channel' => channel, 'data' => data } }
-
-      def self.unsubscribe(id:, channel:) = { 'id' => id, 'unsubscribe' => { 'channel' => channel } }
-
-      def self.presence(id:, channel:) = { 'id' => id, 'presence' => { 'channel' => channel } }
 
       def initialize(
         socket:,
@@ -71,19 +61,12 @@ module Volcano
         result
       end
 
-      def subscribe(channel:, recoverable: false, join_leave: false)
+      def subscribe(channel:, recovery: nil, recoverable: false, join_leave: false)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = request do |id|
-            self.class.subscribe(
-              id: id,
-              channel: channel,
-              recoverable: recoverable,
-              join_leave: join_leave
-            )
-          end
+          result = perform_subscribe(channel, recovery, recoverable, join_leave)
           ensure_open!
           @subscriptions.add(channel)
           result
@@ -113,6 +96,21 @@ module Volcano
       end
 
       private
+
+      def perform_subscribe(channel, recovery, recoverable, join_leave)
+        remember_requested_position(channel, recovery)
+        request(on_reply: subscription_reply_handler(channel)) do |id|
+          subscription_command(id, channel, recovery, recoverable, join_leave)
+        end
+      end
+
+      def subscription_reply_handler(channel)
+        ->(result) { process_subscription_result(channel, result) }
+      end
+
+      def subscription_command(id, channel, recovery, recoverable, join_leave)
+        self.class.subscribe(id:, channel:, recovery:, recoverable:, join_leave:)
+      end
 
       def load_async
         require 'async'

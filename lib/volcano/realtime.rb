@@ -170,6 +170,7 @@ module Volcano
         @protocol_provider = protocol_provider
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
+        @stream_position = {}.freeze
         @lifecycle_lock = nil
         initialize_callback_dispatch
         initialize_presence(type)

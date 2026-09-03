@@ -32,8 +32,22 @@ module Volcano
       def register_publication_handler(protocol)
         return if @handler_registered
 
-        @publication_handler = protocol.on_publication(@name) { |event, data| deliver_publication(event, data) }
+        @publication_handler = protocol.on_publication(@name) do |event, data, publication|
+          deliver_publication(event, data)
+          remember_delivery_position(publication)
+        end
         @handler_registered = true
+      end
+
+      def remember_delivery_position(publication)
+        with_lifecycle_lock do
+          current = @stream_position
+          offset = publication['offset']
+          next unless current.key?(:epoch) && offset.is_a?(Integer) && !offset.negative?
+
+          epoch = publication.fetch('epoch', current.fetch(:epoch))
+          @stream_position = { epoch: epoch.dup.freeze, offset: offset }.freeze if epoch.is_a?(String)
+        end
       end
 
       def deliver_publication(event, data)

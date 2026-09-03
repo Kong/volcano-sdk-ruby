@@ -101,6 +101,26 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     )
   end
 
+  it 'builds a recovery subscription command from a stream position' do
+    expect(
+      described_class.subscribe(
+        id: 1,
+        channel: 'broadcast:contract',
+        recovery: { epoch: 'epoch-1', offset: 42 }
+      )
+    ).to eq(
+      'id' => 1,
+      'subscribe' => {
+        'channel' => 'broadcast:contract',
+        'recover' => true,
+        'epoch' => 'epoch-1',
+        'offset' => 42,
+        'positioned' => true,
+        'recoverable' => true
+      }
+    )
+  end
+
   it 'returns presence command results' do
     Async do |task|
       socket = FakeSocket.new
@@ -293,6 +313,38 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         ['message', { 'event' => 'message', 'value' => 'contract' }]
       )
       protocol.close
+    end.wait
+  end
+
+  it 'does not drop recovered publications at the live callback queue limit' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        result = {
+          'recoverable' => true,
+          'epoch' => 'epoch-1',
+          'offset' => 2,
+          'recovered' => true,
+          'publications' => [
+            { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 'first' } },
+            { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'second' } }
+          ]
+        }
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      publications = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data|
+        publications.enqueue(data.fetch('value'))
+      end
+
+      protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+
+      expect(task.with_timeout(0.2) { [publications.dequeue, publications.dequeue] }).to eq(
+        %w[first second]
+      )
+    ensure
+      protocol&.close
     end.wait
   end
 

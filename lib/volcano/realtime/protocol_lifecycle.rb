@@ -41,6 +41,7 @@ module Volcano
           @pending = {}
           initialize_locks
           initialize_handlers
+          initialize_recovery
           @callback_stopping = @connected = @closed = false
           @subscriptions = Set.new
           @closed_error = nil
@@ -58,7 +59,9 @@ module Volcano
           @callback_queue = Async::Queue.new
         end
 
-        def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
+        def reject_pending(error)
+          @pending.each_value { |pending| pending.queue.enqueue(Failure.new(error: error)) }
+        end
 
         def close_socket
           @socket.close

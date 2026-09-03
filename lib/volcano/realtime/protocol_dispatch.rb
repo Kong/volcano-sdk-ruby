@@ -27,10 +27,12 @@ module Volcano
       end
 
       def dispatch_reply(frame)
-        reply_queue = @pending[frame.fetch('id')]
-        return unless reply_queue
+        pending = @pending[frame.fetch('id')]
+        return unless pending
 
-        reply_queue.enqueue(reply_value(frame))
+        value = reply_value(frame)
+        pending.on_reply&.call(value) unless value.is_a?(Protocol::Failure)
+        pending.queue.enqueue(value)
       end
 
       def reply_value(frame)
@@ -41,7 +43,7 @@ module Volcano
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
-      def dispatch_publication(push)
+      def dispatch_publication(push, enforce_limit: true)
         channel = push['channel'].to_s
         data = push.dig('pub', 'data')
         return unless data.is_a?(Hash)
@@ -49,9 +51,10 @@ module Volcano
         event = data['event']
         registered_channel = matching_channel(@publication_handlers, channel)
         return unless registered_channel
-        return if @callback_queue.size >= @max_callback_queue
+        return if enforce_limit && @callback_queue.size >= @max_callback_queue
 
-        @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
+        handlers = @publication_handlers.fetch(registered_channel).dup
+        @callback_queue.enqueue([handlers, event, data, registered_channel, push.fetch('pub')])
       end
 
       def dispatch_presence(push, event)
@@ -86,17 +89,18 @@ module Volcano
 
       def dispatch_callbacks
         until @callback_stopping
-          handlers, event, data = @callback_queue.dequeue
-          dispatch_callback_delivery(handlers, event, data)
+          handlers, event, data, channel, publication = @callback_queue.dequeue
+          dispatch_callback_delivery(handlers, event, data, publication)
+          remember_publication_position(channel, publication) if publication
           enqueue_pending_presence_resync
         end
       end
 
-      def dispatch_callback_delivery(handlers, event, data)
+      def dispatch_callback_delivery(handlers, event, data, publication = nil)
         handlers.each do |handler|
           break if @callback_stopping
 
-          handler.call(event, data)
+          handler.call(event, data, publication)
         rescue StandardError
           next
         end

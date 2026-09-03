@@ -84,6 +84,7 @@ module Volcano
               join_leave: join_leave
             )
           end
+          ensure_open!
           @subscriptions.add(channel)
           result
         end

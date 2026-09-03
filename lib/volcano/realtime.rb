@@ -3,6 +3,7 @@
 require 'uri'
 require_relative 'realtime/connection_callbacks'
 require_relative 'realtime/connection'
+require_relative 'realtime/reconnect'
 require_relative 'realtime/lifecycle'
 require_relative 'realtime/channel_lifecycle'
 require_relative 'realtime/presence_state'
@@ -21,6 +22,7 @@ module Volcano
     include Lifecycle
     include ConnectionCallbacks
     include Connection
+    include Reconnect
     include PostgresDatabase
 
     ConnectContext = Data.define(:client)
@@ -54,10 +56,11 @@ module Volcano
 
     CHANNEL_TYPES = %i[broadcast presence postgres].freeze
 
-    def initialize(client, api_url:, socket_factory: nil)
+    def initialize(client, api_url:, socket_factory: nil, reconnect_delay: nil)
       @client = client
       @api_url = api_url
       @socket_factory = socket_factory || method(:open_socket)
+      @reconnect_delay = reconnect_delay || method(:default_reconnect_delay)
       initialize_realtime_state
       initialize_postgres_database
     end
@@ -70,6 +73,7 @@ module Volcano
       @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
       @next_connection_callback_id = 0
       @protocol_user_id = nil
+      @reconnect_task = nil
       @closed = false
     end
     private :initialize_realtime_state
@@ -165,7 +169,7 @@ module Volcano
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
-        @handler_registered = @subscribed = @closed = false
+        @handler_registered = @subscribed = @subscription_desired = @closed = false
         @lifecycle_lock = nil
         initialize_callback_dispatch
         initialize_presence(type)
@@ -173,13 +177,7 @@ module Volcano
       end
 
       def subscribe
-        protocol, epoch = with_lifecycle_lock do
-          ensure_open!
-          raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
-
-          protocol = @protocol_provider.call
-          subscribe_protocol(protocol)
-        end
+        protocol, epoch = with_lifecycle_lock { subscribe_with_intent }
         sync_presence(protocol, epoch)
         nil
       end
@@ -202,6 +200,20 @@ module Volcano
         nil
       end
 
+      def subscription_desired? = @subscription_desired && !@closed
+
+      def restoration_needed? = subscription_desired? && !@subscribed
+
+      def restore_subscription(protocol)
+        state = with_lifecycle_lock do
+          next unless restoration_needed?
+
+          subscribe_protocol(protocol)
+        end
+        sync_presence(*state) if state
+        nil
+      end
+
       def remove
         with_lifecycle_lock do
           ensure_open!
@@ -213,6 +225,18 @@ module Volcano
       private :remove
 
       private
+
+      def subscribe_with_intent
+        ensure_open!
+        raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscription_desired
+
+        @subscription_desired = true
+        protocol = @protocol_provider.call
+        subscribe_protocol(protocol)
+      rescue StandardError
+        @subscription_desired = false unless protocol && !protocol.connected?
+        raise
+      end
 
       def with_lifecycle_lock(&)
         require 'async/semaphore'

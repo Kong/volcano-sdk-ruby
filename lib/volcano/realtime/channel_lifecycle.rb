@@ -6,7 +6,7 @@ module Volcano
     module ChannelLifecycle
       def mark_closed
         @closed = true
-        @subscribed = false
+        @subscription_desired = @subscribed = false
         end_postgres_delivery
         reset_presence
       end
@@ -23,11 +23,17 @@ module Volcano
 
       def unsubscribe_protocol
         ensure_open!
-        return unless @subscribed
+        return clear_subscription_intent unless @subscribed
 
         protocol = @protocol_provider.call
         protocol.unsubscribe(channel: @name)
-        @subscribed = false
+        complete_unsubscribe(protocol)
+      end
+
+      def clear_subscription_intent = @subscription_desired = false
+
+      def complete_unsubscribe(protocol)
+        @subscription_desired = @subscribed = false
         end_postgres_delivery
         invalidate_presence_subscription(protocol)
         clear_presence
@@ -56,7 +62,7 @@ module Volcano
 
       def mark_removed
         @callbacks.each_value(&:clear)
-        @handler_registered = @subscribed = false
+        @handler_registered = @subscription_desired = @subscribed = false
         end_postgres_delivery
         reset_presence
         @closed = true

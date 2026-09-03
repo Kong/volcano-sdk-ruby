@@ -695,7 +695,10 @@ does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
 same `type:` to `remove_channel` for every non-broadcast channel. Unexpected
 transport loss reconnects with bounded exponential backoff and restores active
-subscriptions. Publications sent during the outage are not recovered yet.
+subscriptions. Broadcast channels recover retained publications only for this
+client lifetime and authenticated-user lineage. Recovery state is not persisted
+across processes. Postgres channels do not recover missed publications yet;
+presence channels rebuild their current snapshot.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.

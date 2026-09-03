@@ -43,7 +43,7 @@ module Volcano
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
-      def dispatch_publication(push, enforce_limit: true, registered_channel: nil)
+      def dispatch_publication(push, enforce_limit: true, registered_channel: nil, recovered: false)
         channel = push['channel'].to_s
         data = push.dig('pub', 'data')
         return unless data.is_a?(Hash)
@@ -55,7 +55,7 @@ module Volcano
         return mark_publication_gap(registered_channel, push.fetch('pub')) if publication_queue_full?(enforce_limit)
 
         handlers = @publication_handlers.fetch(registered_channel).dup
-        @callback_queue.enqueue([handlers, event, data, push.fetch('pub')])
+        @callback_queue.enqueue([handlers, event, data, push.fetch('pub'), recovered])
       end
 
       def publication_queue_full?(enforce_limit)
@@ -94,17 +94,17 @@ module Volcano
 
       def dispatch_callbacks
         until @callback_stopping
-          handlers, event, data, publication = @callback_queue.dequeue
-          dispatch_callback_delivery(handlers, event, data, publication)
+          handlers, event, data, publication, recovered = @callback_queue.dequeue
+          dispatch_callback_delivery(handlers, event, data, publication, recovered: recovered || false)
           enqueue_pending_presence_resync
         end
       end
 
-      def dispatch_callback_delivery(handlers, event, data, publication = nil)
+      def dispatch_callback_delivery(handlers, event, data, publication = nil, recovered: false)
         handlers.each do |handler|
           break if @callback_stopping
 
-          handler.call(event, data, publication)
+          handler.call(event, data, publication, recovered:)
         rescue StandardError
           next
         end

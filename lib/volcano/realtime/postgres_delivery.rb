@@ -55,18 +55,23 @@ module Volcano
         worker.wait unless worker.equal?(Async::Task.current)
       end
 
-      def enqueue_postgres_delivery(change, protocol = nil, publication = nil)
+      def enqueue_postgres_delivery(change, protocol = nil, publication = nil, recovered: false)
         return :rejected unless @subscribed
 
         request = postgres_delivery_request(change, protocol, publication)
-        if @postgres_queue.limited?
-          report_postgres_queue_overflow
-          return :rejected
-        end
+        capacity = postgres_capacity(recovered)
+        return capacity if capacity
 
         start_postgres_worker
         @postgres_queue.enqueue(request)
         :queued
+      end
+
+      def postgres_capacity(recovered)
+        return unless @postgres_queue.limited? && !recovered
+
+        report_postgres_queue_overflow
+        :rejected
       end
 
       def postgres_delivery_request(change, protocol, publication)

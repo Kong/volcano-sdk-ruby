@@ -46,7 +46,8 @@ module Volcano
           dispatch_publication(
             { 'channel' => channel, 'pub' => publication },
             enforce_limit: false,
-            registered_channel: channel
+            registered_channel: channel,
+            recovered: true
           )
         end
 

@@ -34,10 +34,10 @@ module Volcano
         return if @handler_registered
 
         generation = @publication_generation += 1
-        @publication_handler = protocol.on_publication(@name) do |event, data, publication|
+        @publication_handler = protocol.on_publication(@name) do |event, data, publication, recovered:|
           next unless generation == @publication_generation
 
-          deliver_publication(event, data, protocol, publication)
+          deliver_publication(event, data, protocol, publication, recovered:)
         end
         @handler_registered = true
       end
@@ -45,17 +45,15 @@ module Volcano
       def complete_publication_delivery(protocol, publication)
         return unless protocol && publication
 
-        position = protocol.complete_publication(@name, publication)
-        return unless position
-
         with_lifecycle_lock do
-          @stream_position = position
+          position = protocol.complete_publication(@name, publication)
+          @stream_position = position if position
         end
       end
 
-      def deliver_publication(event, data, protocol, publication)
+      def deliver_publication(event, data, protocol, publication, recovered:)
         if postgres?
-          dispatch_postgres_change(data, protocol, publication)
+          dispatch_postgres_change(data, protocol, publication, recovered:)
         else
           complete_publication_delivery(protocol, publication)
           emit('message', data) if event == 'message'

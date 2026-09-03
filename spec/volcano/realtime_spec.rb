@@ -2292,6 +2292,54 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'applies backpressure instead of dropping a recovered Postgres batch' do
+    delivery = described_class.const_get(:PostgresDelivery, false)
+    stub_const("#{delivery.name}::QUEUE_LIMIT", 1)
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      publications = (1..3).map do |offset|
+        {
+          'offset' => offset,
+          'data' => {
+            'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+            'id' => offset, 'mode' => 'lightweight', 'timestamp' => '2026-09-03T12:00:00Z'
+          }
+        }
+      end
+      socket.respond(
+        command.fetch('id'),
+        result: {
+          'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 3,
+          'publications' => publications
+        }
+      )
+      :defer
+    end
+    transport = BlockingRealtimeDatabaseTransport.new
+    client = realtime_client(socket, transport: transport)
+
+    Async do |task|
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel(
+        'public:messages', type: :postgres, fetch_max_batch_size: 1
+      )
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') do |change|
+        received.enqueue(change)
+      end
+      channel.subscribe
+      task.with_timeout(0.2) { transport.started.dequeue }
+      3.times { transport.release.enqueue(true) }
+
+      changes = Array.new(3) { task.with_timeout(0.5) { received.dequeue } }
+      expect(changes.map(&:id)).to eq([1, 2, 3])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'does not advance recovery before asynchronous Postgres delivery completes' do
     first_socket = FacadeSocket.new
     recovering_socket = FacadeSocket.new
@@ -2350,6 +2398,60 @@ RSpec.describe Volcano::Realtime do
       task.with_timeout(0.2) do
         task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
       end
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(subscribe.dig('subscribe', 'offset')).to eq(1)
+  end
+
+  it 'does not checkpoint a publication blocked by another lifecycle operation' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    publish_started = Async::Queue.new
+    first_socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        first_socket.respond(
+          command.fetch('id'),
+          result: { 'recoverable' => true, 'epoch' => 'epoch-1', 'offset' => 1 }
+        )
+        :defer
+      elsif command.key?('publish')
+        publish_started.enqueue(true)
+        :defer
+      end
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { nil }
+      channel.subscribe
+      send_task = task.async do
+        channel.send(event: 'outgoing')
+      rescue Volcano::Realtime::ClosedError
+        nil
+      end
+      task.with_timeout(0.2) { publish_started.dequeue }
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'blocked' },
+        offset: 2
+      )
+      task.yield
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      send_task.wait
     ensure
       client.realtime.disconnect
     end.wait

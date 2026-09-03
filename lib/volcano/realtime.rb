@@ -4,9 +4,14 @@ require 'uri'
 require_relative 'realtime/connection_callbacks'
 require_relative 'realtime/connection'
 require_relative 'realtime/lifecycle'
+require_relative 'realtime/channel_lifecycle'
 require_relative 'realtime/presence_state'
 require_relative 'realtime/presence'
+require_relative 'realtime/postgres_database'
+require_relative 'realtime/blocking_call'
 require_relative 'realtime/postgres_changes'
+require_relative 'realtime/postgres_expansion'
+require_relative 'realtime/postgres_delivery'
 require_relative 'realtime/channel_callbacks'
 
 module Volcano
@@ -15,6 +20,7 @@ module Volcano
     include Lifecycle
     include ConnectionCallbacks
     include Connection
+    include PostgresDatabase
 
     ConnectContext = Data.define(:client)
     DisconnectContext = Data.define(:code, :reason)
@@ -51,26 +57,31 @@ module Volcano
       @client = client
       @api_url = api_url
       @socket_factory = socket_factory || method(:open_socket)
+      initialize_realtime_state
+      initialize_postgres_database
+    end
+
+    def initialize_realtime_state
       @protocol = nil
       @protocol_lock = nil
       @channel_lock = nil
       @channels = {}
       @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
       @next_connection_callback_id = 0
+      @protocol_user_id = nil
       @closed = false
     end
+    private :initialize_realtime_state
 
-    def channel(name, type: :broadcast)
+    def channel(name, type: :broadcast, auto_fetch: true)
       type = normalize_channel_type(type)
       channel_lock.acquire do
         ensure_open!
         channel_name = "#{type}:#{name}"
-        @channels[channel_name] ||= Channel.new(
-          self,
-          method(:protocol),
-          channel_name,
-          type
-        )
+        channel = @channels[channel_name]
+        next cached_channel(channel, auto_fetch) if channel
+
+        @channels[channel_name] = build_channel(channel_name, type, auto_fetch)
       end
     end
 
@@ -93,27 +104,11 @@ module Volcano
       raise public_error(e), cause: nil
     end
 
-    def close_protocol
-      return nil if @closed
-
-      @closed = true
-      begin
-        @manual_disconnect = true
-        @protocol&.close
-      ensure
-        @manual_disconnect = false
-        @channels.each_value(&:mark_closed)
-      end
-      nil
-    end
-
     def ensure_open!
       raise ClosedError, 'realtime connection closed' if @closed
 
       self
     end
-
-    private :close_protocol
 
     private
 
@@ -125,6 +120,15 @@ module Volcano
     end
 
     def report_channel_error(error) = protocol_error(public_error(error))
+
+    def cached_channel(channel, auto_fetch)
+      channel.__send__(:ensure_auto_fetch!, auto_fetch)
+      channel
+    end
+
+    def build_channel(name, type, auto_fetch)
+      Channel.new(self, method(:protocol), name, type, auto_fetch:)
+    end
 
     def protocol_lock
       require 'async/semaphore'
@@ -138,14 +142,17 @@ module Volcano
 
     # Represents one realtime broadcast channel.
     class Channel
+      include ChannelLifecycle
       include PresenceState
       include Presence
       include PostgresChanges
+      include PostgresExpansion
+      include PostgresDelivery
       include ChannelCallbacks
 
       attr_reader :name
 
-      def initialize(realtime, protocol_provider, name, type)
+      def initialize(realtime, protocol_provider, name, type, auto_fetch:)
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
@@ -153,6 +160,7 @@ module Volcano
         @lifecycle_lock = nil
         initialize_callback_dispatch
         initialize_presence(type)
+        initialize_postgres_delivery(auto_fetch)
       end
 
       def subscribe
@@ -195,57 +203,7 @@ module Volcano
       end
       private :remove
 
-      def mark_closed
-        @closed = true
-        @subscribed = false
-        reset_presence
-      end
-
-      def protocol_lost(protocol)
-        @subscribed = false
-        detach_publication_handler(protocol)
-        @handler_registered = false
-        reset_presence
-      end
-
       private
-
-      def unsubscribe_protocol
-        ensure_open!
-        return unless @subscribed
-
-        protocol = @protocol_provider.call
-        protocol.unsubscribe(channel: @name)
-        @subscribed = false
-        invalidate_presence_subscription(protocol)
-        clear_presence
-      end
-
-      def subscribe_protocol(protocol)
-        epoch = next_presence_epoch
-        register_handlers(protocol, epoch)
-        protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
-        @subscribed = true
-        [protocol, epoch]
-      rescue StandardError
-        invalidate_presence_subscription(protocol)
-        raise
-      end
-
-      def detach_from_protocol
-        return unless @subscribed || @publication_handler
-
-        protocol = @protocol_provider.call
-        protocol.unsubscribe(channel: @name) if @subscribed && protocol.connected?
-        detach_publication_handler(protocol)
-      end
-
-      def mark_removed
-        @callbacks.each_value(&:clear)
-        @handler_registered = @subscribed = false
-        reset_presence
-        @closed = true
-      end
 
       def with_lifecycle_lock(&)
         require 'async/semaphore'

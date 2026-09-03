@@ -8,14 +8,53 @@ module Volcano
 
       def connect_protocol
         @protocol_error_reported = false
+        session_lineage = active_session_lineage
         socket = @socket_factory.call(address)
+        session = session_for_lineage(session_lineage)
         protocol = build_protocol(socket)
-        result = protocol.connect(token: @client.session_token)
-        @protocol = protocol
-        protocol_connected(result)
-        protocol
+        result = protocol.connect(token: session.access_token)
+        session = session_for_lineage(session_lineage)
+        activate_protocol(protocol, session, result)
       rescue StandardError => e
         handle_connection_failure(socket, e)
+      end
+
+      def active_session_lineage
+        _, lineage, session = @client.capture_session_binding
+        return lineage if session
+
+        raise Error::AuthenticationError, 'No active session'
+      end
+
+      def session_for_lineage(expected_lineage)
+        _, lineage, session = @client.capture_session_binding
+        return session if session && lineage == expected_lineage
+
+        raise Error::SessionChangedError
+      end
+
+      def activate_protocol(protocol, session, result)
+        @protocol = protocol
+        @protocol_user_id = session.user_id
+        protocol_connected(result)
+        protocol
+      end
+
+      def close_protocol
+        return nil if @closed
+
+        @closed = true
+        close_connected_protocol
+        nil
+      end
+
+      def close_connected_protocol
+        @manual_disconnect = true
+        @protocol&.close
+      ensure
+        @manual_disconnect = false
+        @channels.each_value(&:mark_closed)
+        @protocol_user_id = nil
       end
 
       def handle_connection_failure(socket, error)

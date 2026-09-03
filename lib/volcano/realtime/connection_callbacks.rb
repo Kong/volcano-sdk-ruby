@@ -115,6 +115,7 @@ module Volcano
       def reset_after_protocol_loss
         protocol = @protocol
         @protocol = nil
+        @protocol_user_id = nil
         @channels.each_value { |channel| channel.protocol_lost(protocol) } if protocol
       end
     end

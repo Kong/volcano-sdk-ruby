@@ -74,15 +74,22 @@ module Volcano
     end
     private :initialize_realtime_state
 
-    def channel(name, type: :broadcast, auto_fetch: true)
+    def channel(
+      name, type: :broadcast, auto_fetch: true,
+      fetch_batch_window_ms: 20, fetch_max_batch_size: 50
+    )
       type = normalize_channel_type(type)
+      batch_config = PostgresBatchConfig.new(
+        auto_fetch:, batch_window_ms: fetch_batch_window_ms,
+        max_batch_size: fetch_max_batch_size
+      )
       channel_lock.acquire do
         ensure_open!
         channel_name = "#{type}:#{name}"
         channel = @channels[channel_name]
-        next cached_channel(channel, auto_fetch) if channel
+        next cached_channel(channel, batch_config) if channel
 
-        @channels[channel_name] = build_channel(channel_name, type, auto_fetch)
+        @channels[channel_name] = build_channel(channel_name, type, batch_config)
       end
     end
 
@@ -122,13 +129,13 @@ module Volcano
 
     def report_channel_error(error) = protocol_error(public_error(error))
 
-    def cached_channel(channel, auto_fetch)
-      channel.__send__(:ensure_auto_fetch!, auto_fetch)
+    def cached_channel(channel, batch_config)
+      channel.__send__(:ensure_fetch_config!, batch_config)
       channel
     end
 
-    def build_channel(name, type, auto_fetch)
-      Channel.new(self, method(:protocol), name, type, auto_fetch:)
+    def build_channel(name, type, batch_config)
+      Channel.new(self, method(:protocol), name, type, batch_config:)
     end
 
     def protocol_lock
@@ -154,7 +161,7 @@ module Volcano
 
       attr_reader :name
 
-      def initialize(realtime, protocol_provider, name, type, auto_fetch:)
+      def initialize(realtime, protocol_provider, name, type, batch_config:)
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
@@ -162,7 +169,7 @@ module Volcano
         @lifecycle_lock = nil
         initialize_callback_dispatch
         initialize_presence(type)
-        initialize_postgres_delivery(auto_fetch)
+        initialize_postgres_delivery(batch_config)
       end
 
       def subscribe

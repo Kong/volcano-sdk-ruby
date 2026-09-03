@@ -669,7 +669,9 @@ ordered, including repeated notifications for the same row. DELETE notifications
 are expanded locally from `old_record` or `id`. If a lookup fails, the error
 callback runs and the original lightweight change is delivered. Use
 `auto_fetch: false` when creating the channel to receive lightweight
-notifications without database requests.
+notifications without database requests. Set `fetch_batch_window_ms:` and
+`fetch_max_batch_size:` on the channel to override the batching defaults. Both
+values must be positive integers, and the maximum batch size cannot exceed 128.
 
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared

@@ -2,25 +2,37 @@
 
 module Volcano
   class Realtime
+    PostgresBatchConfig = Data.define(
+      :auto_fetch, :batch_window_ms, :max_batch_size
+    ) do
+      def initialize(auto_fetch:, batch_window_ms:, max_batch_size:)
+        unless batch_window_ms.is_a?(Integer) && batch_window_ms.positive?
+          raise ArgumentError, 'fetch_batch_window_ms must be a positive integer'
+        end
+        unless max_batch_size.is_a?(Integer) && max_batch_size.between?(1, 128)
+          raise ArgumentError, 'fetch_max_batch_size must be between 1 and 128'
+        end
+
+        super
+      end
+    end
+    private_constant :PostgresBatchConfig
+
     # Collects compatible row lookups and preserves their callback order.
     module PostgresBatch
-      BATCH_LIMIT = 50
-      BATCH_WINDOW = 0.02
-      private_constant :BATCH_LIMIT, :BATCH_WINDOW
-
       private
 
       def collect_postgres_batch(first)
         return [[first], nil] unless first.database_name
 
-        deadline = monotonic_time + BATCH_WINDOW
+        deadline = monotonic_time + (@postgres_batch_config.batch_window_ms / 1000.0)
         requests = [first]
         pending = collect_compatible_requests(requests, deadline)
         [requests, pending]
       end
 
       def collect_compatible_requests(requests, deadline)
-        while requests.length < BATCH_LIMIT
+        while requests.length < @postgres_batch_config.max_batch_size
           request = dequeue_postgres_before(deadline)
           return unless request
           return request unless compatible_postgres_request?(requests.first, request)

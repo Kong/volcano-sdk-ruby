@@ -15,9 +15,9 @@ module Volcano
 
       private
 
-      def initialize_postgres_delivery(auto_fetch)
+      def initialize_postgres_delivery(batch_config)
         require 'async/queue'
-        @auto_fetch = auto_fetch
+        @postgres_batch_config = batch_config
         @postgres_filters = {}
         @postgres_queue = Async::LimitedQueue.new(QUEUE_LIMIT)
         @postgres_worker = nil
@@ -25,10 +25,13 @@ module Volcano
         @postgres_session_lineage = 0
       end
 
-      def ensure_auto_fetch!(auto_fetch)
-        return if @auto_fetch == auto_fetch
+      def ensure_fetch_config!(batch_config)
+        return if @postgres_batch_config == batch_config
+        if @postgres_batch_config.auto_fetch != batch_config.auto_fetch
+          raise ArgumentError, "conflicting auto_fetch option for #{@name}"
+        end
 
-        raise ArgumentError, "conflicting auto_fetch option for #{@name}"
+        raise ArgumentError, "conflicting fetch options for #{@name}"
       end
 
       def begin_postgres_delivery
@@ -69,8 +72,8 @@ module Volcano
       end
 
       def fetch_postgres_change?(change, database_name)
-        change.mode == 'lightweight' && change.type != 'DELETE' && @auto_fetch &&
-          database_name
+        change.mode == 'lightweight' && change.type != 'DELETE' &&
+          @postgres_batch_config.auto_fetch && database_name
       end
 
       def report_postgres_queue_overflow

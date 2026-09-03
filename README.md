@@ -477,6 +477,19 @@ deleted_rows = client.database("main")
 
 Updates and deletes require at least one filter; Volcano rejects filterless mutations.
 
+Use `database_connection_string` inside a Volcano function to select database
+access without changing the advertised `DATABASE_URL` target:
+
+```ruby
+connection_string = Volcano.database_connection_string(
+  ENV.fetch("DATABASE_URL"),
+  user_id: event.dig("__volcano_auth", "user_id")
+)
+```
+
+Pass a user ID to enforce that user's Row-Level Security policies. Omit
+`user_id:` for full service access.
+
 ### Upload, download, and list objects
 
 ```ruby

@@ -506,6 +506,32 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'retains the earliest gap when dropped offsets arrive in reverse order' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.drop_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 3)
+        protocol.drop_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
+
+        expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'does not advance after admitted publication metadata is malformed' do
     Async do |task|
       socket = FakeSocket.new
@@ -678,6 +704,67 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         protocol.close
       end.wait
     end
+  end
+
+  it 'keeps an existing gap when an empty recovery baseline is malformed' do
+    Async do |task|
+      socket = FakeSocket.new
+      results = [
+        { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] },
+        { 'epoch' => nil, 'offset' => 2, 'publications' => [] }
+      ]
+      socket.on_write = lambda do |command|
+        result = command.key?('subscribe') ? results.shift : {}
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.drop_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 1)
+        protocol.unsubscribe(channel: 'broadcast:contract')
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
+
+        expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
+  it 'keeps an existing gap when the first retained offset is malformed' do
+    Async do |task|
+      socket = FakeSocket.new
+      results = [
+        { 'epoch' => 'epoch-1', 'offset' => 0, 'publications' => [] },
+        {
+          'epoch' => 'epoch-1',
+          'offset' => 2,
+          'publications' => [
+            { 'offset' => 'malformed', 'data' => { 'event' => 'message', 'value' => 1 } }
+          ]
+        }
+      ]
+      socket.on_write = lambda do |command|
+        result = command.key?('subscribe') ? results.shift : {}
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      protocol.on_publication('broadcast:contract') { |_event, _data, _publication| nil }
+
+      begin
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.drop_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 1)
+        protocol.unsubscribe(channel: 'broadcast:contract')
+        protocol.subscribe(channel: 'broadcast:contract', recovery: {})
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
+
+        expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 0)
+      ensure
+        protocol.close
+      end
+    end.wait
   end
 
   it 'retains replies that arrive while the socket write yields' do

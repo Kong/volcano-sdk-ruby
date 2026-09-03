@@ -34,28 +34,33 @@ module Volcano
           return unless result.is_a?(Hash)
 
           publications = result.fetch('publications', [])
-          return unless publications.is_a?(Array) && publications.all?(Hash)
+          return unless publications.is_a?(Array)
 
-          @position_gaps.delete(channel)
-          remember_recovery_start(channel, result, publications)
+          replace_subscription_position(channel, result, publications)
           enqueue_recovered_publications(channel, publications)
-          remember_subscription_position(channel, result) if publications.empty?
         end
 
-        def remember_recovery_start(channel, result, publications)
+        def replace_subscription_position(channel, result, publications)
+          position = subscription_position(result, publications)
+          unless position
+            @position_gaps[channel] = true if @stream_positions.key?(channel)
+            return
+          end
+
+          @stream_positions[channel] = position
+          @position_gaps.delete(channel)
+        end
+
+        def subscription_position(result, publications)
+          return immutable_position(result['epoch'], result['offset']) if publications.empty?
+
           first_publication = publications.first
           return unless first_publication.is_a?(Hash)
 
           first_offset = first_publication['offset']
           return unless first_offset.is_a?(Integer) && first_offset.positive?
 
-          position = immutable_position(result['epoch'], first_offset - 1)
-          @stream_positions[channel] = position if position
-        end
-
-        def remember_subscription_position(channel, result)
-          position = immutable_position(result['epoch'], result['offset'])
-          @stream_positions[channel] = position if position
+          immutable_position(result['epoch'], first_offset - 1)
         end
 
         def publication_position(publication, current)

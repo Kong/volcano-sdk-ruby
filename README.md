@@ -641,14 +641,15 @@ a fresh authoritative snapshot.
 ### Subscribe to Postgres changes
 
 Postgres channels deliver immutable, RLS-scoped row changes and filter
-callbacks by event, schema, and table. When the server sends only a lightweight
-notification, `record` is `nil` and the change retains its `id` and `mode`:
+callbacks by event, schema, and table. Configure the database once to expand
+lightweight INSERT and UPDATE notifications into full rows before delivery:
 
 ```ruby
 require "async/queue"
 
 Async do
   received = Async::Queue.new
+  client.realtime.database_name = "app"
   changes = client.realtime.channel("public:messages", type: :postgres)
   changes.on_postgres_changes("INSERT", schema: "public", table: "messages") do |change|
     received.enqueue(change)
@@ -656,17 +657,23 @@ Async do
   changes.subscribe
 
   change = received.dequeue # Wait for an INSERT from another client.
-  puts change.record&.fetch("body") || "changed row #{change.id}"
+  puts change.record.fetch("body")
   client.realtime.disconnect
 end.wait
 ```
+
+Auto-fetch is enabled by default and uses the authenticated session captured
+for the subscription. Deliveries remain ordered while row lookups run. DELETE
+notifications are expanded locally from `old_record` or `id`. If a lookup
+fails, the error callback runs and the original lightweight change is
+delivered. Use `auto_fetch: false` when creating the channel to receive
+lightweight notifications without database requests.
 
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
 same `type:` to `remove_channel` for every non-broadcast channel. Reconnect,
-recovery, and automatic fetching for lightweight database-change notifications
-are out of scope.
+recovery is out of scope.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.

@@ -26,23 +26,18 @@ module Volcano
 
       def on_postgres_changes(event, schema:, table:, callback: nil, &block)
         ensure_postgres!
-        event = event.to_s.upcase
-        raise ArgumentError, "unsupported postgres change event: #{event}" unless EVENTS.include?(event)
-
+        event = postgres_event(event)
         handler = callback || block || raise(ArgumentError, 'callback or block is required')
-        on(event) do |change|
-          handler.call(change) if change.schema == schema.to_s && change.table == table.to_s
-        end
+        register_postgres_listener(event, schema.to_s, table.to_s, handler)
       end
 
       private
 
       def dispatch_postgres_change(data)
         change = postgres_change(data)
-        return unless change
+        return unless change && postgres_listener?(change)
 
-        emit(change.type, change)
-        emit('*', change)
+        enqueue_postgres_delivery(change)
       end
 
       def postgres_change(data)
@@ -53,6 +48,32 @@ module Volcano
           record: data['record'], old_record: data['old_record'], columns: data['columns'],
           timestamp: data.fetch('timestamp'), id: data['id'], mode: data['mode']
         )
+      end
+
+      def postgres_event(event)
+        event = event.to_s.upcase
+        return event if EVENTS.include?(event)
+
+        raise ArgumentError, "unsupported postgres change event: #{event}"
+      end
+
+      def register_postgres_listener(event, schema, table, handler)
+        filtered = proc { |change| handler.call(change) if change.schema == schema && change.table == table }
+        @postgres_filters[filtered] = [event, schema, table]
+        on(event, filtered)
+      end
+
+      def postgres_listener?(change)
+        callbacks = [*@callbacks[change.type], *@callbacks['*']]
+        return true if callbacks.any? { |callback| !@postgres_filters.key?(callback) }
+
+        @postgres_filters.any? do |callback, (event, schema, table)|
+          callbacks.include?(callback) && postgres_filter_matches?(event, schema, table, change)
+        end
+      end
+
+      def postgres_filter_matches?(event, schema, table, change)
+        (event == '*' || event == change.type) && schema == change.schema && table == change.table
       end
 
       def valid_postgres_change?(data)

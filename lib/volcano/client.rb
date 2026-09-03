@@ -3,6 +3,11 @@
 module Volcano
   # Entry point for Volcano API, storage, lock, and realtime operations.
   class Client
+    SessionToken = Data.define(:value) do
+      def session_token = value
+    end
+    private_constant :SessionToken
+
     attr_reader :auth, :functions, :logs, :storage, :locks, :realtime
 
     def initialize(
@@ -71,6 +76,10 @@ module Volcano
     end
 
     private
+
+    def database_with_token(name, token)
+      Database.new(SessionToken.new(value: token), @transport, name)
+    end
 
     def extract_adapters(adapters)
       transport = adapters.delete(:_transport)

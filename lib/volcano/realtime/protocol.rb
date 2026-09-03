@@ -35,8 +35,13 @@ module Volcano
 
       def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
-      def self.subscribe(id:, channel:, recoverable: false, join_leave: false)
+      def self.subscribe(id:, channel:, recovery: nil, recoverable: false, join_leave: false)
         options = { 'channel' => channel }
+        if recovery
+          options.merge!('recover' => true, 'positioned' => true, 'recoverable' => true)
+          options['epoch'] = recovery.fetch(:epoch) if recovery.key?(:epoch)
+          options['offset'] = recovery.fetch(:offset) if recovery.key?(:offset)
+        end
         options['recoverable'] = true if recoverable
         options['join_leave'] = true if join_leave
         { 'id' => id, 'subscribe' => options }
@@ -71,7 +76,7 @@ module Volcano
         result
       end
 
-      def subscribe(channel:, recoverable: false, join_leave: false)
+      def subscribe(channel:, recovery: nil, recoverable: false, join_leave: false)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
@@ -80,6 +85,7 @@ module Volcano
             self.class.subscribe(
               id: id,
               channel: channel,
+              recovery: recovery,
               recoverable: recoverable,
               join_leave: join_leave
             )

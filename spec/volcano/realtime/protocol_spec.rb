@@ -101,6 +101,38 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     )
   end
 
+  it 'builds an initial recovery subscription command' do
+    command = described_class.subscribe(
+      id: 7, channel: 'broadcast:contract', recovery: {}
+    )
+
+    expect(command).to eq(
+      'id' => 7,
+      'subscribe' => {
+        'channel' => 'broadcast:contract',
+        'recover' => true,
+        'positioned' => true,
+        'recoverable' => true
+      }
+    )
+  end
+
+  it 'builds a recovery subscription command from a stream position' do
+    command = described_class.subscribe(
+      id: 7,
+      channel: 'broadcast:contract',
+      recovery: { epoch: 'epoch-1', offset: 42 }
+    )
+
+    expect(command.fetch('subscribe')).to include(
+      'recover' => true,
+      'epoch' => 'epoch-1',
+      'offset' => 42,
+      'positioned' => true,
+      'recoverable' => true
+    )
+  end
+
   it 'returns presence command results' do
     Async do |task|
       socket = FakeSocket.new

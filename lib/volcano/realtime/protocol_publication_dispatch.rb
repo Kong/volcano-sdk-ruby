@@ -36,10 +36,15 @@ module Volcano
         PublicationDelivery.new(
           channel:, handlers: handlers.dup,
           event: data['event'], data:, publication:, recovered:,
-          on_rejection: handlers.filter_map do |handler|
-            @publication_rejections[[channel, handler]]
-          end.first
+          on_rejection: nil
         )
+      end
+
+      def capture_publication_rejection(delivery)
+        outcome = delivery.handlers.filter_map do |handler|
+          @publication_rejections[[delivery.channel, handler]]
+        end.first
+        PublicationDelivery.new(**delivery.to_h, on_rejection: outcome)
       end
 
       def matching_publication_channel(channel)

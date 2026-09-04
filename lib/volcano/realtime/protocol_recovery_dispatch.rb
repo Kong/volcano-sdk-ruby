@@ -20,6 +20,7 @@ module Volcano
       end
 
       def enqueue_ordered_publication(delivery)
+        delivery = capture_publication_rejection(delivery)
         return if publication_batch_enqueued?(delivery.channel, [delivery])
 
         drop_publication(delivery.channel, delivery.publication)

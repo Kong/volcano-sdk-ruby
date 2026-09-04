@@ -382,6 +382,26 @@ RSpec.describe Volcano::Realtime do
     protocol.singleton_class.prepend(observer)
   end
 
+  def observe_immediate_reader_rejection(protocol, **options)
+    protocol.singleton_class.prepend(immediate_reader_rejection_observer(**options))
+  end
+
+  def immediate_reader_rejection_observer(started:, completed:)
+    Module.new do
+      define_method(:reject_publication) do |delivery|
+        started.enqueue(
+          [delivery.channel, delivery.publication['offset'],
+           Async::Task.current.equal?(@reader_task), @callback_queue.limited?,
+           @ordered_publication_counts[delivery.channel]]
+        )
+        super(delivery)
+      ensure
+        completed.enqueue(true)
+      end
+      private :reject_publication
+    end
+  end
+
   def observe_delayed_producer_rejection(protocol, observation)
     protocol.singleton_class.prepend(delayed_live_enqueue_observer(observation))
     protocol.singleton_class.prepend(delayed_admission_observer(observation))
@@ -2752,6 +2772,112 @@ RSpec.describe Volcano::Realtime do
     expect(old_received).to eq([2])
     expect(final_position).to eq(epoch: 'epoch-2', offset: 11)
     expect(final_gaps).not_to include('broadcast:contract')
+  end
+
+  it 'keeps immediate reader rejection independent of a same-channel send', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    first_started, release_first, release_second, reader_passed_queue_fill,
+      publish_started, rejection_started, rejection_completed = Array.new(7) { Async::Queue.new }
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        channel = command.dig('subscribe', 'channel')
+        epoch = channel == 'broadcast:blocker' ? 'blocker-epoch' : 'epoch-1'
+        socket.respond(
+          command.fetch('id'), result: { 'epoch' => epoch, 'offset' => 0, 'publications' => [] }
+        )
+        :defer
+      elsif command.key?('publish')
+        publish_started.enqueue(
+          [command.fetch('id'), command.dig('publish', 'channel')]
+        )
+        :defer
+      elsif command.empty?
+        reader_passed_queue_fill.enqueue(true)
+        :defer
+      end
+    end
+    client = realtime_client(socket)
+    drops = []
+    received = []
+    results = {}
+
+    Async do |task|
+      blocker = client.realtime.channel('blocker')
+      blocker.on('message') do |message|
+        if message.fetch('value') == 'blocker-1'
+          first_started.enqueue(true)
+          release_first.dequeue
+        else
+          release_second.dequeue
+        end
+      end
+      target = client.realtime.channel('contract')
+      target.on('message') { |message| received << message.fetch('value') }
+      blocker.subscribe
+      target.subscribe
+      protocol = client.realtime.send(:protocol)
+      observe_publication_drops(protocol, channel: 'broadcast:contract', drops: drops)
+      observe_immediate_reader_rejection(
+        protocol,
+        started: rejection_started,
+        completed: rejection_completed
+      )
+
+      reply_sent = false
+      reply_id = nil
+      sending = nil
+      begin
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-1' },
+          epoch: 'blocker-epoch', offset: 1
+        )
+        task.with_timeout(0.5) { first_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-2' },
+          epoch: 'blocker-epoch', offset: 2
+        )
+        socket.receive_raw('{}')
+        task.with_timeout(0.5) { reader_passed_queue_fill.dequeue }
+        results[:queue_full] = protocol.instance_variable_get(:@callback_queue).limited?
+
+        sending = task.async { target.send(event: 'message', value: 'sent') }
+        reply_id, results[:command_channel] = task.with_timeout(0.5) { publish_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 1 },
+          epoch: 'epoch-1', offset: 1
+        )
+        results[:rejection] = task.with_timeout(0.5) { rejection_started.dequeue }
+        task.with_timeout(0.5) { rejection_completed.dequeue }
+        results[:drops_before_reply] = drops.dup
+        results[:gaps_before_reply] = protocol.instance_variable_get(:@position_gaps).dup
+
+        socket.respond(reply_id)
+        reply_sent = true
+        results[:command_result] = task.with_timeout(0.5) { sending.wait }
+      ensure
+        sending&.stop
+        socket.respond(reply_id) if reply_id && !reply_sent
+        release_first.enqueue(true)
+        release_second.enqueue(true)
+        client.realtime.disconnect
+      end
+    end.wait
+
+    expect(results).to include(
+      queue_full: true,
+      command_channel: 'broadcast:contract',
+      rejection: ['broadcast:contract', 1, true, true, 0],
+      drops_before_reply: [1],
+      command_result: nil
+    )
+    expect(results.fetch(:gaps_before_reply)).to eq(
+      'broadcast:contract' => { epoch: 'epoch-1', offset: 1 }
+    )
+    expect(received).to be_empty
   end
 
   it 'ignores a delayed old-generation producer rejection after resubscribe', :aggregate_failures do

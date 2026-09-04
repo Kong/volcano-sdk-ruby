@@ -2,6 +2,11 @@
 
 require 'json'
 require_relative 'protocol_dispatch'
+require_relative 'protocol_lifecycle'
+require_relative 'protocol_publication_dispatch'
+require_relative 'protocol_recovery'
+require_relative 'protocol_recovery_dispatch'
+require_relative 'protocol_recovery_position'
 
 module Volcano
   class Realtime
@@ -9,7 +14,10 @@ module Volcano
     class ServerError < StandardError
       attr_reader :code
 
-      def initialize(message, code: nil) = super(message).tap { @code = code }
+      def initialize(message, code: nil)
+        super(message)
+        @code = code.is_a?(String) ? code.dup.freeze : code
+      end
     end
 
     class ClosedError < StandardError; end
@@ -20,8 +28,16 @@ module Volcano
     # Implements the Centrifuge request and publication protocol.
     class Protocol
       include ProtocolDispatch
+      include Lifecycle
+      include ProtocolPublicationDispatch
+      include ProtocolRecovery
+      include ProtocolRecoveryDispatch
+      include ProtocolRecoveryPosition
 
       Failure = Data.define(:error)
+      Pending = Data.define(:queue, :on_reply)
+      private_constant :Pending
+      Events = Data.define(:on_close, :on_error, :on_failure)
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
       DEFAULT_MAX_CALLBACK_QUEUE = 128
@@ -29,34 +45,55 @@ module Volcano
 
       def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
-      def self.subscribe(id:, channel:) = { 'id' => id, 'subscribe' => { 'channel' => channel } }
+      def self.subscribe(id:, channel:, recoverable: false, join_leave: false, recovery: nil)
+        options = { 'channel' => channel }
+        if recovery
+          options.merge!('recover' => true, 'positioned' => true, 'recoverable' => true)
+          options['epoch'] = recovery[:epoch] if recovery.key?(:epoch)
+          options['offset'] = recovery[:offset] if recovery.key?(:offset)
+        elsif recoverable
+          options['recoverable'] = true
+        end
+        options['join_leave'] = true if join_leave
+        { 'id' => id, 'subscribe' => options }
+      end
 
       def self.publish(id:, channel:, data:) = { 'id' => id, 'publish' => { 'channel' => channel, 'data' => data } }
 
       def self.unsubscribe(id:, channel:) = { 'id' => id, 'unsubscribe' => { 'channel' => channel } }
 
+      def self.presence(id:, channel:) = { 'id' => id, 'presence' => { 'channel' => channel } }
+
       def initialize(
         socket:,
         task: nil,
         secrets: [],
+        events: nil,
         **limits
       )
         load_async
         @socket = socket
         @secrets = secrets.freeze
+        @events = events
         configure_limits(limits)
         initialize_state
         start_tasks(task || Async::Task.current)
       end
 
-      def connect(token:) = request { |id| self.class.connect(id: id, token: token) }
+      def connect(token:)
+        result = request { |id| self.class.connect(id: id, token: token) }
+        ensure_open!
+        @connected = true
+        result
+      end
 
-      def subscribe(channel:)
+      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = request { |id| self.class.subscribe(id: id, channel: channel) }
+          result = subscribe_request(channel:, recoverable:, join_leave:, recovery:)
+          ensure_open!
           @subscriptions.add(channel)
           result
         end
@@ -75,11 +112,13 @@ module Volcano
         end
       end
 
-      def on_publication(channel, &block) = ensure_open!.tap { @publication_handlers[channel] << block }
+      def presence(channel:) = request { |id| self.class.presence(id: id, channel: channel) }
 
       def close
+        return nil if @closed
+
         close_with(ClosedError.new('realtime connection closed'))
-        @reader_task.stop && nil
+        nil
       end
 
       private
@@ -99,53 +138,10 @@ module Volcano
         @max_callback_queue = limits.fetch(:max_callback_queue, DEFAULT_MAX_CALLBACK_QUEUE)
       end
 
-      def initialize_state
-        @next_id = 0
-        @pending = {}
-        @write_lock = Async::Semaphore.new(1)
-        @subscription_lock = Async::Semaphore.new(1)
-        @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
-        @callback_queue = Async::Queue.new
-        @callback_stopping = @closed = false
-        @subscriptions = Set.new
-        @closed_error = nil
-      end
-
-      def start_tasks(task)
-        @callback_task = task.async { dispatch_callbacks }
-        @reader_task = task.async { read_loop }
-      end
-
       def ensure_open!
         raise @closed_error if @closed
 
         self
-      end
-
-      def close_with(error)
-        return if @closed
-
-        @closed = true
-        @closed_error = error
-        @subscriptions.clear
-        reject_pending(error)
-        stop_callback_task
-        close_socket
-      end
-
-      def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
-
-      def write_frame(frame) = @write_lock.acquire { @socket.write("#{JSON.generate(frame)}\n") }
-
-      def close_socket
-        @socket.close
-      rescue StandardError
-        nil
-      end
-
-      def stop_callback_task
-        @callback_stopping = true
-        @callback_task.stop unless @callback_task == Async::Task.current
       end
     end
   end

@@ -97,5 +97,20 @@ module Volcano
       end
     end
   end
-  LockLease = Data.define(:key, :token, :expires_at, :fencing_token)
+  LockLease = Data.define(:key, :token, :expires_at, :fencing_token) do
+    def initialize(key:, token:, expires_at:, fencing_token:)
+      super(
+        key: key.dup.freeze,
+        token: token.dup.freeze,
+        expires_at: expires_at&.dup&.freeze,
+        fencing_token: fencing_token
+      )
+    end
+  end
+  LockState = Data.define(:held, :expires_at, :fencing_token) do
+    def initialize(held:, expires_at:, fencing_token:)
+      immutable_expiry = expires_at&.then { |value| value.frozen? ? value : value.dup.freeze }
+      super(held: held, expires_at: immutable_expiry, fencing_token: fencing_token)
+    end
+  end
 end

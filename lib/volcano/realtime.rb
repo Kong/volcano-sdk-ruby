@@ -1,27 +1,101 @@
 # frozen_string_literal: true
 
 require 'uri'
+require_relative 'realtime/connection_callbacks'
+require_relative 'realtime/connection'
+require_relative 'realtime/reconnect'
+require_relative 'realtime/lifecycle'
+require_relative 'realtime/channel_lifecycle'
+require_relative 'realtime/presence_state'
+require_relative 'realtime/presence'
+require_relative 'realtime/postgres_database'
+require_relative 'realtime/blocking_call'
+require_relative 'realtime/postgres_changes'
+require_relative 'realtime/postgres_expansion'
+require_relative 'realtime/postgres_batch'
+require_relative 'realtime/postgres_delivery'
+require_relative 'realtime/broadcast_delivery'
+require_relative 'realtime/channel_callbacks'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
   class Realtime
-    def initialize(client, api_url:, socket_factory: nil)
+    include Lifecycle
+    include ConnectionCallbacks
+    include Connection
+    include Reconnect
+    include PostgresDatabase
+
+    ConnectContext = Data.define(:client)
+    DisconnectContext = Data.define(:code, :reason)
+    ErrorContext = Data.define(:code, :message, :error)
+
+    # Recursively snapshots JSON-compatible values for callback and state safety.
+    module Immutable
+      module_function
+
+      def call(value)
+        case value
+        when Hash then value.to_h { |key, child| [call(key), call(child)] }.freeze
+        when Array then value.map { |child| call(child) }.freeze
+        when String then value.dup.freeze
+        else value.freeze
+        end
+      end
+    end
+    private_constant :Immutable
+
+    PresenceInfo = Data.define(:client, :user, :data) do
+      def initialize(client:, user: nil, data: {})
+        super(
+          client: Immutable.call(client.to_s),
+          user: user.nil? ? nil : Immutable.call(user.to_s),
+          data: Immutable.call(data)
+        )
+      end
+    end
+
+    CHANNEL_TYPES = %i[broadcast presence postgres].freeze
+
+    def initialize(client, api_url:, socket_factory: nil, reconnect_delay: nil)
       @client = client
       @api_url = api_url
       @socket_factory = socket_factory || method(:open_socket)
-      @protocol = nil
-      @protocol_lock = nil
-      @channels = {}
-      @closed = false
+      @reconnect_delay = reconnect_delay || method(:default_reconnect_delay)
+      initialize_realtime_state
+      initialize_postgres_database
     end
 
-    def channel(name)
-      ensure_open!
-      @channels["broadcast:#{name}"] ||= Channel.new(
-        self,
-        method(:protocol),
-        "broadcast:#{name}"
+    def initialize_realtime_state
+      @protocol = nil
+      @protocol_lock = nil
+      @channel_lock = nil
+      @channels = {}
+      @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
+      @next_connection_callback_id = 0
+      @protocol_user_id = nil
+      @reconnect_task = nil
+      @closed = false
+    end
+    private :initialize_realtime_state
+
+    def channel(
+      name, type: :broadcast, auto_fetch: true,
+      fetch_batch_window_ms: 20, fetch_max_batch_size: 50
+    )
+      type = normalize_channel_type(type)
+      batch_config = PostgresBatchConfig.new(
+        auto_fetch:, batch_window_ms: fetch_batch_window_ms,
+        max_batch_size: fetch_max_batch_size
       )
+      channel_lock.acquire do
+        ensure_open!
+        channel_name = "#{type}:#{name}"
+        channel = @channels[channel_name]
+        next cached_channel(channel, batch_config) if channel
+
+        @channels[channel_name] = build_channel(channel_name, type, batch_config)
+      end
     end
 
     def protocol
@@ -43,103 +117,72 @@ module Volcano
       raise public_error(e), cause: nil
     end
 
-    def close_protocol
-      return nil if @closed
-
-      @closed = true
-      begin
-        @protocol&.close
-      ensure
-        @channels.each_value(&:mark_closed)
-      end
-      nil
-    end
-
     def ensure_open!
       raise ClosedError, 'realtime connection closed' if @closed
 
       self
     end
 
-    private :close_protocol
-
     private
+
+    def normalize_channel_type(type)
+      normalized = type.to_s.to_sym
+      return normalized if CHANNEL_TYPES.include?(normalized)
+
+      raise ArgumentError, "unsupported realtime channel type: #{type}"
+    end
+
+    def report_channel_error(error) = protocol_error(public_error(error))
+
+    def cached_channel(channel, batch_config)
+      channel.__send__(:ensure_fetch_config!, batch_config)
+      channel
+    end
+
+    def build_channel(name, type, batch_config)
+      Channel.new(self, method(:protocol), name, type, batch_config:)
+    end
 
     def protocol_lock
       require 'async/semaphore'
       @protocol_lock ||= Async::Semaphore.new(1)
     end
 
-    def connect_protocol
-      socket = @socket_factory.call(address)
-      Protocol.new(socket: socket, secrets: realtime_secrets).tap do |protocol|
-        protocol.connect(token: @client.session_token)
-      end
-    rescue StandardError
-      close_socket(socket)
-      raise
-    end
-
-    def close_socket(socket)
-      socket&.close
-    rescue StandardError
-      nil
-    end
-
-    def address
-      uri = URI(@api_url)
-      uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-      uri.path = "#{uri.path.delete_suffix('/')}/realtime/v1/websocket"
-      encoded_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
-      uri.query = "apikey=#{encoded_key}"
-      uri.to_s
-    end
-
-    def open_socket(address)
-      require 'async/http/endpoint'
-      require 'async/websocket/client'
-      Async::WebSocket::Client.connect(Async::HTTP::Endpoint.parse(address))
-    end
-
-    def realtime_secrets = [@client.anon_token, @client.current_session&.access_token]
-
-    def public_error(error)
-      redacted = Redaction.exception(error, secrets: realtime_secrets)
-      return redacted unless Transport::NETWORK_ERRORS.any? { |type| error.is_a?(type) }
-
-      transport_error = Error::TransportError.new(redacted.message)
-      transport_error.set_backtrace(redacted.backtrace)
-      transport_error
+    def channel_lock
+      require 'async/semaphore'
+      @channel_lock ||= Async::Semaphore.new(1)
     end
 
     # Represents one realtime broadcast channel.
     class Channel
-      def initialize(realtime, protocol_provider, name)
+      include ChannelLifecycle
+      include PresenceState
+      include Presence
+      include PostgresChanges
+      include PostgresExpansion
+      include PostgresBatch
+      include PostgresDelivery
+      include BroadcastDelivery
+      include ChannelCallbacks
+
+      attr_reader :name
+
+      def initialize(realtime, protocol_provider, name, type, batch_config:)
         @realtime = realtime
         @protocol_provider = protocol_provider
-        @name = name
-        @callbacks = []
-        @handler_registered = @subscribed = @closed = false
+        @name = name.freeze
+        @handler_registered = @subscribed = @subscription_desired = @closed = false
         @lifecycle_lock = nil
-      end
-
-      def on(event, callback = nil, &block)
-        raise ArgumentError, "unsupported realtime event: #{event}" unless event == 'message'
-
-        @callbacks << (callback || block || raise(ArgumentError, 'callback or block is required'))
-        self
+        @recovery_position = {}.freeze
+        @recovery_lineage = nil
+        initialize_callback_dispatch
+        initialize_presence(type)
+        initialize_postgres_delivery(batch_config)
       end
 
       def subscribe
-        with_lifecycle_lock do
-          ensure_open!
-          raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscribed
-
-          protocol = @protocol_provider.call
-          register_handler(protocol)
-          protocol.subscribe(channel: @name)
-          @subscribed = true
-        end
+        protocol, epoch = with_lifecycle_lock { subscribe_with_intent }
+        sync_presence(protocol, epoch)
         nil
       end
 
@@ -147,6 +190,7 @@ module Volcano
         with_lifecycle_lock do
           ensure_open!
           raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
+          raise ArgumentError, 'send is only available for broadcast channels' unless broadcast?
 
           data = { 'event' => event.to_s, **payload.transform_keys(&:to_s) }
           @protocol_provider.call.publish(channel: @name, data: data)
@@ -155,30 +199,49 @@ module Volcano
       end
 
       def unsubscribe
-        with_lifecycle_lock do
-          ensure_open!
-          next unless @subscribed
-
-          @protocol_provider.call.unsubscribe(channel: @name)
-          @subscribed = false
-        end
+        state = with_lifecycle_lock { unsubscribe_protocol }
+        emit_presence_sync(state)
         nil
       end
 
-      def mark_closed
-        @closed = true
-        @lifecycle_lock ? @lifecycle_lock.acquire { @subscribed = false } : @subscribed = false
+      def subscription_desired? = @subscription_desired && !@closed
+
+      def restoration_needed? = subscription_desired? && !@subscribed
+
+      def restore_subscription(protocol)
+        state = with_lifecycle_lock do
+          next unless restoration_needed?
+
+          subscribe_protocol(protocol)
+        end
+        sync_presence(*state) if state
+        nil
       end
+
+      def remove
+        with_lifecycle_lock do
+          ensure_open!
+          detach_from_protocol
+          clear_broadcast_recovery_state
+          clear_channel_recovery_state
+          mark_removed
+        end
+        nil
+      end
+      private :remove
 
       private
 
-      def register_handler(protocol)
-        return if @handler_registered
+      def subscribe_with_intent
+        ensure_open!
+        raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscription_desired
 
-        protocol.on_publication(@name) do |event, data|
-          @callbacks.each { |callback| callback.call(data) } if event == 'message'
-        end
-        @handler_registered = true
+        @subscription_desired = true
+        protocol = @protocol_provider.call
+        subscribe_protocol(protocol)
+      rescue StandardError
+        @subscription_desired = false unless protocol && !protocol.connected?
+        raise
       end
 
       def with_lifecycle_lock(&)

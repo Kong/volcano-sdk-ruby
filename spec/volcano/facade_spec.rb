@@ -6,6 +6,45 @@ require 'time'
 
 RSpec.describe Volcano::Client do
   CallbackAbort = Exception unless const_defined?(:CallbackAbort)
+  unless const_defined?(:BoundedReadIO)
+    BoundedReadIO = Class.new(StringIO) do
+      attr_reader :read_lengths
+
+      def initialize(value)
+        super
+        @read_lengths = []
+      end
+
+      def read(length = nil, output = nil)
+        raise 'unbounded read' if length.nil?
+
+        @read_lengths << length
+        super
+      end
+    end
+  end
+  unless const_defined?(:BoundedNonSeekableIO)
+    BoundedNonSeekableIO = Class.new do
+      attr_reader :read_lengths
+
+      def initialize(value)
+        @value = value.b
+        @offset = 0
+        @read_lengths = []
+      end
+
+      def read(length = nil)
+        raise 'unbounded read' if length.nil?
+
+        @read_lengths << length
+        return if @offset >= @value.bytesize
+
+        chunk = @value.byteslice(@offset, length)
+        @offset += chunk.bytesize
+        chunk
+      end
+    end
+  end
   Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
 
   def access_token_with_session_id(session_id)
@@ -373,7 +412,8 @@ RSpec.describe Volcano::Client do
 
     def download_storage_object(**arguments)
       @calls << [:download_storage_object, arguments]
-      Response.new(status: 200, body: nil, headers: {}, data: "hello\x00".b)
+      status = arguments[:byte_range] ? @range_download_status : 200
+      Response.new(status: status, body: nil, headers: {}, data: "hello\x00".b)
     end
 
     def list_storage_objects(**arguments)
@@ -464,9 +504,138 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  # Implements resumable storage session creation for the facade test transport.
+  module FakeUploadSessionTransport
+    attr_accessor :fail_abort_upload, :fail_upload_part_number,
+                  :upload_session_part_size, :upload_session_total_parts
+
+    def create_upload_session(**arguments)
+      @calls << [:create_upload_session, arguments]
+      body = {
+        'session_id' => 'session-123',
+        'part_size' => upload_session_part_size || 8_388_608,
+        'total_parts' => upload_session_total_parts || 3,
+        'expires_at' => '2026-09-09T12:00:00Z'
+      }
+      Response.new(status: 201, body: body, headers: {}, data: nil)
+    end
+
+    def upload_part(**arguments)
+      @calls << [:upload_part, arguments]
+      request = arguments.fetch(:request)
+      if request.part_number == fail_upload_part_number
+        return Response.new(
+          status: 500, body: { 'error' => 'part upload failed' }, headers: {}, data: nil
+        )
+      end
+      body = {
+        'part_number' => request.part_number,
+        'etag' => 'etag-part-1',
+        'size' => request.data.bytesize
+      }
+      Response.new(status: 200, body: body, headers: {}, data: nil)
+    end
+
+    def complete_upload_session(**arguments)
+      @calls << [:complete_upload_session, arguments]
+      request = arguments.fetch(:request)
+      object = {
+        'id' => '00000000-0000-4000-8000-000000000020',
+        'bucket_id' => '00000000-0000-4000-8000-000000000030',
+        'name' => request.path,
+        'size' => 20_000_000,
+        'mime_type' => 'video/mp4',
+        'is_public' => false,
+        'etag' => 'etag-complete'
+      }
+      Response.new(status: 200, body: { 'object' => object }, headers: {}, data: nil)
+    end
+
+    def get_upload_session(**arguments)
+      @calls << [:get_upload_session, arguments]
+      request = arguments.fetch(:request)
+      body = {
+        'session_id' => request.session_id,
+        'status' => 'uploading',
+        'path' => request.path,
+        'content_type' => 'video/mp4',
+        'total_size' => 20_000_000,
+        'part_size' => 8_388_608,
+        'total_parts' => 3,
+        'parts_uploaded' => 1,
+        'bytes_uploaded' => 8_388_608,
+        'parts' => [{ 'part_number' => 1, 'etag' => 'etag-part-1', 'size' => 8_388_608 }],
+        'expires_at' => '2026-09-09T12:00:00Z',
+        'created_at' => '2026-09-02T12:00:00Z'
+      }
+      Response.new(status: 200, body: body, headers: {}, data: nil)
+    end
+
+    def abort_upload_session(**arguments)
+      @calls << [:abort_upload_session, arguments]
+      return failed_abort_response if fail_abort_upload
+
+      Response.new(
+        status: 200, body: { 'message' => 'upload session aborted' }, headers: {}, data: nil
+      )
+    end
+
+    private
+
+    def failed_abort_response
+      Response.new(status: 500, body: { 'error' => 'abort failed' }, headers: {}, data: nil)
+    end
+  end
+
+  module FakeLockTransport
+    def acquire_project_lock(**arguments)
+      @calls << [:acquire_project_lock, arguments]
+      Response.new(
+        status: 201,
+        body: { 'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7 },
+        headers: {},
+        data: nil
+      )
+    end
+
+    def release_project_lock(**arguments)
+      @calls << [:release_project_lock, arguments]
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
+    end
+
+    def get_project_lock(**arguments)
+      @calls << [:get_project_lock, arguments]
+      Response.new(
+        status: 200,
+        body: {
+          'held' => true,
+          'expires_at' => '2026-08-26T12:00:30Z',
+          'fencing_token' => 7
+        },
+        headers: {}, data: nil
+      )
+    end
+
+    def renew_project_lock(**arguments)
+      @calls << [:renew_project_lock, arguments]
+      Response.new(
+        status: 200,
+        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 7 },
+        headers: {}, data: nil
+      )
+    end
+
+    def force_release_project_lock(**arguments)
+      @calls << [:force_release_project_lock, arguments]
+      Response.new(status: 204, body: nil, headers: {}, data: nil)
+    end
+  end
+
   class FakeContractTransport
     include FakeDatabaseTransport
+    include FakeLockTransport
     include FakeStorageTransport
+    include FakeUploadSessionTransport
 
     include FakeCallLog
     include FakeEmailChangeTransport
@@ -476,11 +645,12 @@ RSpec.describe Volcano::Client do
     include FakeUserTransport
 
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :refresh_response,
-                  :signup_response
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :range_download_status,
+                  :refresh_response, :signup_response
 
     def initialize
       @access_token = 'access-token'
+      @range_download_status = 206
       @signup_response = Response.new(
         status: 201,
         body: {
@@ -549,21 +719,6 @@ RSpec.describe Volcano::Client do
       @calls << [:auth_signup, arguments]
       @signup_response
     end
-
-    def acquire_project_lock(**arguments)
-      @calls << [:acquire_project_lock, arguments]
-      Response.new(
-        status: 201,
-        body: { 'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7 },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def release_project_lock(**arguments)
-      @calls << [:release_project_lock, arguments]
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
   end
 
   let(:transport) { FakeContractTransport.new }
@@ -580,7 +735,7 @@ RSpec.describe Volcano::Client do
     session = client.auth.sign_in(email: 'user@example.com', password: 'secret')
     rows = client.database('main').from('items').select('*').eq('slug', 'a').execute
     uploaded = client.storage.from('assets').upload('a.txt', StringIO.new("hello\x00".b))
-    downloaded = client.storage.from('assets').download('a.txt')
+    downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
     page = client.storage.from('assets').list('avatars', limit: 25, cursor: 'cursor-1')
     removed = client.storage.from('assets').remove(['archive/a.txt', 'archive/b.txt'])
     lease = client.locks.acquire('build', ttl: 30)
@@ -2242,6 +2397,288 @@ RSpec.describe Volcano::Client do
     expect(results.fetch(:released)).to be_nil
   end
 
+  it 'accepts a full response when a byte range is ignored' do
+    transport.range_download_status = 200
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    downloaded = client.storage.from('assets').download('a.txt', range: 'bytes=0-4')
+
+    expect(downloaded).to eq("hello\x00".b)
+  end
+
+  it 'gets immutable current lock state' do
+    state = client.locks.get('build')
+
+    expect(state).to eq(
+      Volcano::LockState.new(
+        held: true,
+        expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
+        fencing_token: 7
+      )
+    )
+    expect(state.to_h.values).to all(be_frozen)
+    expect(transport.calls).to eq(
+      [[:get_project_lock, { authorization: 'service-key', key: 'build' }]]
+    )
+  end
+
+  it 'renews a lock lease without mutating the original' do
+    lease = Volcano::LockLease.new(
+      key: 'build', token: '00000000-0000-4000-8000-000000000001',
+      expires_at: Time.iso8601('2026-08-26T12:00:30Z'), fencing_token: 7
+    )
+
+    renewed = client.locks.renew('build', lease, ttl: 60)
+
+    expect(renewed).to eq(
+      Volcano::LockLease.new(
+        key: 'build', token: lease.token,
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'), fencing_token: 7
+      )
+    )
+    expect(lease.expires_at).to eq(Time.iso8601('2026-08-26T12:00:30Z'))
+    expect(transport.calls).to eq(
+      [[:renew_project_lock, {
+        authorization: 'service-key', key: 'build', ttl: 60, token: lease.token
+      }]]
+    )
+  end
+
+  it 'deep-freezes independent lock lease values' do
+    raw_key = +'build'
+    raw_token = +'00000000-0000-4000-8000-000000000001'
+    raw_expiry = Time.iso8601('2026-08-26T12:00:30Z')
+    lease = Volcano::LockLease.new(
+      key: raw_key, token: raw_token, expires_at: raw_expiry, fencing_token: 7
+    )
+    copy = Volcano::LockLease.new(**lease.to_h)
+
+    expect(lease.to_h.values + copy.to_h.values).to all(be_frozen)
+    expect(
+      [
+        lease.key.equal?(raw_key), lease.token.equal?(raw_token), lease.expires_at.equal?(raw_expiry),
+        copy.key.equal?(lease.key), copy.token.equal?(lease.token), copy.expires_at.equal?(lease.expires_at)
+      ]
+    ).to all(be(false))
+  end
+
+  it 'force releases a lock without an ownership token' do
+    result = client.locks.force_release('build')
+
+    expect(result).to be_nil
+    expect(transport.calls).to eq(
+      [[:force_release_project_lock, { authorization: 'service-key', key: 'build' }]]
+    )
+  end
+
+  it 'creates an immutable upload session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    session = client.storage.from('assets').create_upload_session(
+      'videos/demo.mp4', total_size: 20_000_000, content_type: 'video/mp4', part_size: 8_388_608
+    )
+
+    expect(session).to eq(
+      Volcano::UploadSession.new(
+        session_id: 'session-123', part_size: 8_388_608, total_parts: 3,
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z')
+      )
+    )
+    expect(session.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:create_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', content_type: 'video/mp4',
+      total_size: 20_000_000, part_size: 8_388_608
+    )
+  end
+
+  it 'uploads a part and returns immutable metadata' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    part = client.storage.from('assets').upload_part(
+      'videos/demo.mp4', session_id: 'session-123', part_number: 1, data: "chunk\x00".b
+    )
+
+    expect(part).to eq(Volcano::UploadPart.new(part_number: 1, etag: 'etag-part-1', size: 6))
+    expect(part.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:upload_part)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123', part_number: 1, data: "chunk\x00".b
+    )
+  end
+
+  it 'completes an upload session and returns the immutable object' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    object = client.storage.from('assets').complete_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(object).to eq(
+      Volcano::StorageObject.new(
+        id: '00000000-0000-4000-8000-000000000020',
+        bucket_id: '00000000-0000-4000-8000-000000000030',
+        name: 'videos/demo.mp4', size: 20_000_000, mime_type: 'video/mp4',
+        is_public: false, etag: 'etag-complete'
+      )
+    )
+    expect(object.to_h.values).to all(be_frozen)
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:complete_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
+    )
+  end
+
+  it 'gets immutable upload session status' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    status = client.storage.from('assets').get_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(status).to eq(
+      Volcano::UploadSessionStatus.new(
+        session_id: 'session-123', status: 'uploading', path: 'videos/demo.mp4',
+        content_type: 'video/mp4', total_size: 20_000_000, part_size: 8_388_608,
+        total_parts: 3, parts_uploaded: 1, bytes_uploaded: 8_388_608,
+        parts: [Volcano::UploadPart.new(part_number: 1, etag: 'etag-part-1', size: 8_388_608)],
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z'),
+        created_at: Time.iso8601('2026-09-02T12:00:00Z')
+      )
+    )
+    expect([status.to_h.values.all?(&:frozen?), status.parts.frozen?]).to eq([true, true])
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:get_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
+    )
+  end
+
+  it 'defaults omitted upload parts to an empty immutable snapshot' do
+    payload = {
+      'session_id' => 'session-123', 'status' => 'pending', 'path' => 'videos/demo.mp4',
+      'content_type' => 'video/mp4', 'total_size' => 20_000_000, 'part_size' => 8_388_608,
+      'total_parts' => 3, 'parts_uploaded' => 0, 'bytes_uploaded' => 0,
+      'expires_at' => '2026-09-09T12:00:00Z', 'created_at' => '2026-09-02T12:00:00Z'
+    }
+
+    status = client.storage.from('assets').send(:upload_session_status, payload)
+
+    expect(status.parts).to eq([]).and be_frozen
+  end
+
+  it 'aborts an upload session' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    result = client.storage.from('assets').abort_upload_session(
+      'videos/demo.mp4', session_id: 'session-123'
+    )
+
+    expect(result).to be_nil
+    operation, arguments = transport.calls.last
+    expect(operation).to eq(:abort_upload_session)
+    expect(arguments).to include(authorization: 'access-token', bucket_name: 'assets')
+    expect(arguments.fetch(:request)).to have_attributes(
+      path: 'videos/demo.mp4', session_id: 'session-123'
+    )
+  end
+
+  it 'uploads bytes with server-selected chunks' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    object = client.storage.from('assets').upload_resumable(
+      'videos/demo.mp4', 'abcdefghij', content_type: 'video/mp4', part_size: 6
+    )
+
+    storage_calls = transport.calls.drop(1)
+    expect(storage_calls.map(&:first)).to eq(
+      %i[create_upload_session upload_part upload_part upload_part complete_upload_session]
+    )
+    expect(storage_calls.first.last.fetch(:request)).to have_attributes(total_size: 10, part_size: 6)
+    expect(storage_calls[1..3].map { |call| call.last.fetch(:request).data }).to eq(
+      %w[abcd efgh ij]
+    )
+    expect(object.name).to eq('videos/demo.mp4')
+  end
+
+  it 'reports progress after each uploaded part' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    progress = []
+
+    client.storage.from('assets').upload_resumable(
+      'file.bin', 'abcdefghij', on_progress: ->(uploaded, total) { progress << [uploaded, total] }
+    )
+
+    expect(progress).to eq([[4, 10], [8, 10], [10, 10]])
+  end
+
+  it 'aborts when a progress callback fails' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 2
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    progress = ->(*) { raise 'progress failed' }
+
+    expect do
+      client.storage.from('assets').upload_resumable(
+        'file.bin', 'abcdefgh', on_progress: progress
+      )
+    end.to raise_error(RuntimeError, 'progress failed')
+    expect(transport.calls.last(2).map(&:first)).to eq(%i[upload_part abort_upload_session])
+  end
+
+  it 'streams seekable IO with bounded server-selected reads' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = BoundedReadIO.new('abcdefghij')
+
+    client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
+
+    expect(source.read_lengths).to eq([4, 4, 4])
+    upload_calls = transport.calls_for(:upload_part)
+    expect(upload_calls.map { |call| call.last.fetch(:request).data }).to eq(%w[abcd efgh ij])
+  end
+
+  it 'spools non-seekable IO with bounded reads' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 3
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    source = BoundedNonSeekableIO.new('abcdefghij')
+
+    client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
+
+    expect(source.read_lengths).not_to be_empty
+    expect(source.read_lengths).to all(be_between(1, 1_048_576))
+    upload_calls = transport.calls_for(:upload_part)
+    expect(upload_calls.map { |call| call.last.fetch(:request).data }).to eq(%w[abcd efgh ij])
+  end
+
+  it 'aborts after a part failure without masking the error' do
+    transport.upload_session_part_size = 4
+    transport.upload_session_total_parts = 2
+    transport.fail_upload_part_number = 2
+    transport.fail_abort_upload = true
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    expect do
+      client.storage.from('assets').upload_resumable('file.bin', 'abcdefgh')
+    end.to raise_error(Volcano::Error::ServerError, 'part upload failed')
+    expect(transport.calls.drop(1).map(&:first)).to eq(
+      %i[create_upload_session upload_part upload_part abort_upload_session]
+    )
+  end
+
   it 'routes the facade calls through the contract operations', :aggregate_failures do
     lease = results.fetch(:lease)
     expect(transport.calls.map(&:first)).to eq(
@@ -2279,7 +2716,8 @@ RSpec.describe Volcano::Client do
     expect(transport.calls[3][1]).to eq(
       authorization: 'access-token',
       bucket_name: 'assets',
-      path: 'a.txt'
+      path: 'a.txt',
+      byte_range: 'bytes=0-4'
     )
     expect(transport.calls[4][1]).to eq(
       authorization: 'access-token',

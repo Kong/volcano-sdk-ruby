@@ -5,7 +5,9 @@ require 'tempfile'
 
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   unless const_defined?(:GeneratedApis)
-    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks)
+    GeneratedApis = Data.define(
+      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+    )
   end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
 
@@ -303,9 +305,49 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [FakeGeneratedModel.new(name: path), 201, {}]
     end
 
-    def download_storage_object_with_http_info(bucket, path)
-      @calls << [:download, bucket, path]
+    def download_storage_object_with_http_info(bucket, path, options = {})
+      @calls << [:download, bucket, path, options]
       ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
+    end
+
+    def create_upload_session_with_http_info(bucket, path, request)
+      @calls << [:create_session, bucket, path, request]
+      session = FakeGeneratedModel.new(
+        session_id: 'session-123', part_size: 8_388_608, total_parts: 3,
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z')
+      )
+      [session, 201, {}]
+    end
+
+    def upload_part_with_http_info(bucket, path, session_id, part_number, data)
+      @calls << [:upload_part, bucket, path, session_id, part_number, data]
+      [FakeGeneratedModel.new(part_number: part_number, etag: 'etag-part', size: data.bytesize), 200, {}]
+    end
+
+    def complete_upload_session_with_http_info(bucket, path, session_id)
+      @calls << [:complete_upload_session, bucket, path, session_id]
+      object = FakeGeneratedModel.new(
+        id: 'object-123', bucket_id: 'bucket-123', name: path, size: 20_000_000,
+        mime_type: 'video/mp4', is_public: false
+      )
+      [FakeGeneratedModel.new(object: object), 200, {}]
+    end
+
+    def get_upload_session_with_http_info(bucket, path, session_id)
+      @calls << [:get_upload_session, bucket, path, session_id]
+      status = FakeGeneratedModel.new(
+        session_id: session_id, status: 'uploading', path: path, content_type: 'video/mp4',
+        total_size: 20_000_000, part_size: 8_388_608, total_parts: 3,
+        parts_uploaded: 1, bytes_uploaded: 8_388_608, parts: [],
+        expires_at: Time.iso8601('2026-09-09T12:00:00Z'),
+        created_at: Time.iso8601('2026-09-02T12:00:00Z')
+      )
+      [status, 200, {}]
+    end
+
+    def abort_upload_session_with_http_info(bucket, path, session_id)
+      @calls << [:abort_upload_session, bucket, path, session_id]
+      [nil, 200, {}]
     end
 
     def list_storage_objects_with_http_info(bucket, options)
@@ -351,6 +393,85 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls << [:release, key, token, request_id]
       [nil, 204, {}]
     end
+
+    def get_project_lock_with_http_info(key, request_id)
+      @calls << [:get, key, request_id]
+      state = FakeGeneratedModel.new(
+        held: true,
+        expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
+        fencing_token: 7
+      )
+      [state, 200, {}]
+    end
+
+    def renew_project_lock_with_http_info(key, token, request_id, body)
+      @calls << [:renew, key, token, request_id, body]
+      lease = FakeGeneratedModel.new(
+        expires_at: Time.iso8601('2026-08-26T12:01:00Z'),
+        fencing_token: 7
+      )
+      [lease, 200, {}]
+    end
+
+    def force_release_project_lock_with_http_info(key, request_id)
+      @calls << [:force_release, key, request_id]
+      [nil, 204, {}]
+    end
+  end
+
+  class FakeFunctionsApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def resolve_function_for_invocation_with_http_info(name)
+      @calls << [:resolve, name]
+      result = FakeGeneratedModel.new(
+        name: name,
+        function_id: '00000000-0000-4000-8000-000000000040',
+        cache_ttl_seconds: 60
+      )
+      [result, 200, {}]
+    end
+
+    def invoke_function_with_http_info(function_id, request, options = {})
+      @calls << [:invoke, function_id, request, options]
+      [
+        FakeGeneratedModel.new(error: 'invalid order'),
+        422,
+        { 'X-Volcano-Version' => 'staging-v1' }
+      ]
+    end
+  end
+
+  class FakeLogsApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def search_project_logs_with_http_info(project_id, request, options = {})
+      @calls << [:search, project_id, request, options]
+      result = {
+        data: [
+          {
+            id: 'event-1', timestamp: '2026-09-02T12:00:00Z',
+            body: { message: 'ready', values: [1, 2], count: 2 },
+            resource: { type: 'function', id: 'function-1' }
+          }
+        ],
+        limit: 25, has_more: false
+      }
+      [JSON.generate(result), 200, {}]
+    end
+
+    def get_project_log_activity_with_http_info(project_id, request, options = {})
+      @calls << [:activity, project_id, request, options]
+      [JSON.generate(data: [], total: 0), 200, {}]
+    end
   end
 
   let(:apis) do
@@ -359,7 +480,9 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       oauth: FakeOAuthApi.new,
       database: FakeDatabaseApi.new,
       storage: FakeStorageApi.new,
-      locks: FakeLocksApi.new
+      locks: FakeLocksApi.new,
+      functions: FakeFunctionsApi.new,
+      logs: FakeLogsApi.new
     )
   end
   let(:authorizations) { [] }
@@ -372,6 +495,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   let(:transport) do
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
+
   let(:responses) do
     {
       signup: transport.auth_signup(
@@ -415,7 +539,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       download: transport.download_storage_object(
         authorization: 'access-token',
         bucket_name: 'assets',
-        path: 'a.txt'
+        path: 'a.txt',
+        byte_range: 'bytes=0-4'
       ),
       list: transport.list_storage_objects(
         authorization: 'access-token',
@@ -445,7 +570,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
   def download_transport(tempfile)
     storage = Object.new
-    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path|
+    storage.define_singleton_method(:download_storage_object_with_http_info) do |_bucket, _path, _options|
       [tempfile, 200, { 'content-type' => 'application/octet-stream' }]
     end
     empty = Object.new
@@ -455,10 +580,109 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         oauth: empty,
         database: empty,
         storage: storage,
-        locks: empty
+        locks: empty,
+        functions: empty,
+        logs: empty
       )
     end
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+  end
+
+  it 'resolves and invokes a function through generated operations' do
+    resolved = transport.resolve_function_for_invocation(
+      authorization: 'access-token', name: 'send-welcome'
+    )
+    response = transport.invoke_function(
+      authorization: 'access-token',
+      function_id: resolved.body.fetch('function_id'),
+      payload: { 'user_id' => 'user-123' }
+    )
+
+    expect(response).to have_attributes(
+      status: 422, body: { 'error' => 'invalid order' },
+      headers: { 'X-Volcano-Version' => 'staging-v1' }
+    )
+    operation, function_id, request, options = apis.functions.calls.last
+    expect([operation, function_id]).to eq(
+      [:invoke, '00000000-0000-4000-8000-000000000040']
+    )
+    expect(request.to_hash).to eq(payload: { 'user_id' => 'user-123' })
+    expect(options).to eq(follow_location: false)
+    expect(authorizations).to eq(%w[access-token access-token])
+  end
+
+  it 'reads project logs through generated operations', :aggregate_failures do
+    project_id = '00000000-0000-4000-8000-000000000001'
+    resource = { 'resource' => { 'type' => 'function' } }
+
+    search = transport.search_project_logs(
+      authorization: 'access-token', project_id: project_id,
+      request: resource.merge('limit' => 25)
+    )
+    activity = transport.get_project_log_activity(
+      authorization: 'access-token', project_id: project_id,
+      request: resource.merge('bucket_count' => 12)
+    )
+
+    expect(search.body.fetch('data').first).to include(
+      'id' => 'event-1',
+      'body' => { 'message' => 'ready', 'values' => [1, 2], 'count' => 2 }
+    )
+    expect(activity.body.fetch('total')).to eq(0)
+    search_call = apis.logs.calls.fetch(0)
+    activity_call = apis.logs.calls.fetch(1)
+    expect(search_call.first(2)).to eq([:search, project_id])
+    expect(search_call.fetch(2).to_hash).to eq(
+      resource: { type: 'function' }, limit: 25
+    )
+    expect(search_call.last).to eq(debug_return_type: 'String')
+    expect(activity_call.first(2)).to eq([:activity, project_id])
+    expect(activity_call.fetch(2).to_hash).to eq(
+      resource: { type: 'function' }, bucket_count: 12
+    )
+    expect(activity_call.last).to eq(debug_return_type: 'String')
+  end
+
+  it 'reads a lock through the generated API' do
+    response = transport.get_project_lock(authorization: 'service-key', key: 'build:queue')
+
+    expect(response.body).to eq(
+      'held' => true,
+      'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'),
+      'fencing_token' => 7
+    )
+    operation, key, request_id = apis.locks.calls.last
+    expect([operation, key]).to eq([:get, 'build:queue'])
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(authorizations).to eq(['service-key'])
+  end
+
+  it 'renews a lock through the generated API' do
+    response = transport.renew_project_lock(
+      authorization: 'service-key', key: 'build:queue', ttl: 60,
+      token: '00000000-0000-4000-8000-000000000001'
+    )
+
+    expect(response.body).to include('fencing_token' => 7)
+    operation, key, token, request_id, body = apis.locks.calls.last
+    expect([operation, key, token]).to eq(
+      [:renew, 'build:queue', '00000000-0000-4000-8000-000000000001']
+    )
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(body.ttl_seconds).to eq(60)
+    expect(authorizations).to eq(['service-key'])
+  end
+
+  it 'force releases a lock through the generated API' do
+    response = transport.force_release_project_lock(
+      authorization: 'service-key', key: 'build:queue'
+    )
+
+    expect(response.status).to eq(204)
+    operation, key, request_id = apis.locks.calls.last
+    expect([operation, key]).to eq([:force_release, 'build:queue'])
+    expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(authorizations).to eq(['service-key'])
   end
 
   it 'routes only the ten POC operations through generated API classes', :aggregate_failures do
@@ -482,7 +706,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
           "hello\x00".b,
           {}
         ],
-        [:download, 'assets', 'a.txt'],
+        [:download, 'assets', 'a.txt', { range: 'bytes=0-4' }],
         [:list, 'assets', { prefix: 'avatars', limit: 25, cursor: 'cursor-1' }],
         [:delete, 'assets', 'archive/a.txt']
       ]
@@ -1014,6 +1238,82 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(api_client.select_header_content_type(['application/json'])).to eq('application/json')
   end
 
+  it 'creates an upload session through the stable transport' do
+    response = transport.create_upload_session(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadSessionRequest, false).new(
+        path: 'videos/demo.mp4', content_type: 'video/mp4',
+        total_size: 20_000_000, part_size: 8_388_608
+      )
+    )
+
+    expect(response.body).to include(
+      'session_id' => 'session-123', 'part_size' => 8_388_608, 'total_parts' => 3
+    )
+    operation, bucket, path, request = apis.storage.calls.last
+    expect([operation, bucket, path]).to eq([:create_session, 'assets', 'videos/demo.mp4'])
+    expect(request).to have_attributes(
+      object_path: 'videos/demo.mp4', content_type: 'video/mp4',
+      total_size: 20_000_000, part_size: 8_388_608
+    )
+  end
+
+  it 'uploads a part through the stable transport' do
+    response = transport.upload_part(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadPartRequest, false).new(
+        path: 'videos/demo.mp4', session_id: 'session-123', part_number: 2, data: "chunk\x00".b
+      )
+    )
+
+    expect(response.body).to eq('part_number' => 2, 'etag' => 'etag-part', 'size' => 6)
+    expect(apis.storage.calls.last).to eq(
+      [:upload_part, 'assets', 'videos/demo.mp4', 'session-123', 2, "chunk\x00".b]
+    )
+  end
+
+  it 'completes an upload session through the stable transport' do
+    response = transport.complete_upload_session(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadSessionReference, false).new(
+        path: 'videos/demo.mp4', session_id: 'session-123'
+      )
+    )
+
+    expect(response.body.fetch('object')).to include('name' => 'videos/demo.mp4')
+    expect(apis.storage.calls.last).to eq(
+      [:complete_upload_session, 'assets', 'videos/demo.mp4', 'session-123']
+    )
+  end
+
+  it 'gets upload session status through the stable transport' do
+    response = transport.get_upload_session(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadSessionReference, false).new(
+        path: 'videos/demo.mp4', session_id: 'session-123'
+      )
+    )
+
+    expect(response.body).to include('session_id' => 'session-123', 'status' => 'uploading')
+    expect(apis.storage.calls.last).to eq(
+      [:get_upload_session, 'assets', 'videos/demo.mp4', 'session-123']
+    )
+  end
+
+  it 'aborts an upload session through the stable transport' do
+    response = transport.abort_upload_session(
+      authorization: 'access-token', bucket_name: 'assets',
+      request: Volcano.const_get(:UploadSessionReference, false).new(
+        path: 'videos/demo.mp4', session_id: 'session-123'
+      )
+    )
+
+    expect(response.status).to eq(200)
+    expect(apis.storage.calls.last).to eq(
+      [:abort_upload_session, 'assets', 'videos/demo.mp4', 'session-123']
+    )
+  end
+
   it 'converts the public timeout in seconds to Typhoeus milliseconds' do
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
     configuration = transport.send(:generated_configuration, 'access-token')
@@ -1024,6 +1324,16 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     expect(request.options.fetch(:timeout)).to eq(1_500)
+  end
+
+  it 'honors disabled redirect following for passthrough responses' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+
+    request = api_client.build_request(
+      :post, '/functions/function-id/invoke', auth_names: [], follow_location: false
+    )
+
+    expect(request.options.fetch(:followlocation)).to be(false)
   end
 
   it 'preserves object path segments and percent-encodes spaces' do
@@ -1044,6 +1354,124 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(calls.map { |call| call.fetch(1) }).to eq(expected_paths)
   ensure
     file&.close!
+  end
+
+  it 'maps the generated download range option to the request header' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 206, {}] }
+    storage = described_class::StorageApi.new(api_client)
+
+    options, = storage.download_storage_object_with_http_info('assets', 'payload.txt', range: 'bytes=0-4')
+
+    expect(options.fetch(:header_params).fetch('Range')).to eq('bytes=0-4')
+  end
+
+  it 'serializes upload session creation as JSON through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 201, {}] }
+    storage = described_class::StorageApi.new(api_client)
+    request = InternalGenerated::CreateUploadSessionRequest.new(
+      object_path: 'videos/demo.mp4', content_type: 'video/mp4', total_size: 20_000_000
+    )
+
+    options, = storage.create_upload_session_with_http_info('assets', 'videos/demo.mp4', request)
+
+    expect(options.fetch(:header_params).fetch('Content-Type')).to eq('application/json')
+    expect(JSON.parse(options.fetch(:body))).to eq(
+      'object_path' => 'videos/demo.mp4',
+      'content_type' => 'video/mp4',
+      'total_size' => 20_000_000
+    )
+    expect(options.fetch(:return_type)).to eq('CreateUploadSessionResponse')
+  end
+
+  it 'sends upload parts as binary through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+
+    storage.upload_part_with_http_info(
+      'assets', 'videos/demo clip.mp4', 'session-123', 2, "chunk\x00".b
+    )
+
+    method, path, options = calls.fetch(0)
+    expect([method, path]).to eq([:PUT, '/storage/assets/videos/demo%20clip.mp4'])
+    expect(options.fetch(:header_params)).to include(
+      'Content-Type' => 'application/octet-stream',
+      'X-Upload-Session' => 'session-123',
+      'X-Part-Number' => '2'
+    )
+    expect(options.fetch(:body)).to eq("chunk\x00".b)
+    expect(options.fetch(:return_type)).to eq('UploadSessionPart')
+  end
+
+  it 'completes upload sessions through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+
+    storage.complete_upload_session_with_http_info(
+      'assets', 'videos/demo clip.mp4', 'session-123'
+    )
+
+    method, path, options = calls.fetch(0)
+    expect([method, path]).to eq([:POST, '/storage/assets/videos/demo%20clip.mp4'])
+    expect(options.fetch(:header_params)).to include(
+      'Content-Type' => 'application/json',
+      'X-Upload-Session' => 'session-123',
+      'X-Upload-Complete' => 'true'
+    )
+    expect(JSON.parse(options.fetch(:body))).to eq({})
+    expect(options.fetch(:return_type)).to eq('CompleteUploadSessionResponse')
+  end
+
+  it 'gets upload session status through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+
+    storage.get_upload_session_with_http_info(
+      'assets', 'videos/demo clip.mp4', 'session-123'
+    )
+
+    method, path, options = calls.fetch(0)
+    expect([method, path]).to eq([:GET, '/storage/assets/videos/demo%20clip.mp4'])
+    expect(options.fetch(:header_params)).to include(
+      'Accept' => 'application/json', 'X-Upload-Session' => 'session-123'
+    )
+    expect(options.fetch(:return_type)).to eq('UploadSessionStatusResponse')
+  end
+
+  it 'aborts upload sessions through the path adapter' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = described_class::StorageApi.new(api_client)
+
+    storage.abort_upload_session_with_http_info(
+      'assets', 'videos/demo clip.mp4', 'session-123'
+    )
+
+    method, path, options = calls.fetch(0)
+    expect([method, path]).to eq([:DELETE, '/storage/assets/videos/demo%20clip.mp4'])
+    expect(options.fetch(:header_params)).to include(
+      'Accept' => 'application/json', 'X-Upload-Session' => 'session-123'
+    )
   end
 
   it 'preserves nested object paths when updating visibility' do
@@ -1121,7 +1549,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     empty = Object.new
     factory = lambda do |_authorization|
       GeneratedApis.new(
-        authentication: authentication, oauth: empty, database: empty, storage: empty, locks: empty
+        authentication: authentication, oauth: empty, database: empty,
+        storage: empty, locks: empty, functions: empty, logs: empty
       )
     end
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)

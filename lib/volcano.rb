@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 require_relative 'volcano/version'
+require_relative 'volcano/connection_string'
 require_relative 'volcano/models'
+require_relative 'volcano/function_response'
+require_relative 'volcano/log_responses'
 require_relative 'volcano/storage_models'
 require_relative 'volcano/auth_state'
 require_relative 'volcano/errors'
@@ -25,9 +28,18 @@ require_relative 'volcano/auth_reset_password'
 require_relative 'volcano/auth_get_user'
 require_relative 'volcano/auth_update_user'
 require_relative 'volcano/database'
+require_relative 'volcano/functions'
+require_relative 'volcano/logs'
 require_relative 'volcano/storage'
+require_relative 'volcano/storage_upload_sessions'
+require_relative 'volcano/storage_resumable_upload'
 require_relative 'volcano/storage_mutations'
 require_relative 'volcano/storage_public_url'
+require_relative 'volcano/lock_lease_clock'
+require_relative 'volcano/lock_guard'
+require_relative 'volcano/lock_renewer'
+require_relative 'volcano/lock_session'
+require_relative 'volcano/lock_auto_renewal'
 require_relative 'volcano/locks'
 require_relative 'volcano/realtime/protocol'
 require_relative 'volcano/realtime'
@@ -35,7 +47,9 @@ require_relative 'volcano/client'
 
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
-  private_constant :GeneratedTransport, :Redaction
+  private_constant :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer, :LockSession,
+                   :Redaction
 
-  Realtime.private_constant :Protocol, :ProtocolDispatch
+  Realtime.private_constant :Protocol, :ProtocolDispatch, :ProtocolPublicationDispatch, :ProtocolRecovery,
+                            :ProtocolRecoveryDispatch, :ProtocolRecoveryPosition
 end

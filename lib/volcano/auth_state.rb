@@ -27,6 +27,7 @@ module Volcano
     def initialize
       @mutex = Mutex.new
       @generation = 0
+      @lineage = 0
       @session = nil
       @callbacks = {}
       @next_callback_id = 0
@@ -38,16 +39,18 @@ module Volcano
 
     def capture = @mutex.synchronize { [@generation, @session] }
 
+    def capture_binding = @mutex.synchronize { [@generation, @lineage, @session] }
+
     def store(session, event: :signed_in)
       dispatch = @mutex.synchronize do
-        enqueue_notification(replace(session), event, session)
+        enqueue_notification(replace(session, event), event, session)
       end
       drain_notifications if dispatch
     end
 
     def store_if_current?(session, generation, event: :signed_in)
       dispatch = @mutex.synchronize do
-        callbacks = replace_if_current(session, generation)
+        callbacks = replace_if_current(session, generation, event)
         return false unless callbacks
 
         enqueue_notification(callbacks, event, session)
@@ -69,16 +72,17 @@ module Volcano
 
     private
 
-    def replace(session)
+    def replace(session, event)
       @session = session
       @generation += 1
+      @lineage += 1 unless event == :token_refreshed
       @callbacks.keys
     end
 
-    def replace_if_current(session, generation)
+    def replace_if_current(session, generation, event)
       return unless generation == @generation
 
-      replace(session)
+      replace(session, event)
     end
 
     def register(callback)

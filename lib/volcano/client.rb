@@ -3,7 +3,12 @@
 module Volcano
   # Entry point for Volcano API, storage, lock, and realtime operations.
   class Client
-    attr_reader :auth, :storage, :locks, :realtime
+    SessionToken = Data.define(:value) do
+      def session_token = value
+    end
+    private_constant :SessionToken
+
+    attr_reader :auth, :functions, :logs, :storage, :locks, :realtime
 
     def initialize(
       anon_key:,
@@ -12,13 +17,13 @@ module Volcano
       timeout: 60,
       **adapters
     )
-      transport, socket_factory = extract_adapters(adapters)
+      transport, socket_factory, reconnect_delay = extract_adapters(adapters)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
       @auth_state = AuthState.new
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
-      initialize_facades(socket_factory)
+      initialize_facades(socket_factory, reconnect_delay)
     end
 
     def database(name)
@@ -46,12 +51,20 @@ module Volcano
       @service_key
     end
 
+    def function_token
+      current_session&.access_token || @service_key || @anon_key
+    end
+
     def store_session(session, event: :signed_in)
       @auth_state.store(session, event: event)
     end
 
     def capture_session
       @auth_state.capture
+    end
+
+    def capture_session_binding
+      @auth_state.capture_binding
     end
 
     def store_session_if_current?(session, generation, event: :signed_in)
@@ -68,22 +81,30 @@ module Volcano
 
     private
 
+    def database_with_token(name, token)
+      Database.new(SessionToken.new(value: token), @transport, name)
+    end
+
     def extract_adapters(adapters)
       transport = adapters.delete(:_transport)
       socket_factory = adapters.delete(:_realtime_socket_factory)
+      reconnect_delay = adapters.delete(:_realtime_reconnect_delay)
       raise ArgumentError, "unknown keyword: #{adapters.keys.first}" unless adapters.empty?
 
-      [transport, socket_factory]
+      [transport, socket_factory, reconnect_delay]
     end
 
-    def initialize_facades(socket_factory)
+    def initialize_facades(socket_factory, reconnect_delay)
       @auth = Auth.new(self, @transport, api_url: @api_url)
+      @functions = Functions.new(self, @transport)
+      @logs = Logs.new(self, @transport)
       @storage = Storage.new(self, @transport, api_url: @api_url, anon_key: @anon_key)
       @locks = Locks.new(self, @transport)
       @realtime = Realtime.new(
         self,
         api_url: @api_url,
-        socket_factory: socket_factory
+        socket_factory: socket_factory,
+        reconnect_delay: reconnect_delay
       )
     end
   end

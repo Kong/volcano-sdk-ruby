@@ -391,6 +391,46 @@ session. It succeeds without a request when no session exists. If revocation
 fails, the SDK still clears that session and raises the typed error. A session
 established while sign-out is pending remains current.
 
+### Invoke a function
+
+```ruby
+result = client.functions.invoke(
+  "send-welcome",
+  { user_id: session.user_id }
+)
+puts [result.status, result.version, result.data]
+```
+
+`invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
+active user session when present, then a configured service key, then the
+anonymous key. An anonymous key can invoke a public function without a user
+session; the function receives no user identity. The immutable result includes
+the response body, status, headers, and `X-Volcano-Version`. A function's own
+non-2xx response is returned when the version header proves it ran; platform
+failures raise typed SDK errors.
+
+### Read project logs
+
+```ruby
+project_id = "00000000-0000-4000-8000-000000000001"
+page = client.logs.search(
+  project_id,
+  { resource: { type: "function" }, limit: 100 }
+)
+page.data.each { |event| puts [event["timestamp"], event["body"]] }
+
+activity = client.logs.activity(
+  project_id,
+  { resource: { type: "function" }, bucket_count: 24 }
+)
+puts activity.total
+```
+
+`search` returns an immutable page of retained runtime or deployment log
+events. Pass `next_cursor` back as `cursor` to continue a search. `activity`
+returns immutable time buckets using the same resource selector and query
+syntax. Both methods require an active user session.
+
 ### Query a database
 
 ```ruby
@@ -439,12 +479,60 @@ deleted_rows = client.database("main")
 
 Updates and deletes require at least one filter; Volcano rejects filterless mutations.
 
+Use `database_connection_string` inside a Volcano function to select database
+access without changing the advertised `DATABASE_URL` target:
+
+```ruby
+connection_string = Volcano.database_connection_string(
+  ENV.fetch("DATABASE_URL"),
+  user_id: event.dig("__volcano_auth", "user_id")
+)
+```
+
+Pass a user ID to enforce that user's Row-Level Security policies. Omit
+`user_id:` for full service access.
+The helper preserves libpq connection syntax, including hostless and multi-host
+targets, and leaves unrelated query values unchanged.
+
 ### Upload, download, and list objects
 
 ```ruby
 bucket = client.storage.from("assets")
 bucket.upload("a.txt", "hello".b)
 bytes = bucket.download("a.txt")
+first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
+video = "demo video".b
+uploaded = bucket.upload_resumable(
+  "videos/automatic.mp4",
+  video,
+  content_type: "video/mp4",
+  on_progress: ->(uploaded_bytes, total_bytes) { puts "#{uploaded_bytes}/#{total_bytes}" }
+)
+puts uploaded.name
+upload_session = bucket.create_upload_session(
+  "videos/demo.mp4",
+  total_size: video.bytesize,
+  content_type: "video/mp4",
+  part_size: 8_388_608
+)
+puts [upload_session.session_id, upload_session.total_parts]
+part = bucket.upload_part(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id,
+  part_number: 1,
+  data: video
+)
+puts part.etag
+status = bucket.get_upload_session(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id
+)
+puts [status.parts_uploaded, status.bytes_uploaded]
+completed = bucket.complete_upload_session(
+  "videos/demo.mp4",
+  session_id: upload_session.session_id
+)
+puts completed.name
 
 page = bucket.list("avatars", limit: 100)
 page.objects.each { |object| puts object.name }
@@ -464,16 +552,53 @@ Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for
 the next page. Removals run in input order; a failed request raises after any
 earlier paths have already been deleted.
+Pass an HTTP byte range to download only part of an object.
+`create_upload_session` returns the immutable server-selected part size, part
+count, and expiration time for a resumable upload.
+`upload_resumable` creates a session, chunks the data using the server-selected
+part size, and completes the upload. It streams seekable `IO` values directly;
+non-seekable inputs are spooled to a temporary file with bounded reads. If a
+part or progress callback fails, it makes a best-effort abort and raises the
+original error. `on_progress` runs after each successful part with cumulative
+uploaded bytes and the total size.
+`upload_part` returns immutable part metadata and can safely retry the same part
+number to replace that part.
+`get_upload_session` returns immutable progress and uploaded-part metadata for
+resuming an interrupted upload.
+`complete_upload_session` assembles the uploaded parts and returns the stored
+object.
+`abort_upload_session(path, session_id: ...)` abandons a session and discards
+its uploaded parts.
 Visibility updates return the server-confirmed object; `public_url` is set only
 when the object is public.
 `get_public_url` constructs a URL locally and does not check object visibility.
 
-### Acquire and release a lock
+### Inspect, acquire, and release a lock
 
 ```ruby
+state = client.locks.get("build")
+puts state.held
 lease = client.locks.acquire("build", ttl: 30)
+lease = client.locks.renew("build", lease, ttl: 30)
 client.locks.release("build", lease)
+client.locks.force_release("stale-build")
+
+client.locks.with_lock("deploy", ttl: 30) do |guard|
+  deploy(fencing_token: guard.lease.fencing_token)
+  raise "lock lost" if guard.lost?
+end
 ```
+
+`locks.get` returns immutable lock availability, expiry, and fencing-token
+state without acquiring the lock.
+`locks.renew` returns a new immutable lease and leaves the previous value
+unchanged.
+`locks.with_lock` renews the lease for the lifetime of the block and always
+attempts to release its latest lease. The guard exposes the latest immutable
+lease, `lost?`, and `wait_lost(timeout:)`. Use the fencing token for protected
+writes; stop work when the guard reports lease loss.
+`locks.force_release` drops any current lease without an ownership token. Use
+it only for administrative recovery behind fencing-token enforcement.
 
 ### Broadcast over realtime
 
@@ -481,25 +606,109 @@ Realtime calls are asynchronous and must run in an Async reactor:
 
 ```ruby
 Async do
+  stop_connect = client.realtime.on_connect do |context|
+    puts "connected #{context.client}"
+  end
+  client.realtime.on_disconnect do |context|
+    puts "disconnected #{context.reason}"
+  end
+  client.realtime.on_error { |context| warn context.message }
+
   channel = client.realtime.channel("deployments")
+  raise "unexpected channel" unless channel.name == "broadcast:deployments"
   channel.on("message") { |message| puts message.fetch("value") }
   channel.subscribe
+  raise "not connected" unless client.realtime.connected?
   channel.send(event: "message", value: "contract")
-  channel.unsubscribe
+  client.realtime.remove_channel("deployments")
+  raise "disconnected" unless client.realtime.connected?
+  client.realtime.disconnect
+  raise "still connected" if client.realtime.connected?
+  stop_connect.call
+end.wait
+```
+
+### Track presence
+
+Presence identity and metadata come from the authenticated user. `track` keeps
+optional application state locally without replacing that server-managed data:
+
+```ruby
+Async do
+  lobby = client.realtime.channel("lobby", type: :presence)
+  lobby.on_presence_sync do |state|
+    puts "#{state.length} clients online"
+  end
+  lobby.on("join") { |info| puts "joined #{info.user}" }
+  lobby.on("leave") { |info| puts "left #{info.user}" }
+
+  lobby.subscribe
+  lobby.track("status" => "online")
+  puts lobby.tracked_state.fetch("status")
+  lobby.presence_state.each_value { |info| puts info.data }
+  lobby.unsubscribe
   client.realtime.disconnect
 end.wait
 ```
 
-This proof of concept implements connect, subscribe, publish, unsubscribe, and
-clean shutdown. Reconnect, recovery, presence, and database-change
-subscriptions are out of scope.
+`presence_state` returns an immutable snapshot keyed by Centrifuge client ID.
+`get_presence_state` is an equivalent cross-SDK alias. Subscribe again to fetch
+a fresh authoritative snapshot.
+
+### Subscribe to Postgres changes
+
+Postgres channels deliver immutable, RLS-scoped row changes and filter
+callbacks by event, schema, and table. Configure the database once to expand
+lightweight INSERT and UPDATE notifications into full rows before delivery:
+
+```ruby
+require "async/queue"
+
+Async do
+  received = Async::Queue.new
+  client.realtime.database_name = "app"
+  changes = client.realtime.channel("public:messages", type: :postgres)
+  changes.on_postgres_changes("INSERT", schema: "public", table: "messages") do |change|
+    received.enqueue(change)
+  end
+  changes.subscribe
+
+  change = received.dequeue # Wait for an INSERT from another client.
+  puts change.record.fetch("body")
+  client.realtime.disconnect
+end.wait
+```
+
+Auto-fetch is enabled by default and uses the authenticated session captured
+for the subscription. Lookups for the same table that arrive within 20
+milliseconds are grouped into one request, up to 50 rows. Deliveries remain
+ordered, including repeated notifications for the same row. DELETE notifications
+are expanded locally from `old_record` or `id`. If a lookup fails, the error
+callback runs and the original lightweight change is delivered. Use
+`auto_fetch: false` when creating the channel to receive lightweight
+notifications without database requests. Set `fetch_batch_window_ms:` and
+`fetch_max_batch_size:` on the channel to override the batching defaults. Both
+values must be positive integers, and the maximum batch size cannot exceed 128.
+
+`remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
+does the same for every managed channel without disconnecting the shared
+realtime transport, so later calls to `channel` return fresh facades. Pass the
+same `type:` to `remove_channel` for every non-broadcast channel. Unexpected
+transport loss reconnects with bounded exponential backoff and restores active
+subscriptions. Broadcast channels recover retained publications only for this
+client lifetime and the same authenticated-user lineage. Recovery state is not
+persisted across processes. Postgres channels do not recover missed
+publications yet; presence channels rebuild their current snapshot.
+Connection callbacks receive immutable contexts and run outside protocol
+processing. Each registration returns an idempotent callable that stops future
+delivery.
 
 ## Generated boundary
 
-The internal REST transport is generated from the self-contained public
-Volcano OpenAPI bundle at hosting commit
-`cb12eb4636252cb658f13850dad930fa73a5dc4c`. Its SHA-256 is
-`95e5c102830db382064180afca4c62ad8b11faabf58148f9d21236046b930090`.
+The internal REST transport is generated from `openapi/openapi.yaml`, which
+includes the managed auth page contract from [Hosting #945](https://github.com/Kong/volcano-hosting/pull/945)
+and the OAuth provider response contract from [Hosting #991](https://github.com/Kong/volcano-hosting/pull/991).
+Its SHA-256 is `68e9d526b8acad3736027ca2278f2534967710d867a6941e338e00f77a77ac76`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

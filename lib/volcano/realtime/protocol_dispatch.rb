@@ -12,15 +12,35 @@ module Volcano
         elsif frame.key?('id')
           dispatch_reply(frame)
         elsif frame.key?('push')
-          dispatch_publication(frame.fetch('push'))
+          dispatch_push(frame.fetch('push'))
+        end
+      end
+
+      def dispatch_push(push)
+        if push.key?('pub')
+          dispatch_publication(push)
+        elsif push.key?('join')
+          dispatch_presence(push, 'join')
+        elsif push.key?('leave')
+          dispatch_presence(push, 'leave')
         end
       end
 
       def dispatch_reply(frame)
-        reply_queue = @pending[frame.fetch('id')]
-        return unless reply_queue
+        pending = @pending[frame.fetch('id')]
+        return unless pending
 
-        reply_queue.enqueue(reply_value(frame))
+        reply = reply_value(frame)
+        pending.queue.enqueue(apply_reply_hook(pending, reply))
+      end
+
+      def apply_reply_hook(pending, reply)
+        return reply if reply.is_a?(Protocol::Failure) || !pending.on_reply
+
+        pending.on_reply.call(reply)
+        reply
+      rescue StandardError => e
+        Protocol::Failure.new(error: e)
       end
 
       def reply_value(frame)
@@ -31,32 +51,63 @@ module Volcano
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
       end
 
-      def dispatch_publication(push)
-        channel = push['channel'].to_s
-        data = push.dig('pub', 'data')
-        return unless data.is_a?(Hash)
+      def dispatch_presence(push, event)
+        channel = matching_channel(@presence_handlers, push['channel'].to_s)
+        info = push.dig(event, 'info')
+        return unless channel && info.is_a?(Hash)
 
-        event = data['event']
-        registered_channel = @publication_handlers.each_key.select do |candidate|
-          channel == candidate || channel.end_with?(":#{candidate}")
+        if @callback_queue.size >= @max_callback_queue
+          @pending_presence_resyncs[channel] = @presence_handlers.fetch(channel).dup
+          return
+        end
+
+        @callback_queue.enqueue([@presence_handlers.fetch(channel).dup, event, info])
+      end
+
+      def matching_channel(handlers, channel)
+        handlers.each_key.select do |candidate|
+          if candidate.start_with?('postgres:')
+            postgres_channel?(candidate, channel)
+          else
+            channel == candidate || channel.end_with?(":#{candidate}")
+          end
         end.max_by(&:length)
-        return unless registered_channel
-        return if @callback_queue.size >= @max_callback_queue
+      end
 
-        @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
+      def postgres_channel?(candidate, channel)
+        candidate_parts = candidate.split(':')
+        channel_parts = channel.split(':')
+        candidate_parts.length == 3 && candidate_parts.first == 'postgres' &&
+          channel_parts.length == 5 && channel_parts.slice(1, 3) == candidate_parts
       end
 
       def dispatch_callbacks
         until @callback_stopping
-          handlers, event, data = @callback_queue.dequeue
-          handlers.each do |handler|
-            break if @callback_stopping
-
-            handler.call(event, data)
-          rescue StandardError
-            next
-          end
+          delivery = @callback_queue.dequeue
+          dispatch_queued_callback(delivery)
+          enqueue_pending_presence_resync
         end
+      rescue StandardError => e
+        close_with(closed_error(e), notify_error: true)
+      end
+
+      def dispatch_callback_delivery(handlers, event, data)
+        handlers.each do |handler|
+          break if @callback_stopping
+
+          handler.call(event, data)
+        rescue StandardError
+          next
+        end
+      end
+
+      def enqueue_pending_presence_resync
+        return if @callback_queue.size >= @max_callback_queue
+
+        channel, handlers = @pending_presence_resyncs.shift
+        return unless channel
+
+        @callback_queue.enqueue([handlers, 'sync_required', {}])
       end
     end
   end

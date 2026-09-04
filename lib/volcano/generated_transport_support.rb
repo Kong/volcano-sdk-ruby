@@ -24,6 +24,12 @@ module Volcano
 
     # Corrects generated content negotiation and private model lookup.
     class ApiClient < Generated::ApiClient
+      def build_request(http_method, path, options = {})
+        request = super
+        request.options[:followlocation] = options.fetch(:follow_location, true)
+        request
+      end
+
       def select_header_content_type(content_types)
         if content_types.include?('multipart/form-data') && content_types.include?('application/json')
           return 'multipart/form-data'
@@ -52,6 +58,8 @@ module Volcano
 
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
+      include UploadSessionStorageApi
+
       UPLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.upload_storage_object',
         header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' }.freeze,
@@ -82,7 +90,11 @@ module Volcano
       end
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})
-        call_storage_api(:GET, bucket_name, path, opts.merge(DOWNLOAD_OPTIONS))
+        header_params = DOWNLOAD_OPTIONS.fetch(:header_params).merge(opts[:header_params] || {})
+        header_params['Range'] = opts[:range] unless opts[:range].nil?
+        options = opts.merge(DOWNLOAD_OPTIONS, header_params: header_params)
+
+        call_storage_api(:GET, bucket_name, path, options)
       end
 
       def delete_storage_object_with_http_info(bucket_name, path, opts = {})
@@ -182,7 +194,9 @@ module Volcano
           oauth: Generated::OAuthAuthenticationApi.new(api_client),
           database: Generated::DatabaseQueriesApi.new(api_client),
           storage: StorageApi.new(api_client),
-          locks: Generated::LocksApi.new(api_client)
+          locks: Generated::LocksApi.new(api_client),
+          functions: Generated::FunctionsApi.new(api_client),
+          logs: Generated::LogsApi.new(api_client)
         )
       end
 

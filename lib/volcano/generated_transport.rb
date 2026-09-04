@@ -17,6 +17,7 @@ end
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :Generated
+  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_support'
   require_relative 'generated_transport_auth'
   require_relative 'generated_transport_anonymous'
@@ -25,14 +26,19 @@ module Volcano
   require_relative 'generated_transport_sessions'
   require_relative 'generated_transport_oauth'
   require_relative 'generated_transport_database'
+  require_relative 'generated_transport_logs'
   require_relative 'generated_transport_storage'
+  require_relative 'generated_transport_upload_sessions'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
     include ApiFactory
+    include LogTransport
     include ValueNormalization
 
-    GeneratedApis = Data.define(:authentication, :oauth, :database, :storage, :locks)
+    GeneratedApis = Data.define(
+      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+    )
 
     def initialize(api_url:, timeout: 60, api_factory: nil)
       @api_url = api_url
@@ -50,6 +56,40 @@ module Volcano
       end
     end
 
+    def get_project_lock(authorization:, key:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.locks.get_project_lock_with_http_info(
+          key,
+          SecureRandom.uuid
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def force_release_project_lock(authorization:, key:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.locks.force_release_project_lock_with_http_info(
+          key,
+          SecureRandom.uuid
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def renew_project_lock(authorization:, key:, ttl:, token:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
+        result = apis.locks.renew_project_lock_with_http_info(
+          key, token, SecureRandom.uuid, body
+        )
+        data, status, headers = result
+        response(data, status, headers)
+      end
+    end
+
     def release_project_lock(authorization:, key:, token:)
       invoke do
         apis = @api_factory.call(authorization)
@@ -57,6 +97,25 @@ module Volcano
           key,
           token,
           SecureRandom.uuid
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def resolve_function_for_invocation(authorization:, name:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.functions.resolve_function_for_invocation_with_http_info(name)
+        response(data, status, headers)
+      end
+    end
+
+    def invoke_function(authorization:, function_id:, payload:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        request = Generated::FunctionInvocationRequest.new(payload: payload)
+        data, status, headers = apis.functions.invoke_function_with_http_info(
+          function_id, request, follow_location: false
         )
         response(data, status, headers)
       end

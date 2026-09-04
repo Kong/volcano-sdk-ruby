@@ -8,9 +8,9 @@ module Volcano
       module IO
         private
 
-        def request
+        def request(on_reply: nil)
           ensure_open!
-          id, reply_queue = register_request
+          id, reply_queue = register_request(on_reply)
           write_frame(yield(id))
           reply = await_reply(reply_queue)
           raise reply.error if reply.is_a?(Failure)
@@ -22,13 +22,25 @@ module Volcano
           @pending.delete(id) if defined?(id)
         end
 
-        def register_request
+        def register_request(on_reply)
           if @pending.length >= @max_pending
             raise PendingLimitError, "realtime pending command limit #{@max_pending} reached"
           end
 
           @next_id += 1
-          [@next_id, Async::Queue.new].tap { |id, queue| @pending[id] = queue }
+          queue = Async::Queue.new
+          @pending[@next_id] = Pending.new(queue: queue, on_reply: on_reply)
+          [@next_id, queue]
+        end
+
+        def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
+
+        def write_serialized_frame(frame)
+          @write_lock.acquire { @socket.write(frame) }
+        rescue StandardError => e
+          failure = closed_error(e)
+          close_with(failure, notify_error: true)
+          raise failure
         end
 
         def await_reply(reply_queue)
@@ -44,9 +56,9 @@ module Volcano
             process_message(message)
           end
         rescue JSON::ParserError => e
-          close_with(ClosedError.new(invalid_frame_message(e)))
+          close_with(ClosedError.new(invalid_frame_message(e)), notify_error: true)
         rescue StandardError => e
-          close_with(closed_error(e))
+          close_with(closed_error(e), notify_error: true)
         ensure
           close_with(ClosedError.new('realtime connection closed'))
         end

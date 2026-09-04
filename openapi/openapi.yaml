@@ -8634,6 +8634,7 @@ paths:
                     maximum: 599
                   data:
                     description: Raw JSON value returned by the OAuth provider's API
+                    nullable: true
         '400':
           description: |
             Invalid request (for example: missing `endpoint`, an `endpoint` that is

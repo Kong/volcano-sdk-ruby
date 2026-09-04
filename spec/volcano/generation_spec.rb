@@ -6,9 +6,9 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = '4f98b2deaa075e876a3fbe49cc13097c7a08ab39312f9a1cd9b9c0229c016166'
+  OPENAPI_SHA256 = '68e9d526b8acad3736027ca2278f2534967710d867a6941e338e00f77a77ac76'
 
-  it 'uses the exact bundled contract and emits all eight POC operations' do
+  it 'uses the exact bundled contract and emits the required POC operations' do
     expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)
 
     Dir.mktmpdir('volcano-ruby-openapi') do |directory|
@@ -28,6 +28,10 @@ RSpec.describe 'OpenAPI generation' do
         'query_database_select',
         'upload_storage_object',
         'download_storage_object',
+        'resolve_function_for_invocation',
+        'invoke_function',
+        'search_project_logs',
+        'get_project_log_activity',
         'acquire_project_lock',
         'release_project_lock'
       )

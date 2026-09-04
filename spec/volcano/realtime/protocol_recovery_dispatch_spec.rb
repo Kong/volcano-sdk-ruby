@@ -133,6 +133,23 @@ RSpec.describe ProtocolRecoveryDispatch do
       hook_release&.enqueue(true)
       release&.enqueue(true)
     end
+
+    it 'coalesces overflow by the captured multi-hook registration snapshot' do
+      queues = multi_hook_queues
+      prepare_multi_hook_overflow(queues)
+
+      (1..20).each { |offset| dispatch_live('target', offset) }
+
+      expect(protocol.instance_variable_get(:@publication_queue).size).to eq(2)
+      drain_blocking_callbacks(queues)
+      queues.fetch(:gate_release).enqueue(true)
+      publications = [wait_for(queues.fetch(:first_hook)), wait_for(queues.fetch(:second_hook))]
+      expect(publications.map { |publication| publication.fetch('offset') }).to eq([2, 2])
+      expect([queues.fetch(:first_hook).empty?, queues.fetch(:second_hook).empty?]).to eq([true, true])
+    ensure
+      queues&.fetch(:gate_release)&.enqueue(true)
+      2.times { queues&.fetch(:callback_release)&.enqueue(true) }
+    end
   end
 
   it 'closes and notifies once when the reader fails' do
@@ -252,6 +269,48 @@ RSpec.describe ProtocolRecoveryDispatch do
       release.dequeue
     end
     protocol.on_publication(channel, on_rejection: rejection) { nil }
+  end
+
+  def multi_hook_queues
+    names = %i[
+      callback_entered callback_release callback_drained gate_entered gate_release first_hook second_hook
+    ]
+    names.to_h do |name|
+      [name, Async::Queue.new]
+    end
+  end
+
+  def prepare_multi_hook_overflow(queues)
+    register_callback_gate(queues)
+    register_blocking_rejection('gate', queues.fetch(:gate_entered), queues.fetch(:gate_release))
+    register_target_rejections(queues)
+    block_publication_producer(queues)
+  end
+
+  def register_target_rejections(queues)
+    protocol.on_publication('target', on_rejection: ->(pub) { queues.fetch(:first_hook).enqueue(pub) }) { nil }
+    protocol.on_publication('target', on_rejection: ->(pub) { queues.fetch(:second_hook).enqueue(pub) }) { nil }
+  end
+
+  def block_publication_producer(queues)
+    dispatch_live('blocker', 1)
+    queues.fetch(:callback_entered).dequeue
+    dispatch_live('blocker', 2)
+    dispatch_live('gate', 1)
+    queues.fetch(:gate_entered).dequeue
+  end
+
+  def register_callback_gate(queues)
+    protocol.on_publication('blocker') do |_event, _data, publication|
+      queues.fetch(:callback_entered).enqueue(publication.fetch('offset'))
+      queues.fetch(:callback_release).dequeue
+      queues.fetch(:callback_drained).enqueue(publication.fetch('offset'))
+    end
+  end
+
+  def drain_blocking_callbacks(queues)
+    2.times { queues.fetch(:callback_release).enqueue(true) }
+    2.times { queues.fetch(:callback_drained).dequeue }
   end
 
   def dispatch_live(channel, offset)

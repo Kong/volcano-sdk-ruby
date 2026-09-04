@@ -6,7 +6,7 @@ module Volcano
     module ProtocolPublicationDispatch
       Registration = Data.define(:handler, :on_rejection)
       PublicationDelivery = Data.define(
-        :channel, :handlers, :event, :data, :publication, :recovered, :on_rejection
+        :channel, :handlers, :event, :data, :publication, :recovered, :on_rejection, :rejection_key
       )
       private_constant :PublicationDelivery
 
@@ -68,7 +68,8 @@ module Volcano
           data: data,
           publication: publication,
           recovered: recovered,
-          on_rejection: combined_rejection_hook(registrations)
+          on_rejection: combined_rejection_hook(registrations),
+          rejection_key: registrations
         )
       end
 

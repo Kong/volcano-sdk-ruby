@@ -48,7 +48,7 @@ module Volcano
       end
 
       def enqueue_publication_rejection(delivery)
-        key = [delivery.channel, delivery.handlers, delivery.on_rejection].freeze
+        key = [delivery.channel, delivery.rejection_key].freeze
         return if @publication_rejections.key?(key)
 
         @publication_rejections[key] = true

@@ -6,6 +6,20 @@ module Volcano
     module ProtocolRecovery
       private
 
+      def subscribe_request(channel:, recoverable:, join_leave:, recovery:)
+        request(on_reply: recovery && lambda do |reply|
+          parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+        end) do |id|
+          self.class.subscribe(
+            id: id,
+            channel: channel,
+            recoverable: recoverable,
+            join_leave: join_leave,
+            recovery: recovery
+          )
+        end
+      end
+
       def parse_recovery_result(channel:, recovery:, result:)
         result_position, publications = validated_recovery_result(result)
         return block_malformed_recovery_result(channel, recovery) unless result_position

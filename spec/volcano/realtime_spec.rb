@@ -8,6 +8,29 @@ require 'spec_helper'
 RSpec.describe Volcano::Realtime do
   RealtimeResponse = Data.define(:status, :body, :headers, :data) unless const_defined?(:RealtimeResponse)
 
+  unless const_defined?(:DelayedProducerObservation)
+    DelayedProducerObservation = Data.define(
+      :channel, :recovery_offset, :live_offset, :producer_waiting,
+      :live_queued, :rejection_started, :rejection_completed
+    ) do
+      def recovery?(delivery)
+        delivery.channel == channel && delivery.recovered &&
+          delivery.publication['offset'] == recovery_offset
+      end
+
+      def live?(delivery)
+        delivery.channel == channel && !delivery.recovered &&
+          delivery.publication['offset'] == live_offset
+      end
+
+      def signal_for(delivery)
+        return producer_waiting if recovery?(delivery)
+
+        rejection_started if live?(delivery)
+      end
+    end
+  end
+
   class RealtimeAuthTransport
     def auth_signin(**)
       RealtimeResponse.new(
@@ -178,6 +201,62 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  class DelayedRejectionResponder
+    attr_reader :reader_passed_queue_fill
+
+    def initialize(socket, replacement: nil)
+      @socket = socket
+      @replacement = replacement
+      @target_subscriptions = 0
+      @reader_passed_queue_fill = Async::Queue.new
+    end
+
+    def call(command)
+      return respond_to_subscription(command) if command.key?('subscribe')
+      return respond_to_unsubscribe(command) if command.key?('unsubscribe')
+
+      acknowledge_queue_fill if command.empty?
+    end
+
+    private
+
+    def respond_to_subscription(command)
+      channel = command.dig('subscribe', 'channel')
+      @socket.respond(command.fetch('id'), result: subscription_result(channel))
+      :defer
+    end
+
+    def respond_to_unsubscribe(command)
+      @socket.respond(command.fetch('id'))
+      :defer
+    end
+
+    def acknowledge_queue_fill
+      @reader_passed_queue_fill.enqueue(true)
+      :defer
+    end
+
+    def subscription_result(channel)
+      return blocker_result if channel == 'broadcast:blocker'
+
+      @target_subscriptions += 1
+      return initial_target_result if @target_subscriptions == 1 || !@replacement
+
+      @replacement
+    end
+
+    def blocker_result = { 'epoch' => 'blocker-epoch', 'offset' => 0, 'publications' => [] }
+
+    def initial_target_result
+      {
+        'epoch' => 'epoch-1', 'offset' => 2,
+        'publications' => [
+          { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } }
+        ]
+      }
+    end
+  end
+
   def realtime_client(socket, transport: RealtimeAuthTransport.new)
     client = Volcano::Client.new(
       anon_key: 'anon-key',
@@ -197,6 +276,27 @@ RSpec.describe Volcano::Realtime do
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     client
+  end
+
+  def delayed_rejection_socket(replacement: nil)
+    socket = FacadeSocket.new
+    responder = DelayedRejectionResponder.new(socket, replacement:)
+    socket.on_write = responder
+    [socket, responder.reader_passed_queue_fill]
+  end
+
+  def reconnecting_delayed_rejection_client(replacement:)
+    socket, reader_passed_queue_fill = delayed_rejection_socket(replacement:)
+    restored_socket = FacadeSocket.new
+    client = reconnecting_realtime_client([socket, restored_socket])
+    [socket, restored_socket, reader_passed_queue_fill, client]
+  end
+
+  def expect_reconnect_position(socket, epoch:, offset:)
+    subscribe = socket.commands.find do |command|
+      command.dig('subscribe', 'channel') == 'broadcast:contract'
+    end
+    expect(subscribe.fetch('subscribe')).to include('epoch' => epoch, 'offset' => offset)
   end
 
   def presence_info(client, user, display_name)
@@ -270,6 +370,47 @@ RSpec.describe Volcano::Realtime do
       end
     end
     protocol.singleton_class.prepend(observer)
+  end
+
+  def observe_publication_drops(protocol, channel:, drops:)
+    observer = Module.new do
+      define_method(:drop_publication) do |name, publication|
+        drops << publication['offset'] if name == channel && publication.is_a?(Hash)
+        super(name, publication)
+      end
+    end
+    protocol.singleton_class.prepend(observer)
+  end
+
+  def observe_delayed_producer_rejection(protocol, observation)
+    protocol.singleton_class.prepend(delayed_live_enqueue_observer(observation))
+    protocol.singleton_class.prepend(delayed_admission_observer(observation))
+  end
+
+  def delayed_live_enqueue_observer(observation)
+    Module.new do
+      define_method(:enqueue_ordered_publication) do |delivery|
+        observed = observation.live?(delivery)
+        super(delivery)
+      ensure
+        observation.live_queued.enqueue(@ordered_publication_counts[observation.channel]) if observed
+      end
+      private :enqueue_ordered_publication
+    end
+  end
+
+  def delayed_admission_observer(observation)
+    Module.new do
+      define_method(:admit_publication) do |delivery, enforce_limit:|
+        signal = observation.signal_for(delivery)
+        signal&.enqueue([Async::Task.current.equal?(@publication_producer_task),
+                         enforce_limit, @callback_queue.limited?])
+        super(delivery, enforce_limit:)
+      ensure
+        observation.rejection_completed.enqueue(true) if observation.live?(delivery)
+      end
+      private :admit_publication
+    end
   end
 
   it 'exposes the canonical channel name' do
@@ -2611,6 +2752,326 @@ RSpec.describe Volcano::Realtime do
     expect(old_received).to eq([2])
     expect(final_position).to eq(epoch: 'epoch-2', offset: 11)
     expect(final_gaps).not_to include('broadcast:contract')
+  end
+
+  it 'ignores a delayed old-generation producer rejection after resubscribe', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    replacement = { 'epoch' => 'epoch-2', 'offset' => 10, 'publications' => [] }
+    socket, restored_socket, reader_passed_queue_fill, client =
+      reconnecting_delayed_rejection_client(replacement:)
+    first_started, release_first, second_started, release_second,
+      producer_waiting, live_queued, rejection_started, rejection_completed,
+      old_recovery_processed, current_received = Array.new(10) { Async::Queue.new }
+    drops = []
+    results = {}
+
+    Async do |task|
+      blocker = client.realtime.channel('blocker')
+      blocker.on('message') do |message|
+        case message.fetch('value')
+        when 'blocker-1'
+          first_started.enqueue(true)
+          release_first.dequeue
+        when 'blocker-2'
+          second_started.enqueue(true)
+          release_second.dequeue
+        end
+      end
+      target = client.realtime.channel('contract')
+      target.on('message') { |message| current_received.enqueue(message.fetch('value')) }
+      blocker.subscribe
+      protocol = client.realtime.send(:protocol)
+      observe_publication_drops(protocol, channel: 'broadcast:contract', drops: drops)
+      observation = DelayedProducerObservation.new(
+        channel: 'broadcast:contract',
+        recovery_offset: 2,
+        live_offset: 3,
+        producer_waiting: producer_waiting,
+        live_queued: live_queued,
+        rejection_started: rejection_started,
+        rejection_completed: rejection_completed
+      )
+      observe_delayed_producer_rejection(protocol, observation)
+      observe_broadcast_delivery(target, offset: 2, completed: old_recovery_processed)
+
+      first_released = second_released = false
+      begin
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-1' },
+          epoch: 'blocker-epoch', offset: 1
+        )
+        task.with_timeout(0.5) { first_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-2' },
+          epoch: 'blocker-epoch', offset: 2
+        )
+        socket.receive_raw('{}')
+        task.with_timeout(0.5) { reader_passed_queue_fill.dequeue }
+        expect(protocol.instance_variable_get(:@callback_queue)).to be_limited
+
+        target.subscribe
+        expect(task.with_timeout(0.5) { producer_waiting.dequeue }).to eq([true, false, true])
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 3 },
+          epoch: 'epoch-1', offset: 3
+        )
+        expect(task.with_timeout(0.5) { live_queued.dequeue }).to eq(2)
+
+        target.unsubscribe
+        target.subscribe
+        results[:replacement_position] = protocol.position('broadcast:contract')
+
+        release_first.enqueue(true)
+        first_released = true
+        task.with_timeout(0.5) { second_started.dequeue }
+        expect(task.with_timeout(0.5) { rejection_started.dequeue }).to eq([true, true, true])
+        task.with_timeout(0.5) { rejection_completed.dequeue }
+        results[:drops_after_rejection] = drops.dup
+        results[:gaps_after_rejection] = protocol.instance_variable_get(:@position_gaps).dup
+
+        release_second.enqueue(true)
+        second_released = true
+        task.with_timeout(0.5) { old_recovery_processed.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 11 },
+          epoch: 'epoch-2', offset: 11
+        )
+        results[:received] = task.with_timeout(0.5) { current_received.dequeue }
+        results[:position] = protocol.position('broadcast:contract')
+        results[:gaps] = protocol.instance_variable_get(:@position_gaps).dup
+
+        socket.fail_read(IOError.new('socket failed'))
+        task.with_timeout(0.5) do
+          task.yield until restored_socket.commands.any? do |command|
+            command.dig('subscribe', 'channel') == 'broadcast:contract'
+          end
+        end
+      ensure
+        release_first.enqueue(true) unless first_released
+        release_second.enqueue(true) unless second_released
+        client.realtime.disconnect
+      end
+    end.wait
+
+    expect(results).to include(
+      replacement_position: { epoch: 'epoch-2', offset: 10 },
+      drops_after_rejection: [], received: 11,
+      position: { epoch: 'epoch-2', offset: 11 }
+    )
+    expect(results.fetch(:gaps_after_rejection)).not_to include('broadcast:contract')
+    expect(results.fetch(:gaps)).not_to include('broadcast:contract')
+    expect_reconnect_position(restored_socket, epoch: 'epoch-2', offset: 11)
+  end
+
+  it 'ignores a delayed old-generation producer rejection after remove and recreate', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    replacement = { 'epoch' => 'epoch-2', 'offset' => 10, 'publications' => [] }
+    socket, reader_passed_queue_fill = delayed_rejection_socket(replacement:)
+    client = realtime_client(socket)
+    first_started, release_first, second_started, release_second,
+      producer_waiting, live_queued, rejection_started, rejection_completed,
+      old_recovery_processed, current_received = Array.new(10) { Async::Queue.new }
+    drops = []
+    old_received = []
+    results = {}
+
+    Async do |task|
+      blocker = client.realtime.channel('blocker')
+      blocker.on('message') do |message|
+        case message.fetch('value')
+        when 'blocker-1'
+          first_started.enqueue(true)
+          release_first.dequeue
+        when 'blocker-2'
+          second_started.enqueue(true)
+          release_second.dequeue
+        end
+      end
+      old_target = client.realtime.channel('contract')
+      old_target.on('message') { |message| old_received << message.fetch('value') }
+      blocker.subscribe
+      protocol = client.realtime.send(:protocol)
+      observe_publication_drops(protocol, channel: 'broadcast:contract', drops: drops)
+      observation = DelayedProducerObservation.new(
+        channel: 'broadcast:contract',
+        recovery_offset: 2,
+        live_offset: 3,
+        producer_waiting: producer_waiting,
+        live_queued: live_queued,
+        rejection_started: rejection_started,
+        rejection_completed: rejection_completed
+      )
+      observe_delayed_producer_rejection(protocol, observation)
+      observe_broadcast_delivery(old_target, offset: 2, completed: old_recovery_processed)
+
+      first_released = second_released = false
+      begin
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-1' },
+          epoch: 'blocker-epoch', offset: 1
+        )
+        task.with_timeout(0.5) { first_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-2' },
+          epoch: 'blocker-epoch', offset: 2
+        )
+        socket.receive_raw('{}')
+        task.with_timeout(0.5) { reader_passed_queue_fill.dequeue }
+        expect(protocol.instance_variable_get(:@callback_queue)).to be_limited
+
+        old_target.subscribe
+        expect(task.with_timeout(0.5) { producer_waiting.dequeue }).to eq([true, false, true])
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 3 },
+          epoch: 'epoch-1', offset: 3
+        )
+        expect(task.with_timeout(0.5) { live_queued.dequeue }).to eq(2)
+
+        client.realtime.remove_channel('contract')
+        new_target = client.realtime.channel('contract')
+        new_target.on('message') { |message| current_received.enqueue(message.fetch('value')) }
+        new_target.subscribe
+        results[:replacement_position] = protocol.position('broadcast:contract')
+
+        release_first.enqueue(true)
+        first_released = true
+        task.with_timeout(0.5) { second_started.dequeue }
+        expect(task.with_timeout(0.5) { rejection_started.dequeue }).to eq([true, true, true])
+        task.with_timeout(0.5) { rejection_completed.dequeue }
+        results[:drops_after_rejection] = drops.dup
+        results[:gaps_after_rejection] = protocol.instance_variable_get(:@position_gaps).dup
+
+        release_second.enqueue(true)
+        second_released = true
+        task.with_timeout(0.5) { old_recovery_processed.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 11 },
+          epoch: 'epoch-2', offset: 11
+        )
+        results[:received] = task.with_timeout(0.5) { current_received.dequeue }
+        results[:position] = protocol.position('broadcast:contract')
+        results[:gaps] = protocol.instance_variable_get(:@position_gaps).dup
+      ensure
+        release_first.enqueue(true) unless first_released
+        release_second.enqueue(true) unless second_released
+        client.realtime.disconnect
+      end
+    end.wait
+
+    expect(old_received).to be_empty
+    expect(results).to include(
+      replacement_position: { epoch: 'epoch-2', offset: 10 },
+      drops_after_rejection: [], received: 11,
+      position: { epoch: 'epoch-2', offset: 11 }
+    )
+    expect(results.fetch(:gaps_after_rejection)).not_to include('broadcast:contract')
+    expect(results.fetch(:gaps)).not_to include('broadcast:contract')
+  end
+
+  it 'records one gap for a delayed current-generation producer rejection', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    socket, reader_passed_queue_fill = delayed_rejection_socket
+    client = realtime_client(socket)
+    first_started, release_first, second_started, release_second,
+      producer_waiting, live_queued, rejection_started, rejection_completed,
+      target_received = Array.new(9) { Async::Queue.new }
+    drops = []
+    results = {}
+
+    Async do |task|
+      blocker = client.realtime.channel('blocker')
+      blocker.on('message') do |message|
+        case message.fetch('value')
+        when 'blocker-1'
+          first_started.enqueue(true)
+          release_first.dequeue
+        when 'blocker-2'
+          second_started.enqueue(true)
+          release_second.dequeue
+        end
+      end
+      target = client.realtime.channel('contract')
+      target.on('message') { |message| target_received.enqueue(message.fetch('value')) }
+      blocker.subscribe
+      protocol = client.realtime.send(:protocol)
+      observe_publication_drops(protocol, channel: 'broadcast:contract', drops: drops)
+      observation = DelayedProducerObservation.new(
+        channel: 'broadcast:contract',
+        recovery_offset: 2,
+        live_offset: 3,
+        producer_waiting: producer_waiting,
+        live_queued: live_queued,
+        rejection_started: rejection_started,
+        rejection_completed: rejection_completed
+      )
+      observe_delayed_producer_rejection(protocol, observation)
+
+      first_released = second_released = false
+      begin
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-1' },
+          epoch: 'blocker-epoch', offset: 1
+        )
+        task.with_timeout(0.5) { first_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-2' },
+          epoch: 'blocker-epoch', offset: 2
+        )
+        socket.receive_raw('{}')
+        task.with_timeout(0.5) { reader_passed_queue_fill.dequeue }
+        expect(protocol.instance_variable_get(:@callback_queue)).to be_limited
+
+        target.subscribe
+        expect(task.with_timeout(0.5) { producer_waiting.dequeue }).to eq([true, false, true])
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 3 },
+          epoch: 'epoch-1', offset: 3
+        )
+        expect(task.with_timeout(0.5) { live_queued.dequeue }).to eq(2)
+
+        release_first.enqueue(true)
+        first_released = true
+        task.with_timeout(0.5) { second_started.dequeue }
+        expect(task.with_timeout(0.5) { rejection_started.dequeue }).to eq([true, true, true])
+        task.with_timeout(0.5) { rejection_completed.dequeue }
+
+        release_second.enqueue(true)
+        second_released = true
+        results[:recovered] = task.with_timeout(0.5) { target_received.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 4 },
+          epoch: 'epoch-1', offset: 4
+        )
+        results[:later] = task.with_timeout(0.5) { target_received.dequeue }
+        results[:drops] = drops.dup
+        results[:position] = protocol.position('broadcast:contract')
+        results[:gaps] = protocol.instance_variable_get(:@position_gaps).dup
+      ensure
+        release_first.enqueue(true) unless first_released
+        release_second.enqueue(true) unless second_released
+        client.realtime.disconnect
+      end
+    end.wait
+
+    expect(results).to include(
+      recovered: 2, later: 4, drops: [3],
+      position: { epoch: 'epoch-1', offset: 2 }
+    )
+    expect(results.fetch(:gaps)).to eq(
+      'broadcast:contract' => { epoch: 'epoch-1', offset: 3 }
+    )
   end
 
   it 'retains the delivered initial recovery position for the next reconnect' do

@@ -7,15 +7,17 @@ module Volcano
       module Lifecycle
         def connected? = @connected && !@closed
 
-        def on_publication(channel, &handler)
+        def on_publication(channel, on_rejection: nil, &handler)
           ensure_open!
           @publication_handlers[channel] << handler
+          @publication_rejections[[channel, handler]] = on_rejection if on_rejection
           handler
         end
 
         def off_publication(channel, handler)
           handlers = @publication_handlers[channel]
           handlers.delete(handler)
+          @publication_rejections.delete([channel, handler])
           @publication_handlers.delete(channel) if handlers.empty?
           nil
         end
@@ -60,6 +62,7 @@ module Volcano
 
         def initialize_handlers
           @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
+          @publication_rejections = {}
           @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
           @pending_presence_resyncs = {}
           @callback_queue = Async::LimitedQueue.new(@max_callback_queue)

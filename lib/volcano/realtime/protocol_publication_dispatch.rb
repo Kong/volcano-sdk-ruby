@@ -4,7 +4,9 @@ module Volcano
   class Realtime
     # Prepares publications and admits them to callback delivery.
     module ProtocolPublicationDispatch
-      PublicationDelivery = Data.define(:channel, :handlers, :event, :data, :publication, :recovered)
+      PublicationDelivery = Data.define(
+        :channel, :handlers, :event, :data, :publication, :recovered, :on_rejection
+      )
       private_constant :PublicationDelivery
 
       private
@@ -33,7 +35,10 @@ module Volcano
 
         PublicationDelivery.new(
           channel:, handlers: handlers.dup,
-          event: data['event'], data:, publication:, recovered:
+          event: data['event'], data:, publication:, recovered:,
+          on_rejection: handlers.filter_map do |handler|
+            @publication_rejections[[channel, handler]]
+          end.first
         )
       end
 
@@ -61,7 +66,7 @@ module Volcano
 
       def admit_publication(delivery, enforce_limit:)
         if enforce_limit && @callback_queue.limited?
-          drop_publication(delivery.channel, delivery.publication)
+          reject_publication(delivery)
           return
         end
 
@@ -71,6 +76,12 @@ module Volcano
             delivery.publication, delivery.recovered
           ]
         )
+      end
+
+      def reject_publication(delivery)
+        return delivery.on_rejection.call(delivery.publication) if delivery.on_rejection
+
+        drop_publication(delivery.channel, delivery.publication)
       end
     end
   end

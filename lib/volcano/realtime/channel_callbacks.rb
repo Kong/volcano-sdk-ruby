@@ -34,13 +34,24 @@ module Volcano
         return if @handler_registered
 
         generation = @publication_generation
-        @publication_handler = protocol.on_publication(@name) do |event, data, publication, recovered:|
+        @publication_handler = protocol.on_publication(
+          @name, on_rejection: broadcast_rejection(protocol, generation)
+        ) do |event, data, publication, recovered:|
           next deliver_publication(event, data) unless broadcast?
 
           context = PublicationContext.new(protocol:, publication:, generation:, recovered:)
           deliver_broadcast(event, data, context)
         end
         @handler_registered = true
+      end
+
+      def broadcast_rejection(protocol, generation)
+        return unless broadcast?
+
+        lambda do |publication|
+          context = PublicationContext.new(protocol:, publication:, generation:, recovered: false)
+          drop_broadcast_publication(context)
+        end
       end
 
       def deliver_publication(event, data)

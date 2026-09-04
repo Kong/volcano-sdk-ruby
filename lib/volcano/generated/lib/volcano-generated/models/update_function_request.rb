@@ -113,7 +113,7 @@ module Volcano::Generated
       end
 
       if attributes.key?(:'openapi_spec')
-        if (value = attributes[:'openapi_spec']).is_a?(Hash)
+        if (value = attributes[:'openapi_spec']).is_a?(Hash) || value.nil?
           self.openapi_spec = value
         end
       end

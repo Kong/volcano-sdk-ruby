@@ -4,15 +4,16 @@ module Volcano
   class Realtime
     # Preserves publication order while recovered deliveries wait for callback capacity.
     module ProtocolRecoveryDispatch
-      PublicationBatch = Data.define(:channel, :deliveries)
+      PublicationBatch = Data.define(:channel, :deliveries, :rejection_key)
       private_constant :PublicationBatch
 
       private
 
       def initialize_publication_producer
-        @publication_queue = Async::LimitedQueue.new(@max_callback_queue)
-        @publication_pending = 0
+        @publication_queue = Async::Queue.new
+        @publication_queue_size = 0
         @publication_pending_by_channel = Hash.new(0)
+        @publication_rejections = {}
         @producer_stopping = false
       end
 
@@ -25,13 +26,15 @@ module Volcano
         enqueue_recovered_batch(publication_batch(channel, deliveries))
       end
 
-      def publication_batch(channel, deliveries)
-        PublicationBatch.new(channel: channel.dup.freeze, deliveries: deliveries.freeze)
+      def publication_batch(channel, deliveries, rejection_key: nil)
+        PublicationBatch.new(
+          channel: channel.dup.freeze, deliveries: deliveries.freeze, rejection_key: rejection_key
+        )
       end
 
       def enqueue_recovered_batch(batch)
         if publication_queue_full?
-          batch.deliveries.each { |delivery| reject_publication_delivery(delivery) }
+          batch.deliveries.each { |delivery| enqueue_publication_rejection(delivery) }
           raise PendingLimitError, "realtime publication producer limit #{@max_callback_queue} reached"
         end
 
@@ -39,24 +42,32 @@ module Volcano
       end
 
       def enqueue_live_publication(delivery)
-        return reject_publication_delivery(delivery) if publication_queue_full?
+        return enqueue_publication_rejection(delivery) if publication_queue_full?
 
         enqueue_publication_batch(publication_batch(delivery.channel, [delivery]))
       end
 
-      def enqueue_publication_batch(batch)
-        @publication_pending += 1
+      def enqueue_publication_rejection(delivery)
+        key = [delivery.channel, delivery.handlers, delivery.on_rejection].freeze
+        return if @publication_rejections.key?(key)
+
+        @publication_rejections[key] = true
+        enqueue_publication_batch(
+          publication_batch(delivery.channel, [delivery], rejection_key: key), bounded: false
+        )
+      end
+
+      def enqueue_publication_batch(batch, bounded: true)
+        @publication_queue_size += 1 if bounded
         @publication_pending_by_channel[batch.channel] += 1
         @publication_queue.enqueue(batch)
       end
 
-      def publication_queue_full? = @publication_queue.limited?
-
-      def publication_ordered? = @publication_pending.positive?
+      def publication_queue_full? = @publication_queue_size >= @max_callback_queue
 
       def dispatch_publication_batches
         until @producer_stopping
-          batch = @publication_queue.dequeue
+          batch = next_publication_batch
           begin
             dispatch_publication_batch(batch)
           ensure
@@ -67,7 +78,15 @@ module Volcano
         close_with(closed_error(e), notify_error: true)
       end
 
+      def next_publication_batch
+        batch = @publication_queue.dequeue
+        @publication_queue_size -= 1 unless batch.rejection_key
+        batch
+      end
+
       def dispatch_publication_batch(batch)
+        return batch.deliveries.each { |delivery| reject_publication_delivery(delivery) } if batch.rejection_key
+
         batch.deliveries.each do |delivery|
           if delivery.recovered
             @callback_queue.enqueue(delivery)
@@ -78,7 +97,7 @@ module Volcano
       end
 
       def complete_publication_batch(batch)
-        @publication_pending -= 1
+        @publication_rejections.delete(batch.rejection_key) if batch.rejection_key
         @publication_pending_by_channel[batch.channel] -= 1
         @publication_pending_by_channel.delete(batch.channel) if @publication_pending_by_channel[batch.channel].zero?
       end

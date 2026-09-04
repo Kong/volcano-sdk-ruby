@@ -99,24 +99,39 @@ RSpec.describe ProtocolRecoveryDispatch do
   context 'with one producer queue slot' do
     let(:protocol_options) { { max_callback_queue: 1 } }
 
-    it 'fails a recovery request when the bounded producer queue is saturated' do
+    it 'keeps dispatching replies while a live rejection hook waits' do
+      hook_entered = Async::Queue.new
+      hook_release = Async::Queue.new
       entered, release = fill_callback_capacity
-      %w[one two three].each { |channel| protocol.on_publication(channel) { nil } }
-      socket.on_write = lambda do |command|
-        socket.receive(recovery_reply(command, [retained(4, command_channel(command))]))
-      end
-      dispatch_live('blocker', 1)
-      entered.dequeue
-      dispatch_live('blocker', 2)
+      register_blocking_rejection('room', hook_entered, hook_release)
+      socket.on_write = method(:reply_ok)
+      fill_live_callback_queue(entered)
 
-      protocol.subscribe(channel: 'one', recovery: { epoch: 'e', offset: 3 })
-      wait_until { producer_queue_empty? }
-      protocol.subscribe(channel: 'two', recovery: { epoch: 'e', offset: 3 })
+      socket.receive(push('room', retained(3, 'rejected')))
+      hook_entered.dequeue
+      command = Async::Task.current.async { protocol.presence(channel: 'presence:room') }
 
-      expect do
-        protocol.subscribe(channel: 'three', recovery: { epoch: 'e', offset: 3 })
-      end.to raise_error(Volcano::Realtime::PendingLimitError)
-      release.enqueue(true)
+      expect(wait_task(command)).to eq('ok' => true)
+    ensure
+      hook_release&.enqueue(true)
+      release&.enqueue(true)
+    end
+
+    it 'fails a recovery request when the bounded producer queue is saturated' do
+      hook_entered = Async::Queue.new
+      hook_release = Async::Queue.new
+      release = saturate_producer(hook_entered, hook_release)
+      failed = failed_recovery_task
+      2.times { release.enqueue(true) }
+      hook_entered.dequeue
+
+      result = Async::Task.current.with_timeout(0.2) { protocol.presence(channel: 'presence:room') }
+      expect(result).to eq('ok' => true)
+      hook_release.enqueue(true)
+      expect(wait_task(failed)).to be_a(Volcano::Realtime::PendingLimitError)
+    ensure
+      hook_release&.enqueue(true)
+      release&.enqueue(true)
     end
   end
 
@@ -166,6 +181,36 @@ RSpec.describe ProtocolRecoveryDispatch do
     socket.receive(frame)
   end
 
+  def reply_ok(command)
+    socket.receive('id' => command.fetch('id'), 'result' => { 'ok' => true })
+  end
+
+  def reply_saturation_command(command)
+    return reply_ok(command) unless command.key?('subscribe')
+
+    socket.receive(recovery_reply(command, [retained(4, command_channel(command))]))
+  end
+
+  def saturate_producer(hook_entered, hook_release)
+    entered, release = fill_callback_capacity
+    %w[one two].each { |channel| protocol.on_publication(channel) { nil } }
+    register_blocking_rejection('three', hook_entered, hook_release)
+    socket.on_write = method(:reply_saturation_command)
+    fill_live_callback_queue(entered)
+    protocol.subscribe(channel: 'one', recovery: { epoch: 'e', offset: 3 })
+    wait_until { producer_queue_empty? }
+    protocol.subscribe(channel: 'two', recovery: { epoch: 'e', offset: 3 })
+    release
+  end
+
+  def failed_recovery_task
+    Async::Task.current.async do
+      protocol.subscribe(channel: 'three', recovery: { epoch: 'e', offset: 3 })
+    rescue StandardError => e
+      e
+    end
+  end
+
   def recovery_reply(command, publications)
     {
       'id' => command.fetch('id'),
@@ -193,6 +238,20 @@ RSpec.describe ProtocolRecoveryDispatch do
       release.dequeue
     end
     [entered, release]
+  end
+
+  def fill_live_callback_queue(entered)
+    dispatch_live('blocker', 1)
+    entered.dequeue
+    dispatch_live('blocker', 2)
+  end
+
+  def register_blocking_rejection(channel, entered, release)
+    rejection = lambda do |_publication|
+      entered.enqueue(true)
+      release.dequeue
+    end
+    protocol.on_publication(channel, on_rejection: rejection) { nil }
   end
 
   def dispatch_live(channel, offset)
@@ -313,4 +372,6 @@ RSpec.describe ProtocolRecoveryDispatch do
   end
 
   def wait_for(queue) = Async::Task.current.with_timeout(0.2) { queue.dequeue }
+
+  def wait_task(task) = Async::Task.current.with_timeout(0.2) { task.wait }
 end

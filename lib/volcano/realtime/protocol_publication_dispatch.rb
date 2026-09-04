@@ -18,11 +18,7 @@ module Volcano
         delivery = publication_delivery(channel, publication, recovered: false)
         return unless delivery
 
-        if publication_ordered?
-          enqueue_live_publication(delivery)
-        else
-          admit_live_publication(delivery)
-        end
+        enqueue_live_publication(delivery)
       end
 
       def publication_delivery(channel, publication, recovered:)
@@ -79,6 +75,7 @@ module Volcano
       def combined_rejection_hook(registrations)
         hooks = registrations.filter_map(&:on_rejection).freeze
         return if hooks.empty?
+        return hooks.first if hooks.one?
 
         ->(publication) { hooks.each { |hook| hook.call(publication) } }
       end

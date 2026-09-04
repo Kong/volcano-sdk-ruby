@@ -1,12 +1,42 @@
 # frozen_string_literal: true
 
 require 'digest'
+require 'json'
 require 'open3'
 require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
   OPENAPI_SHA256 = 'bdd8d476bf4b742d5edb5c28d9d95fe81f623394d17c0b765de1160cf38bbbca'
+
+  it 'preserves explicit null without turning omitted object fields into null' do
+    Dir.mktmpdir('volcano-ruby-nullable') do |directory|
+      output = File.join(directory, 'generated')
+      stdout, stderr, status = Open3.capture3(
+        'npx', '--no-install', 'openapi-generator-cli', 'generate',
+        '-i', 'tests/fixtures/nullable-object.yaml', '-g', 'ruby',
+        '-c', 'openapi-generator.yaml', '-t', 'openapi/templates', '-o', output,
+        '--global-property', 'apiTests=false,modelTests=false,apiDocs=false,modelDocs=false', chdir: ROOT
+      )
+      expect(status).to be_success, "#{stdout}\n#{stderr}"
+      stdout, stderr, status = Open3.capture3(
+        Gem.ruby, '-I', File.join(output, 'lib'), '-r', 'volcano-generated', '-r', 'json', '-e', <<~RUBY
+          model = Volcano::Generated::NullableObjectProbe
+          puts JSON.generate(
+            omitted: model.new.to_hash,
+            explicit_null: model.new(document: nil).to_hash,
+            value: model.new(document: { 'enabled' => false }).to_hash,
+            nonnullable: model.new(strict: nil).to_hash
+          )
+        RUBY
+      )
+      expect(status).to be_success, stderr
+      expect(JSON.parse(stdout)).to eq(
+        'omitted' => {}, 'explicit_null' => { 'document' => nil },
+        'value' => { 'document' => { 'enabled' => false } }, 'nonnullable' => {}
+      )
+    end
+  end
 
   it 'uses the exact bundled contract and emits the required POC operations' do
     expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)

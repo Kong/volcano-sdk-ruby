@@ -1,0 +1,17 @@
+openapi: 3.0.3
+info:
+  title: Nullable object generation probe
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    NullableObjectProbe:
+      type: object
+      properties:
+        document:
+          type: object
+          nullable: true
+          additionalProperties: true
+        strict:
+          type: object
+          additionalProperties: true

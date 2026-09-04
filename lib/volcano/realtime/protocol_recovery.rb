@@ -12,10 +12,8 @@ module Volcano
           return unless current
 
           position = publication_position(publication, current)
-          unless position && position.fetch(:epoch) == current.fetch(:epoch)
-            mark_publication_gap(channel, publication)
-            return
-          end
+          return if invalid_publication_position?(channel, publication, current, position)
+          return if skipped_publication_position?(channel, current, position)
           return if position_blocked_by_gap?(channel, position)
 
           @stream_positions[channel] = position
@@ -78,6 +76,27 @@ module Volcano
           return unless publication.is_a?(Hash) && publication.key?('offset')
 
           immutable_position(publication.fetch('epoch', current.fetch(:epoch)), publication.fetch('offset'))
+        end
+
+        def invalid_publication_position?(channel, publication, current, position)
+          return false if position && position.fetch(:epoch) == current.fetch(:epoch)
+
+          mark_publication_gap(channel, publication)
+          true
+        end
+
+        def skipped_publication_position?(channel, current, position)
+          return false unless position.fetch(:offset) > current.fetch(:offset) + 1
+
+          mark_skipped_offset_gap(channel, current)
+          true
+        end
+
+        def mark_skipped_offset_gap(channel, current)
+          mark_publication_gap(
+            channel,
+            'epoch' => current.fetch(:epoch), 'offset' => current.fetch(:offset) + 1
+          )
         end
 
         def mark_publication_gap(channel, publication)

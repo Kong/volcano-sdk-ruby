@@ -3442,6 +3442,49 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'reconnects from the last contiguous offset after a live publication jump' do
+    first_socket = FacadeSocket.new
+    restored_socket = FacadeSocket.new
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'epoch' => 'epoch-1', 'offset' => 2, 'publications' => [] }
+      )
+      :defer
+    end
+    client = reconnecting_realtime_client([first_socket, restored_socket])
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+      first_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 4 },
+        epoch: 'epoch-1',
+        offset: 4
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }).to eq(4)
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    restored_subscribe = restored_socket.commands.find { |command| command.key?('subscribe') }
+    expect(restored_subscribe.fetch('subscribe')).to include(
+      'channel' => 'broadcast:contract',
+      'recover' => true,
+      'epoch' => 'epoch-1',
+      'offset' => 2
+    )
+  end
+
   it 'starts broadcast recovery over for a different authenticated user' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new

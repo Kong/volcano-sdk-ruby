@@ -8568,6 +8568,10 @@ paths:
         - Microsoft Graph profile: `/me`
 
         The response wraps the provider's raw JSON value with request metadata.
+        An empty provider body is represented as `data: null`; the envelope
+        preserves the provider's HTTP status in `status_code`, including errors.
+        Provider response bodies are limited to 8 MiB after decompression.
+        Transport failures, invalid JSON, and oversized bodies return `502`.
       operationId: callOAuthProviderAPI
       security:
         - AuthUserAccessToken: []
@@ -8633,7 +8637,7 @@ paths:
                     minimum: 100
                     maximum: 599
                   data:
-                    description: Raw JSON value returned by the OAuth provider's API
+                    description: Raw provider JSON value, or null when the provider returns no body
                     nullable: true
         '400':
           description: |
@@ -8649,8 +8653,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '404':
+          description: OAuth provider configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to create the provider API request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '502':
-          description: Provider API error
+          description: Provider transport failure, invalid JSON, or response body larger than 8 MiB
           content:
             application/json:
               schema:

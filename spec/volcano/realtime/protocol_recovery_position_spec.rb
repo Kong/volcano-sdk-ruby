@@ -34,6 +34,13 @@ RSpec.describe ProtocolRecoveryPosition do
     ).to eq(epoch: 'epoch', offset: 5)
   end
 
+  it 'derives a publication epoch from the stored position' do
+    protocol_set_position('epoch', 5)
+    protocol.__send__(:complete_publication, 'channel', { 'offset' => 6 })
+
+    expect(position).to eq(epoch: 'epoch', offset: 6)
+  end
+
   it 'ignores dropped offsets at or behind the committed cursor' do
     expect(
       position_after(current: ['epoch', 5], drop: ['epoch', 3], then_complete: ['epoch', 6])

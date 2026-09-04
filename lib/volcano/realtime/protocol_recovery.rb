@@ -8,12 +8,19 @@ module Volcano
 
       def parse_recovery_result(channel:, recovery:, result:)
         result_position, publications = validated_recovery_result(result)
-        return [] unless result_position
+        return block_malformed_recovery_result(channel, recovery) unless result_position
 
         requested_position = requested_recovery_position(recovery)
         return install_empty_recovery_result(channel, result_position) if publications.empty?
 
         install_retained_recovery_result(channel, requested_position, publications)
+      end
+
+      def block_malformed_recovery_result(channel, recovery)
+        requested_position = requested_recovery_position(recovery)
+        replace_recovery_position(channel, requested_position) if requested_position
+        mark_unknown_gap(channel)
+        []
       end
 
       def validated_recovery_result(result)

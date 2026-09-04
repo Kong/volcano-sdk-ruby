@@ -168,6 +168,8 @@ RSpec.describe ProtocolRecovery do
     )
 
     expect(position).to eq(epoch: 'e', offset: 3)
+    protocol.__send__(:complete_publication, 'room', { 'epoch' => 'e', 'offset' => 4 })
+    expect(position).to eq(epoch: 'e', offset: 3)
   end
 
   it 'keeps recovery state when publications are not an array' do
@@ -180,6 +182,8 @@ RSpec.describe ProtocolRecovery do
       result: { 'epoch' => 'e', 'offset' => 4, 'publications' => {} }
     )
 
+    expect(position).to eq(epoch: 'e', offset: 3)
+    protocol.__send__(:complete_publication, 'room', { 'epoch' => 'e', 'offset' => 4 })
     expect(position).to eq(epoch: 'e', offset: 3)
   end
 
@@ -202,6 +206,8 @@ RSpec.describe ProtocolRecovery do
       )
     end
 
+    expect(position).to eq(epoch: 'e', offset: 3)
+    protocol.__send__(:complete_publication, 'room', { 'epoch' => 'e', 'offset' => 4 })
     expect(position).to eq(epoch: 'e', offset: 3)
   end
 

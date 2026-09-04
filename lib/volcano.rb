@@ -50,5 +50,5 @@ module Volcano
   private_constant :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer, :LockSession,
                    :Redaction
 
-  Realtime.private_constant :Protocol, :ProtocolDispatch
+  Realtime.private_constant :Protocol, :ProtocolDispatch, :ProtocolRecoveryPosition
 end

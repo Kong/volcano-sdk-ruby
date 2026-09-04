@@ -382,6 +382,23 @@ RSpec.describe Volcano::Realtime do
     protocol.singleton_class.prepend(observer)
   end
 
+  def observe_recovered_queue_saturation(protocol, channel:, observed:)
+    observer = Module.new do
+      define_method(:publication_batch_enqueued?) do |name, deliveries|
+        if name == channel && deliveries.first.recovered && @ordered_publication_queue.limited?
+          observed.enqueue(
+            reader: Async::Task.current.equal?(@reader_task),
+            queue_sizes: [@callback_queue.size, @ordered_publication_queue.size],
+            ordered_count: @ordered_publication_counts[name]
+          )
+        end
+        super(name, deliveries)
+      end
+      private :publication_batch_enqueued?
+    end
+    protocol.singleton_class.prepend(observer)
+  end
+
   def observe_immediate_reader_rejection(protocol, **options)
     protocol.singleton_class.prepend(immediate_reader_rejection_observer(**options))
   end
@@ -3197,6 +3214,173 @@ RSpec.describe Volcano::Realtime do
     )
     expect(results.fetch(:gaps)).to eq(
       'broadcast:contract' => { epoch: 'epoch-1', offset: 3 }
+    )
+  end
+
+  it 'reconnects from the delivered cursor when a recovered batch saturates the ordered queue' do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    socket, restored_socket = Array.new(2) { FacadeSocket.new }
+    reader_passed_queue_fill, recovery_requested = Array.new(2) { Async::Queue.new }
+    target_results = [
+      { 'epoch' => 'epoch-1', 'offset' => 1, 'publications' => [] },
+      {
+        'epoch' => 'epoch-1', 'offset' => 2,
+        'publications' => [
+          { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } }
+        ]
+      },
+      {
+        'epoch' => 'epoch-1', 'offset' => 3,
+        'publications' => [
+          { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } },
+          { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }
+        ]
+      }
+    ]
+    socket.on_write = lambda do |command|
+      if command.key?('subscribe')
+        channel = command.dig('subscribe', 'channel')
+        result = if channel == 'broadcast:blocker'
+                   { 'epoch' => 'blocker-epoch', 'offset' => 0, 'publications' => [] }
+                 else
+                   target_results.shift
+                 end
+        socket.respond(command.fetch('id'), result: result)
+        :defer
+      elsif command.key?('unsubscribe')
+        socket.respond(command.fetch('id'))
+        :defer
+      elsif command.empty?
+        reader_passed_queue_fill.enqueue(true)
+        :defer
+      end
+    end
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      if command.dig('subscribe', 'channel') == 'broadcast:blocker'
+        restored_socket.respond(
+          command.fetch('id'),
+          result: { 'epoch' => 'blocker-epoch', 'offset' => 1, 'publications' => [] }
+        )
+      else
+        recovery_requested.enqueue(command)
+      end
+      :defer
+    end
+    client = reconnecting_realtime_client([socket, restored_socket])
+    blocker_started, release_blocker, producer_waiting, live_queued,
+      saturation_observed, unused_rejection_started, unused_rejection_completed,
+      received = Array.new(8) { Async::Queue.new }
+    results = {}
+
+    Async do |task|
+      blocker = client.realtime.channel('blocker')
+      blocker.on('message') do |message|
+        next unless message.fetch('value') == 'blocker-1'
+
+        blocker_started.enqueue(true)
+        release_blocker.dequeue
+      end
+      target = client.realtime.channel('contract')
+      target.on('message') { |message| received.enqueue(message.fetch('value')) }
+      blocker.subscribe
+      target.subscribe
+      protocol = client.realtime.send(:protocol)
+      observation = DelayedProducerObservation.new(
+        channel: 'broadcast:contract', recovery_offset: 2, live_offset: 3,
+        producer_waiting:, live_queued:,
+        rejection_started: unused_rejection_started,
+        rejection_completed: unused_rejection_completed
+      )
+      observe_delayed_producer_rejection(protocol, observation)
+      observe_recovered_queue_saturation(
+        protocol, channel: 'broadcast:contract', observed: saturation_observed
+      )
+
+      saturated_subscription = nil
+      begin
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-1' },
+          epoch: 'blocker-epoch', offset: 1
+        )
+        task.with_timeout(0.5) { blocker_started.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:blocker',
+          data: { 'event' => 'message', 'value' => 'blocker-2' },
+          epoch: 'blocker-epoch', offset: 2
+        )
+        socket.receive_raw('{}')
+        task.with_timeout(0.5) { reader_passed_queue_fill.dequeue }
+
+        target.unsubscribe
+        target.subscribe
+        results[:producer_waiting] = task.with_timeout(0.5) { producer_waiting.dequeue }
+        socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => 3 },
+          epoch: 'epoch-1', offset: 3
+        )
+        results[:live_count] = task.with_timeout(0.5) { live_queued.dequeue }
+
+        target.unsubscribe
+        saturated_subscription = task.async do
+          target.subscribe
+        rescue StandardError => e
+          e
+        end
+        results[:saturation] = task.with_timeout(0.5) { saturation_observed.dequeue }
+        failure = task.with_timeout(0.5) { saturated_subscription.wait }
+        expect(failure).to be_a(Volcano::Realtime::ClosedError)
+
+        recovery = task.with_timeout(0.5) { recovery_requested.dequeue }
+        results[:failure] = [failure.class, failure.message]
+        results[:protocol_connected] = protocol.connected?
+        results[:socket_closed] = socket.closed?
+        results[:received_before_recovery] = received.size
+        results[:recovery_request] = recovery.fetch('subscribe')
+
+        restored_socket.respond(
+          recovery.fetch('id'),
+          result: {
+            'epoch' => 'epoch-1', 'offset' => 3,
+            'publications' => [
+              { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 2 } },
+              { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 3 } }
+            ]
+          }
+        )
+        results[:received] = task.with_timeout(0.5) { Array.new(2) { received.dequeue } }
+      ensure
+        saturated_subscription&.stop
+        release_blocker.enqueue(true)
+        client.realtime.disconnect
+      end
+    end.wait
+
+    limit_message = 'realtime recovered publication queue limit 1 reached'
+    expect(results).to eq(
+      producer_waiting: [true, false, true],
+      live_count: 2,
+      saturation: {
+        reader: true,
+        queue_sizes: [1, 1],
+        ordered_count: 2
+      },
+      failure: [Volcano::Realtime::ClosedError, limit_message],
+      protocol_connected: false,
+      socket_closed: true,
+      received_before_recovery: 0,
+      recovery_request: {
+        'channel' => 'broadcast:contract',
+        'recover' => true,
+        'positioned' => true,
+        'recoverable' => true,
+        'epoch' => 'epoch-1',
+        'offset' => 1
+      },
+      received: [2, 3]
     )
   end
 

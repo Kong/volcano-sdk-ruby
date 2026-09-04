@@ -16,7 +16,8 @@ module Volcano
         return if deliveries.empty?
         return if publication_batch_enqueued?(channel, deliveries)
 
-        deliveries.each { |delivery| drop_publication(channel, delivery.publication) }
+        raise PendingLimitError,
+              "realtime recovered publication queue limit #{@max_callback_queue} reached"
       end
 
       def enqueue_ordered_publication(delivery)

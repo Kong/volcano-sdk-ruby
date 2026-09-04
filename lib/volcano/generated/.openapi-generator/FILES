@@ -68,6 +68,16 @@ lib/volcano-generated/models/auth_list_o_auth_providers200_response_providers_in
 lib/volcano-generated/models/auth_method_summary.rb
 lib/volcano-generated/models/auth_methods_response.rb
 lib/volcano-generated/models/auth_o_auth_exchange_request.rb
+lib/volcano-generated/models/auth_page_appearance_defaults.rb
+lib/volcano-generated/models/auth_page_appearance_options.rb
+lib/volcano-generated/models/auth_page_appearance_response.rb
+lib/volcano-generated/models/auth_page_density.rb
+lib/volcano-generated/models/auth_page_font.rb
+lib/volcano-generated/models/auth_page_layout.rb
+lib/volcano-generated/models/auth_page_radius.rb
+lib/volcano-generated/models/auth_page_scale.rb
+lib/volcano-generated/models/auth_page_theme.rb
+lib/volcano-generated/models/auth_page_theme_colors.rb
 lib/volcano-generated/models/auth_password_policy.rb
 lib/volcano-generated/models/auth_platform_exchange_request.rb
 lib/volcano-generated/models/auth_refresh_request.rb
@@ -214,6 +224,8 @@ lib/volcano-generated/models/paginated_service_keys.rb
 lib/volcano-generated/models/paginated_storage_buckets.rb
 lib/volcano-generated/models/paginated_variables.rb
 lib/volcano-generated/models/platform_exchange_response.rb
+lib/volcano-generated/models/preview_auth_page_request.rb
+lib/volcano-generated/models/preview_auth_page_response.rb
 lib/volcano-generated/models/project.rb
 lib/volcano-generated/models/project_config.rb
 lib/volcano-generated/models/project_config_apply_result.rb
@@ -227,6 +239,8 @@ lib/volcano-generated/models/project_config_auth_email_password_provider.rb
 lib/volcano-generated/models/project_config_auth_email_smtp.rb
 lib/volcano-generated/models/project_config_auth_email_verification.rb
 lib/volcano-generated/models/project_config_auth_managed_pages.rb
+lib/volcano-generated/models/project_config_auth_page_appearance.rb
+lib/volcano-generated/models/project_config_auth_page_layouts.rb
 lib/volcano-generated/models/project_config_auth_password.rb
 lib/volcano-generated/models/project_config_auth_password_reset.rb
 lib/volcano-generated/models/project_config_auth_providers.rb
@@ -326,6 +340,8 @@ lib/volcano-generated/models/test_email_response.rb
 lib/volcano-generated/models/unban_user_response.rb
 lib/volcano-generated/models/update_auth_config_request.rb
 lib/volcano-generated/models/update_auth_hosted_page_request.rb
+lib/volcano-generated/models/update_auth_page_layout_request.rb
+lib/volcano-generated/models/update_auth_page_theme_request.rb
 lib/volcano-generated/models/update_database_branch_request.rb
 lib/volcano-generated/models/update_database_type_request.rb
 lib/volcano-generated/models/update_email_template_request.rb

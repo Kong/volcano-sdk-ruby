@@ -22,12 +22,15 @@ module Volcano::Generated
 
     attr_accessor :pages
 
+    attr_accessor :appearance
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'enabled' => :'enabled',
         :'redirects' => :'redirects',
-        :'pages' => :'pages'
+        :'pages' => :'pages',
+        :'appearance' => :'appearance'
       }
     end
 
@@ -46,7 +49,8 @@ module Volcano::Generated
       {
         :'enabled' => :'Boolean',
         :'redirects' => :'ProjectConfigAuthRedirects',
-        :'pages' => :'ProjectConfigHostedPages'
+        :'pages' => :'ProjectConfigHostedPages',
+        :'appearance' => :'ProjectConfigAuthPageAppearance'
       }
     end
 
@@ -83,6 +87,10 @@ module Volcano::Generated
       if attributes.key?(:'pages')
         self.pages = attributes[:'pages']
       end
+
+      if attributes.key?(:'appearance')
+        self.appearance = attributes[:'appearance']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -107,7 +115,8 @@ module Volcano::Generated
       self.class == o.class &&
           enabled == o.enabled &&
           redirects == o.redirects &&
-          pages == o.pages
+          pages == o.pages &&
+          appearance == o.appearance
     end
 
     # @see the `==` method
@@ -119,7 +128,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [enabled, redirects, pages].hash
+      [enabled, redirects, pages, appearance].hash
     end
 
     # Builds the object from hash

@@ -104,21 +104,28 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::AuthAdminApi* | [**unban_auth_user**](docs/AuthAdminApi.md#unban_auth_user) | **POST** /projects/{id}/auth/users/{userId}/unban | Unban a user
 *Volcano::Generated::AuthConfigurationApi* | [**configure_auth_methods**](docs/AuthConfigurationApi.md#configure_auth_methods) | **PUT** /projects/{id}/auth/methods | Configure authentication methods (unified)
 *Volcano::Generated::AuthConfigurationApi* | [**create_email_template**](docs/AuthConfigurationApi.md#create_email_template) | **POST** /projects/{id}/email-templates | Create email template
+*Volcano::Generated::AuthConfigurationApi* | [**delete_auth_page_layout**](docs/AuthConfigurationApi.md#delete_auth_page_layout) | **DELETE** /projects/{id}/auth/pages/{pageType}/layout | Clear one managed auth page layout
+*Volcano::Generated::AuthConfigurationApi* | [**delete_auth_page_theme**](docs/AuthConfigurationApi.md#delete_auth_page_theme) | **DELETE** /projects/{id}/auth/pages/theme | Clear the managed auth page theme
 *Volcano::Generated::AuthConfigurationApi* | [**delete_email_template**](docs/AuthConfigurationApi.md#delete_email_template) | **DELETE** /projects/{id}/email-templates/{type} | Delete email template
 *Volcano::Generated::AuthConfigurationApi* | [**get_auth_config**](docs/AuthConfigurationApi.md#get_auth_config) | **GET** /projects/{id}/auth/config | Get auth configuration
 *Volcano::Generated::AuthConfigurationApi* | [**get_auth_hosted_page**](docs/AuthConfigurationApi.md#get_auth_hosted_page) | **GET** /projects/{id}/auth/hosted-pages/{pageType} | Get hosted auth page
 *Volcano::Generated::AuthConfigurationApi* | [**get_auth_methods**](docs/AuthConfigurationApi.md#get_auth_methods) | **GET** /projects/{id}/auth/methods | Get all authentication methods
+*Volcano::Generated::AuthConfigurationApi* | [**get_auth_page_appearance**](docs/AuthConfigurationApi.md#get_auth_page_appearance) | **GET** /projects/{id}/auth/pages/appearance | Get managed auth page appearance
 *Volcano::Generated::AuthConfigurationApi* | [**get_default_email_template**](docs/AuthConfigurationApi.md#get_default_email_template) | **GET** /email-templates/defaults/{type} | Get default email template by type
 *Volcano::Generated::AuthConfigurationApi* | [**get_default_email_templates**](docs/AuthConfigurationApi.md#get_default_email_templates) | **GET** /email-templates/defaults | Get default email templates
 *Volcano::Generated::AuthConfigurationApi* | [**get_email_template**](docs/AuthConfigurationApi.md#get_email_template) | **GET** /projects/{id}/email-templates/{type} | Get email template
 *Volcano::Generated::AuthConfigurationApi* | [**get_hosted_login_options**](docs/AuthConfigurationApi.md#get_hosted_login_options) | **GET** /projects/{id}/auth/hosted/login/options | Get hosted login runtime options
 *Volcano::Generated::AuthConfigurationApi* | [**hosted_login_check_email**](docs/AuthConfigurationApi.md#hosted_login_check_email) | **POST** /projects/{id}/auth/hosted/login/check-email | Check whether email exists for hosted login flow
 *Volcano::Generated::AuthConfigurationApi* | [**list_email_templates**](docs/AuthConfigurationApi.md#list_email_templates) | **GET** /projects/{id}/email-templates | List email templates
+*Volcano::Generated::AuthConfigurationApi* | [**preview_auth_page**](docs/AuthConfigurationApi.md#preview_auth_page) | **POST** /projects/{id}/auth/pages/{pageType}/preview | Preview an unsaved managed auth page appearance
+*Volcano::Generated::AuthConfigurationApi* | [**render_auth_page_preview**](docs/AuthConfigurationApi.md#render_auth_page_preview) | **GET** /projects/{id}/auth/pages/{pageType}/preview | Render a short-lived managed auth page preview
 *Volcano::Generated::AuthConfigurationApi* | [**render_default_managed_auth_page**](docs/AuthConfigurationApi.md#render_default_managed_auth_page) | **GET** /projects/{id}/auth/hosted | Render default managed auth page
-*Volcano::Generated::AuthConfigurationApi* | [**render_managed_auth_page**](docs/AuthConfigurationApi.md#render_managed_auth_page) | **GET** /projects/{id}/auth/hosted/{pageType} | Render managed reset-password page
+*Volcano::Generated::AuthConfigurationApi* | [**render_managed_auth_page**](docs/AuthConfigurationApi.md#render_managed_auth_page) | **GET** /projects/{id}/auth/hosted/{pageType} | Render a managed auth page
 *Volcano::Generated::AuthConfigurationApi* | [**test_email_config**](docs/AuthConfigurationApi.md#test_email_config) | **POST** /projects/{id}/auth/config/test-email | Send a test email using the project's saved SMTP config
 *Volcano::Generated::AuthConfigurationApi* | [**update_auth_config**](docs/AuthConfigurationApi.md#update_auth_config) | **PUT** /projects/{id}/auth/config | Update auth configuration
 *Volcano::Generated::AuthConfigurationApi* | [**update_auth_hosted_page**](docs/AuthConfigurationApi.md#update_auth_hosted_page) | **PUT** /projects/{id}/auth/hosted-pages/{pageType} | Update hosted auth page
+*Volcano::Generated::AuthConfigurationApi* | [**update_auth_page_layout**](docs/AuthConfigurationApi.md#update_auth_page_layout) | **PUT** /projects/{id}/auth/pages/{pageType}/layout | Save one managed auth page layout
+*Volcano::Generated::AuthConfigurationApi* | [**update_auth_page_theme**](docs/AuthConfigurationApi.md#update_auth_page_theme) | **PUT** /projects/{id}/auth/pages/theme | Save the managed auth page theme
 *Volcano::Generated::AuthConfigurationApi* | [**update_email_template**](docs/AuthConfigurationApi.md#update_email_template) | **PUT** /projects/{id}/email-templates/{type} | Update email template
 *Volcano::Generated::AuthenticationApi* | [**auth_cancel_email_change**](docs/AuthenticationApi.md#auth_cancel_email_change) | **DELETE** /auth/user/cancel-email-change | Cancel pending email change
 *Volcano::Generated::AuthenticationApi* | [**auth_confirm_email**](docs/AuthenticationApi.md#auth_confirm_email) | **POST** /auth/confirm | Confirm email address
@@ -335,6 +342,16 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::AuthMethodSummary](docs/AuthMethodSummary.md)
  - [Volcano::Generated::AuthMethodsResponse](docs/AuthMethodsResponse.md)
  - [Volcano::Generated::AuthOAuthExchangeRequest](docs/AuthOAuthExchangeRequest.md)
+ - [Volcano::Generated::AuthPageAppearanceDefaults](docs/AuthPageAppearanceDefaults.md)
+ - [Volcano::Generated::AuthPageAppearanceOptions](docs/AuthPageAppearanceOptions.md)
+ - [Volcano::Generated::AuthPageAppearanceResponse](docs/AuthPageAppearanceResponse.md)
+ - [Volcano::Generated::AuthPageDensity](docs/AuthPageDensity.md)
+ - [Volcano::Generated::AuthPageFont](docs/AuthPageFont.md)
+ - [Volcano::Generated::AuthPageLayout](docs/AuthPageLayout.md)
+ - [Volcano::Generated::AuthPageRadius](docs/AuthPageRadius.md)
+ - [Volcano::Generated::AuthPageScale](docs/AuthPageScale.md)
+ - [Volcano::Generated::AuthPageTheme](docs/AuthPageTheme.md)
+ - [Volcano::Generated::AuthPageThemeColors](docs/AuthPageThemeColors.md)
  - [Volcano::Generated::AuthPasswordPolicy](docs/AuthPasswordPolicy.md)
  - [Volcano::Generated::AuthPlatformExchangeRequest](docs/AuthPlatformExchangeRequest.md)
  - [Volcano::Generated::AuthRefreshRequest](docs/AuthRefreshRequest.md)
@@ -481,6 +498,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::PaginatedStorageBuckets](docs/PaginatedStorageBuckets.md)
  - [Volcano::Generated::PaginatedVariables](docs/PaginatedVariables.md)
  - [Volcano::Generated::PlatformExchangeResponse](docs/PlatformExchangeResponse.md)
+ - [Volcano::Generated::PreviewAuthPageRequest](docs/PreviewAuthPageRequest.md)
+ - [Volcano::Generated::PreviewAuthPageResponse](docs/PreviewAuthPageResponse.md)
  - [Volcano::Generated::Project](docs/Project.md)
  - [Volcano::Generated::ProjectConfig](docs/ProjectConfig.md)
  - [Volcano::Generated::ProjectConfigApplyResult](docs/ProjectConfigApplyResult.md)
@@ -494,6 +513,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectConfigAuthEmailSMTP](docs/ProjectConfigAuthEmailSMTP.md)
  - [Volcano::Generated::ProjectConfigAuthEmailVerification](docs/ProjectConfigAuthEmailVerification.md)
  - [Volcano::Generated::ProjectConfigAuthManagedPages](docs/ProjectConfigAuthManagedPages.md)
+ - [Volcano::Generated::ProjectConfigAuthPageAppearance](docs/ProjectConfigAuthPageAppearance.md)
+ - [Volcano::Generated::ProjectConfigAuthPageLayouts](docs/ProjectConfigAuthPageLayouts.md)
  - [Volcano::Generated::ProjectConfigAuthPassword](docs/ProjectConfigAuthPassword.md)
  - [Volcano::Generated::ProjectConfigAuthPasswordReset](docs/ProjectConfigAuthPasswordReset.md)
  - [Volcano::Generated::ProjectConfigAuthProviders](docs/ProjectConfigAuthProviders.md)
@@ -593,6 +614,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UnbanUserResponse](docs/UnbanUserResponse.md)
  - [Volcano::Generated::UpdateAuthConfigRequest](docs/UpdateAuthConfigRequest.md)
  - [Volcano::Generated::UpdateAuthHostedPageRequest](docs/UpdateAuthHostedPageRequest.md)
+ - [Volcano::Generated::UpdateAuthPageLayoutRequest](docs/UpdateAuthPageLayoutRequest.md)
+ - [Volcano::Generated::UpdateAuthPageThemeRequest](docs/UpdateAuthPageThemeRequest.md)
  - [Volcano::Generated::UpdateDatabaseBranchRequest](docs/UpdateDatabaseBranchRequest.md)
  - [Volcano::Generated::UpdateDatabaseTypeRequest](docs/UpdateDatabaseTypeRequest.md)
  - [Volcano::Generated::UpdateEmailTemplateRequest](docs/UpdateEmailTemplateRequest.md)

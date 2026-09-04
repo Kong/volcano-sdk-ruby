@@ -27,10 +27,12 @@ module Volcano
       end
 
       def dispatch_reply(frame)
-        reply_queue = @pending[frame.fetch('id')]
-        return unless reply_queue
+        pending = @pending[frame.fetch('id')]
+        return unless pending
 
-        reply_queue.enqueue(reply_value(frame))
+        reply = reply_value(frame)
+        pending.on_reply&.call(reply) unless reply.is_a?(Protocol::Failure)
+        pending.queue.enqueue(reply)
       end
 
       def reply_value(frame)

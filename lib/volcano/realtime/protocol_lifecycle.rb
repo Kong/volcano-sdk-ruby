@@ -59,7 +59,7 @@ module Volcano
           @callback_queue = Async::Queue.new
         end
 
-        def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
+        def reject_pending(error) = @pending.each_value { |pending| pending.queue.enqueue(Failure.new(error: error)) }
 
         def close_socket
           @socket.close

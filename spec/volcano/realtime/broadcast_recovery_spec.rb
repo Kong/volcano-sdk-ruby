@@ -55,6 +55,8 @@ class BroadcastRecoverySocket
     @incoming.enqueue(nil)
   end
 
+  def closed? = @closed
+
   private
 
   def default_result(command)
@@ -85,6 +87,21 @@ RSpec.describe BroadcastRecovery do
 
     expect(subscribe_options(socket)).to eq(empty_recovery_options)
   ensure
+    disconnect(client)
+  end
+
+  it 'rejects retained broadcasts when auth lineage changes during subscribe' do
+    first, replacement = recovery_sockets(2)
+    waiting, resume = async_queues(2)
+    client = recovery_client([first, replacement], reconnect_gate: [waiting, resume])
+
+    result = subscribe_across_lineage_change(client, [first, replacement], resume)
+
+    expect(result.fetch(:outcome)).to be_a(Volcano::Error::SessionChangedError)
+    expect(result.fetch(:replacement_options)).to eq(empty_recovery_options)
+    expect([result.fetch(:delivery), result.fetch(:remaining)]).to eq(['replacement', true])
+  ensure
+    resume&.enqueue(true)
     disconnect(client)
   end
 
@@ -214,11 +231,32 @@ RSpec.describe BroadcastRecovery do
     socket = BroadcastRecoverySocket.new
     client = recovery_client([socket])
 
-    saturate_recovered_producer(client, socket)
+    result = saturate_recovered_producer(client, socket)
 
+    expect(result.fetch(:error)).to be_a(Volcano::Realtime::PendingLimitError)
     expect(subscribe_options(socket, index: 3)).to include(
       'epoch' => 'epoch-1', 'offset' => 1
     )
+  ensure
+    disconnect(client)
+  end
+
+  it 'eliminates an accepted server subscription after local recovery admission fails' do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    socket = BroadcastRecoverySocket.new
+    client = recovery_client([socket])
+    received = Async::Queue.new
+
+    result = saturate_recovered_producer(client, socket, received:)
+    socket.publication(channel: 'broadcast:contract', offset: 99, value: 99)
+
+    expect(
+      [result.fetch(:error).class, result.fetch(:protocol).connected?, socket.closed?]
+    ).to eq([Volcano::Realtime::PendingLimitError, false, true])
+    state = failed_subscription_state(result.fetch(:channel), result.fetch(:protocol))
+    expect(state.values_at(:handler, :registered, :protocol_handler)).to eq([nil, false, false])
+    expect(state.fetch(:generation)).to be > result.fetch(:failed_generation)
+    expect(received).to be_empty
   ensure
     disconnect(client)
   end
@@ -332,6 +370,54 @@ RSpec.describe BroadcastRecovery do
     channel
   end
 
+  def subscribe_across_lineage_change(client, sockets, resume)
+    first, replacement = sockets
+    received = Async::Queue.new
+    outcome = changed_lineage_outcome(client, first, received)
+    unless outcome.is_a?(Volcano::Error::SessionChangedError)
+      return { outcome:, replacement_options: nil, delivery: nil, remaining: received.empty? }
+    end
+
+    finish_replacement_reconnect(replacement, resume, received).merge(outcome:)
+  end
+
+  def changed_lineage_outcome(client, socket, received)
+    started = Async::Queue.new
+    socket.on_write = deferred_subscribe(started)
+    pending = start_subscription(client, received)
+    command = started.dequeue
+    client.store_session(other_user_session)
+    socket.respond(command.fetch('id'), result: baseline(1, publications: [retained(1)]))
+    pending.wait
+  end
+
+  def deferred_subscribe(started)
+    lambda do |command|
+      next unless command.key?('subscribe')
+
+      started.enqueue(command)
+      :defer
+    end
+  end
+
+  def start_subscription(client, received)
+    channel = client.realtime.channel('contract')
+    channel.on('message', ->(message) { received.enqueue(message.fetch('value')) })
+    Async::Task.current.async do
+      channel.subscribe
+    rescue StandardError => e
+      e
+    end
+  end
+
+  def finish_replacement_reconnect(socket, resume, received)
+    resume.enqueue(true)
+    wait_for_subscribe(socket)
+    socket.publication(channel: 'broadcast:contract', offset: 1, value: 'replacement')
+    delivery = dequeue(received).fetch(0)
+    { replacement_options: subscribe_options(socket), delivery:, remaining: received.empty? }
+  end
+
   def publish_and_wait(socket, received, offset:)
     socket.publication(channel: 'project-id:broadcast:contract', offset:, value: offset)
     expect(dequeue(received)).to eq([offset])
@@ -415,18 +501,31 @@ RSpec.describe BroadcastRecovery do
     socket.publication(channel: 'broadcast:blocker', offset: 2, value: 'queued')
   end
 
-  def saturate_recovered_producer(client, socket)
-    blocker_entered, blocker_release, recovery_entered, recovery_release = async_queues(4)
-    blocker = blocking_channel(client, 'blocker', blocker_entered, blocker_release)
-    target = blocking_recovery_channel(client, recovery_entered, recovery_release)
-    establish_saturated_target(
-      client, socket, [blocker, target], [blocker_entered, recovery_entered]
-    )
+  def saturate_recovered_producer(client, socket, received: nil)
+    queues = async_queues(4)
+    channels = saturation_channels(client, queues, received)
+    target = channels.last
+    establish_saturated_target(client, socket, channels, [queues.fetch(0), queues.fetch(2)])
     fill_producer_queue(socket, target)
-    expect_saturated_recovery(socket, target)
+    protocol = client.realtime.send(:protocol)
+    generation = target.instance_variable_get(:@publication_generation)
+    { channel: target, protocol:, error: fail_saturated_recovery(socket, target), failed_generation: generation }
   ensure
-    2.times { blocker_release&.enqueue(true) }
-    recovery_release&.enqueue(true)
+    release_saturation(queues)
+  end
+
+  def saturation_channels(client, queues, received)
+    [
+      blocking_channel(client, 'blocker', queues.fetch(0), queues.fetch(1)),
+      blocking_recovery_channel(client, queues.fetch(2), queues.fetch(3), received:)
+    ]
+  end
+
+  def release_saturation(queues)
+    return unless queues
+
+    2.times { queues.fetch(1).enqueue(true) }
+    queues.fetch(3).enqueue(true)
   end
 
   def establish_saturated_target(client, socket, channels, entered)
@@ -452,9 +551,11 @@ RSpec.describe BroadcastRecovery do
     target.unsubscribe
   end
 
-  def expect_saturated_recovery(socket, target)
+  def fail_saturated_recovery(socket, target)
     socket.on_write = retained_reply(socket, retained(2))
-    expect { target.subscribe }.to raise_error(Volcano::Realtime::PendingLimitError)
+    target.subscribe
+  rescue StandardError => e
+    e
   end
 
   def blocking_channel(client, name, entered, release)
@@ -466,14 +567,25 @@ RSpec.describe BroadcastRecovery do
     end
   end
 
-  def blocking_recovery_channel(client, entered, release)
+  def blocking_recovery_channel(client, entered, release, received: nil)
     client.realtime.channel('contract').tap do |channel|
       channel.on('message') do |message|
         value = message.fetch('value')
+        received&.enqueue(value) if value == 99
         entered.enqueue(value)
         release.dequeue unless value == 1
       end
     end
+  end
+
+  def failed_subscription_state(channel, protocol)
+    handlers = protocol.instance_variable_get(:@publication_handlers)
+    {
+      handler: channel.instance_variable_get(:@publication_handler),
+      registered: channel.instance_variable_get(:@handler_registered),
+      generation: channel.instance_variable_get(:@publication_generation),
+      protocol_handler: handlers.key?('broadcast:contract')
+    }
   end
 
   def publish_blockers(socket, entered)

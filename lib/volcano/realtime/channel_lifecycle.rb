@@ -47,15 +47,22 @@ module Volcano
 
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch
+        recovery_binding = recovery_binding()
         prepare_protocol_subscription(protocol, epoch)
-        protocol.subscribe(channel: @name, **subscription_options)
-        remember_recovery_position(protocol)
-        @subscribed = true
-        [protocol, epoch]
-      rescue StandardError
+        complete_protocol_subscription(protocol, epoch, recovery_binding)
+      rescue StandardError => e
+        reject_failed_subscription(protocol, e)
         end_postgres_delivery
         invalidate_presence_subscription(protocol)
         raise
+      end
+
+      def complete_protocol_subscription(protocol, epoch, recovery_binding)
+        protocol.subscribe(channel: @name, **subscription_options(recovery_binding))
+        validate_recovery_binding!(recovery_binding)
+        remember_recovery_position(protocol)
+        @subscribed = true
+        [protocol, epoch]
       end
 
       def prepare_protocol_subscription(protocol, epoch)
@@ -71,20 +78,33 @@ module Volcano
         detach_publication_handler(protocol)
       end
 
-      def subscription_options
-        {
-          recovery: broadcast? ? recovery_position : nil,
-          recoverable: presence?,
-          join_leave: presence?
-        }
+      def subscription_options(binding) = { recovery: binding&.last, recoverable: presence?, join_leave: presence? }
+
+      def recovery_binding
+        return unless broadcast?
+
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
+        [lineage, recovery_position(lineage)].freeze
       end
 
-      def recovery_position
-        _, lineage, = @realtime.__send__(:capture_protocol_session)
+      def recovery_position(lineage)
         return @recovery_position if @recovery_lineage == lineage
 
         @recovery_lineage = lineage
         @recovery_position = {}.freeze
+      end
+
+      def validate_recovery_binding!(binding)
+        return unless binding
+
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
+        raise Error::SessionChangedError unless lineage == binding.first
+      end
+
+      def reject_failed_subscription(protocol, error)
+        detach_publication_handler(protocol)
+        @handler_registered = false
+        protocol.close if protocol.connected? && !error.is_a?(ServerError)
       end
 
       def remember_recovery_position(protocol)

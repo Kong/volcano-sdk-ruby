@@ -29,6 +29,16 @@ module Volcano::Generated
     # Function visibility for anon-key invocation. - `false` (default): only auth user tokens and service keys can invoke - `true`: anon keys with `functions.invoke` can invoke 
     attr_accessor :is_public
 
+    attr_accessor :invocation_mode
+
+    attr_accessor :http_auth_mode
+
+    # Optional OpenAPI 3.0 or 3.1 document describing an HTTP-mode function.
+    attr_accessor :openapi_spec
+
+    # Whether OpenAPI metadata is configured; list responses omit the document itself.
+    attr_accessor :has_openapi_spec
+
     attr_accessor :aws_function_arn
 
     # Canonical GeoDNS endpoint URL for invoking this function (always HTTPS)
@@ -85,6 +95,10 @@ module Volcano::Generated
         :'status' => :'status',
         :'provisioning_started_at' => :'provisioning_started_at',
         :'is_public' => :'is_public',
+        :'invocation_mode' => :'invocation_mode',
+        :'http_auth_mode' => :'http_auth_mode',
+        :'openapi_spec' => :'openapi_spec',
+        :'has_openapi_spec' => :'has_openapi_spec',
         :'aws_function_arn' => :'aws_function_arn',
         :'invoke_url' => :'invoke_url',
         :'deployed_regions' => :'deployed_regions',
@@ -117,6 +131,10 @@ module Volcano::Generated
         :'status' => :'String',
         :'provisioning_started_at' => :'Time',
         :'is_public' => :'Boolean',
+        :'invocation_mode' => :'FunctionInvocationMode',
+        :'http_auth_mode' => :'FunctionHTTPAuthMode',
+        :'openapi_spec' => :'Hash<String, Object>',
+        :'has_openapi_spec' => :'Boolean',
         :'aws_function_arn' => :'String',
         :'invoke_url' => :'String',
         :'deployed_regions' => :'Array<String>',
@@ -133,6 +151,7 @@ module Volcano::Generated
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'openapi_spec',
       ])
     end
 
@@ -184,6 +203,32 @@ module Volcano::Generated
         self.is_public = attributes[:'is_public']
       else
         self.is_public = nil
+      end
+
+      if attributes.key?(:'invocation_mode')
+        self.invocation_mode = attributes[:'invocation_mode']
+      else
+        self.invocation_mode = nil
+      end
+
+      if attributes.key?(:'http_auth_mode')
+        self.http_auth_mode = attributes[:'http_auth_mode']
+      else
+        self.http_auth_mode = nil
+      end
+
+      if attributes.key?(:'openapi_spec')
+        if (value = attributes[:'openapi_spec']).is_a?(Hash) || value.nil?
+          self.openapi_spec = value
+        end
+      else
+        self.openapi_spec = nil
+      end
+
+      if attributes.key?(:'has_openapi_spec')
+        self.has_openapi_spec = attributes[:'has_openapi_spec']
+      else
+        self.has_openapi_spec = nil
       end
 
       if attributes.key?(:'aws_function_arn')
@@ -269,6 +314,18 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "is_public", is_public cannot be nil.')
       end
 
+      if @invocation_mode.nil?
+        invalid_properties.push('invalid value for "invocation_mode", invocation_mode cannot be nil.')
+      end
+
+      if @http_auth_mode.nil?
+        invalid_properties.push('invalid value for "http_auth_mode", http_auth_mode cannot be nil.')
+      end
+
+      if @has_openapi_spec.nil?
+        invalid_properties.push('invalid value for "has_openapi_spec", has_openapi_spec cannot be nil.')
+      end
+
       if @deployed_regions.nil?
         invalid_properties.push('invalid value for "deployed_regions", deployed_regions cannot be nil.')
       end
@@ -297,6 +354,9 @@ module Volcano::Generated
       status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "deleting"])
       return false unless status_validator.valid?(@status)
       return false if @is_public.nil?
+      return false if @invocation_mode.nil?
+      return false if @http_auth_mode.nil?
+      return false if @has_openapi_spec.nil?
       return false if @deployed_regions.nil?
       return false if @created_at.nil?
       return false if @updated_at.nil?
@@ -363,6 +423,36 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] invocation_mode Value to be assigned
+    def invocation_mode=(invocation_mode)
+      if invocation_mode.nil?
+        fail ArgumentError, 'invocation_mode cannot be nil'
+      end
+
+      @invocation_mode = invocation_mode
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] http_auth_mode Value to be assigned
+    def http_auth_mode=(http_auth_mode)
+      if http_auth_mode.nil?
+        fail ArgumentError, 'http_auth_mode cannot be nil'
+      end
+
+      @http_auth_mode = http_auth_mode
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] has_openapi_spec Value to be assigned
+    def has_openapi_spec=(has_openapi_spec)
+      if has_openapi_spec.nil?
+        fail ArgumentError, 'has_openapi_spec cannot be nil'
+      end
+
+      @has_openapi_spec = has_openapi_spec
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] deployed_regions Value to be assigned
     def deployed_regions=(deployed_regions)
       if deployed_regions.nil?
@@ -403,6 +493,10 @@ module Volcano::Generated
           status == o.status &&
           provisioning_started_at == o.provisioning_started_at &&
           is_public == o.is_public &&
+          invocation_mode == o.invocation_mode &&
+          http_auth_mode == o.http_auth_mode &&
+          openapi_spec == o.openapi_spec &&
+          has_openapi_spec == o.has_openapi_spec &&
           aws_function_arn == o.aws_function_arn &&
           invoke_url == o.invoke_url &&
           deployed_regions == o.deployed_regions &&
@@ -424,7 +518,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, name, status, provisioning_started_at, is_public, aws_function_arn, invoke_url, deployed_regions, runtime, handler, current_deployment_id, pending_deployment_id, last_invoked_at, created_at, updated_at].hash
+      [id, project_id, name, status, provisioning_started_at, is_public, invocation_mode, http_auth_mode, openapi_spec, has_openapi_spec, aws_function_arn, invoke_url, deployed_regions, runtime, handler, current_deployment_id, pending_deployment_id, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

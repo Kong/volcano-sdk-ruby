@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Create a new serverless PostgreSQL database
-    # Creates a serverless PostgreSQL database in the project. Each project can contain up to 100 databases. Requests over this cap return 403. 
+    # Creates a serverless PostgreSQL database in the project. Each project can hold 1 database on Free and up to 10,000 on Pro. Requests over the plan's cap return 403. 
     # @param id [String] Project ID
     # @param create_database_request [CreateDatabaseRequest] 
     # @param [Hash] opts the optional parameters
@@ -31,7 +31,7 @@ module Volcano::Generated
     end
 
     # Create a new serverless PostgreSQL database
-    # Creates a serverless PostgreSQL database in the project. Each project can contain up to 100 databases. Requests over this cap return 403. 
+    # Creates a serverless PostgreSQL database in the project. Each project can hold 1 database on Free and up to 10,000 on Pro. Requests over the plan&#39;s cap return 403. 
     # @param id [String] Project ID
     # @param create_database_request [CreateDatabaseRequest] 
     # @param [Hash] opts the optional parameters
@@ -494,6 +494,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [String] :status Return only the databases in this status.
     # @return [PaginatedDatabases]
     def list_databases(id, opts = {})
       data, _status_code, _headers = list_databases_with_http_info(id, opts)
@@ -510,6 +511,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [String] :status Return only the databases in this status.
     # @return [Array<(PaginatedDatabases, Integer, Hash)>] PaginatedDatabases data, response status code and response headers
     def list_databases_with_http_info(id, opts = {})
       if @api_client.config.debugging
@@ -539,6 +541,10 @@ module Volcano::Generated
         fail ArgumentError, 'invalid value for "opts[:"search"]" when calling DatabasesApi.list_databases, the character length must be smaller than or equal to 256.'
       end
 
+      allowable_values = ["provisioning", "active", "restoring", "failed", "deleting"]
+      if @api_client.config.client_side_validation && opts[:'status'] && !allowable_values.include?(opts[:'status'])
+        fail ArgumentError, "invalid value for \"status\", must be one of #{allowable_values}"
+      end
       # resource path
       local_var_path = '/projects/{id}/databases'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
 
@@ -550,6 +556,7 @@ module Volcano::Generated
       query_params[:'ending_before'] = opts[:'ending_before'] if !opts[:'ending_before'].nil?
       query_params[:'offset'] = opts[:'offset'] if !opts[:'offset'].nil?
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
+      query_params[:'status'] = opts[:'status'] if !opts[:'status'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -643,7 +650,7 @@ module Volcano::Generated
     end
 
     # Reset database password
-    # Rotates the Volcano-managed PostgreSQL password used by clients when connecting through pgproxy. This does not rotate or expose the internal owner password. The returned password and connection string are the only client credentials that will authenticate through pgproxy after reset. 
+    # Rotates the Volcano-managed PostgreSQL password used by clients when connecting through pgproxy. This does not rotate or expose the internal owner password. The returned password and connection string are the only client credentials that will authenticate through pgproxy after reset.  Existing connections are not interrupted; new ones must use the returned string. Proxies pick the rotation up within a few seconds, so the previous password can still open new connections until then. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters
@@ -654,7 +661,7 @@ module Volcano::Generated
     end
 
     # Reset database password
-    # Rotates the Volcano-managed PostgreSQL password used by clients when connecting through pgproxy. This does not rotate or expose the internal owner password. The returned password and connection string are the only client credentials that will authenticate through pgproxy after reset. 
+    # Rotates the Volcano-managed PostgreSQL password used by clients when connecting through pgproxy. This does not rotate or expose the internal owner password. The returned password and connection string are the only client credentials that will authenticate through pgproxy after reset.  Existing connections are not interrupted; new ones must use the returned string. Proxies pick the rotation up within a few seconds, so the previous password can still open new connections until then. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters

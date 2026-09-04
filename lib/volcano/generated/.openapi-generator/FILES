@@ -13,6 +13,7 @@ lib/volcano-generated/api/anon_keys_api.rb
 lib/volcano-generated/api/auth_admin_api.rb
 lib/volcano-generated/api/auth_configuration_api.rb
 lib/volcano-generated/api/authentication_api.rb
+lib/volcano-generated/api/database_backups_api.rb
 lib/volcano-generated/api/database_branches_api.rb
 lib/volcano-generated/api/database_queries_api.rb
 lib/volcano-generated/api/databases_api.rb
@@ -104,8 +105,10 @@ lib/volcano-generated/models/configure_auth_methods_request.rb
 lib/volcano-generated/models/configure_auth_methods_request_oauth_providers_inner.rb
 lib/volcano-generated/models/connect_project_git_request.rb
 lib/volcano-generated/models/create_anon_key_request.rb
+lib/volcano-generated/models/create_database_backup_request.rb
 lib/volcano-generated/models/create_database_branch_request.rb
 lib/volcano-generated/models/create_database_request.rb
+lib/volcano-generated/models/create_database_restore_request.rb
 lib/volcano-generated/models/create_email_template_request.rb
 lib/volcano-generated/models/create_frontend_custom_domain_request.rb
 lib/volcano-generated/models/create_function_scheduler_request.rb
@@ -118,6 +121,10 @@ lib/volcano-generated/models/create_upload_session_request.rb
 lib/volcano-generated/models/create_upload_session_response.rb
 lib/volcano-generated/models/create_variable_request.rb
 lib/volcano-generated/models/database.rb
+lib/volcano-generated/models/database_backup.rb
+lib/volcano-generated/models/database_backup_list.rb
+lib/volcano-generated/models/database_backup_schedule.rb
+lib/volcano-generated/models/database_backup_schedule_entry.rb
 lib/volcano-generated/models/database_branch.rb
 lib/volcano-generated/models/database_branch_list.rb
 lib/volcano-generated/models/database_branch_storage.rb
@@ -131,10 +138,14 @@ lib/volcano-generated/models/database_query_performance_database.rb
 lib/volcano-generated/models/database_query_performance_item.rb
 lib/volcano-generated/models/database_query_performance_response.rb
 lib/volcano-generated/models/database_query_result.rb
+lib/volcano-generated/models/database_restore.rb
+lib/volcano-generated/models/database_restore_list.rb
+lib/volcano-generated/models/database_restore_window.rb
 lib/volcano-generated/models/database_select_request.rb
 lib/volcano-generated/models/database_stats.rb
 lib/volcano-generated/models/database_update_request.rb
 lib/volcano-generated/models/delete_database202_response.rb
+lib/volcano-generated/models/delete_database_backup200_response.rb
 lib/volcano-generated/models/delete_database_branch202_response.rb
 lib/volcano-generated/models/deployment_phase.rb
 lib/volcano-generated/models/deployment_progress.rb
@@ -142,6 +153,7 @@ lib/volcano-generated/models/deployment_reference.rb
 lib/volcano-generated/models/device_authorization_response.rb
 lib/volcano-generated/models/email_template.rb
 lib/volcano-generated/models/error.rb
+lib/volcano-generated/models/export_project_source_request.rb
 lib/volcano-generated/models/frontend.rb
 lib/volcano-generated/models/frontend_custom_domain_response.rb
 lib/volcano-generated/models/frontend_custom_domain_tls_config.rb
@@ -153,6 +165,8 @@ lib/volcano-generated/models/frontend_usage_data.rb
 lib/volcano-generated/models/frontend_usage_history_response.rb
 lib/volcano-generated/models/function.rb
 lib/volcano-generated/models/function_deployment.rb
+lib/volcano-generated/models/function_http_auth_mode.rb
+lib/volcano-generated/models/function_invocation_mode.rb
 lib/volcano-generated/models/function_invocation_request.rb
 lib/volcano-generated/models/function_region.rb
 lib/volcano-generated/models/function_runtime_deployment.rb
@@ -315,6 +329,10 @@ lib/volcano-generated/models/project_metrics_result.rb
 lib/volcano-generated/models/project_metrics_unit.rb
 lib/volcano-generated/models/project_metrics_value.rb
 lib/volcano-generated/models/project_metrics_window.rb
+lib/volcano-generated/models/project_source_export.rb
+lib/volcano-generated/models/project_source_export_omission.rb
+lib/volcano-generated/models/project_source_export_skip.rb
+lib/volcano-generated/models/project_source_export_state.rb
 lib/volcano-generated/models/project_usage_response.rb
 lib/volcano-generated/models/realtime_config.rb
 lib/volcano-generated/models/realtime_plan_limits.rb

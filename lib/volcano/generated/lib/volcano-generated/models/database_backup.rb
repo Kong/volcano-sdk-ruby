@@ -14,21 +14,22 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) function. Functions are never created or deleted through the manifest. When `schedulers` is declared it is fully synced (schedulers absent from the list are deleted); omitting `schedulers` leaves the function's schedulers untouched. 
-  class ProjectConfigFunction < ApiModelBase
+  # A point-in-time copy of a database, kept by the storage provider and restorable in place.  Backups cover the database itself, not its branches. Restoring one replaces the database's data and keeps its connection string. 
+  class DatabaseBackup < ApiModelBase
+    # Backup name, unique within the database. Backups you create are named by you; scheduled backups are named by the storage provider. 
     attr_accessor :name
 
-    # Function visibility for anon-key invocation
-    attr_accessor :public
+    # Whether the backup was requested explicitly or produced by the backup schedule. Only `manual` backups count against the plan's backup allowance. 
+    attr_accessor :source
 
-    attr_accessor :invocation_mode
+    # Storage the backup occupies. Absent until the provider has costed it, which takes a few minutes after the backup is taken; absent is not the same as empty. 
+    attr_accessor :size_bytes
 
-    attr_accessor :http_auth_mode
+    # When the backup is deleted automatically, from the plan's retention. Absent means it is kept until deleted explicitly. 
+    attr_accessor :expires_at
 
-    # OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function
-    attr_accessor :openapi_spec
-
-    attr_accessor :schedulers
+    # The point in time the backup captures.
+    attr_accessor :created_at
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -56,11 +57,10 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'name' => :'name',
-        :'public' => :'public',
-        :'invocation_mode' => :'invocation_mode',
-        :'http_auth_mode' => :'http_auth_mode',
-        :'openapi_spec' => :'openapi_spec',
-        :'schedulers' => :'schedulers'
+        :'source' => :'source',
+        :'size_bytes' => :'size_bytes',
+        :'expires_at' => :'expires_at',
+        :'created_at' => :'created_at'
       }
     end
 
@@ -78,18 +78,16 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'name' => :'String',
-        :'public' => :'Boolean',
-        :'invocation_mode' => :'FunctionInvocationMode',
-        :'http_auth_mode' => :'FunctionHTTPAuthMode',
-        :'openapi_spec' => :'Hash<String, Object>',
-        :'schedulers' => :'Array<ProjectConfigScheduler>'
+        :'source' => :'String',
+        :'size_bytes' => :'Integer',
+        :'expires_at' => :'Time',
+        :'created_at' => :'Time'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
-        :'openapi_spec',
       ])
     end
 
@@ -97,14 +95,14 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigFunction` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DatabaseBackup` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigFunction`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DatabaseBackup`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
@@ -115,28 +113,24 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'public')
-        self.public = attributes[:'public']
+      if attributes.key?(:'source')
+        self.source = attributes[:'source']
+      else
+        self.source = nil
       end
 
-      if attributes.key?(:'invocation_mode')
-        self.invocation_mode = attributes[:'invocation_mode']
+      if attributes.key?(:'size_bytes')
+        self.size_bytes = attributes[:'size_bytes']
       end
 
-      if attributes.key?(:'http_auth_mode')
-        self.http_auth_mode = attributes[:'http_auth_mode']
+      if attributes.key?(:'expires_at')
+        self.expires_at = attributes[:'expires_at']
       end
 
-      if attributes.key?(:'openapi_spec')
-        if (value = attributes[:'openapi_spec']).is_a?(Hash) || value.nil?
-          self.openapi_spec = value
-        end
-      end
-
-      if attributes.key?(:'schedulers')
-        if (value = attributes[:'schedulers']).is_a?(Array)
-          self.schedulers = value
-        end
+      if attributes.key?(:'created_at')
+        self.created_at = attributes[:'created_at']
+      else
+        self.created_at = nil
       end
     end
 
@@ -149,8 +143,16 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @name.to_s.length < 1
-        invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
+      if @source.nil?
+        invalid_properties.push('invalid value for "source", source cannot be nil.')
+      end
+
+      if !@size_bytes.nil? && @size_bytes < 0
+        invalid_properties.push('invalid value for "size_bytes", must be greater than or equal to 0.')
+      end
+
+      if @created_at.nil?
+        invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
 
       invalid_properties
@@ -161,7 +163,11 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @name.nil?
-      return false if @name.to_s.length < 1
+      return false if @source.nil?
+      source_validator = EnumAttributeValidator.new('String', ["manual", "scheduled"])
+      return false unless source_validator.valid?(@source)
+      return false if !@size_bytes.nil? && @size_bytes < 0
+      return false if @created_at.nil?
       true
     end
 
@@ -172,11 +178,41 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
-      if name.to_s.length < 1
-        fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
+      @name = name
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] source Object to be assigned
+    def source=(source)
+      validator = EnumAttributeValidator.new('String', ["manual", "scheduled"])
+      unless validator.valid?(source)
+        fail ArgumentError, "invalid value for \"source\", must be one of #{validator.allowable_values}."
+      end
+      @source = source
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] size_bytes Value to be assigned
+    def size_bytes=(size_bytes)
+      if size_bytes.nil?
+        fail ArgumentError, 'size_bytes cannot be nil'
       end
 
-      @name = name
+      if size_bytes < 0
+        fail ArgumentError, 'invalid value for "size_bytes", must be greater than or equal to 0.'
+      end
+
+      @size_bytes = size_bytes
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] created_at Value to be assigned
+    def created_at=(created_at)
+      if created_at.nil?
+        fail ArgumentError, 'created_at cannot be nil'
+      end
+
+      @created_at = created_at
     end
 
     # Checks equality by comparing each attribute.
@@ -185,11 +221,10 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           name == o.name &&
-          public == o.public &&
-          invocation_mode == o.invocation_mode &&
-          http_auth_mode == o.http_auth_mode &&
-          openapi_spec == o.openapi_spec &&
-          schedulers == o.schedulers
+          source == o.source &&
+          size_bytes == o.size_bytes &&
+          expires_at == o.expires_at &&
+          created_at == o.created_at
     end
 
     # @see the `==` method
@@ -201,7 +236,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, public, invocation_mode, http_auth_mode, openapi_spec, schedulers].hash
+      [name, source, size_bytes, expires_at, created_at].hash
     end
 
     # Builds the object from hash

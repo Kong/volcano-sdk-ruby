@@ -3,6 +3,7 @@
 require 'json'
 require_relative 'protocol_dispatch'
 require_relative 'protocol_lifecycle'
+require_relative 'protocol_recovery'
 require_relative 'protocol_recovery_position'
 
 module Volcano
@@ -26,9 +27,12 @@ module Volcano
     class Protocol
       include ProtocolDispatch
       include Lifecycle
+      include ProtocolRecovery
       include ProtocolRecoveryPosition
 
       Failure = Data.define(:error)
+      Pending = Data.define(:queue, :on_reply)
+      private_constant :Pending
       Events = Data.define(:on_close, :on_error, :on_failure)
       DEFAULT_REQUEST_TIMEOUT = 10
       DEFAULT_MAX_PENDING = 128
@@ -37,9 +41,15 @@ module Volcano
 
       def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
-      def self.subscribe(id:, channel:, recoverable: false, join_leave: false)
+      def self.subscribe(id:, channel:, recoverable: false, join_leave: false, recovery: nil)
         options = { 'channel' => channel }
-        options['recoverable'] = true if recoverable
+        if recovery
+          options.merge!('recover' => true, 'positioned' => true, 'recoverable' => true)
+          options['epoch'] = recovery[:epoch] if recovery.key?(:epoch)
+          options['offset'] = recovery[:offset] if recovery.key?(:offset)
+        elsif recoverable
+          options['recoverable'] = true
+        end
         options['join_leave'] = true if join_leave
         { 'id' => id, 'subscribe' => options }
       end
@@ -73,17 +83,20 @@ module Volcano
         result
       end
 
-      def subscribe(channel:, recoverable: false, join_leave: false)
+      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = request do |id|
+          result = request(on_reply: recovery && lambda do |reply|
+            parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+          end) do |id|
             self.class.subscribe(
               id: id,
               channel: channel,
               recoverable: recoverable,
-              join_leave: join_leave
+              join_leave: join_leave,
+              recovery: recovery
             )
           end
           ensure_open!

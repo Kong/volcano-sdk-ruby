@@ -14,6 +14,7 @@ require_relative 'realtime/postgres_changes'
 require_relative 'realtime/postgres_expansion'
 require_relative 'realtime/postgres_batch'
 require_relative 'realtime/postgres_delivery'
+require_relative 'realtime/broadcast_delivery'
 require_relative 'realtime/channel_callbacks'
 
 module Volcano
@@ -161,6 +162,7 @@ module Volcano
       include PostgresExpansion
       include PostgresBatch
       include PostgresDelivery
+      include BroadcastDelivery
       include ChannelCallbacks
 
       attr_reader :name
@@ -218,6 +220,7 @@ module Volcano
         with_lifecycle_lock do
           ensure_open!
           detach_from_protocol
+          clear_broadcast_recovery_state
           mark_removed
         end
         nil

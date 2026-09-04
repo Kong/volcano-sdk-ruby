@@ -33,6 +33,10 @@ module Volcano
       def clear_subscription_intent = @subscription_desired = false
 
       def complete_unsubscribe(protocol)
+        if broadcast?
+          detach_publication_handler(protocol)
+          @handler_registered = false
+        end
         @subscription_desired = @subscribed = false
         end_postgres_delivery
         invalidate_presence_subscription(protocol)

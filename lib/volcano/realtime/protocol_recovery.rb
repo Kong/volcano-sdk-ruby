@@ -37,21 +37,23 @@ module Volcano
         def recovery_result_handler(channel, recovery)
           return if recovery.nil?
 
-          ->(reply) { process_subscription_result(channel, reply) }
+          requested_position = immutable_position(recovery[:epoch], recovery[:offset])
+          ->(reply) { process_subscription_result(channel, reply, requested_position) }
         end
 
-        def process_subscription_result(channel, result)
+        def process_subscription_result(channel, result, requested_position)
+          @stream_positions[channel] = requested_position if requested_position
           return mark_invalid_subscription_baseline(channel) unless result.is_a?(Hash)
 
           publications = result.fetch('publications', [])
           return mark_invalid_subscription_baseline(channel) unless publications.is_a?(Array)
 
-          replace_subscription_position(channel, result, publications)
+          replace_subscription_position(channel, result, publications, requested_position)
           enqueue_recovered_publications(channel, publications)
         end
 
-        def replace_subscription_position(channel, result, publications)
-          position = subscription_position(result, publications)
+        def replace_subscription_position(channel, result, publications, requested_position)
+          position = subscription_position(result, publications, requested_position)
           unless position
             mark_invalid_subscription_baseline(channel)
             return
@@ -59,6 +61,7 @@ module Volcano
 
           @stream_positions[channel] = position
           @position_gaps.delete(channel)
+          mark_skipped_offset_gap(channel, requested_position) if recovery_gap?(requested_position, publications)
         end
 
         def mark_invalid_subscription_baseline(channel)
@@ -66,17 +69,18 @@ module Volcano
           nil
         end
 
-        def subscription_position(result, publications)
+        def subscription_position(result, publications, requested_position)
           return immutable_position(result['epoch'], result['offset']) if publications.empty?
 
-          first_publication = publications.first
-          return unless first_publication.is_a?(Hash)
-
-          first_offset = first_publication['offset']
+          first_offset = publications.first['offset'] if publications.first.is_a?(Hash)
           return unless first_offset.is_a?(Integer) && first_offset.positive?
 
-          immutable_position(result['epoch'], first_offset - 1)
+          return immutable_position(result['epoch'], first_offset - 1) unless requested_position
+
+          requested_position if result['epoch'] == requested_position.fetch(:epoch)
         end
+
+        def recovery_gap?(position, pubs) = position && pubs.first && pubs.first['offset'] != position[:offset] + 1
 
         def publication_position(publication, current)
           return unless publication.is_a?(Hash) && publication.key?('offset')

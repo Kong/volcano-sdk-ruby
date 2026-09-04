@@ -3475,6 +3475,70 @@ RSpec.describe Volcano::Realtime do
     )
   end
 
+  it 'reconnects from the requested cursor when recovered publications begin after a gap' do
+    first_socket, recovered_socket, restored_socket = Array.new(3) { FacadeSocket.new }
+    first_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      first_socket.respond(
+        command.fetch('id'),
+        result: { 'epoch' => 'epoch-1', 'offset' => 2, 'publications' => [] }
+      )
+      :defer
+    end
+    recovered_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      reply = JSON.generate(
+        'id' => command.fetch('id'),
+        'result' => {
+          'epoch' => 'epoch-1',
+          'offset' => 5,
+          'publications' => [
+            { 'offset' => 4, 'data' => { 'event' => 'message', 'value' => 4 } }
+          ]
+        }
+      )
+      live = JSON.generate(
+        'push' => {
+          'channel' => 'project-id:broadcast:contract',
+          'pub' => {
+            'epoch' => 'epoch-1',
+            'offset' => 5,
+            'data' => { 'event' => 'message', 'value' => 5 }
+          }
+        }
+      )
+      recovered_socket.receive_raw("#{reply}\n#{live}")
+      :defer
+    end
+    client = reconnecting_realtime_client([first_socket, recovered_socket, restored_socket])
+    received = Async::Queue.new
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received.enqueue(message.fetch('value')) }
+      channel.subscribe
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until recovered_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([4, 5])
+
+      recovered_socket.fail_read(IOError.new('socket failed again'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    ensure
+      client.realtime.disconnect
+    end.wait
+
+    expect_reconnect_position(recovered_socket, epoch: 'epoch-1', offset: 2)
+    expect_reconnect_position(restored_socket, epoch: 'epoch-1', offset: 2)
+  end
+
   it 'reconnects from the last contiguous offset after a live publication jump' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new

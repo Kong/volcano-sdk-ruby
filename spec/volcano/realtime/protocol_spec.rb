@@ -605,6 +605,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
       protocol = described_class.new(socket: socket, task: task)
       received = []
       protocol.on_publication('broadcast:contract') do |_event, data, publication = nil, recovered: false|
+        protocol.complete_publication('broadcast:contract', publication)
         received << [data.fetch('value'), publication&.fetch('offset'), recovered]
       end
 
@@ -618,6 +619,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
           ['live-4', 4, false]
         ]
       )
+      expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-1', offset: 4)
       protocol.close
     end.wait
   end
@@ -656,6 +658,65 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         expect(protocol.instance_variable_get(:@position_gaps)).to eq(
           'broadcast:contract' => { epoch: 'epoch-1', offset: 3 }
         )
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
+  it 'preserves the requested cursor when recovered publications begin after a gap' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1',
+              'offset' => 5,
+              'publications' => [
+                { 'offset' => 4, 'data' => { 'event' => 'message', 'value' => 4 } }
+              ]
+            }
+          ),
+          JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:contract',
+              'pub' => {
+                'offset' => 5,
+                'data' => { 'event' => 'message', 'value' => 5 }
+              }
+            }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      observations = []
+      received = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        observations << [
+          publication.fetch('offset'),
+          protocol.position('broadcast:contract'),
+          protocol.instance_variable_get(:@position_gaps).fetch('broadcast:contract', nil)
+        ]
+        protocol.complete_publication('broadcast:contract', publication)
+        received.enqueue(data.fetch('value'))
+      end
+
+      begin
+        protocol.subscribe(
+          channel: 'broadcast:contract', recovery: { epoch: 'epoch-1', offset: 2 }
+        )
+        expect(task.with_timeout(0.2) { [received.dequeue, received.dequeue] }).to eq([4, 5])
+
+        expected_position = { epoch: 'epoch-1', offset: 2 }
+        expected_gap = { epoch: 'epoch-1', offset: 3 }
+        expect(observations).to eq(
+          [[4, expected_position, expected_gap], [5, expected_position, expected_gap]]
+        )
+        expect(protocol.position('broadcast:contract')).to eq(expected_position)
+        expect(protocol.position('broadcast:contract')).to be_frozen
+        expect(protocol.position('broadcast:contract').fetch(:epoch)).to be_frozen
       ensure
         protocol.close
       end

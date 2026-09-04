@@ -2090,6 +2090,39 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'does not accumulate recovery state when non-broadcast channels are removed' do
+    socket = FacadeSocket.new
+    socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      socket.respond(
+        command.fetch('id'),
+        result: {
+          'epoch' => "#{command.dig('subscribe', 'channel')}-epoch",
+          'offset' => 1,
+          'publications' => []
+        }
+      )
+      :defer
+    end
+    client = realtime_client(socket)
+
+    Async do
+      10.times do |index|
+        type = index.even? ? :presence : :postgres
+        name = type == :presence ? "lobby-#{index}" : "public:messages_#{index}"
+        client.realtime.channel(name, type: type).subscribe
+        client.realtime.remove_channel(name, type: type)
+      end
+      protocol = client.realtime.send(:protocol)
+
+      expect(protocol.instance_variable_get(:@stream_positions)).to be_empty
+      expect(protocol.instance_variable_get(:@position_gaps)).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'removes all channels without disconnecting', :aggregate_failures do
     socket = FacadeSocket.new
     client = Volcano::Client.new(

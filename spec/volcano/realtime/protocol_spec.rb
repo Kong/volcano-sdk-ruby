@@ -298,6 +298,78 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'leaves non-recovery subscription replies outside recovery processing', :aggregate_failures do
+    Async do |task|
+      socket = FakeSocket.new
+      results = {
+        'presence:lobby' => {
+          'epoch' => 'presence-epoch',
+          'offset' => 1,
+          'publications' => [
+            {
+              'offset' => 1,
+              'data' => { 'event' => 'message', 'value' => 'recovered-presence' }
+            }
+          ]
+        },
+        'postgres:public:messages' => {
+          'epoch' => 'postgres-epoch',
+          'offset' => 1,
+          'publications' => []
+        }
+      }
+      socket.on_write = lambda do |command|
+        channel = command.dig('subscribe', 'channel')
+        result = channel ? results.fetch(channel) : {}
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => result))
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      deliveries = []
+      live_delivered = Async::Queue.new
+      protocol.on_publication('presence:lobby') do |_event, data, _publication, recovered:|
+        value = data.fetch('value')
+        deliveries << [value, recovered]
+        live_delivered.enqueue(true) if value == 'live-presence'
+      end
+
+      begin
+        presence_result = protocol.subscribe(
+          channel: 'presence:lobby', recoverable: true, join_leave: true
+        )
+        postgres_result = protocol.subscribe(channel: 'postgres:public:messages')
+        socket.receive(
+          JSON.generate(
+            'push' => {
+              'channel' => 'presence:lobby',
+              'pub' => {
+                'data' => { 'event' => 'message', 'value' => 'live-presence' }
+              }
+            }
+          )
+        )
+        task.with_timeout(0.2) { live_delivered.dequeue }
+
+        expect(presence_result).to eq(results.fetch('presence:lobby'))
+        expect(postgres_result).to eq(results.fetch('postgres:public:messages'))
+        expect(deliveries).to eq([['live-presence', false]])
+        expect(protocol.position('presence:lobby')).to be_nil
+        expect(protocol.position('postgres:public:messages')).to be_nil
+        expect(socket.writes.map { |frame| JSON.parse(frame).fetch('subscribe') }).to eq(
+          [
+            {
+              'channel' => 'presence:lobby',
+              'recoverable' => true,
+              'join_leave' => true
+            },
+            { 'channel' => 'postgres:public:messages' }
+          ]
+        )
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'dispatches project-prefixed raw publications by data event' do
     Async do |task|
       socket = FakeSocket.new

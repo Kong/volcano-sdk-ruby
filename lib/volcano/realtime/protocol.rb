@@ -87,7 +87,7 @@ module Volcano
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = request(on_reply: ->(reply) { process_subscription_result(channel, reply) }) do |id|
+          result = request(on_reply: recovery_result_handler(channel, recovery)) do |id|
             self.class.subscribe(
               id: id,
               channel: channel,

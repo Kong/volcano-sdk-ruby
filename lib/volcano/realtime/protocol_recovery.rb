@@ -34,6 +34,12 @@ module Volcano
           @position_gaps = {}
         end
 
+        def recovery_result_handler(channel, recovery)
+          return if recovery.nil?
+
+          ->(reply) { process_subscription_result(channel, reply) }
+        end
+
         def process_subscription_result(channel, result)
           return mark_invalid_subscription_baseline(channel) unless result.is_a?(Hash)
 

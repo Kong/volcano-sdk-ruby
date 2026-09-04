@@ -10,7 +10,8 @@ module Volcano
         on_reply = nil
         if recovery
           on_reply = lambda do |reply|
-            parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+            publications = parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+            dispatch_recovered_publications(channel, publications)
           end
         end
 

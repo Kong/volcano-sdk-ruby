@@ -23,6 +23,11 @@ RSpec.describe Volcano do
     expect { Volcano::Realtime::ProtocolDispatch }.to raise_error(NameError, /private constant/)
   end
 
+  it 'keeps realtime publication dispatch modules outside the public API' do
+    expect { Volcano::Realtime::ProtocolPublicationDispatch }.to raise_error(NameError, /private constant/)
+    expect { Volcano::Realtime::ProtocolRecoveryDispatch }.to raise_error(NameError, /private constant/)
+  end
+
   it 'does not load the Async runtime for a REST-only require' do
     root = File.expand_path('..', __dir__)
     stdout, stderr, status = Open3.capture3(

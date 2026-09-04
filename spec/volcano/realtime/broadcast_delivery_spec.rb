@@ -49,6 +49,7 @@ end
 
 class BroadcastDeliveryRealtime
   def ensure_open! = self
+  def capture_protocol_session = [0, 0, nil]
 end
 
 RSpec.describe BroadcastDelivery do

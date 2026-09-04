@@ -12,6 +12,7 @@ module Volcano
       end
 
       def protocol_lost(protocol)
+        remember_recovery_position(protocol)
         @subscribed = false
         end_postgres_delivery
         detach_publication_handler(protocol)
@@ -34,6 +35,7 @@ module Volcano
 
       def complete_unsubscribe(protocol)
         if broadcast?
+          remember_recovery_position(protocol)
           detach_publication_handler(protocol)
           @handler_registered = false
         end
@@ -45,9 +47,9 @@ module Volcano
 
       def subscribe_protocol(protocol)
         epoch = next_presence_epoch
-        begin_postgres_delivery
-        register_handlers(protocol, epoch)
-        protocol.subscribe(channel: @name, recoverable: presence?, join_leave: presence?)
+        prepare_protocol_subscription(protocol, epoch)
+        protocol.subscribe(channel: @name, **subscription_options)
+        remember_recovery_position(protocol)
         @subscribed = true
         [protocol, epoch]
       rescue StandardError
@@ -56,12 +58,46 @@ module Volcano
         raise
       end
 
+      def prepare_protocol_subscription(protocol, epoch)
+        begin_postgres_delivery
+        register_handlers(protocol, epoch)
+      end
+
       def detach_from_protocol
         return unless @subscribed || @publication_handler
 
         protocol = @protocol_provider.call
         protocol.unsubscribe(channel: @name) if @subscribed && protocol.connected?
         detach_publication_handler(protocol)
+      end
+
+      def subscription_options
+        {
+          recovery: broadcast? ? recovery_position : nil,
+          recoverable: presence?,
+          join_leave: presence?
+        }
+      end
+
+      def recovery_position
+        _, lineage, = @realtime.__send__(:capture_protocol_session)
+        return @recovery_position if @recovery_lineage == lineage
+
+        @recovery_lineage = lineage
+        @recovery_position = {}.freeze
+      end
+
+      def remember_recovery_position(protocol)
+        return unless broadcast?
+
+        @recovery_position = protocol.__send__(:position, @name) || @recovery_position
+      end
+
+      def clear_channel_recovery_state
+        return unless broadcast?
+
+        @recovery_position = {}.freeze
+        @recovery_lineage = nil
       end
 
       def mark_removed

@@ -31,8 +31,16 @@ module Volcano
         return unless pending
 
         reply = reply_value(frame)
-        pending.on_reply&.call(reply) unless reply.is_a?(Protocol::Failure)
-        pending.queue.enqueue(reply)
+        pending.queue.enqueue(apply_reply_hook(pending, reply))
+      end
+
+      def apply_reply_hook(pending, reply)
+        return reply if reply.is_a?(Protocol::Failure) || !pending.on_reply
+
+        pending.on_reply.call(reply)
+        reply
+      rescue StandardError => e
+        Protocol::Failure.new(error: e)
       end
 
       def reply_value(frame)
@@ -41,19 +49,6 @@ module Volcano
 
         message = error['message'] || 'realtime command failed'
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
-      end
-
-      def dispatch_publication(push)
-        channel = push['channel'].to_s
-        data = push.dig('pub', 'data')
-        return unless data.is_a?(Hash)
-
-        event = data['event']
-        registered_channel = matching_channel(@publication_handlers, channel)
-        return unless registered_channel
-        return if @callback_queue.size >= @max_callback_queue
-
-        @callback_queue.enqueue([@publication_handlers.fetch(registered_channel).dup, event, data])
       end
 
       def dispatch_presence(push, event)
@@ -88,10 +83,12 @@ module Volcano
 
       def dispatch_callbacks
         until @callback_stopping
-          handlers, event, data = @callback_queue.dequeue
-          dispatch_callback_delivery(handlers, event, data)
+          delivery = @callback_queue.dequeue
+          dispatch_queued_callback(delivery)
           enqueue_pending_presence_resync
         end
+      rescue StandardError => e
+        close_with(closed_error(e), notify_error: true)
       end
 
       def dispatch_callback_delivery(handlers, event, data)

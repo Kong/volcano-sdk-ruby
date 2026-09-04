@@ -6,7 +6,7 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = 'bdd8d476bf4b742d5edb5c28d9d95fe81f623394d17c0b765de1160cf38bbbca'
+  OPENAPI_SHA256 = '076d97809c95f50567d8b100f4188c1fe2b74e73a388e335c79850e66edfc0e4'
 
   it 'uses the exact bundled contract and emits the required POC operations' do
     expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)

@@ -14,38 +14,30 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # PostgreSQL database with automatic scalability and security features. 
-  class Database < ApiModelBase
+  # A restore of a database, either from a named backup or to a point in time. Restores run in the background and take longer than a request, so the database is unavailable until this reports `completed`. 
+  class DatabaseRestore < ApiModelBase
     attr_accessor :id
+
+    attr_accessor :database_id
 
     attr_accessor :project_id
 
-    # Database name
-    attr_accessor :name
+    # Whether the restore targets a named backup or an arbitrary point in time. Both replace the database's data in place. 
+    attr_accessor :kind
 
-    # Database status. `restoring` means a restore is replacing the database's data: it does not accept connections, and the operations that would race the restore are rejected until it finishes. Its branches keep serving throughout. 
+    # Restore status. `pending` and `running` both mean the restore is still in flight and the database is not connectable; an attempt that fails with tries left goes back to `pending`. `failed` and `exhausted` both mean Volcano gave up: the database is left `failed` if its data may already have been replaced, and `active` if the restore never started — a backup that no longer exists at the provider ends the restore without touching the database. A restore cannot be cancelled once it starts. 
     attr_accessor :status
 
-    # Timestamp when the current provisioning phase started
-    attr_accessor :provisioning_started_at
+    # The backup restored, kept even if that backup is later deleted. Absent for a point-in-time restore. 
+    attr_accessor :backup_name
 
-    # Secure PostgreSQL connection URI for your database.  The database is identified by the globally-unique username (`volcano_client_{database_id}`) already in this URI; the `application_name` parameter only selects the access mode: - `volcano_full_access` — Full admin access (DDL, migrations) - `volcano_user_access:{user_id}` — User impersonation (RLS enforced) - `volcano_user_access` — Anonymous access (anon role, RLS enforced) 
-    attr_accessor :connection_string
+    # The point in time restored to. Absent for a backup restore.
+    attr_accessor :restore_to
 
-    # Region where the database is hosted
-    attr_accessor :region
+    # Why the most recent attempt failed, when one has.
+    attr_accessor :error
 
-    # PostgreSQL major version
-    attr_accessor :pg_version
-
-    # Database size tier that determines available RAM and scaling limits. 
-    attr_accessor :database_type
-
-    # Latest observed storage for this database, in bytes: its own on-disk size, plus what each branch has diverged from it, plus what its backups cost to hold. This is the figure the storage allowance is enforced against, and the stats endpoint breaks it down. A point-in-time gauge recorded by a background pass, so it may be absent until the database has been sampled, and it can trail the stats endpoint's `current_storage_bytes`, which measures on request. Summing the latest samples for every database in a project produces the project's \"Database Storage (Bytes)\" usage gauge. Populated on database list responses; single-database responses omit it. 
-    attr_accessor :storage_bytes
-
-    # Most recent request timestamp for this database
-    attr_accessor :last_invoked_at
+    attr_accessor :completed_at
 
     attr_accessor :created_at
 
@@ -77,16 +69,14 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'id' => :'id',
+        :'database_id' => :'database_id',
         :'project_id' => :'project_id',
-        :'name' => :'name',
+        :'kind' => :'kind',
         :'status' => :'status',
-        :'provisioning_started_at' => :'provisioning_started_at',
-        :'connection_string' => :'connection_string',
-        :'region' => :'region',
-        :'pg_version' => :'pg_version',
-        :'database_type' => :'database_type',
-        :'storage_bytes' => :'storage_bytes',
-        :'last_invoked_at' => :'last_invoked_at',
+        :'backup_name' => :'backup_name',
+        :'restore_to' => :'restore_to',
+        :'error' => :'error',
+        :'completed_at' => :'completed_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -106,16 +96,14 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'id' => :'String',
+        :'database_id' => :'String',
         :'project_id' => :'String',
-        :'name' => :'String',
+        :'kind' => :'String',
         :'status' => :'String',
-        :'provisioning_started_at' => :'Time',
-        :'connection_string' => :'String',
-        :'region' => :'String',
-        :'pg_version' => :'String',
-        :'database_type' => :'String',
-        :'storage_bytes' => :'Integer',
-        :'last_invoked_at' => :'Time',
+        :'backup_name' => :'String',
+        :'restore_to' => :'Time',
+        :'error' => :'String',
+        :'completed_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -131,14 +119,14 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::Database` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DatabaseRestore` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::Database`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DatabaseRestore`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
@@ -149,16 +137,22 @@ module Volcano::Generated
         self.id = nil
       end
 
+      if attributes.key?(:'database_id')
+        self.database_id = attributes[:'database_id']
+      else
+        self.database_id = nil
+      end
+
       if attributes.key?(:'project_id')
         self.project_id = attributes[:'project_id']
       else
         self.project_id = nil
       end
 
-      if attributes.key?(:'name')
-        self.name = attributes[:'name']
+      if attributes.key?(:'kind')
+        self.kind = attributes[:'kind']
       else
-        self.name = nil
+        self.kind = nil
       end
 
       if attributes.key?(:'status')
@@ -167,32 +161,20 @@ module Volcano::Generated
         self.status = nil
       end
 
-      if attributes.key?(:'provisioning_started_at')
-        self.provisioning_started_at = attributes[:'provisioning_started_at']
+      if attributes.key?(:'backup_name')
+        self.backup_name = attributes[:'backup_name']
       end
 
-      if attributes.key?(:'connection_string')
-        self.connection_string = attributes[:'connection_string']
+      if attributes.key?(:'restore_to')
+        self.restore_to = attributes[:'restore_to']
       end
 
-      if attributes.key?(:'region')
-        self.region = attributes[:'region']
+      if attributes.key?(:'error')
+        self.error = attributes[:'error']
       end
 
-      if attributes.key?(:'pg_version')
-        self.pg_version = attributes[:'pg_version']
-      end
-
-      if attributes.key?(:'database_type')
-        self.database_type = attributes[:'database_type']
-      end
-
-      if attributes.key?(:'storage_bytes')
-        self.storage_bytes = attributes[:'storage_bytes']
-      end
-
-      if attributes.key?(:'last_invoked_at')
-        self.last_invoked_at = attributes[:'last_invoked_at']
+      if attributes.key?(:'completed_at')
+        self.completed_at = attributes[:'completed_at']
       end
 
       if attributes.key?(:'created_at')
@@ -217,29 +199,20 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "id", id cannot be nil.')
       end
 
+      if @database_id.nil?
+        invalid_properties.push('invalid value for "database_id", database_id cannot be nil.')
+      end
+
       if @project_id.nil?
         invalid_properties.push('invalid value for "project_id", project_id cannot be nil.')
       end
 
-      if @name.nil?
-        invalid_properties.push('invalid value for "name", name cannot be nil.')
-      end
-
-      if @name.to_s.length > 64
-        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 64.')
-      end
-
-      pattern = Regexp.new(/^[a-z0-9_]+$/)
-      if @name !~ pattern
-        invalid_properties.push("invalid value for \"name\", must conform to the pattern #{pattern}.")
+      if @kind.nil?
+        invalid_properties.push('invalid value for "kind", kind cannot be nil.')
       end
 
       if @status.nil?
         invalid_properties.push('invalid value for "status", status cannot be nil.')
-      end
-
-      if !@storage_bytes.nil? && @storage_bytes < 0
-        invalid_properties.push('invalid value for "storage_bytes", must be greater than or equal to 0.')
       end
 
       if @created_at.nil?
@@ -258,16 +231,14 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @id.nil?
+      return false if @database_id.nil?
       return false if @project_id.nil?
-      return false if @name.nil?
-      return false if @name.to_s.length > 64
-      return false if @name !~ Regexp.new(/^[a-z0-9_]+$/)
+      return false if @kind.nil?
+      kind_validator = EnumAttributeValidator.new('String', ["snapshot", "point_in_time"])
+      return false unless kind_validator.valid?(@kind)
       return false if @status.nil?
-      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "restoring", "deleting"])
+      status_validator = EnumAttributeValidator.new('String', ["pending", "running", "completed", "failed", "exhausted"])
       return false unless status_validator.valid?(@status)
-      database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
-      return false unless database_type_validator.valid?(@database_type)
-      return false if !@storage_bytes.nil? && @storage_bytes < 0
       return false if @created_at.nil?
       return false if @updated_at.nil?
       true
@@ -284,6 +255,16 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] database_id Value to be assigned
+    def database_id=(database_id)
+      if database_id.nil?
+        fail ArgumentError, 'database_id cannot be nil'
+      end
+
+      @database_id = database_id
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] project_id Value to be assigned
     def project_id=(project_id)
       if project_id.nil?
@@ -293,57 +274,24 @@ module Volcano::Generated
       @project_id = project_id
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] name Value to be assigned
-    def name=(name)
-      if name.nil?
-        fail ArgumentError, 'name cannot be nil'
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] kind Object to be assigned
+    def kind=(kind)
+      validator = EnumAttributeValidator.new('String', ["snapshot", "point_in_time"])
+      unless validator.valid?(kind)
+        fail ArgumentError, "invalid value for \"kind\", must be one of #{validator.allowable_values}."
       end
-
-      if name.to_s.length > 64
-        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 64.'
-      end
-
-      pattern = Regexp.new(/^[a-z0-9_]+$/)
-      if name !~ pattern
-        fail ArgumentError, "invalid value for \"name\", must conform to the pattern #{pattern}."
-      end
-
-      @name = name
+      @kind = kind
     end
 
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] status Object to be assigned
     def status=(status)
-      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "restoring", "deleting"])
+      validator = EnumAttributeValidator.new('String', ["pending", "running", "completed", "failed", "exhausted"])
       unless validator.valid?(status)
         fail ArgumentError, "invalid value for \"status\", must be one of #{validator.allowable_values}."
       end
       @status = status
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] database_type Object to be assigned
-    def database_type=(database_type)
-      validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
-      unless validator.valid?(database_type)
-        fail ArgumentError, "invalid value for \"database_type\", must be one of #{validator.allowable_values}."
-      end
-      @database_type = database_type
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] storage_bytes Value to be assigned
-    def storage_bytes=(storage_bytes)
-      if storage_bytes.nil?
-        fail ArgumentError, 'storage_bytes cannot be nil'
-      end
-
-      if storage_bytes < 0
-        fail ArgumentError, 'invalid value for "storage_bytes", must be greater than or equal to 0.'
-      end
-
-      @storage_bytes = storage_bytes
     end
 
     # Custom attribute writer method with validation
@@ -372,16 +320,14 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           id == o.id &&
+          database_id == o.database_id &&
           project_id == o.project_id &&
-          name == o.name &&
+          kind == o.kind &&
           status == o.status &&
-          provisioning_started_at == o.provisioning_started_at &&
-          connection_string == o.connection_string &&
-          region == o.region &&
-          pg_version == o.pg_version &&
-          database_type == o.database_type &&
-          storage_bytes == o.storage_bytes &&
-          last_invoked_at == o.last_invoked_at &&
+          backup_name == o.backup_name &&
+          restore_to == o.restore_to &&
+          error == o.error &&
+          completed_at == o.completed_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -395,7 +341,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, name, status, provisioning_started_at, connection_string, region, pg_version, database_type, storage_bytes, last_invoked_at, created_at, updated_at].hash
+      [id, database_id, project_id, kind, status, backup_name, restore_to, error, completed_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

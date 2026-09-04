@@ -707,8 +707,8 @@ delivery.
 
 The internal REST transport is generated from the self-contained public
 Volcano OpenAPI bundle at hosting commit
-`cb12eb4636252cb658f13850dad930fa73a5dc4c`. Its SHA-256 is
-`95e5c102830db382064180afca4c62ad8b11faabf58148f9d21236046b930090`.
+`91f1983dc733caee5ca70d32607ece0427a56f44`. Its SHA-256 is
+`0049bfc31e5dd72eaf8d0394a9c354e97f1d8a3723a013df19f40108b21535fc`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

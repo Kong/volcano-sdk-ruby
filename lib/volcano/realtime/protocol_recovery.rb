@@ -13,7 +13,7 @@ module Volcano
 
           position = publication_position(publication, current)
           return if invalid_publication_position?(channel, publication, current, position)
-          return if skipped_publication_position?(channel, current, position)
+          return if non_successor_publication_position?(channel, current, position)
           return if position_blocked_by_gap?(channel, position)
 
           @stream_positions[channel] = position
@@ -95,10 +95,11 @@ module Volcano
           true
         end
 
-        def skipped_publication_position?(channel, current, position)
-          return false unless position.fetch(:offset) > current.fetch(:offset) + 1
+        def non_successor_publication_position?(channel, current, position)
+          expected_offset = current.fetch(:offset) + 1
+          return false if position.fetch(:offset) == expected_offset
 
-          mark_skipped_offset_gap(channel, current)
+          mark_skipped_offset_gap(channel, current) if position.fetch(:offset) > expected_offset
           true
         end
 

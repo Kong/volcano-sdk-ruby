@@ -855,7 +855,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
-  it 'preserves duplicate and older offsets while only subscription results replace epochs' do
+  it 'advances only through successors while only subscription results replace epochs' do
     Async do |task|
       socket = FakeSocket.new
       subscription_results = [
@@ -870,24 +870,101 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
       begin
         protocol.subscribe(channel: 'broadcast:contract', recovery: {})
-        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 3)
+        successor_position = protocol.position('broadcast:contract')
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 3)
         duplicate_position = protocol.position('broadcast:contract')
         protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 1)
         older_position = protocol.position('broadcast:contract')
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 5)
+        jump_position = protocol.position('broadcast:contract')
+        jump_gap = protocol.instance_variable_get(:@position_gaps).fetch('broadcast:contract')
         protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-1', 'offset' => 2)
-        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-2', 'offset' => 3)
+        older_gap = protocol.instance_variable_get(:@position_gaps).fetch('broadcast:contract')
+        protocol.complete_publication('broadcast:contract', 'epoch' => 'epoch-2', 'offset' => 4)
         publication_transition = protocol.position('broadcast:contract')
         protocol.unsubscribe(channel: 'broadcast:contract')
         protocol.subscribe(
-          channel: 'broadcast:contract', recovery: { epoch: 'epoch-1', offset: 2 }
+          channel: 'broadcast:contract', recovery: { epoch: 'epoch-1', offset: 3 }
         )
 
-        expect(duplicate_position).to eq(epoch: 'epoch-1', offset: 2)
-        expect(older_position).to eq(epoch: 'epoch-1', offset: 1)
-        expect(publication_transition).to eq(epoch: 'epoch-1', offset: 2)
-        expect(protocol.position('broadcast:contract')).to eq(epoch: 'epoch-2', offset: 10)
-        expect(protocol.instance_variable_get(:@position_gaps)).not_to include(
-          'broadcast:contract'
+        expected_position = { epoch: 'epoch-1', offset: 3 }
+        expected_gap = { epoch: 'epoch-1', offset: 4 }
+        expect(
+          successor: successor_position,
+          duplicate: duplicate_position,
+          older: older_position,
+          jump: jump_position,
+          jump_gap: jump_gap,
+          older_gap: older_gap,
+          publication_transition: publication_transition,
+          subscription_position: protocol.position('broadcast:contract'),
+          subscription_gaps: protocol.instance_variable_get(:@position_gaps)
+        ).to eq(
+          successor: expected_position,
+          duplicate: expected_position,
+          older: expected_position,
+          jump: expected_position,
+          jump_gap: expected_gap,
+          older_gap: expected_gap,
+          publication_transition: expected_position,
+          subscription_position: { epoch: 'epoch-2', offset: 10 },
+          subscription_gaps: {}
+        )
+      ensure
+        protocol.close
+      end
+    end.wait
+  end
+
+  it 'keeps recovered completion monotonic across duplicate, older, and skipped offsets' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.on_write = lambda do |command|
+        socket.receive(
+          JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'epoch-1', 'offset' => 5,
+              'publications' => [
+                { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 'successor' } },
+                { 'offset' => 3, 'data' => { 'event' => 'message', 'value' => 'duplicate' } },
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 'older' } },
+                { 'offset' => 5, 'data' => { 'event' => 'message', 'value' => 'jump' } },
+                { 'offset' => 4, 'data' => { 'event' => 'message', 'value' => 'after-jump' } }
+              ]
+            }
+          )
+        )
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      observations = Async::Queue.new
+      protocol.on_publication('broadcast:contract') do |_event, data, publication|
+        protocol.complete_publication('broadcast:contract', publication)
+        observations.enqueue(
+          [
+            data.fetch('value'), protocol.position('broadcast:contract'),
+            protocol.instance_variable_get(:@position_gaps).fetch('broadcast:contract', nil)
+          ]
+        )
+      end
+
+      begin
+        protocol.subscribe(
+          channel: 'broadcast:contract', recovery: { epoch: 'epoch-1', offset: 2 }
+        )
+        actual = task.with_timeout(0.2) { Array.new(5) { observations.dequeue } }
+        position = { epoch: 'epoch-1', offset: 3 }
+        gap = { epoch: 'epoch-1', offset: 4 }
+
+        expect(actual).to eq(
+          [
+            ['successor', position, nil],
+            ['duplicate', position, nil],
+            ['older', position, nil],
+            ['jump', position, gap],
+            ['after-jump', position, gap]
+          ]
         )
       ensure
         protocol.close

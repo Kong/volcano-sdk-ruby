@@ -3539,7 +3539,7 @@ RSpec.describe Volcano::Realtime do
     expect_reconnect_position(restored_socket, epoch: 'epoch-1', offset: 2)
   end
 
-  it 'reconnects from the last contiguous offset after a live publication jump' do
+  it 'reconnects from the monotonic contiguous offset after stale and skipped live publications' do
     first_socket = FacadeSocket.new
     restored_socket = FacadeSocket.new
     first_socket.on_write = lambda do |command|
@@ -3558,13 +3558,15 @@ RSpec.describe Volcano::Realtime do
       channel = client.realtime.channel('contract')
       channel.on('message') { |message| received.enqueue(message.fetch('value')) }
       channel.subscribe
-      first_socket.publication(
-        channel: 'project-id:broadcast:contract',
-        data: { 'event' => 'message', 'value' => 4 },
-        epoch: 'epoch-1',
-        offset: 4
-      )
-      expect(task.with_timeout(0.2) { received.dequeue }).to eq(4)
+      [3, 3, 1, 5].each do |offset|
+        first_socket.publication(
+          channel: 'project-id:broadcast:contract',
+          data: { 'event' => 'message', 'value' => offset },
+          epoch: 'epoch-1',
+          offset: offset
+        )
+      end
+      expect(task.with_timeout(0.2) { Array.new(4) { received.dequeue } }).to eq([3, 3, 1, 5])
 
       first_socket.fail_read(IOError.new('socket failed'))
       task.with_timeout(0.2) do
@@ -3578,7 +3580,7 @@ RSpec.describe Volcano::Realtime do
       'channel' => 'broadcast:contract',
       'recover' => true,
       'epoch' => 'epoch-1',
-      'offset' => 2
+      'offset' => 3
     )
   end
 

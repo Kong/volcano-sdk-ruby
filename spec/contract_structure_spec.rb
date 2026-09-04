@@ -11,9 +11,9 @@ RSpec.describe 'shared SDK contract bindings' do
   let(:expected_hashes) do
     {
       'auth.feature' => 'c237deb0b3be98d64689699a0ffdcd272e7ef027a2b69439b1768195042ed493',
-      'database-delete.feature' => 'f1358e5c97fc8483b49a250ef63761ac937e22e0bc3f90c24c5db0462ba10a21',
+      'database-delete.feature' => 'b328579ee9b33cbb313dd4d13eb899d53f64344c5e5beb00dbfb7eed2098e2c7',
       'database-insert.feature' => '46150600af9f54b690bc5c9b8f230c5ba4e3be755e50ad0921051faa95e45316',
-      'database-update.feature' => '44d657acf525b86add59453b6ae5c9e03f423fd17b6dfbf28f7fff0aece2919d',
+      'database-update.feature' => '7a64470474f2ba842faf1b8352ccc2cd7efa8183212ab309c1321dffb9c093d3',
       'database.feature' => '4685b29357a621068b25984ff0de29cd4c504eebe5cfb597f0b999e29878a668',
       'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
       'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',

@@ -185,6 +185,43 @@ Then('exactly the deleted contract row is returned') do
   raise 'database result did not match the deleted row' unless contract.last_outcome.value == [row]
 end
 
+When('the client updates a missing contract row') do
+  contract.record do
+    contract.client
+            .database(contract.fixture.fetch('database_name'))
+            .from(contract.fixture.fetch('table_name'))
+            .update('value' => 'must-not-be-written')
+            .eq('slug', "#{contract.fixture.fetch('fixture_row').fetch('slug')}-missing")
+            .execute
+  end
+end
+
+When('the client deletes a missing contract row') do
+  contract.record do
+    contract.client
+            .database(contract.fixture.fetch('database_name'))
+            .from(contract.fixture.fetch('table_name'))
+            .delete
+            .eq('slug', "#{contract.fixture.fetch('fixture_row').fetch('slug')}-missing")
+            .execute
+  end
+end
+
+Then('the mutation returns an empty row list') do
+  raise 'mutation did not return an empty row list' unless contract.last_outcome.value == []
+end
+
+Then('the existing contract row is unchanged') do
+  row = contract.fixture.fetch('fixture_row')
+  result = contract.client
+                   .database(contract.fixture.fetch('database_name'))
+                   .from(contract.fixture.fetch('table_name'))
+                   .select('*')
+                   .eq('slug', row.fetch('slug'))
+                   .execute
+  raise 'existing contract row changed' unless result == [row]
+end
+
 When('the client uploads and downloads the contract object') do
   contract.record do
     bucket = contract.client.storage.from(contract.fixture.fetch('bucket_name'))

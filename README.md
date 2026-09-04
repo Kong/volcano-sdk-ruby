@@ -708,7 +708,7 @@ delivery.
 The internal REST transport is generated from `openapi/openapi.yaml`, which
 includes the managed auth page contract from [Hosting #945](https://github.com/Kong/volcano-hosting/pull/945)
 and the OAuth provider response contract from [Hosting #991](https://github.com/Kong/volcano-hosting/pull/991).
-Its SHA-256 is `68e9d526b8acad3736027ca2278f2534967710d867a6941e338e00f77a77ac76`.
+Its SHA-256 is `bdd8d476bf4b742d5edb5c28d9d95fe81f623394d17c0b765de1160cf38bbbca`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

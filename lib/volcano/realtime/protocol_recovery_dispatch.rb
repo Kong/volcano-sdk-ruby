@@ -37,7 +37,7 @@ module Volcano
         true
       end
 
-      def ordered_publication_channel?(channel) = @ordered_publication_counts[channel].positive?
+      def ordered_publications_pending? = !@ordered_publication_counts.empty?
 
       def dispatch_ordered_publications
         until @publication_producer_stopping

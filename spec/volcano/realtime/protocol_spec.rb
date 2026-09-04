@@ -624,6 +624,181 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     end.wait
   end
 
+  it 'orders a cross-channel live push behind an earlier same-frame recovered batch' do
+    Async do |task|
+      socket = FakeSocket.new
+      producer_waiting = Async::Queue.new
+      release_producer = Async::Queue.new
+      reader_finished_frame = Async::Queue.new
+      socket.on_write = lambda do |command|
+        if command.empty?
+          reader_finished_frame.enqueue(true)
+        elsif command.dig('subscribe', 'channel') == 'broadcast:beta'
+          socket.receive(
+            JSON.generate(
+              'id' => command.fetch('id'),
+              'result' => { 'epoch' => 'beta-epoch', 'offset' => 0, 'publications' => [] }
+            )
+          )
+        elsif command.dig('subscribe', 'channel') == 'broadcast:alpha'
+          reply = JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'alpha-epoch', 'offset' => 2,
+              'publications' => [
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 'alpha-1' } },
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'alpha-2' } }
+              ]
+            }
+          )
+          live = JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:beta',
+              'pub' => {
+                'offset' => 1,
+                'data' => { 'event' => 'message', 'value' => 'beta-1' }
+              }
+            }
+          )
+          socket.receive_raw("#{reply}\n#{live}\n{}")
+        end
+      end
+      protocol = described_class.new(socket: socket, task: task)
+      protocol.singleton_class.prepend(
+        Module.new do
+          define_method(:dispatch_publication_batch) do |batch|
+            if batch.channel == 'broadcast:alpha' && batch.deliveries.first.recovered
+              producer_waiting.enqueue(true)
+              release_producer.dequeue
+            end
+            super(batch)
+          end
+          private :dispatch_publication_batch
+        end
+      )
+      received = Async::Queue.new
+      %w[alpha beta].each do |name|
+        channel = "broadcast:#{name}"
+        protocol.on_publication(channel) do |_event, data, publication|
+          protocol.complete_publication(channel, publication)
+          received.enqueue(data.fetch('value'))
+        end
+      end
+      protocol.subscribe(channel: 'broadcast:beta', recovery: {})
+
+      released = false
+      subscription = task.async { protocol.subscribe(channel: 'broadcast:alpha', recovery: {}) }
+      begin
+        task.with_timeout(0.2) { producer_waiting.dequeue }
+        task.with_timeout(0.2) { reader_finished_frame.dequeue }
+        task.with_timeout(0.2) { subscription.wait }
+        release_producer.enqueue(true)
+        released = true
+
+        expect(task.with_timeout(0.2) { Array.new(3) { received.dequeue } }).to eq(
+          %w[alpha-1 alpha-2 beta-1]
+        )
+      ensure
+        release_producer.enqueue(true) unless released
+        subscription.stop
+        protocol.close
+      end
+    end.wait
+  end
+
+  it 'keeps cross-channel frame order while callback backpressure blocks the producer' do
+    Async do |task|
+      socket = FakeSocket.new
+      reader_finished_frame = Async::Queue.new
+      socket.on_write = lambda do |command|
+        if command.empty?
+          reader_finished_frame.enqueue(true)
+        elsif command.dig('subscribe', 'channel') == 'broadcast:beta'
+          socket.receive(
+            JSON.generate(
+              'id' => command.fetch('id'),
+              'result' => { 'epoch' => 'beta-epoch', 'offset' => 0, 'publications' => [] }
+            )
+          )
+        elsif command.dig('subscribe', 'channel') == 'broadcast:alpha'
+          reply = JSON.generate(
+            'id' => command.fetch('id'),
+            'result' => {
+              'epoch' => 'alpha-epoch', 'offset' => 2,
+              'publications' => [
+                { 'offset' => 1, 'data' => { 'event' => 'message', 'value' => 'alpha-1' } },
+                { 'offset' => 2, 'data' => { 'event' => 'message', 'value' => 'alpha-2' } }
+              ]
+            }
+          )
+          live = JSON.generate(
+            'push' => {
+              'channel' => 'broadcast:beta',
+              'pub' => {
+                'offset' => 1,
+                'data' => { 'event' => 'message', 'value' => 'beta-1' }
+              }
+            }
+          )
+          socket.receive_raw("#{reply}\n#{live}\n{}")
+        end
+      end
+      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 3)
+      blocker_entered = Async::Queue.new
+      release_blocker = Async::Queue.new
+      protocol.on_publication('broadcast:blocker') do |_event, data|
+        next unless data.fetch('value') == 'blocker-1'
+
+        blocker_entered.enqueue(true)
+        release_blocker.dequeue
+      end
+      received = Async::Queue.new
+      %w[alpha beta].each do |name|
+        channel = "broadcast:#{name}"
+        protocol.on_publication(channel) do |_event, data, publication|
+          protocol.complete_publication(channel, publication)
+          received.enqueue(data.fetch('value'))
+        end
+      end
+      protocol.subscribe(channel: 'broadcast:beta', recovery: {})
+
+      blocker = lambda do |value|
+        JSON.generate(
+          'push' => {
+            'channel' => 'broadcast:blocker',
+            'pub' => { 'data' => { 'event' => 'message', 'value' => value } }
+          }
+        )
+      end
+      socket.receive(blocker.call('blocker-1'))
+      task.with_timeout(0.2) { blocker_entered.dequeue }
+      socket.receive_raw(
+        "#{blocker.call('blocker-2')}\n#{blocker.call('blocker-3')}\n" \
+        "#{blocker.call('blocker-4')}\n{}"
+      )
+      task.with_timeout(0.2) { reader_finished_frame.dequeue }
+
+      released = false
+      subscription = task.async { protocol.subscribe(channel: 'broadcast:alpha', recovery: {}) }
+      begin
+        task.with_timeout(0.2) { reader_finished_frame.dequeue }
+        task.with_timeout(0.2) { subscription.wait }
+        expect(protocol.instance_variable_get(:@callback_queue)).to be_limited
+        expect(protocol.instance_variable_get(:@position_gaps)).not_to include('broadcast:beta')
+
+        release_blocker.enqueue(true)
+        released = true
+        expect(task.with_timeout(0.2) { Array.new(3) { received.dequeue } }).to eq(
+          %w[alpha-1 alpha-2 beta-1]
+        )
+      ensure
+        release_blocker.enqueue(true) unless released
+        subscription.stop
+        protocol.close
+      end
+    end.wait
+  end
+
   it 'does not advance across a gap in recovered publication offsets' do
     Async do |task|
       socket = FakeSocket.new

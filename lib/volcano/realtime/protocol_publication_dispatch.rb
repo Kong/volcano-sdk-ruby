@@ -15,7 +15,7 @@ module Volcano
         delivery = publication_delivery(push, recovered)
         return unless delivery
 
-        if !recovered && ordered_publication_channel?(delivery.channel)
+        if !recovered && ordered_publications_pending?
           enqueue_ordered_publication(delivery)
         else
           admit_publication(delivery, enforce_limit:)

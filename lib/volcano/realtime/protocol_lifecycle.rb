@@ -41,6 +41,7 @@ module Volcano
           @pending = {}
           initialize_locks
           initialize_handlers
+          initialize_recovery_positions
           @callback_stopping = @connected = @closed = false
           @subscriptions = Set.new
           @closed_error = nil

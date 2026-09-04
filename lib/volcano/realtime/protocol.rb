@@ -3,6 +3,7 @@
 require 'json'
 require_relative 'protocol_dispatch'
 require_relative 'protocol_lifecycle'
+require_relative 'protocol_recovery_position'
 
 module Volcano
   class Realtime
@@ -25,6 +26,7 @@ module Volcano
     class Protocol
       include ProtocolDispatch
       include Lifecycle
+      include ProtocolRecoveryPosition
 
       Failure = Data.define(:error)
       Events = Data.define(:on_close, :on_error, :on_failure)

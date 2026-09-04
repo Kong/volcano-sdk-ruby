@@ -173,6 +173,8 @@ module Volcano
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
         @lifecycle_lock = nil
+        @recovery_position = {}.freeze
+        @recovery_lineage = nil
         initialize_callback_dispatch
         initialize_presence(type)
         initialize_postgres_delivery(batch_config)
@@ -221,6 +223,7 @@ module Volcano
           ensure_open!
           detach_from_protocol
           clear_broadcast_recovery_state
+          clear_channel_recovery_state
           mark_removed
         end
         nil

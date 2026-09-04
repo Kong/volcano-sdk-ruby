@@ -7,9 +7,14 @@ module Volcano
       private
 
       def subscribe_request(channel:, recoverable:, join_leave:, recovery:)
-        request(on_reply: recovery && lambda do |reply|
-          parse_recovery_result(channel: channel, recovery: recovery, result: reply)
-        end) do |id|
+        on_reply = nil
+        if recovery
+          on_reply = lambda do |reply|
+            parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+          end
+        end
+
+        request(on_reply:) do |id|
           self.class.subscribe(
             id: id,
             channel: channel,
@@ -25,16 +30,26 @@ module Volcano
         return block_malformed_recovery_result(channel, recovery) unless result_position
 
         requested_position = requested_recovery_position(recovery)
+        return block_recovery_result(channel, requested_position) if unrecovered_empty_result?(
+          result, requested_position, publications
+        )
         return install_empty_recovery_result(channel, result_position) if publications.empty?
 
         install_retained_recovery_result(channel, requested_position, publications)
       end
 
       def block_malformed_recovery_result(channel, recovery)
-        requested_position = requested_recovery_position(recovery)
+        block_recovery_result(channel, requested_recovery_position(recovery))
+      end
+
+      def block_recovery_result(channel, requested_position)
         replace_recovery_position(channel, requested_position) if requested_position
         mark_unknown_gap(channel)
         []
+      end
+
+      def unrecovered_empty_result?(result, requested_position, publications)
+        requested_position && result['recovered'] == false && publications.empty?
       end
 
       def validated_recovery_result(result)

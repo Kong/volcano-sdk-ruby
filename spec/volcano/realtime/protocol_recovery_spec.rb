@@ -95,7 +95,7 @@ RSpec.describe ProtocolRecovery do
     expect(position).to eq(epoch: 'e', offset: 4)
   end
 
-  it 'uses the server position when an empty recovery result has a requested cursor' do
+  it 'uses the server position when an empty recovery result without recovered has a requested cursor' do
     retained = protocol.__send__(
       :parse_recovery_result,
       channel: 'room',
@@ -105,6 +105,20 @@ RSpec.describe ProtocolRecovery do
 
     expect(retained).to eq([])
     expect(position).to eq(epoch: 'server', offset: 9)
+  end
+
+  it 'keeps a requested cursor and blocks completion when recovery explicitly failed' do
+    retained = protocol.__send__(
+      :parse_recovery_result,
+      channel: 'room',
+      recovery: { epoch: 'e', offset: 3 },
+      result: { 'recovered' => false, 'epoch' => 'e', 'offset' => 9, 'publications' => [] }
+    )
+
+    expect(retained).to eq([])
+    expect(position).to eq(epoch: 'e', offset: 3)
+    protocol.__send__(:complete_publication, 'room', { 'epoch' => 'e', 'offset' => 4 })
+    expect(position).to eq(epoch: 'e', offset: 3)
   end
 
   it 'installs a requested cursor before returning retained publications' do
@@ -223,6 +237,19 @@ RSpec.describe ProtocolRecovery do
       protocol.subscribe(channel: 'room', recovery: { epoch: 'e', offset: 3 })
     end.to raise_error(Volcano::Realtime::ServerError, 'bad request') { |error| expect(error.code).to eq(107) }
     expect(position).to be_nil
+  end
+
+  it 'treats recovery false as an ordinary subscribe and keeps the connection usable' do
+    commands = []
+    socket.on_write = lambda do |command|
+      commands << command
+      socket.receive('id' => command.fetch('id'), 'result' => { 'ok' => true })
+    end
+
+    expect(protocol.subscribe(channel: 'room', recovery: false)).to eq('ok' => true)
+    expect(commands).to eq([{ 'id' => 1, 'subscribe' => { 'channel' => 'room' } }])
+    expect(position).to be_nil
+    expect(protocol.presence(channel: 'presence:room')).to eq('ok' => true)
   end
 
   private

@@ -347,8 +347,8 @@ fresh.auth.current_session = session if session
 ```
 
 The writer copies and freezes a complete native session in memory only. It does
-not make a request or persist credentials, and raises `ArgumentError` for an
-incomplete value.
+not make a request, persist credentials, or notify auth-state subscribers. It
+raises `ArgumentError` for an incomplete value.
 
 ### Refresh the current session
 

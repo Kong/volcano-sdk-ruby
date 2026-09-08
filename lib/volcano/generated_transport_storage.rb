@@ -3,11 +3,12 @@
 module Volcano
   # Storage operations for the internal generated transport.
   class GeneratedTransport
-    def upload_storage_object(authorization:, bucket_name:, path:, data:)
+    def upload_storage_object(authorization:, bucket_name:, path:, data:, content_type: nil)
       invoke do
         apis = @api_factory.call(authorization)
         with_upload_file(path, data) do |file|
-          result = apis.storage.upload_storage_object_with_http_info(bucket_name, path, file)
+          options = { content_type: content_type }.compact
+          result = apis.storage.upload_storage_object_with_http_info(bucket_name, path, file, options)
           data_value, status, headers = result
           return response(data_value, status, headers)
         end

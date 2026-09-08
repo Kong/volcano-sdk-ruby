@@ -502,7 +502,7 @@ targets, and leaves unrelated query values unchanged.
 
 ```ruby
 bucket = client.storage.from("assets")
-bucket.upload("a.txt", "hello".b)
+bucket.upload("a.txt", "hello".b, content_type: "text/plain; charset=utf-8")
 bytes = bucket.download("a.txt")
 first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
 video = "demo video".b
@@ -551,6 +551,11 @@ puts public_object.public_url
 public_url = bucket.get_public_url("avatars/a.png")
 puts public_url
 ```
+
+Simple uploads accept an optional `content_type:` for the multipart file part.
+Omit it or pass `nil` to retain the transport's filename-based MIME detection and
+`application/octet-stream` fallback. Explicit values must be non-blank printable
+ASCII; MIME parameters such as `charset=utf-8` are allowed.
 
 Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for

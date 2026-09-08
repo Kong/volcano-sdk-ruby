@@ -27,6 +27,7 @@ module Volcano
       def build_request(http_method, path, options = {})
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)
+        request.options[:params_encoding] = options.fetch(:params_encoding, request.options[:params_encoding])
         request
       end
 
@@ -85,6 +86,11 @@ module Volcano
       }.freeze
 
       def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
+        if opts[:content_type]
+          # Ethon accepts [filename, MIME type, local path] with encoding disabled.
+          file = [File.basename(file.path), opts[:content_type], File.expand_path(file.path)]
+          opts = opts.merge(params_encoding: :none)
+        end
         options = opts.merge(UPLOAD_OPTIONS).merge(form_params: { 'file' => file })
         call_storage_api(:POST, bucket_name, path, options)
       end

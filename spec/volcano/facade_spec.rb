@@ -759,6 +759,18 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'owns the upload content type before reading a caller-owned stream' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    content_type = +'image/png'
+    source = StringIO.new('bytes')
+    allow(source).to receive(:read) { content_type.replace("text/plain\r\nX-Bad: yes") }
+
+    client.storage.from('assets').upload('image.png', source, content_type: content_type)
+
+    expect(transport.calls.last.last.fetch(:content_type)).to eq('image/png')
+    expect(transport.calls.last.last.fetch(:content_type)).to be_frozen
+  end
+
   it 'returns nil without a current session or transport call' do
     expect(client.auth.current_session).to be_nil
     expect(transport.calls).to be_empty
@@ -2749,7 +2761,8 @@ RSpec.describe Volcano::Client do
       authorization: 'access-token',
       bucket_name: 'assets',
       path: 'a.txt',
-      data: "hello\x00".b
+      data: "hello\x00".b,
+      content_type: nil
     )
     expect(transport.calls[3][1]).to eq(
       authorization: 'access-token',

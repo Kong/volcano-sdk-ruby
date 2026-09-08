@@ -1336,6 +1336,18 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(request.options.fetch(:followlocation)).to be(false)
   end
 
+  it 'keeps a multipart encoding override local to one request' do
+    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    original = api_client.config.params_encoding
+
+    upload = api_client.build_request(:post, '/storage/assets/payload', auth_names: [], params_encoding: :none)
+    following = api_client.build_request(:get, '/health', auth_names: [])
+
+    expect(upload.options.fetch(:params_encoding)).to eq(:none)
+    expect(following.options.fetch(:params_encoding)).to eq(original)
+    expect(api_client.config.params_encoding).to eq(original)
+  end
+
   it 'preserves object path segments and percent-encodes spaces' do
     api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
     calls = []

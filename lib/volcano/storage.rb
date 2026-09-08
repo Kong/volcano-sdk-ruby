@@ -34,13 +34,15 @@ module Volcano
       freeze
     end
 
-    def upload(path, value)
+    def upload(path, value, content_type: nil)
+      mime_type = upload_content_type(content_type)
       response = Transport.invoke do
         @transport.upload_storage_object(
           authorization: @client.session_token,
           bucket_name: @name,
           path: path,
-          data: upload_bytes(value)
+          data: upload_bytes(value),
+          content_type: mime_type
         )
       end
       Transport.body(response, 201)
@@ -79,6 +81,13 @@ module Volcano
     end
 
     private
+
+    def upload_content_type(value)
+      return if value.nil?
+      return value.dup.freeze if value.is_a?(String) && value.match?(/\A[\x20-\x7e]+\z/) && !value.strip.empty?
+
+      raise ArgumentError, 'content_type must be a non-blank printable ASCII string'
+    end
 
     def upload_bytes(value)
       bytes = value.respond_to?(:read) ? value.read : value

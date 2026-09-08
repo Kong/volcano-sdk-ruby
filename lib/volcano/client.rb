@@ -5,6 +5,10 @@ module Volcano
   class Client
     SessionToken = Data.define(:value) do
       def session_token = value
+
+      def session_read
+        yield(value)
+      end
     end
     private_constant :SessionToken
 
@@ -43,6 +47,10 @@ module Volcano
       raise Error::AuthenticationError, 'No active session' unless session
 
       session.access_token
+    end
+
+    def session_read(&)
+      @auth.session_read(&)
     end
 
     def service_token

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'monitor'
+
 module Volcano
   # Authenticates users and updates the client session.
   class Auth
@@ -10,6 +12,7 @@ module Volcano
       @client = client
       @transport = transport
       @api_url = api_url
+      @refresh_lock = Monitor.new
     end
 
     def current_session
@@ -31,17 +34,6 @@ module Volcano
       payload = Transport.body(sign_in_response(email:, password:), 200)
       session = build_session(payload)
       raise Error::SessionChangedError unless @client.store_session_if_current?(session, generation)
-
-      session
-    end
-
-    def refresh_session
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      session = build_session(refresh_payload(current.refresh_token, generation))
-      stored = @client.store_session_if_current?(session, generation, event: :token_refreshed)
-      raise Error::SessionChangedError unless stored
 
       session
     end
@@ -68,15 +60,6 @@ module Volcano
       end
     end
 
-    def refresh_response(refresh_token)
-      Transport.invoke do
-        @transport.auth_refresh(
-          authorization: @client.anon_token,
-          refresh_token: refresh_token
-        )
-      end
-    end
-
     def logout_response(refresh_token)
       Transport.invoke do
         @transport.auth_logout(
@@ -91,13 +74,6 @@ module Volcano
       nil
     rescue Error::VolcanoError => e
       e
-    end
-
-    def refresh_payload(refresh_token, generation)
-      Transport.body(refresh_response(refresh_token), 200)
-    rescue Error::AuthenticationError
-      @client.clear_session_if_current?(generation)
-      raise
     end
 
     def build_session(payload)

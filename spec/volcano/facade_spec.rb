@@ -645,7 +645,7 @@ RSpec.describe Volcano::Client do
     include FakeUserTransport
 
     attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :range_download_status,
+    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :on_signin, :range_download_status,
                   :refresh_response, :signup_response
 
     def initialize
@@ -703,6 +703,7 @@ RSpec.describe Volcano::Client do
 
     def auth_signin(**arguments)
       @calls << [:auth_signin, arguments]
+      @on_signin&.call
       Response.new(
         status: 200,
         body: {
@@ -774,6 +775,28 @@ RSpec.describe Volcano::Client do
     expect { current.access_token = 'changed' }.to raise_error(NoMethodError)
     expect { current.access_token.replace('changed') }.to raise_error(FrozenError)
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'does not replace a session adopted during password sign-in' do
+    replacement = supplied_session
+    transport.on_signin = -> { client.auth.current_session = replacement }
+
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }
+      .to raise_error(Volcano::Error::SessionChangedError)
+    expect(client.auth.current_session).to eq(replacement)
+  end
+
+  it 'does not restore a session cleared during password sign-in' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    received = []
+    client.auth.on_auth_state_change { |event, _session| received << event }
+    received.clear
+    transport.on_signin = -> { client.auth.sign_out }
+
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }
+      .to raise_error(Volcano::Error::SessionChangedError)
+    expect(client.auth.current_session).to be_nil
+    expect(received).to eq([:signed_out])
   end
 
   it 'reports local auth-state transitions to subscribers', :aggregate_failures do

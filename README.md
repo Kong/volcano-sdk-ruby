@@ -350,6 +350,10 @@ The writer copies and freezes a complete native session in memory only. It does
 not make a request or persist credentials, and raises `ArgumentError` for an
 incomplete value.
 
+Password sign-in raises `Volcano::Error::SessionChangedError` if local session
+state changes while the request is in flight. The late response does not replace
+the newer state or emit a sign-in notification.
+
 ### Refresh the current session
 
 ```ruby

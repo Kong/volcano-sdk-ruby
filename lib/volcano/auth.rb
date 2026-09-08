@@ -27,9 +27,11 @@ module Volcano
     end
 
     def sign_in(email:, password:)
+      generation, = @client.capture_session
       payload = Transport.body(sign_in_response(email:, password:), 200)
       session = build_session(payload)
-      @client.store_session(session)
+      raise Error::SessionChangedError unless @client.store_session_if_current?(session, generation)
+
       session
     end
 

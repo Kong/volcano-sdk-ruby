@@ -129,7 +129,7 @@ Then('exactly the fixture row is returned') do
 end
 
 When('the client inserts its contract row') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('insert')
+  row = contract.fixture.fetch('mutation_rows').fetch('insert')
   contract.record do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
@@ -140,12 +140,12 @@ When('the client inserts its contract row') do
 end
 
 Then('exactly the inserted contract row is returned') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('insert')
+  row = contract.fixture.fetch('mutation_rows').fetch('insert')
   raise 'database result did not match the inserted row' unless contract.last_outcome.value == [row]
 end
 
 When('the client updates its contract row') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('update')
+  row = contract.fixture.fetch('mutation_rows').fetch('update')
   contract.record do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
@@ -162,12 +162,12 @@ When('the client updates its contract row') do
 end
 
 Then('exactly the updated contract row is returned') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('update').fetch('after')
+  row = contract.fixture.fetch('mutation_rows').fetch('update').fetch('after')
   raise 'database result did not match the updated row' unless contract.last_outcome.value == [row]
 end
 
 When('the client deletes its contract row') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('delete')
+  row = contract.fixture.fetch('mutation_rows').fetch('delete')
   contract.record do
     table = contract.client
                     .database(contract.fixture.fetch('database_name'))
@@ -181,7 +181,7 @@ When('the client deletes its contract row') do
 end
 
 Then('exactly the deleted contract row is returned') do
-  row = contract.fixture.fetch('mutation_rows').fetch('ruby').fetch('delete')
+  row = contract.fixture.fetch('mutation_rows').fetch('delete')
   raise 'database result did not match the deleted row' unless contract.last_outcome.value == [row]
 end
 

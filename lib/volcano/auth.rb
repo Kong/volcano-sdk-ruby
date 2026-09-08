@@ -17,7 +17,7 @@ module Volcano
     end
 
     def current_session=(session)
-      @client.store_session(owned_complete_session(session))
+      @client.store_session(owned_complete_session(session), event: nil)
     end
 
     def on_auth_state_change(&callback)

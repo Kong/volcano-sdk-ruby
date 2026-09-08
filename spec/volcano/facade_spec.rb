@@ -2175,6 +2175,21 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#current_session=' do
+    [false, true].each do |existing_session|
+      it "adopts silently with existing_session=#{existing_session}" do
+        client.auth.sign_in(email: 'user@example.com', password: 'secret') if existing_session
+        received = []
+        client.auth.on_auth_state_change { |event, session| received << [event, session] }
+        received.clear
+
+        client.auth.current_session = supplied_session
+
+        expect(received).to be_empty
+        client.auth.on_auth_state_change { |event, session| received << [event, session] }
+        expect(received).to eq([[:initial_session, supplied_session]])
+      end
+    end
+
     it 'stores an owned copy in an empty client' do
       supplied = supplied_session
       client.auth.current_session = supplied

@@ -97,7 +97,7 @@ module Volcano
     end
 
     def enqueue_notification(callbacks, event, session)
-      return false if callbacks.empty?
+      return false if event.nil? || callbacks.empty?
 
       @notifications << [callbacks, event, session]
       return false if @dispatching_notifications

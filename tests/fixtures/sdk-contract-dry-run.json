@@ -13,30 +13,12 @@
     "value": "dry-run"
   },
   "mutation_rows": {
-    "javascript": {
-      "insert": { "slug": "dry-run-js-insert", "value": "insert-js" },
-      "update": {
-        "before": { "slug": "dry-run-js-update", "value": "before-js" },
-        "after": { "slug": "dry-run-js-update", "value": "after-js" }
-      },
-      "delete": { "slug": "dry-run-js-delete", "value": "delete-js" }
+    "insert": { "slug": "contract-insert", "value": "insert" },
+    "update": {
+      "before": { "slug": "contract-update", "value": "before" },
+      "after": { "slug": "contract-update", "value": "after" }
     },
-    "python": {
-      "insert": { "slug": "dry-run-py-insert", "value": "insert-py" },
-      "update": {
-        "before": { "slug": "dry-run-py-update", "value": "before-py" },
-        "after": { "slug": "dry-run-py-update", "value": "after-py" }
-      },
-      "delete": { "slug": "dry-run-py-delete", "value": "delete-py" }
-    },
-    "ruby": {
-      "insert": { "slug": "dry-run-rb-insert", "value": "insert-rb" },
-      "update": {
-        "before": { "slug": "dry-run-rb-update", "value": "before-rb" },
-        "after": { "slug": "dry-run-rb-update", "value": "after-rb" }
-      },
-      "delete": { "slug": "dry-run-rb-delete", "value": "delete-rb" }
-    }
+    "delete": { "slug": "contract-delete", "value": "delete" }
   },
   "bucket_name": "dry-run",
   "storage_path": "dry-run/payload.txt",

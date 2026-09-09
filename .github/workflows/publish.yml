@@ -1,0 +1,68 @@
+name: Check release package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-release-package-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release tag and ancestry
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          test "$RELEASE_TAG" = "v$(jq -er '.["."]' .release-please-manifest.json)"
+
+  check:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: [validate, check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - run: gem build volcano-sdk.gemspec
+      - name: Smoke test the gem
+        run: |
+          gem unpack volcano-sdk-*.gem --target unpacked
+          version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
+          # An absolute require cannot fall back to the source checkout.
+          bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"
+      - name: Check package version against the release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: test "v$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')" = "$RELEASE_TAG"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-package
+          path: volcano-sdk-*.gem
+          if-no-files-found: error

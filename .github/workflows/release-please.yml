@@ -28,14 +28,18 @@ jobs:
           permission-pull-requests: write
           permission-issues: write
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        id: release
         with:
           token: ${{ steps.app.outputs.token }}
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
       - name: Enable checked auto-merge for release PRs
+        shell: bash
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           GH_REPO: ${{ github.repository }}
-        run: bash .github/scripts/auto-merge-release.sh
+        # Looking up the branch also handles retries when Release Please leaves the PR unchanged.
+        run: |
+          gh pr list --base main --head release-please--branches--main--components--volcano-sdk --state open \
+            --json number,author,isCrossRepository,isDraft,headRefOid \
+            --jq '.[] | select(.author.login == "app/kong-volcano-app" and .isCrossRepository == false and .isDraft == false) | [.number, .headRefOid] | @tsv' |
+            while IFS=$'\t' read -r number head; do
+              gh pr merge "$number" --auto --squash --match-head-commit "$head"
+            done

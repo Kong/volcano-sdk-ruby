@@ -21,7 +21,6 @@ jobs:
         with:
           persist-credentials: false
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - run: bash .github/scripts/release-tests.sh
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -46,4 +45,9 @@ jobs:
           chmod 600 "$VOLCANO_SDK_CONTRACT_FIXTURE"
           bundle exec cucumber features/contract --dry-run --strict --format progress
       - run: gem build volcano-sdk.gemspec
-      - run: bash .github/scripts/package-tests.sh volcano-sdk-*.gem
+      - name: Smoke test the gem
+        run: |
+          gem unpack volcano-sdk-*.gem --target unpacked
+          version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
+          # An absolute require cannot fall back to the source checkout.
+          bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"

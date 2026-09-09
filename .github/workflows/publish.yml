@@ -27,12 +27,12 @@ jobs:
           persist-credentials: false
       - name: Validate release tag and ancestry
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           git merge-base --is-ancestor HEAD origin/main
-          bash .github/scripts/validate-release.sh
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          test "$RELEASE_TAG" = "v$(jq -er '.["."]' .release-please-manifest.json)"
 
   check:
     needs: validate
@@ -55,7 +55,8 @@ jobs:
         run: |
           gem unpack volcano-sdk-*.gem --target unpacked
           version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
-          bash .github/scripts/smoke-test-gem.sh "unpacked/volcano-sdk-$version"
+          # An absolute require cannot fall back to the source checkout.
+          bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"
       - name: Check package version against the release
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}

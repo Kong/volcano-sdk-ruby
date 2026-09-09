@@ -70,7 +70,8 @@ jobs:
       - name: Smoke test the gem
         run: |
           gem unpack volcano-sdk-*.gem --target unpacked
-          bundle exec ruby -Iunpacked/volcano-sdk-$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')/lib -rvolcano -e 'abort unless Volcano::Client'
+          version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
+          bundle exec ruby -I"unpacked/volcano-sdk-$version/lib" -rvolcano -e 'abort unless Volcano::Client'
       - name: Check package version against the release
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}

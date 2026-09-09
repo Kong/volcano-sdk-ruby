@@ -17,16 +17,18 @@ Keep these required and auto-merge enabled in repository settings. If reviews
 or a merge queue are added later, GitHub enforces those too.
 
 Merging the release PR causes Release Please to create a `vMAJOR.MINOR.PATCH`
-tag and GitHub release. `publish.yml` then:
+tag and GitHub release. `publish.yml` runs as **Check release package** and:
 
 1. Confirms the tag belongs to `main`, matches the release manifest, and has a
    published, non-prerelease GitHub release.
 2. Runs the full SDK CI workflow at that exact commit.
 3. Builds the package, checks its version against the tag, and smoke-tests it.
-4. Passes only the build artifact to a separate OIDC publishing job.
+4. Uploads `release-package` as a GitHub Actions artifact.
 
-Build jobs cannot request publishing credentials. The publish job does not
-check out source or run package build hooks. Workflows serialize releases.
+Registry publishing is not implemented in this phase. There is no upload job,
+registry credential request, or publishing environment dependency. A GitHub
+release does not mean the package is available from RubyGems.
+Workflows serialize releases.
 
 ## One-time setup
 
@@ -35,9 +37,16 @@ Install `kong-volcano-app` on `Kong/volcano-sdk-ruby`. Set repository variable
 The installation needs Contents, Pull requests, and Issues write permissions.
 Minted tokens are scoped to this repository and those permissions. Do not use
 `GITHUB_TOKEN` for release writes: its events do not trigger downstream CI or
-publishing.
+package checks.
 
-Configure the registry trusted publisher with these exact values:
+Registry setup is not required for this phase. The GitHub App setup above is.
+
+## Enable registry publishing later
+
+After registry ownership, package naming, and release approval are confirmed,
+add an artifact-only OIDC publishing job in a separate reviewed PR. Grant
+`id-token: write` only to that job; do not check out source or run build hooks
+in it. Configure the trusted publisher with these intended values:
 
 | Setting | Value |
 | --- | --- |
@@ -50,31 +59,35 @@ Configure the registry trusted publisher with these exact values:
 The environment allows only the `main` branch and `v*` tags. It has no required
 human deployment approval. Registry trust must use this environment name.
 
-The registry did not contain `volcano-sdk` when this setup was prepared.
-A registry owner must register a **pending trusted publisher** for that name
-before the first publication. The release manifest starts at `0.0.0` to mark
+Confirm access to Kong's RubyGems account and acceptance of the intended name
+`volcano-sdk` before registering a **pending trusted publisher**.
+An absent public package page does not guarantee name availability.
+
+The release manifest starts at `0.0.0` to mark
 the package as unreleased; the first Release Please release is `0.1.0`.
 No package name is reserved merely by committing this workflow.
+
+Versions can advance before registry publishing is enabled. Use a new release
+containing the publishing workflow for the first registry upload. Re-running a
+pre-activation release uses its old workflow and cannot publish it. Do not move
+existing tags or assume the first registry version will still be `0.1.0`.
 
 Release Please updates `lib/volcano/version.rb` and the SDK entry in
 `Gemfile.lock`, not the internal OpenAPI generator's npm package.
 
-Repository settings and workflow files do not prove registry access. Activation
-is verified only after a release run publishes successfully and the package can
+Repository settings and workflow files do not prove registry access. Registry
+activation is verified only after a release run publishes successfully and the package can
 be installed from its registry.
 
 ## Recovery
 
 Re-run a failed Release Please job to rediscover an existing pending release PR.
-For a failed publish, re-run its original `Publish SDK` workflow run. It rebuilds
-and rechecks the release event's commit. There is no arbitrary-ref dispatch input.
+For failed package checks, re-run the original **Check release package** workflow.
+It rebuilds and rechecks the release event's commit. There is no arbitrary-ref
+dispatch input. Artifacts have limited retention; they are not registry releases.
 
-An already-published immutable version is not overwritten. npm/RubyGems reject
-duplicate uploads; confirm the existing registry version before treating that
-specific error as an already-completed publish.
 Do not delete or move a released tag to repair a package. Fix the source and
-release a new version. For npm, do not republish an older missing version with
-the `latest` tag after a newer release; use a deliberate registry recovery.
+release a new version.
 
 ## Verification
 
@@ -90,6 +103,5 @@ changes. No registry credentials are needed for these checks.
 
 - [Volcano CLI release automation](https://github.com/Kong/volcano-cli/blob/main/.github/workflows/release-please.yml)
 - [Release Please authentication and event triggering](https://github.com/googleapis/release-please-action#github-credentials)
-- [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
 - [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/)
 - [RubyGems trusted publishing](https://guides.rubygems.org/trusted-publishing/)

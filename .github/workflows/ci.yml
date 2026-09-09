@@ -2,11 +2,6 @@ name: CI
 
 on:
   workflow_call:
-    inputs:
-      ref:
-        description: Immutable release commit to verify
-        required: false
-        type: string
   pull_request:
   push:
     branches:
@@ -24,7 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
       - run: bash .github/scripts/release-tests.sh

@@ -3,12 +3,6 @@ name: Publish SDK
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing stable GitHub release tag to publish
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -23,35 +17,26 @@ defaults:
 
 jobs:
   validate:
-    if: >-
-      (github.event_name == 'release' && !github.event.release.prerelease) ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    if: github.event.release.prerelease == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    outputs:
-      sha: ${{ steps.ref.outputs.sha }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
           fetch-depth: 0
           persist-credentials: false
       - name: Validate release tag and ancestry
-        id: ref
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           git merge-base --is-ancestor HEAD origin/main
           bash .github/scripts/validate-release.sh
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   check:
     needs: validate
     uses: ./.github/workflows/ci.yml
-    with:
-      ref: ${{ needs.validate.outputs.sha }}
 
   build:
     needs: [validate, check]
@@ -60,7 +45,6 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ needs.validate.outputs.sha }}
           persist-credentials: false
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
@@ -74,7 +58,7 @@ jobs:
           bundle exec ruby -I"unpacked/volcano-sdk-$version/lib" -rvolcano -e 'abort unless Volcano::Client'
       - name: Check package version against the release
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: test "v$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')" = "$RELEASE_TAG"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

@@ -28,7 +28,7 @@ tag and GitHub release. `publish.yml` runs as **Check release package** and:
 Registry publishing is not implemented in this phase. There is no upload job,
 registry credential request, or publishing environment dependency. A GitHub
 release does not mean the package is available from RubyGems.
-Workflows serialize releases.
+Package checks serialize runs for the same tag; different releases run independently.
 
 ## One-time setup
 
@@ -94,6 +94,8 @@ release a new version.
 ```sh
 bash .github/scripts/release-tests.sh
 go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+gem build volcano-sdk.gemspec
+bash .github/scripts/package-tests.sh volcano-sdk-*.gem
 ```
 
 Run the normal native CI checks and package smoke test before merging workflow

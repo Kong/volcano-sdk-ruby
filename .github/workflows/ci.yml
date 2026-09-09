@@ -46,3 +46,4 @@ jobs:
           chmod 600 "$VOLCANO_SDK_CONTRACT_FIXTURE"
           bundle exec cucumber features/contract --dry-run --strict --format progress
       - run: gem build volcano-sdk.gemspec
+      - run: bash .github/scripts/package-tests.sh volcano-sdk-*.gem

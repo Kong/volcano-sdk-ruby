@@ -1428,6 +1428,7 @@ paths:
                   uniqueItems: true
                   items:
                     type: string
+                    maxLength: 256
                     pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                 expected_shared_variables:
                   type: array
@@ -1435,6 +1436,7 @@ paths:
                   description: When present, replace only if the current complete shared list matches this list.
                   items:
                     type: string
+                    maxLength: 256
                     pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
                 expected_shared_variables_digest:
                   type: string
@@ -1469,6 +1471,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Persistence or synchronization failed
+        '503':
+          description: Shared variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/config:
     get:
       tags:
@@ -1609,6 +1617,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProjectConfigValidationErrorResponse'
+        '503':
+          description: Shared variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/source-export:
     get:
       tags:
@@ -4172,6 +4186,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '503':
+          description: Private variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases:
     get:
       tags:
@@ -6157,6 +6177,12 @@ paths:
                 $ref: '#/components/schemas/Variable'
         '404':
           description: Variable not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Private variable membership writes are disabled during rollout
           content:
             application/json:
               schema:
@@ -13904,15 +13930,11 @@ components:
           type: string
         private:
           type: boolean
-        is_empty:
-          type: boolean
-          description: Whether the repository has no commits and can receive an initial source export.
       required:
         - id
         - full_name
         - default_branch
         - private
-        - is_empty
     GitRepositoriesResponse:
       type: object
       properties:

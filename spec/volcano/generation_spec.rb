@@ -7,7 +7,7 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = 'b646dd7f5e6b5f0f2fca4bb1580f7974a1483eac55cbafb2c547c90dd3d85176'
+  OPENAPI_SHA256 = '74653534cb8abcb717fbd5c5426f17762657982ce7b6ccaedf2921b6c425ca3b'
 
   it 'preserves shared-variable digest and nullable function metadata validation' do
     generated = Volcano.const_get(:Generated, false)

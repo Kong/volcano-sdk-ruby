@@ -234,6 +234,29 @@ Then('the downloaded bytes equal the uploaded bytes') do
   raise 'downloaded bytes changed' unless contract.last_outcome.value.fetch('bytes') == contract.storage_bytes
 end
 
+When('the client uploads the contract object as text\/plain and reads its stored metadata') do
+  contract.record do
+    bucket = contract.client.storage.from(contract.fixture.fetch('bucket_name'))
+    uploaded = bucket.upload(contract.storage_path, contract.storage_bytes, content_type: 'text/plain')
+    contract.register_cleanup(-> { bucket.remove(contract.storage_path) })
+    listed = bucket.list(contract.storage_path)
+    {
+      'path' => uploaded.fetch('name'),
+      'bytes' => bucket.download(contract.storage_path),
+      'content_type' => uploaded.fetch('mime_type'),
+      'listed' => listed.objects.map { |item| { 'name' => item.name, 'mime_type' => item.mime_type } }
+    }
+  end
+end
+
+Then('the uploaded and listed object content types are text\/plain') do
+  value = contract.last_outcome.value
+  raise 'upload content type changed' unless value.fetch('content_type') == 'text/plain'
+
+  expected = [{ 'name' => contract.storage_path, 'mime_type' => 'text/plain' }]
+  raise 'stored content type changed' unless value.fetch('listed') == expected
+end
+
 Then('the stored object path equals the contract path') do
   raise 'stored object path changed' unless contract.last_outcome.value.fetch('path') == contract.storage_path
 end

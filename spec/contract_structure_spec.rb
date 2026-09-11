@@ -10,6 +10,7 @@ require 'rubygems/package'
 RSpec.describe 'shared SDK contract bindings' do
   let(:expected_hashes) do
     {
+      'storage-lifecycle.feature' => '08d00ac825bc186929904dea75af28052df964e446e7aeb0e2266711536aa88f',
       'storage-range.feature' => '807424f26ccdf72e74b359eb52a807f3ae4657f95cdef0255f636a8f588e49cd',
       'storage-metadata.feature' => '8a99fab83abf3d73e41ab8557f681b8b1659299a942a1ceb18a2f85009f5af6e',
       'auth.feature' => 'c237deb0b3be98d64689699a0ffdcd272e7ef027a2b69439b1768195042ed493',

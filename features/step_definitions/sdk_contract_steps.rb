@@ -274,6 +274,50 @@ Then('the downloaded bytes equal uploaded bytes 2 through 7 inclusive') do
   raise 'downloaded range changed' unless contract.last_outcome.value.fetch('bytes') == expected
 end
 
+When('the client copies, moves, and removes a copy of the contract object') do
+  bucket = contract.client.storage.from(contract.fixture.fetch('bucket_name'))
+  source = contract.storage_path
+  copied = "#{source}.copy"
+  moved = "#{source}.moved"
+  contract.register_cleanup(lambda do
+    bucket.list(source).objects.each do |item|
+      bucket.remove(item.name) if [source, copied, moved].include?(item.name)
+    end
+  end)
+  contract.record do
+    bucket.upload(source, contract.storage_bytes)
+    bucket.copy(source, copied)
+    original_bytes = bucket.download(source)
+    copied_bytes = bucket.download(copied)
+    bucket.move(copied, moved)
+    moved_bytes = bucket.download(moved)
+    after_move = bucket.list(source).objects.map(&:name).sort
+    bucket.remove(moved)
+    after_remove = bucket.list(source).objects.map(&:name).sort
+    remaining_bytes = bucket.download(source)
+    {
+      'bytes' => [original_bytes, copied_bytes, moved_bytes, remaining_bytes],
+      'after_move' => after_move,
+      'after_remove' => after_remove
+    }
+  end
+end
+
+Then('the original, copied, and moved bytes equal the uploaded bytes') do
+  raise 'storage lifecycle changed bytes' unless contract.last_outcome.value.fetch('bytes').all?(contract.storage_bytes)
+end
+
+Then('moving the copy leaves only the original and moved paths') do
+  expected = [contract.storage_path, "#{contract.storage_path}.moved"].sort
+  raise 'move left unexpected paths' unless contract.last_outcome.value.fetch('after_move') == expected
+end
+
+Then('removing the moved object leaves the original unchanged') do
+  value = contract.last_outcome.value
+  raise 'remove left unexpected paths' unless value.fetch('after_remove') == [contract.storage_path]
+  raise 'remove changed original bytes' unless value.fetch('bytes').fetch(3) == contract.storage_bytes
+end
+
 Then('the stored object path equals the contract path') do
   raise 'stored object path changed' unless contract.last_outcome.value.fetch('path') == contract.storage_path
 end

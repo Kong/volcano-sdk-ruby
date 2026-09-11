@@ -24,6 +24,8 @@ RSpec.describe Volcano::Functions do
     ['hello', 'text/plain', 'hello'],
     ['42', 'text/plain', '42'],
     ['[]', 'text/plain', []],
+    ["\n [1, 2]", 'text/plain', "\n [1, 2]"],
+    ['42', 'application/vnd.example+json', '42'],
     ['broken json', 'application/json', 'broken json'],
     ['NaN', 'application/json', 'NaN'],
     ['', 'text/plain', nil]

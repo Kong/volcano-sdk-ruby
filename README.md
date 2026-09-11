@@ -420,7 +420,9 @@ anonymous key. An anonymous key can invoke a public function without a user
 session; the function receives no user identity. The immutable result includes
 the response body, status, headers, and `X-Volcano-Version`. The body can be a
 JSON object, array, scalar, or text; an empty body returns `nil`. Values are
-deeply frozen. Invalid JSON is returned as text. A function's own
+deeply frozen. Invalid JSON or JSON that cannot decode to valid UTF-8 is
+returned as the original decoded response text; malformed Unicode is not repaired.
+A function's own
 non-2xx response is returned when the version header proves it ran; platform
 failures raise typed SDK errors.
 

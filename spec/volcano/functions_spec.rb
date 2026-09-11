@@ -32,6 +32,12 @@ RSpec.describe Volcano::Functions do
     ['42', 'application/vnd.example+json', '42'],
     ['broken json', 'application/json', 'broken json'],
     ['NaN', 'application/json', 'NaN'],
+    ['"\ud800"', 'application/json', '"\ud800"'],
+    ['"\udc00"', 'application/json', '"\udc00"'],
+    ['{"value":["\udc00"]}', 'application/json', '{"value":["\udc00"]}'],
+    ['{"\udc00":"value"}', 'application/json', '{"\udc00":"value"}'],
+    ['"\ud83d\ude00"', 'application/json', "\u{1F600}"],
+    ['"\\\\ud800"', 'application/json', '\\ud800'],
     ['', 'text/plain', nil]
   ].each do |body, content_type, expected|
     [200, 422].freeze.each do |status|

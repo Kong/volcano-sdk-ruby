@@ -39,9 +39,19 @@ module Volcano
       return nil if text.empty?
       return text unless function_json?(text, headers)
 
-      JSON.parse(text, max_nesting: false)
+      parsed = JSON.parse(text, max_nesting: false)
+      valid_function_encoding?(parsed) ? parsed : text
     rescue JSON::ParserError
       text
+    end
+
+    def valid_function_encoding?(value)
+      case value
+      when Hash then value.all? { |key, item| valid_function_encoding?(key) && valid_function_encoding?(item) }
+      when Array then value.all? { |item| valid_function_encoding?(item) }
+      when String then value.valid_encoding?
+      else true
+      end
     end
 
     def function_json?(text, headers)

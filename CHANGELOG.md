@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.1...v0.3.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **logs:** refresh rejected session credentials once ([#111](https://github.com/Kong/volcano-sdk-ruby/issues/111)) ([ed9a5a5](https://github.com/Kong/volcano-sdk-ruby/commit/ed9a5a51b93a100e1da199e59acd773b998922e1))
+
 ## [0.3.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.0...v0.3.1) (2026-09-11)
 
 

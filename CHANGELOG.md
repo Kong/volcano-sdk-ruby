@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.2.0...v0.3.0) (2026-09-11)
+
+
+### Features
+
+* **auth:** optionally sign in after signup ([#107](https://github.com/Kong/volcano-sdk-ruby/issues/107)) ([ea42295](https://github.com/Kong/volcano-sdk-ruby/commit/ea4229504fb09a10511f85b32fa45bf0406d111d))
+
 ## [0.2.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.1.0...v0.2.0) (2026-09-11)
 
 

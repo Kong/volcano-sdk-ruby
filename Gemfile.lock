@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    volcano-sdk (0.2.0)
+    volcano-sdk (0.3.0)
       async (= 2.20.0)
       async-http (= 0.94.2)
       async-websocket (= 0.30.0)

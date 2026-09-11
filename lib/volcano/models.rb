@@ -59,7 +59,6 @@ module Volcano
       super(message: message.dup.freeze, provider: provider.dup.freeze, expires_in: expires_in)
     end
   end
-  SignUpResult = Data.define(:confirmation_required, :message)
   EmailChangeResult = Data.define(:message, :new_email)
   USER_OPTIONAL_ATTRIBUTES = %i[
     project_id email_confirmed user_metadata app_metadata avatar_url banned_until

@@ -55,6 +55,12 @@ raise "session changed" unless current_session == session
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
 
+Sessions returned by authentication retain the user payload in `session.user`,
+including metadata. The snapshot is deeply immutable and available without a
+request. It is cached data, not proof of authentication; use `auth.user` to fetch
+the server-validated profile. Existing three-field `Session` construction still
+works, with `user: nil`. An adopted snapshot must have the same user ID.
+
 ### Get the current user
 
 ```ruby

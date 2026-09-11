@@ -418,7 +418,9 @@ puts [result.status, result.version, result.data]
 active user session when present, then a configured service key, then the
 anonymous key. An anonymous key can invoke a public function without a user
 session; the function receives no user identity. The immutable result includes
-the response body, status, headers, and `X-Volcano-Version`. A function's own
+the response body, status, headers, and `X-Volcano-Version`. The body can be a
+JSON object, array, scalar, or text; an empty body returns `nil`. Values are
+deeply frozen. Invalid JSON is returned as text. A function's own
 non-2xx response is returned when the version header proves it ran; platform
 failures raise typed SDK errors.
 

@@ -27,6 +27,7 @@ module Volcano
   require_relative 'generated_transport_oauth'
   require_relative 'generated_transport_database'
   require_relative 'generated_transport_logs'
+  require_relative 'generated_transport_functions'
   require_relative 'generated_transport_storage'
   require_relative 'generated_transport_upload_sessions'
 
@@ -97,25 +98,6 @@ module Volcano
           key,
           token,
           SecureRandom.uuid
-        )
-        response(data, status, headers)
-      end
-    end
-
-    def resolve_function_for_invocation(authorization:, name:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.functions.resolve_function_for_invocation_with_http_info(name)
-        response(data, status, headers)
-      end
-    end
-
-    def invoke_function(authorization:, function_id:, payload:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        request = Generated::FunctionInvocationRequest.new(payload: payload)
-        data, status, headers = apis.functions.invoke_function_with_http_info(
-          function_id, request, follow_location: false
         )
         response(data, status, headers)
       end

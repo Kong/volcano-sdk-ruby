@@ -439,7 +439,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     def invoke_function_with_http_info(function_id, request, options = {})
       @calls << [:invoke, function_id, request, options]
       [
-        FakeGeneratedModel.new(error: 'invalid order'),
+        JSON.generate(error: 'invalid order'),
         422,
         { 'X-Volcano-Version' => 'staging-v1' }
       ]
@@ -607,7 +607,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       [:invoke, '00000000-0000-4000-8000-000000000040']
     )
     expect(request.to_hash).to eq(payload: { 'user_id' => 'user-123' })
-    expect(options).to eq(follow_location: false)
+    expect(options).to eq(follow_location: false, debug_return_type: 'String')
     expect(authorizations).to eq(%w[access-token access-token])
   end
 

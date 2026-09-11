@@ -51,4 +51,15 @@ RSpec.describe Volcano::Session do
   it 'preserves positional construction of the original three fields' do
     expect(described_class.new('access', 'refresh', 'user').user).to be_nil
   end
+
+  it 'owns other mutable metadata leaves like the user value object' do
+    roles = Set.new(['reader'])
+    session = described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'roles' => roles })
+    roles.add('admin')
+
+    client.auth.current_session = session
+
+    expect(client.current_session.user['roles']).to eq(Set.new(['reader'])).and be_frozen
+    expect(session.user['roles']).not_to equal(roles)
+  end
 end

@@ -52,14 +52,11 @@ RSpec.describe Volcano::Session do
     expect(described_class.new('access', 'refresh', 'user').user).to be_nil
   end
 
-  it 'owns other mutable metadata leaves like the user value object' do
-    roles = Set.new(['reader'])
-    session = described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'roles' => roles })
-    roles.add('admin')
+  it 'rejects non-JSON metadata instead of shallowly copying arbitrary objects' do
+    roles = Set.new([['reader']])
 
-    client.auth.current_session = session
-
-    expect(client.current_session.user['roles']).to eq(Set.new(['reader'])).and be_frozen
-    expect(session.user['roles']).not_to equal(roles)
+    expect do
+      described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'roles' => roles })
+    end.to raise_error(TypeError, /JSON values or timestamps/)
   end
 end

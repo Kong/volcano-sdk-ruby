@@ -14,7 +14,8 @@ module Volcano
       when Hash then value.to_h { |key, item| [immutable_user(key), immutable_user(item)] }.freeze
       when Array then value.map { |item| immutable_user(item) }.freeze
       when String, Time then value.dup.freeze
-      else value.frozen? ? value : value.dup.freeze
+      when Integer, Float, TrueClass, FalseClass, NilClass then value
+      else raise TypeError, 'Session user snapshot must contain JSON values or timestamps'
       end
     end
   end

@@ -60,6 +60,7 @@ including metadata. The snapshot is deeply immutable and available without a
 request. It is cached data, not proof of authentication; use `auth.user` to fetch
 the server-validated profile. Existing three-field `Session` construction still
 works, with `user: nil`. An adopted snapshot must have the same user ID.
+Snapshots accept JSON values and `Time` timestamps, not arbitrary Ruby objects.
 
 ### Get the current user
 

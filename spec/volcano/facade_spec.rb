@@ -646,7 +646,7 @@ RSpec.describe Volcano::Client do
 
     attr_reader :calls
     attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :on_signin, :range_download_status,
-                  :refresh_response, :signup_response
+                  :refresh_response, :signup_response, :on_signup
 
     def initialize
       @access_token = 'access-token'
@@ -718,6 +718,7 @@ RSpec.describe Volcano::Client do
 
     def auth_signup(**arguments)
       @calls << [:auth_signup, arguments]
+      @on_signup&.call
       @signup_response
     end
   end
@@ -954,6 +955,51 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#sign_up' do
+    [true, false].product([true, false]).each do |confirmation_required, sign_in_when_allowed|
+      it "applies sign-in opt-in #{sign_in_when_allowed} with confirmation requirement #{confirmation_required}" do
+        transport.signup_response = Response.new(
+          status: 201, body: { 'confirmation_required' => confirmation_required, 'message' => 'Accepted' },
+          headers: {}, data: nil
+        )
+        result = client.auth.sign_up(email: 'new@example.com', password: 'secret', sign_in_when_allowed:)
+
+        signed_in = sign_in_when_allowed && !confirmation_required
+        expect(!result.session.nil?).to be(signed_in)
+        expect(result.session).to be(client.auth.current_session)
+        expect(result.message).to eq('Accepted')
+        expect(result.confirmation_required).to be(confirmation_required)
+        expect(transport.calls_for(:auth_signin).size).to eq(signed_in ? 1 : 0)
+      end
+    end
+
+    %i[on_signup on_signin].each do |stage|
+      it "preserves a session replaced during #{stage}" do
+        replacement = Volcano::Session.new(access_token: 'replacement', refresh_token: 'refresh', user_id: 'other')
+        transport.signup_response = Response.new(
+          status: 201, body: { 'confirmation_required' => false, 'message' => 'Accepted' }, headers: {}, data: nil
+        )
+        transport.public_send(:"#{stage}=", -> { client.auth.current_session = replacement })
+
+        expect do
+          client.auth.sign_up(email: 'new@example.com', password: 'secret', sign_in_when_allowed: true)
+        end.to raise_error(Volcano::Error::SessionChangedError)
+        expect(client.auth.current_session).to eq(replacement)
+      end
+    end
+
+    it 'surfaces follow-up sign-in failures without replacing the session' do
+      established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      transport.signup_response = Response.new(
+        status: 201, body: { 'confirmation_required' => false, 'message' => 'Accepted' }, headers: {}, data: nil
+      )
+      transport.on_signin = -> { raise Volcano::Error::AuthenticationError, 'Sign-in rejected' }
+
+      expect do
+        client.auth.sign_up(email: 'new@example.com', password: 'secret', sign_in_when_allowed: true)
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Sign-in rejected')
+      expect(client.auth.current_session).to be(established)
+    end
+
     it 'returns an owned acknowledgement without changing the session', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 

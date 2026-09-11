@@ -725,9 +725,9 @@ delivery.
 ## Generated boundary
 
 The internal REST transport is generated from `openapi/openapi.yaml`, which
-matches the public bundle from [Hosting #991](https://github.com/Kong/volcano-hosting/pull/991)
-at commit `ef03f689e`.
-Its SHA-256 is `076d97809c95f50567d8b100f4188c1fe2b74e73a388e335c79850e66edfc0e4`.
+matches the public bundle from [Hosting #1007](https://github.com/Kong/volcano-hosting/pull/1007)
+at commit `c04c6231144d81536d9f2d1ff68d20dfa7a4d04a`.
+Its SHA-256 is `b646dd7f5e6b5f0f2fca4bb1580f7974a1483eac55cbafb2c547c90dd3d85176`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

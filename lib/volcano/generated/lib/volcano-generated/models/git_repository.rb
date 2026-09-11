@@ -24,17 +24,13 @@ module Volcano::Generated
 
     attr_accessor :private
 
-    # Whether the repository has no commits and can receive an initial source export.
-    attr_accessor :is_empty
-
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'id' => :'id',
         :'full_name' => :'full_name',
         :'default_branch' => :'default_branch',
-        :'private' => :'private',
-        :'is_empty' => :'is_empty'
+        :'private' => :'private'
       }
     end
 
@@ -54,8 +50,7 @@ module Volcano::Generated
         :'id' => :'Integer',
         :'full_name' => :'String',
         :'default_branch' => :'String',
-        :'private' => :'Boolean',
-        :'is_empty' => :'Boolean'
+        :'private' => :'Boolean'
       }
     end
 
@@ -104,12 +99,6 @@ module Volcano::Generated
       else
         self.private = nil
       end
-
-      if attributes.key?(:'is_empty')
-        self.is_empty = attributes[:'is_empty']
-      else
-        self.is_empty = nil
-      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -133,10 +122,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "private", private cannot be nil.')
       end
 
-      if @is_empty.nil?
-        invalid_properties.push('invalid value for "is_empty", is_empty cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -148,7 +133,6 @@ module Volcano::Generated
       return false if @full_name.nil?
       return false if @default_branch.nil?
       return false if @private.nil?
-      return false if @is_empty.nil?
       true
     end
 
@@ -192,16 +176,6 @@ module Volcano::Generated
       @private = private
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] is_empty Value to be assigned
-    def is_empty=(is_empty)
-      if is_empty.nil?
-        fail ArgumentError, 'is_empty cannot be nil'
-      end
-
-      @is_empty = is_empty
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -210,8 +184,7 @@ module Volcano::Generated
           id == o.id &&
           full_name == o.full_name &&
           default_branch == o.default_branch &&
-          private == o.private &&
-          is_empty == o.is_empty
+          private == o.private
     end
 
     # @see the `==` method
@@ -223,7 +196,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, full_name, default_branch, private, is_empty].hash
+      [id, full_name, default_branch, private].hash
     end
 
     # Builds the object from hash

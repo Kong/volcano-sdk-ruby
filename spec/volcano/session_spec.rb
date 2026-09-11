@@ -59,4 +59,18 @@ RSpec.describe Volcano::Session do
       described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'roles' => roles })
     end.to raise_error(TypeError, /JSON values or timestamps/)
   end
+
+  it 'normalizes string and timestamp subclasses to plain immutable values' do
+    label = Class.new(String).new('reader')
+    timestamp = Class.new(Time).at(123, 456, :nanosecond).getlocal('+02:00')
+    [label, timestamp].each { |value| value.instance_variable_set(:@notes, ['mutable']) }
+    session = described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'values' => [label, timestamp] })
+    values = session.user.fetch('values')
+
+    expect(values.map(&:class)).to eq([String, Time])
+    expect(values.flat_map(&:instance_variables)).to be_empty
+    expect(values).to eq([label, timestamp])
+    expect(values).to all(be_frozen)
+    expect(values.last.utc_offset).to eq(timestamp.utc_offset)
+  end
 end

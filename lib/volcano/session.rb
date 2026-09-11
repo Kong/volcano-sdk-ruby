@@ -13,10 +13,14 @@ module Volcano
       case value
       when Hash then value.to_h { |key, item| [immutable_user(key), immutable_user(item)] }.freeze
       when Array then value.map { |item| immutable_user(item) }.freeze
-      when String, Time then value.dup.freeze
+      when String, Time then plain_leaf(value).freeze
       when Integer, Float, TrueClass, FalseClass, NilClass then value
       else raise TypeError, 'Session user snapshot must contain JSON values or timestamps'
       end
+    end
+
+    def plain_leaf(value)
+      value.is_a?(String) ? String.new(value) : Time.at(value)
     end
   end
 end

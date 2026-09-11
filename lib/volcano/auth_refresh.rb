@@ -10,7 +10,7 @@ module Volcano
       refresh_captured_session(binding)
     end
 
-    def session_read
+    def session_request
       binding = @client.capture_session_binding
       raise Error::AuthenticationError, 'No active session' unless binding.last
 
@@ -25,6 +25,8 @@ module Volcano
       owned_session_binding(binding)
       response
     end
+
+    alias session_read session_request
 
     private
 

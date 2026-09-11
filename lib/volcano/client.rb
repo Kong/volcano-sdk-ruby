@@ -6,7 +6,7 @@ module Volcano
     SessionToken = Data.define(:value) do
       def session_token = value
 
-      def session_read
+      def session_request
         yield(value)
       end
     end
@@ -49,9 +49,11 @@ module Volcano
       session.access_token
     end
 
-    def session_read(&)
-      @auth.session_read(&)
+    def session_request(&)
+      @auth.session_request(&)
     end
+
+    alias session_read session_request
 
     def service_token
       raise Error::AuthenticationError, 'No service key configured' unless @service_key

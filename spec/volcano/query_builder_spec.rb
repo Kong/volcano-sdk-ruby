@@ -28,6 +28,21 @@ RSpec.describe Volcano::QueryBuilder do
     response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
   end
 
+  %i[client auth].each do |entry_point|
+    it "preserves the #{entry_point} session_read compatibility entry point" do
+      tokens = []
+      receiver = entry_point == :client ? client : client.auth
+      result = receiver.session_read do |token|
+        tokens << token
+        response(token == 'old-access' ? 401 : 200)
+      end
+
+      expect(result.status).to eq(200)
+      expect(tokens).to eq(%w[old-access new-access])
+      expect(transport).to have_received(:auth_refresh).once
+    end
+  end
+
   def concurrent_results(started, release)
     readers = Array.new(2) { Thread.new { query.execute } }
     Timeout.timeout(5) do
@@ -231,13 +246,58 @@ RSpec.describe Volcano::QueryBuilder do
   end
 
   %i[insert update delete].each do |operation|
-    it "does not replay #{operation} on a 401" do
+    it "refreshes once and replays the same #{operation} on a 401" do
+      calls = []
       method = :"query_database_#{operation}"
-      allow(transport).to receive(method).and_return(response(401))
+      allow(transport).to receive(method) do |**arguments|
+        calls << arguments
+        calls.size == 1 ? response(401) : response(200, 'data' => [{ 'id' => 1 }])
+      end
+      mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
+      expect(mutation.execute).to eq([{ 'id' => 1 }])
+      expect(calls.map { |call| call.fetch(:authorization) }).to eq(%w[old-access new-access])
+      expect(calls.first.except(:authorization)).to eq(calls.last.except(:authorization))
+      expect(transport).to have_received(:auth_refresh).once
+    end
+
+    it "does not replay #{operation} on a 403" do
+      method = :"query_database_#{operation}"
+      allow(transport).to receive(method).and_return(response(403))
       mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
       expect { mutation.execute }.to raise_error(Volcano::Error::AuthenticationError)
       expect(transport).to have_received(method).once
       expect(transport).not_to have_received(:auth_refresh)
+    end
+
+    it "bounds #{operation} to one retry after repeated 401 responses" do
+      method = :"query_database_#{operation}"
+      allow(transport).to receive(method).and_return(response(401))
+      mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
+      expect { mutation.execute }.to raise_error(Volcano::Error::AuthenticationError)
+      expect(transport).to have_received(method).twice
+      expect(transport).to have_received(:auth_refresh).once
+    end
+
+    it "never retries #{operation} after an ambiguous transport failure" do
+      method = :"query_database_#{operation}"
+      allow(transport).to receive(method).and_raise(Timeout::Error)
+      mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
+      expect { mutation.execute }.to raise_error(Volcano::Error::TransportError)
+      expect(transport).to have_received(method).once
+      expect(transport).not_to have_received(:auth_refresh)
+    end
+
+    it "never retries #{operation} under a replacement session" do
+      method = :"query_database_#{operation}"
+      allow(transport).to receive(method).and_return(response(401))
+      allow(transport).to receive(:auth_refresh) do
+        client.auth.current_session = replacement
+        refresh_response
+      end
+      mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
+      expect { mutation.execute }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(transport).to have_received(method).once
+      expect(client.current_session).to eq(replacement)
     end
   end
 end

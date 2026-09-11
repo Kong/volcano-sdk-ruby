@@ -14,6 +14,8 @@ RSpec.describe 'shared SDK contract bindings' do
       'database-delete.feature' => 'b328579ee9b33cbb313dd4d13eb899d53f64344c5e5beb00dbfb7eed2098e2c7',
       'database-insert.feature' => '46150600af9f54b690bc5c9b8f230c5ba4e3be755e50ad0921051faa95e45316',
       'database-update.feature' => '7a64470474f2ba842faf1b8352ccc2cd7efa8183212ab309c1321dffb9c093d3',
+      'database-refresh.feature' => '76eb18c448899a6849e84015f1a276a984e1005eb494042b45247c67923cac89',
+      'realtime-pause.feature' => 'd4ff3e9cab94dfe1adabbe50e47c6ff46ca8fc48b357f1d9c425aea6d8519e33',
       'database.feature' => '4685b29357a621068b25984ff0de29cd4c504eebe5cfb597f0b999e29878a668',
       'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
       'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',

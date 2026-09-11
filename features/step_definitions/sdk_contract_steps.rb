@@ -278,6 +278,38 @@ Given('two authenticated realtime clients') do
   end
 end
 
+Given('the client replaces its access token with a rejected token') do
+  session = contract.client.auth.current_session
+  raise 'current session is missing' unless session
+
+  contract.client.auth.current_session = Volcano::Session.new(
+    access_token: 'sdk-contract-rejected-access-token',
+    refresh_token: session.refresh_token,
+    user_id: session.user_id
+  )
+end
+
+Then('the database read replaces the rejected token for the same user') do
+  session = contract.client.auth.current_session
+  raise 'current session is missing' unless session
+  raise 'access token is missing' if session.access_token.to_s.empty?
+  raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
+  raise 'refresh token is missing' if session.refresh_token.to_s.empty?
+  raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
+end
+
+When('one client pauses delivery for 1 second and then resumes with the same handler') do
+  raise contract.last_outcome.error if contract.last_outcome && !contract.last_outcome.ok
+
+  contract.record do
+    Async do |task|
+      VolcanoContract::BroadcastPause.new(contract).run(task)
+    ensure
+      contract.realtime_clients.reverse_each { |client| client.realtime.disconnect }
+    end.wait
+  end
+end
+
 When('one client subscribes and the other publishes the contract message') do
   raise contract.last_outcome.error if contract.last_outcome && !contract.last_outcome.ok
 

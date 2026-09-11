@@ -53,6 +53,8 @@ module Volcano
       @auth.session_request(&)
     end
 
+    alias session_read session_request
+
     def service_token
       raise Error::AuthenticationError, 'No service key configured' unless @service_key
 

@@ -28,6 +28,21 @@ RSpec.describe Volcano::QueryBuilder do
     response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
   end
 
+  %i[client auth].each do |entry_point|
+    it "preserves the #{entry_point} session_read compatibility entry point" do
+      tokens = []
+      receiver = entry_point == :client ? client : client.auth
+      result = receiver.session_read do |token|
+        tokens << token
+        response(token == 'old-access' ? 401 : 200)
+      end
+
+      expect(result.status).to eq(200)
+      expect(tokens).to eq(%w[old-access new-access])
+      expect(transport).to have_received(:auth_refresh).once
+    end
+  end
+
   def concurrent_results(started, release)
     readers = Array.new(2) { Thread.new { query.execute } }
     Timeout.timeout(5) do

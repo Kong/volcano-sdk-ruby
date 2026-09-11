@@ -26,6 +26,8 @@ module Volcano
       response
     end
 
+    alias session_read session_request
+
     private
 
     def retry_session(binding)

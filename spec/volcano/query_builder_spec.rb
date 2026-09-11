@@ -39,6 +39,12 @@ RSpec.describe Volcano::QueryBuilder do
     readers&.each { |reader| reader.kill.join }
   end
 
+  def read_result
+    query.execute
+  rescue Volcano::Error::VolcanoError => e
+    e
+  end
+
   it 'shares a successful refresh between concurrent reads of the same session' do
     started = Queue.new
     release = Queue.new
@@ -53,6 +59,42 @@ RSpec.describe Volcano::QueryBuilder do
     end
     expect(concurrent_results(started, release)).to eq([[{ 'id' => 1 }], [{ 'id' => 1 }]])
     expect(transport).to have_received(:auth_refresh).once
+  end
+
+  it 'preserves each concurrent read error when refresh clears the session' do
+    started = Queue.new
+    release = Queue.new
+    allow(transport).to receive(:auth_refresh).and_return(response(401, 'error' => 'refresh failed'))
+    allow(transport).to receive(:query_database_select) do
+      started << true
+      release.pop
+      response(401)
+    end
+    readers = Array.new(2) { Thread.new { read_result } }
+    2.times { started.pop }
+    2.times { release << true }
+    expect(readers.map { |reader| reader.value.message }).to eq(['read expired', 'read expired'])
+    expect(transport).to have_received(:auth_refresh).once
+  ensure
+    readers&.each { |reader| reader.kill.join }
+  end
+
+  it 'allows a refresh listener to wait for another refresh thread' do
+    completed = []
+    workers = []
+    subscription = client.auth.on_auth_state_change do |event, _session|
+      next unless event == :token_refreshed
+
+      subscription.unsubscribe
+      worker = Thread.new { client.auth.refresh_session }
+      workers << worker
+      completed << !worker.join(1).nil?
+    end
+    query.execute
+    workers.each { |worker| worker.join(5) }
+    expect(completed).to eq([true])
+  ensure
+    workers&.each { |worker| worker.kill.join }
   end
 
   it 'refreshes once and replays the same select under the refreshed token' do
@@ -83,6 +125,12 @@ RSpec.describe Volcano::QueryBuilder do
     end
   end
 
+  it 'preserves the read error when refresh returns an incomplete session' do
+    allow(transport).to receive(:auth_refresh).and_return(response(200, {}))
+    expect { query.execute }.to raise_error(Volcano::Error::AuthenticationError, 'read expired')
+    expect(transport).to have_received(:query_database_select).once
+  end
+
   it 'does not refresh a replacement session after a delayed 401' do
     allow(transport).to receive(:query_database_select) do
       client.auth.current_session = replacement
@@ -109,6 +157,26 @@ RSpec.describe Volcano::QueryBuilder do
     end
     expect { query.execute }.to raise_error(Volcano::Error::SessionChangedError)
     expect(transport).to have_received(:query_database_select).once
+    expect(client.current_session).to eq(replacement)
+  end
+
+  it 'rejects a replacement adopted by the failed-refresh listener' do
+    allow(transport).to receive(:auth_refresh).and_return(response(401))
+    client.auth.on_auth_state_change do |event, _session|
+      client.auth.current_session = replacement if event == :signed_out
+    end
+    expect { query.execute }.to raise_error(Volcano::Error::SessionChangedError)
+    expect(client.current_session).to eq(replacement)
+  end
+
+  it 'rejects rows if the session changes during replay' do
+    allow(transport).to receive(:query_database_select) do |authorization:, **|
+      next response(401) if authorization == 'old-access'
+
+      client.auth.current_session = replacement
+      response(200, 'data' => [{ 'id' => 1 }])
+    end
+    expect { query.execute }.to raise_error(Volcano::Error::SessionChangedError)
     expect(client.current_session).to eq(replacement)
   end
 

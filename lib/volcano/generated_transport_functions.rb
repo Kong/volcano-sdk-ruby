@@ -39,7 +39,7 @@ module Volcano
       return nil if text.empty?
       return text unless function_json?(text, headers)
 
-      parsed = JSON.parse(text, max_nesting: false)
+      parsed = JSON.parse(text)
       valid_function_encoding?(parsed) ? parsed : text
     rescue JSON::ParserError
       text

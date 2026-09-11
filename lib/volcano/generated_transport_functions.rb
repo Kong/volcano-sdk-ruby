@@ -35,10 +35,11 @@ module Volcano
     def function_body(body, headers)
       return nil if body.nil? || body.empty?
 
-      text = body.dup.force_encoding(Encoding::UTF_8).scrub
+      text = body.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
+      return nil if text.empty?
       return text unless function_json?(text, headers)
 
-      JSON.parse(text)
+      JSON.parse(text, max_nesting: false)
     rescue JSON::ParserError
       text
     end

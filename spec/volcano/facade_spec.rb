@@ -1068,7 +1068,7 @@ RSpec.describe Volcano::Client do
         Volcano::Session.new(
           access_token: 'anonymous-access',
           refresh_token: 'anonymous-refresh',
-          user_id: 'anonymous-user'
+          user_id: 'anonymous-user', user: { 'id' => 'anonymous-user' }
         )
       )
       expect(client.auth.current_session).to be(session)
@@ -1440,7 +1440,8 @@ RSpec.describe Volcano::Client do
 
       expect(result).to eq(
         Volcano::Session.new(
-          access_token: 'oauth-access', refresh_token: 'oauth-refresh', user_id: 'oauth-user'
+          access_token: 'oauth-access', refresh_token: 'oauth-refresh', user_id: 'oauth-user',
+          user: { 'id' => 'oauth-user' }
         )
       )
       expect(client.auth.current_session).to be(result)
@@ -2293,7 +2294,7 @@ RSpec.describe Volcano::Client do
     it 'cannot be changed through the supplied mutable strings' do
       supplied = supplied_session
       client.auth.current_session = supplied
-      supplied.to_h.each_value { |value| value.replace('mutated') }
+      [supplied.access_token, supplied.refresh_token, supplied.user_id].each { |value| value.replace('mutated') }
 
       expect(client.auth.current_session).to eq(
         Volcano::Session.new(
@@ -2348,7 +2349,8 @@ RSpec.describe Volcano::Client do
 
       expect(refreshed).to eq(
         Volcano::Session.new(
-          access_token: 'access-2', refresh_token: 'refresh-2', user_id: established.user_id
+          access_token: 'access-2', refresh_token: 'refresh-2', user_id: established.user_id,
+          user: { 'id' => established.user_id }
         )
       )
       expect(client.auth.current_session).to be(refreshed)
@@ -2451,7 +2453,7 @@ RSpec.describe Volcano::Client do
       Volcano::Session.new(
         access_token: 'access-token',
         refresh_token: 'refresh-token',
-        user_id: 'user-123'
+        user_id: 'user-123', user: { 'id' => 'user-123' }
       )
     )
     expect(client.current_session).to be(results.fetch(:session))

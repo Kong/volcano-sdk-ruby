@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module Volcano
-  Session = Data.define(:access_token, :refresh_token, :user_id)
   AUTH_SESSION_ATTRIBUTES = %i[
     id user_id provider expires_at is_active is_current user_agent ip_address last_ip_address
     last_activity_at session_started_at created_at updated_at

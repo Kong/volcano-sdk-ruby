@@ -279,11 +279,11 @@ When('the client copies, moves, and removes a copy of the contract object') do
   source = contract.storage_path
   copied = "#{source}.copy"
   moved = "#{source}.moved"
-  contract.register_cleanup(lambda do
-    bucket.list(source).objects.each do |item|
-      bucket.remove(item.name) if [source, copied, moved].include?(item.name)
-    end
-  end)
+  [source, copied, moved].each do |path|
+    contract.register_cleanup(lambda do
+      bucket.remove(path) if bucket.list(path).objects.any? { |item| item.name == path }
+    end)
+  end
   contract.record do
     bucket.upload(source, contract.storage_bytes)
     bucket.copy(source, copied)

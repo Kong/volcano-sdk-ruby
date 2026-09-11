@@ -177,6 +177,21 @@ RSpec.describe VolcanoContract::World do
     expect(outcome.error.code).to eq('invalid_contract')
   end
 
+  it 'attempts every registered cleanup after the first callback fails' do
+    attempted = []
+    paths = %w[original copied moved]
+    paths.each do |path|
+      world.register_cleanup(lambda do
+        attempted << path
+        raise 'delete failed' if path == 'moved'
+      end)
+    end
+
+    expect { world.cleanup }.to raise_error(VolcanoContract::CleanupError, /delete failed/)
+    expect(attempted).to eq(paths.reverse)
+    expect { world.cleanup }.not_to raise_error
+  end
+
   it 'redacts fixture credentials from cleanup exceptions and their failures' do
     realtime = Object.new
     secret_values = credentials.values

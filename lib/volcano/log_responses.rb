@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Volcano
-  # Deeply freezes JSON values owned by public log responses.
+  # Captures immutable JSON for log requests and responses.
   module ImmutableLogJSON
     private
 

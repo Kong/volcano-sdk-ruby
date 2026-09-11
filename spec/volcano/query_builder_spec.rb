@@ -79,6 +79,44 @@ RSpec.describe Volcano::QueryBuilder do
     readers&.each { |reader| reader.kill.join }
   end
 
+  context 'when a refresh listener waits for a coalesced read before replacing the session' do
+    let(:coordination) { { started: Queue.new, release: Queue.new, results: Queue.new, completed: [] } }
+
+    before do
+      allow(transport).to receive(:query_database_select) do |authorization:, **|
+        if authorization == 'old-access'
+          coordination[:started] << true
+          coordination[:release].pop
+          response(401)
+        else
+          response(200, 'data' => [{ 'id' => 1 }])
+        end
+      end
+      client.auth.on_auth_state_change do |event, _session|
+        next unless event == :token_refreshed
+
+        coordination[:release] << true
+        coordination[:completed] << Timeout.timeout(5) { coordination[:results].pop }
+        client.auth.current_session = replacement
+      end
+    end
+
+    it 'preserves the completed read and rejects the still-pending owner read' do
+      readers = Array.new(2) { Thread.new { read_result.tap { |result| coordination[:results] << result } } }
+      outcomes = Timeout.timeout(5) do
+        2.times { coordination[:started].pop }
+        coordination[:release] << true
+        readers.map(&:value)
+      end
+      expect(coordination[:completed]).to eq([[{ 'id' => 1 }]])
+      expect(outcomes).to contain_exactly([{ 'id' => 1 }], an_instance_of(Volcano::Error::SessionChangedError))
+      expect(client.auth.current_session).to eq(replacement)
+      expect(transport).to have_received(:auth_refresh).once
+    ensure
+      readers&.each { |reader| reader.kill.join }
+    end
+  end
+
   it 'allows a refresh listener to wait for another refresh thread' do
     completed = []
     workers = []

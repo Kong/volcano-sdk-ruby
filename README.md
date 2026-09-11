@@ -443,7 +443,10 @@ rows = client.database("main").from("items").select("*").eq("slug", "a").execute
 
 Database selects refresh the captured session after an HTTP 401 and retry the
 same query once. Concurrent reads reuse a successful refresh for that session.
-Replacing or signing out the session prevents replay and raises `SessionChangedError`.
+Replacing or signing out the session before replay, or while replay is in flight,
+raises `SessionChangedError`. Reads do not wait for auth callbacks running on
+another thread. A later callback-driven session change does not invalidate a
+completed read.
 A failed refresh preserves the original read error. Writes, HTTP 403 responses,
 and network failures do not trigger this retry. Realtime's fixed-token row reads
 do not refresh the session.

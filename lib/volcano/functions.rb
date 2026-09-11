@@ -46,7 +46,6 @@ module Volcano
     def function_response(response)
       version = header(response.headers, 'X-Volcano-Version')
       Transport.body(response, 200) unless response.status.between?(200, 299) || version
-      raise TypeError, 'Expected a complete function response' unless response.body.nil? || response.body.is_a?(Hash)
 
       FunctionResponse.new(
         data: response.body, status: response.status,

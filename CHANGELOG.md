@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.2...v0.3.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* **functions:** preserve JSON values and text responses ([#113](https://github.com/Kong/volcano-sdk-ruby/issues/113)) ([0b41f40](https://github.com/Kong/volcano-sdk-ruby/commit/0b41f40d658ca4c2b319e15d58e966c6d8f73041))
+
 ## [0.3.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.1...v0.3.2) (2026-09-11)
 
 

@@ -110,12 +110,14 @@ module Volcano
     end
 
     def execute
-      response = Transport.invoke do
-        @context.transport.query_database_select(
-          authorization: @context.client.session_token,
-          database_name: @context.database_name,
-          body: query_body
-        )
+      response = @context.client.session_read do |token|
+        Transport.invoke do
+          @context.transport.query_database_select(
+            authorization: token,
+            database_name: @context.database_name,
+            body: query_body
+          )
+        end
       end
       Transport.body(response, 200).fetch('data')
     end

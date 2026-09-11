@@ -5,6 +5,10 @@ module Volcano
   class Client
     SessionToken = Data.define(:value) do
       def session_token = value
+
+      def session_read
+        yield(value)
+      end
     end
     private_constant :SessionToken
 
@@ -45,6 +49,10 @@ module Volcano
       session.access_token
     end
 
+    def session_read(&)
+      @auth.session_read(&)
+    end
+
     def service_token
       raise Error::AuthenticationError, 'No service key configured' unless @service_key
 
@@ -67,12 +75,12 @@ module Volcano
       @auth_state.capture_binding
     end
 
-    def store_session_if_current?(session, generation, event: :signed_in)
-      @auth_state.store_if_current?(session, generation, event: event)
+    def store_session_if_current?(session, generation, event: :signed_in, notifications: nil)
+      @auth_state.store_if_current?(session, generation, event: event, notifications: notifications)
     end
 
-    def clear_session_if_current?(generation, event: :signed_out)
-      @auth_state.clear_if_current?(generation, event: event)
+    def clear_session_if_current?(generation, event: :signed_out, notifications: nil)
+      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications)
     end
 
     def subscribe_auth_state_change(...)

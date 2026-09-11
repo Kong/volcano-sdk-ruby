@@ -48,18 +48,18 @@ module Volcano
       drain_notifications if dispatch
     end
 
-    def store_if_current?(session, generation, event: :signed_in)
+    def store_if_current?(session, generation, event: :signed_in, notifications: nil)
       dispatch = @mutex.synchronize do
         callbacks = replace_if_current(session, generation, event)
         return false unless callbacks
 
         enqueue_notification(callbacks, event, session)
       end
-      drain_notifications if dispatch
+      return true unless dispatch
+
+      notifications ? notifications.push(method(:drain_notifications)) : drain_notifications
       true
     end
-
-    def clear_if_current?(generation, event: :signed_out) = store_if_current?(nil, generation, event: event)
 
     def subscribe(&callback)
       callback_id, dispatch = @mutex.synchronize do

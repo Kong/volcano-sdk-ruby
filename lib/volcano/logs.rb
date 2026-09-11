@@ -3,42 +3,50 @@
 module Volcano
   # Searches retained project logs and activity.
   class Logs
+    include ImmutableLogJSON
+
     def initialize(client, transport)
       @client = client
       @transport = transport
     end
 
     def search(project_id, request)
-      validate_request(project_id, request)
-      response = Transport.invoke do
-        @transport.search_project_logs(
-          authorization: @client.session_token,
-          project_id: project_id,
-          request: request.dup
-        )
+      project_id, request = log_request(project_id, request)
+      response = @client.session_request do |token|
+        Transport.invoke do
+          @transport.search_project_logs(
+            authorization: token,
+            project_id: project_id,
+            request: request
+          )
+        end
       end
       search_response(Transport.body(response, 200))
     end
 
     def activity(project_id, request)
-      validate_request(project_id, request)
-      response = Transport.invoke do
-        @transport.get_project_log_activity(
-          authorization: @client.session_token,
-          project_id: project_id,
-          request: request.dup
-        )
+      project_id, request = log_request(project_id, request)
+      response = @client.session_request do |token|
+        Transport.invoke do
+          @transport.get_project_log_activity(
+            authorization: token,
+            project_id: project_id,
+            request: request
+          )
+        end
       end
       activity_response(Transport.body(response, 200))
     end
 
     private
 
-    def validate_request(project_id, request)
+    def log_request(project_id, request)
       unless project_id.is_a?(String) && !project_id.strip.empty?
         raise ArgumentError, 'project_id must be a non-empty String'
       end
       raise TypeError, 'Log request must be a Hash' unless request.is_a?(Hash)
+
+      [project_id.dup.freeze, immutable_json(request)]
     end
 
     def search_response(body)

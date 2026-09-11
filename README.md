@@ -450,8 +450,8 @@ syntax. Both methods require an active user session.
 rows = client.database("main").from("items").select("*").eq("slug", "a").execute
 ```
 
-Database selects, inserts, updates, and deletes refresh the captured session after
-an HTTP 401 and retry the same request once. Concurrent requests reuse a successful
+Database selects, inserts, updates, deletes, and log reads refresh the captured
+session after an HTTP 401 and retry the same request once. Concurrent requests reuse a successful
 refresh for that session.
 Replacing or signing out the session before replay, or while replay is in flight,
 raises `SessionChangedError`. Requests do not wait for auth callbacks running on

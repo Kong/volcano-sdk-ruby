@@ -110,7 +110,7 @@ module Volcano
     end
 
     def execute
-      response = @context.client.session_read do |token|
+      response = @context.client.session_request do |token|
         Transport.invoke do
           @context.transport.query_database_select(
             authorization: token,
@@ -165,12 +165,14 @@ module Volcano
     end
 
     def execute
-      response = Transport.invoke do
-        @context.transport.query_database_insert(
-          authorization: @context.client.session_token,
-          database_name: @context.database_name,
-          body: { 'table' => @table, 'values' => @values }
-        )
+      response = @context.client.session_request do |token|
+        Transport.invoke do
+          @context.transport.query_database_insert(
+            authorization: token,
+            database_name: @context.database_name,
+            body: { 'table' => @table, 'values' => @values }
+          )
+        end
       end
       Transport.body(response, 200).fetch('data')
     end
@@ -189,12 +191,14 @@ module Volcano
     end
 
     def execute
-      response = Transport.invoke do
-        @context.transport.query_database_update(
-          authorization: @context.client.session_token,
-          database_name: @context.database_name,
-          body: { 'table' => @table, 'values' => @values, 'filters' => @filters }
-        )
+      response = @context.client.session_request do |token|
+        Transport.invoke do
+          @context.transport.query_database_update(
+            authorization: token,
+            database_name: @context.database_name,
+            body: { 'table' => @table, 'values' => @values, 'filters' => @filters }
+          )
+        end
       end
       Transport.body(response, 200).fetch('data')
     end
@@ -218,12 +222,14 @@ module Volcano
     end
 
     def execute
-      response = Transport.invoke do
-        @context.transport.query_database_delete(
-          authorization: @context.client.session_token,
-          database_name: @context.database_name,
-          body: { 'table' => @table, 'filters' => @filters }
-        )
+      response = @context.client.session_request do |token|
+        Transport.invoke do
+          @context.transport.query_database_delete(
+            authorization: token,
+            database_name: @context.database_name,
+            body: { 'table' => @table, 'filters' => @filters }
+          )
+        end
       end
       Transport.body(response, 200).fetch('data')
     end

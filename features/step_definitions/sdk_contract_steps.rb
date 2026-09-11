@@ -257,6 +257,23 @@ Then('the uploaded and listed object content types are text\/plain') do
   raise 'stored content type changed' unless value.fetch('listed') == expected
 end
 
+When('the client uploads the contract object and downloads bytes 2 through 7') do
+  contract.record do
+    bucket = contract.client.storage.from(contract.fixture.fetch('bucket_name'))
+    uploaded = bucket.upload(contract.storage_path, contract.storage_bytes)
+    contract.register_cleanup(-> { bucket.remove(contract.storage_path) })
+    {
+      'bytes' => bucket.download(contract.storage_path, range: 'bytes=2-7'),
+      'path' => uploaded.fetch('name')
+    }
+  end
+end
+
+Then('the downloaded bytes equal uploaded bytes 2 through 7 inclusive') do
+  expected = contract.storage_bytes.byteslice(2, 6)
+  raise 'downloaded range changed' unless contract.last_outcome.value.fetch('bytes') == expected
+end
+
 Then('the stored object path equals the contract path') do
   raise 'stored object path changed' unless contract.last_outcome.value.fetch('path') == contract.storage_path
 end

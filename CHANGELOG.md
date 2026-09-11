@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.1.0...v0.2.0) (2026-09-11)
+
+
+### Features
+
+* **database:** refresh expired sessions for select queries ([#96](https://github.com/Kong/volcano-sdk-ruby/issues/96)) ([2c5d6ea](https://github.com/Kong/volcano-sdk-ruby/commit/2c5d6ea4354027629b69c3cd984a7e4deb3d6c09))
+
 ## 0.1.0 (2026-09-09)
 
 

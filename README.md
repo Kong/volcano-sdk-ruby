@@ -31,9 +31,18 @@ result = client.auth.sign_up(
 puts result.message if result.confirmation_required
 ```
 
-`sign_up` returns an immutable acknowledgement and never creates or replaces a
-session. The response is identical for new and existing email addresses. Call
-`sign_in` separately after the account is ready to establish a session.
+`sign_up` returns an immutable acknowledgement without changing the session by
+default. The signup acknowledgement is identical for new and existing email
+addresses. Pass `sign_in_when_allowed: true` to follow it with `sign_in` only when
+confirmation is not required:
+
+```ruby
+result = client.auth.sign_up(email: "new-user@example.com", password: "secret", sign_in_when_allowed: true)
+session = result.session # nil when no follow-up sign-in ran.
+```
+
+A successful follow-up stores the session and emits the normal sign-in event.
+A failed follow-up raises its usual typed error; it does not undo the successful signup.
 
 ### Sign in
 

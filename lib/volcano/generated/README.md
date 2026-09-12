@@ -284,6 +284,7 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::ProjectsApi* | [**list_project_deployments**](docs/ProjectsApi.md#list_project_deployments) | **GET** /projects/{id}/deployments | List deployments in a project
 *Volcano::Generated::ProjectsApi* | [**list_projects**](docs/ProjectsApi.md#list_projects) | **GET** /projects | List all projects for authenticated user
 *Volcano::Generated::ProjectsApi* | [**query_project_metrics**](docs/ProjectsApi.md#query_project_metrics) | **POST** /projects/{id}/metrics/query | Query project runtime metrics
+*Volcano::Generated::ProjectsApi* | [**replace_shared_variables**](docs/ProjectsApi.md#replace_shared_variables) | **PUT** /projects/{id}/shared-variables | Replace shared variable names
 *Volcano::Generated::ProjectsApi* | [**set_project_git_production_branch**](docs/ProjectsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
 *Volcano::Generated::ProjectsApi* | [**summarize_project_deployments**](docs/ProjectsApi.md#summarize_project_deployments) | **GET** /projects/{id}/deployments/summary | Summarize deployments in a project
 *Volcano::Generated::ProjectsApi* | [**update_project**](docs/ProjectsApi.md#update_project) | **PATCH** /projects/{id} | Update project metadata and region policy
@@ -626,6 +627,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
  - [Volcano::Generated::ResourceReference](docs/ResourceReference.md)

@@ -624,7 +624,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -635,7 +635,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -1472,6 +1472,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#query_project_metrics\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Replace shared variable names
+    # Atomically replaces the complete shared function-variable list without changing values. Names must already exist. Validates final affected function environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored as non-shared variables. 
+    # @param id [String] Project ID
+    # @param replace_shared_variables_request [ReplaceSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def replace_shared_variables(id, replace_shared_variables_request, opts = {})
+      replace_shared_variables_with_http_info(id, replace_shared_variables_request, opts)
+      nil
+    end
+
+    # Replace shared variable names
+    # Atomically replaces the complete shared function-variable list without changing values. Names must already exist. Validates final affected function environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored as non-shared variables. 
+    # @param id [String] Project ID
+    # @param replace_shared_variables_request [ReplaceSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def replace_shared_variables_with_http_info(id, replace_shared_variables_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.replace_shared_variables ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.replace_shared_variables"
+      end
+      # verify the required parameter 'replace_shared_variables_request' is set
+      if @api_client.config.client_side_validation && replace_shared_variables_request.nil?
+        fail ArgumentError, "Missing the required parameter 'replace_shared_variables_request' when calling ProjectsApi.replace_shared_variables"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/shared-variables'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(replace_shared_variables_request)
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.replace_shared_variables",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#replace_shared_variables\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

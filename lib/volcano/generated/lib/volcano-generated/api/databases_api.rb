@@ -428,7 +428,7 @@ module Volcano::Generated
     end
 
     # List platform-supported regions for database provisioning
-    # Returns the regions enabled for database provisioning in this platform environment. This is a public endpoint that doesn't require authentication. 
+    # Returns the regions enabled for database provisioning in this platform environment. These are the same regions offered for function deployment, and the only values the `region` field of a database accepts. This is a public endpoint that doesn't require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<ListDatabaseRegions200ResponseInner>]
     def list_database_regions(opts = {})
@@ -437,7 +437,7 @@ module Volcano::Generated
     end
 
     # List platform-supported regions for database provisioning
-    # Returns the regions enabled for database provisioning in this platform environment. This is a public endpoint that doesn&#39;t require authentication. 
+    # Returns the regions enabled for database provisioning in this platform environment. These are the same regions offered for function deployment, and the only values the &#x60;region&#x60; field of a database accepts. This is a public endpoint that doesn&#39;t require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<(Array<ListDatabaseRegions200ResponseInner>, Integer, Hash)>] Array<ListDatabaseRegions200ResponseInner> data, response status code and response headers
     def list_database_regions_with_http_info(opts = {})

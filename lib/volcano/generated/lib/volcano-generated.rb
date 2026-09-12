@@ -318,6 +318,7 @@ Volcano::Generated.autoload :RealtimeConfig, 'volcano-generated/models/realtime_
 Volcano::Generated.autoload :RealtimePlanLimits, 'volcano-generated/models/realtime_plan_limits'
 Volcano::Generated.autoload :RealtimeStats, 'volcano-generated/models/realtime_stats'
 Volcano::Generated.autoload :RefreshOAuthProviderToken200Response, 'volcano-generated/models/refresh_o_auth_provider_token200_response'
+Volcano::Generated.autoload :ReplaceSharedVariablesRequest, 'volcano-generated/models/replace_shared_variables_request'
 Volcano::Generated.autoload :ResetDatabasePassword200Response, 'volcano-generated/models/reset_database_password200_response'
 Volcano::Generated.autoload :ResolveFunctionResponse, 'volcano-generated/models/resolve_function_response'
 Volcano::Generated.autoload :ResourceReference, 'volcano-generated/models/resource_reference'

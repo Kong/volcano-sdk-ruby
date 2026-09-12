@@ -31,6 +31,8 @@ module Volcano::Generated
     # @option opts [FunctionInvocationMode] :invocation_mode 
     # @option opts [FunctionHTTPAuthMode] :http_auth_mode 
     # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
+    # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it only project variables marked &#x60;shared: true&#x60;; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
+    # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
     # @return [Function]
     def create_function(id, name, code, runtime, opts = {})
       data, _status_code, _headers = create_function_with_http_info(id, name, code, runtime, opts)
@@ -49,6 +51,8 @@ module Volcano::Generated
     # @option opts [FunctionInvocationMode] :invocation_mode 
     # @option opts [FunctionHTTPAuthMode] :http_auth_mode 
     # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
+    # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it only project variables marked &#x60;shared: true&#x60;; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
+    # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
     # @return [Array<(Function, Integer, Hash)>] Function data, response status code and response headers
     def create_function_with_http_info(id, name, code, runtime, opts = {})
       if @api_client.config.debugging
@@ -84,6 +88,10 @@ module Volcano::Generated
       if @api_client.config.client_side_validation && !allowable_values.include?(runtime)
         fail ArgumentError, "invalid value for \"runtime\", must be one of #{allowable_values}"
       end
+      allowable_values = ["all", "scoped"]
+      if @api_client.config.client_side_validation && opts[:'variable_scope'] && !allowable_values.include?(opts[:'variable_scope'])
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{allowable_values}"
+      end
       # resource path
       local_var_path = '/projects/{id}/functions'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
 
@@ -110,6 +118,8 @@ module Volcano::Generated
       form_params['invocation_mode'] = opts[:'invocation_mode'] if !opts[:'invocation_mode'].nil?
       form_params['http_auth_mode'] = opts[:'http_auth_mode'] if !opts[:'http_auth_mode'].nil?
       form_params['openapi_spec'] = opts[:'openapi_spec'] if !opts[:'openapi_spec'].nil?
+      form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
+      form_params['variables'] = opts[:'variables'] if !opts[:'variables'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -220,7 +230,7 @@ module Volcano::Generated
     # Deploy multiple functions in one request
     # Upload multiple function source archives in one multipart request. Each archive should contain source files plus dependency manifests/lockfiles, not installed dependency directories. ZIP and tar.gz uploads are accepted and normalized to tar.gz before storage. The API enforces `SOURCE_ARCHIVE_SIZE_LIMIT_MB` for each uploaded and normalized source archive. The server records a shared deployment batch ID for the resulting function deployments. Each function deployment runs its own compile/publish workflow concurrently, and each publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` for the final container image. One batch request can include up to 100 functions. Submit multiple batch requests for larger projects. If one function fails before its workflow starts, already-started function deployments are left running and the failed function is reported in the `failed` array. Failed new functions are deleted; failed updates are rolled back to their previous metadata/status where possible. 
     # @param id [String] Project ID
-    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.
+    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes. 
     # @param [Hash] opts the optional parameters
     # @option opts [File] :code_0 Function ZIP or tar.gz archive referenced by the first manifest entry&#39;s &#x60;file_field&#x60;; additional code_N file fields may be included. Each archive is subject to SOURCE_ARCHIVE_SIZE_LIMIT_MB.
     # @return [BatchFunctionDeployResponse]
@@ -232,7 +242,7 @@ module Volcano::Generated
     # Deploy multiple functions in one request
     # Upload multiple function source archives in one multipart request. Each archive should contain source files plus dependency manifests/lockfiles, not installed dependency directories. ZIP and tar.gz uploads are accepted and normalized to tar.gz before storage. The API enforces &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60; for each uploaded and normalized source archive. The server records a shared deployment batch ID for the resulting function deployments. Each function deployment runs its own compile/publish workflow concurrently, and each publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; for the final container image. One batch request can include up to 100 functions. Submit multiple batch requests for larger projects. If one function fails before its workflow starts, already-started function deployments are left running and the failed function is reported in the &#x60;failed&#x60; array. Failed new functions are deleted; failed updates are rolled back to their previous metadata/status where possible. 
     # @param id [String] Project ID
-    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.
+    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes. 
     # @param [Hash] opts the optional parameters
     # @option opts [File] :code_0 Function ZIP or tar.gz archive referenced by the first manifest entry&#39;s &#x60;file_field&#x60;; additional code_N file fields may be included. Each archive is subject to SOURCE_ARCHIVE_SIZE_LIMIT_MB.
     # @return [Array<(BatchFunctionDeployResponse, Integer, Hash)>] BatchFunctionDeployResponse data, response status code and response headers

@@ -338,6 +338,7 @@ lib/volcano-generated/models/realtime_config.rb
 lib/volcano-generated/models/realtime_plan_limits.rb
 lib/volcano-generated/models/realtime_stats.rb
 lib/volcano-generated/models/refresh_o_auth_provider_token200_response.rb
+lib/volcano-generated/models/replace_shared_variables_request.rb
 lib/volcano-generated/models/reset_database_password200_response.rb
 lib/volcano-generated/models/resolve_function_response.rb
 lib/volcano-generated/models/resource_reference.rb

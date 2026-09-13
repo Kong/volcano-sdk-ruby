@@ -7,7 +7,21 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = '076d97809c95f50567d8b100f4188c1fe2b74e73a388e335c79850e66edfc0e4'
+  OPENAPI_SHA256 = '74653534cb8abcb717fbd5c5426f17762657982ce7b6ccaedf2921b6c425ca3b'
+
+  it 'preserves shared-variable digest and nullable function metadata validation' do
+    generated = Volcano.const_get(:Generated, false)
+    request_class = generated.const_get(:ReplaceSharedVariablesRequest, false)
+    function_class = generated.const_get(:UpdateFunctionRequest, false)
+    digest = 'a' * 64
+    request = request_class.new(shared_variables: [], expected_shared_variables_digest: digest)
+
+    expect(request.to_hash[:expected_shared_variables_digest]).to eq(digest)
+    expect do
+      request_class.new(shared_variables: [], expected_shared_variables_digest: "#{digest}\n")
+    end.to raise_error(ArgumentError)
+    expect(function_class.new(openapi_spec: nil).to_hash).to include(openapi_spec: nil)
+  end
 
   it 'preserves explicit null without turning omitted object fields into null' do
     Dir.mktmpdir('volcano-ruby-nullable') do |directory|

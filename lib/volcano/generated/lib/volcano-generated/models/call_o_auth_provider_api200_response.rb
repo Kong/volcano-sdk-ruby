@@ -22,7 +22,7 @@ module Volcano::Generated
 
     attr_accessor :status_code
 
-    # Raw provider JSON value, or null when the provider returns no body
+    # Raw JSON value returned by the OAuth provider's API
     attr_accessor :data
 
     class EnumAttributeValidator

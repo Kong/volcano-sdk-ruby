@@ -949,7 +949,9 @@ paths:
         `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded
         `offset` past the cursor anchor. Supplying `limit` without `page`
         selects cursor mode. `search` applies a case-insensitive project-name
-        filter in either mode. Sending `page` with `cursor` or `ending_before`,
+        filter in either mode. `include` optionally expands each returned
+        project with its Git connection and/or aggregate health summary using
+        `git_connection` and `health`. Sending `page` with `cursor` or `ending_before`,
         or sending both cursor directions, returns 400.
       operationId: listProjects
       security:
@@ -961,6 +963,20 @@ paths:
         - $ref: '#/components/parameters/EndingBefore'
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Search'
+        - name: include
+          in: query
+          required: false
+          description: Optional comma-separated project metadata expansions.
+          style: form
+          explode: false
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              enum:
+                - git_connection
+                - health
       responses:
         '200':
           description: Successful response
@@ -15597,6 +15613,14 @@ components:
             param that changes on each upload. Absent when the project has no
             logo. The logo image is stored in the project's storage folder.
           example: /projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/logo?v=1718524800
+        git_connection:
+          allOf:
+            - $ref: '#/components/schemas/ProjectGitConnectionSummary'
+          description: Present for connected projects when `git_connection` is requested through the list endpoint's `include` parameter.
+        health:
+          allOf:
+            - $ref: '#/components/schemas/ProjectHealthSummary'
+          description: Present when `health` is requested through the list endpoint's `include` parameter.
         created_at:
           type: string
           format: date-time
@@ -15611,6 +15635,38 @@ components:
         - selected_regions
         - created_at
         - updated_at
+    ProjectGitConnectionSummary:
+      type: object
+      properties:
+        repo_installation_id:
+          type: integer
+          format: int64
+        repo_id:
+          type: integer
+          format: int64
+        repo_full_name:
+          type: string
+        root_directory:
+          type: string
+        production_branch:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - repo_installation_id
+        - repo_id
+        - repo_full_name
+        - root_directory
+        - production_branch
+        - updated_at
+    ProjectHealthSummary:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ProjectHealthStatus'
+      required:
+        - status
     ProjectConfig:
       type: object
       additionalProperties: false

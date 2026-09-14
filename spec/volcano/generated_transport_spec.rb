@@ -426,14 +426,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       @calls = []
     end
 
-    def resolve_function_for_invocation_with_http_info(name)
-      @calls << [:resolve, name]
-      result = FakeGeneratedModel.new(
+    def resolve_function_for_invocation_with_http_info(name, options = {})
+      @calls << [:resolve, name, options]
+      body = JSON.generate(
         name: name,
         function_id: '00000000-0000-4000-8000-000000000040',
         cache_ttl_seconds: 60
       )
-      [result, 200, {}]
+      [body, 200, {}]
     end
 
     def invoke_function_with_http_info(function_id, request, options = {})

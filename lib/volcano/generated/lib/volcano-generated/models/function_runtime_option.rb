@@ -24,6 +24,9 @@ module Volcano::Generated
     # Whether this runtime is the CLI default for its language.
     attr_accessor :default
 
+    # Whether a durable function can be authored on this runtime. Only runtimes with a durable authoring API report true, and a durable deploy naming any other runtime is rejected.
+    attr_accessor :durable_capable
+
     attr_accessor :deployment
 
     # Attribute mapping from ruby-style variable name to JSON key.
@@ -32,6 +35,7 @@ module Volcano::Generated
         :'name' => :'name',
         :'language' => :'language',
         :'default' => :'default',
+        :'durable_capable' => :'durable_capable',
         :'deployment' => :'deployment'
       }
     end
@@ -52,6 +56,7 @@ module Volcano::Generated
         :'name' => :'String',
         :'language' => :'String',
         :'default' => :'Boolean',
+        :'durable_capable' => :'Boolean',
         :'deployment' => :'FunctionRuntimeDeployment'
       }
     end
@@ -96,6 +101,12 @@ module Volcano::Generated
         self.default = nil
       end
 
+      if attributes.key?(:'durable_capable')
+        self.durable_capable = attributes[:'durable_capable']
+      else
+        self.durable_capable = nil
+      end
+
       if attributes.key?(:'deployment')
         self.deployment = attributes[:'deployment']
       else
@@ -120,6 +131,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "default", default cannot be nil.')
       end
 
+      if @durable_capable.nil?
+        invalid_properties.push('invalid value for "durable_capable", durable_capable cannot be nil.')
+      end
+
       if @deployment.nil?
         invalid_properties.push('invalid value for "deployment", deployment cannot be nil.')
       end
@@ -134,6 +149,7 @@ module Volcano::Generated
       return false if @name.nil?
       return false if @language.nil?
       return false if @default.nil?
+      return false if @durable_capable.nil?
       return false if @deployment.nil?
       true
     end
@@ -169,6 +185,16 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] durable_capable Value to be assigned
+    def durable_capable=(durable_capable)
+      if durable_capable.nil?
+        fail ArgumentError, 'durable_capable cannot be nil'
+      end
+
+      @durable_capable = durable_capable
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] deployment Value to be assigned
     def deployment=(deployment)
       if deployment.nil?
@@ -186,6 +212,7 @@ module Volcano::Generated
           name == o.name &&
           language == o.language &&
           default == o.default &&
+          durable_capable == o.durable_capable &&
           deployment == o.deployment
     end
 
@@ -198,7 +225,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, language, default, deployment].hash
+      [name, language, default, durable_capable, deployment].hash
     end
 
     # Builds the object from hash

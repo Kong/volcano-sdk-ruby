@@ -624,7 +624,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -635,7 +635,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -1308,7 +1308,7 @@ module Volcano::Generated
     end
 
     # List all projects for authenticated user
-    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses `page` and `limit`. Cursor mode uses `cursor` or `ending_before` with `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded `offset` past the cursor anchor. Supplying `limit` without `page` selects cursor mode. `search` applies a case-insensitive project-name filter in either mode. `include` optionally expands each returned project with its Git connection and/or aggregate health summary using `git_connection` and `health`. Sending `page` with `cursor` or `ending_before`, or sending both cursor directions, returns 400. 
+    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses `page` and `limit`. Cursor mode uses `cursor` or `ending_before` with `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded `offset` past the cursor anchor. Supplying `limit` without `page` selects cursor mode. `search` applies a case-insensitive project-name filter in either mode. Sending `page` with `cursor` or `ending_before`, or sending both cursor directions, returns 400. 
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
@@ -1316,7 +1316,6 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
-    # @option opts [Array<String>] :include Optional comma-separated project metadata expansions.
     # @return [PaginatedProjects]
     def list_projects(opts = {})
       data, _status_code, _headers = list_projects_with_http_info(opts)
@@ -1324,7 +1323,7 @@ module Volcano::Generated
     end
 
     # List all projects for authenticated user
-    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses &#x60;page&#x60; and &#x60;limit&#x60;. Cursor mode uses &#x60;cursor&#x60; or &#x60;ending_before&#x60; with &#x60;limit&#x60;, returns &#x60;next_cursor&#x60;/&#x60;prev_cursor&#x60;, and supports a bounded &#x60;offset&#x60; past the cursor anchor. Supplying &#x60;limit&#x60; without &#x60;page&#x60; selects cursor mode. &#x60;search&#x60; applies a case-insensitive project-name filter in either mode. &#x60;include&#x60; optionally expands each returned project with its Git connection and/or aggregate health summary using &#x60;git_connection&#x60; and &#x60;health&#x60;. Sending &#x60;page&#x60; with &#x60;cursor&#x60; or &#x60;ending_before&#x60;, or sending both cursor directions, returns 400. 
+    # Returns projects that are not deleting or deleted, newest first. Supports two mutually exclusive pagination modes. Offset mode uses &#x60;page&#x60; and &#x60;limit&#x60;. Cursor mode uses &#x60;cursor&#x60; or &#x60;ending_before&#x60; with &#x60;limit&#x60;, returns &#x60;next_cursor&#x60;/&#x60;prev_cursor&#x60;, and supports a bounded &#x60;offset&#x60; past the cursor anchor. Supplying &#x60;limit&#x60; without &#x60;page&#x60; selects cursor mode. &#x60;search&#x60; applies a case-insensitive project-name filter in either mode. Sending &#x60;page&#x60; with &#x60;cursor&#x60; or &#x60;ending_before&#x60;, or sending both cursor directions, returns 400. 
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
@@ -1332,7 +1331,6 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
-    # @option opts [Array<String>] :include Optional comma-separated project metadata expansions.
     # @return [Array<(PaginatedProjects, Integer, Hash)>] PaginatedProjects data, response status code and response headers
     def list_projects_with_http_info(opts = {})
       if @api_client.config.debugging
@@ -1358,10 +1356,6 @@ module Volcano::Generated
         fail ArgumentError, 'invalid value for "opts[:"search"]" when calling ProjectsApi.list_projects, the character length must be smaller than or equal to 256.'
       end
 
-      allowable_values = ["git_connection", "health"]
-      if @api_client.config.client_side_validation && opts[:'include'] && !opts[:'include'].all? { |item| allowable_values.include?(item) }
-        fail ArgumentError, "invalid value for \"include\", must include one of #{allowable_values}"
-      end
       # resource path
       local_var_path = '/projects'
 
@@ -1373,7 +1367,6 @@ module Volcano::Generated
       query_params[:'ending_before'] = opts[:'ending_before'] if !opts[:'ending_before'].nil?
       query_params[:'offset'] = opts[:'offset'] if !opts[:'offset'].nil?
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
-      query_params[:'include'] = @api_client.build_collection_param(opts[:'include'], :csv) if !opts[:'include'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -1479,6 +1472,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#query_project_metrics\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Replace shared variable names
+    # Atomically replaces the complete shared function-variable list without changing values. Names must already exist. Validates final affected function environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored as non-shared variables. 
+    # @param id [String] Project ID
+    # @param replace_shared_variables_request [ReplaceSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def replace_shared_variables(id, replace_shared_variables_request, opts = {})
+      replace_shared_variables_with_http_info(id, replace_shared_variables_request, opts)
+      nil
+    end
+
+    # Replace shared variable names
+    # Atomically replaces the complete shared function-variable list without changing values. Names must already exist. Validates final affected function environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored as non-shared variables. 
+    # @param id [String] Project ID
+    # @param replace_shared_variables_request [ReplaceSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def replace_shared_variables_with_http_info(id, replace_shared_variables_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.replace_shared_variables ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.replace_shared_variables"
+      end
+      # verify the required parameter 'replace_shared_variables_request' is set
+      if @api_client.config.client_side_validation && replace_shared_variables_request.nil?
+        fail ArgumentError, "Missing the required parameter 'replace_shared_variables_request' when calling ProjectsApi.replace_shared_variables"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/shared-variables'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(replace_shared_variables_request)
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.replace_shared_variables",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#replace_shared_variables\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

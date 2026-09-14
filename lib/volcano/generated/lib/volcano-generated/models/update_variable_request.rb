@@ -15,11 +15,15 @@ require 'time'
 
 module Volcano::Generated
   class UpdateVariableRequest < ApiModelBase
+    # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
+    attr_accessor :shared
+
     attr_accessor :value
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'shared' => :'shared',
         :'value' => :'value'
       }
     end
@@ -37,6 +41,7 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'shared' => :'Boolean',
         :'value' => :'String'
       }
     end
@@ -62,6 +67,10 @@ module Volcano::Generated
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'shared')
+        self.shared = attributes[:'shared']
+      end
 
       if attributes.key?(:'value')
         self.value = attributes[:'value']
@@ -105,6 +114,7 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          shared == o.shared &&
           value == o.value
     end
 
@@ -117,7 +127,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [value].hash
+      [shared, value].hash
     end
 
     # Builds the object from hash

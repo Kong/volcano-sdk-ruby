@@ -38,12 +38,6 @@ module Volcano::Generated
     # Relative API path that serves the project logo when one has been uploaded. The path is versioned with a `?v=` cache-busting query param that changes on each upload. Absent when the project has no logo. The logo image is stored in the project's storage folder. 
     attr_accessor :logo_url
 
-    # Present for connected projects when `git_connection` is requested through the list endpoint's `include` parameter.
-    attr_accessor :git_connection
-
-    # Present when `health` is requested through the list endpoint's `include` parameter.
-    attr_accessor :health
-
     attr_accessor :created_at
 
     attr_accessor :updated_at
@@ -82,8 +76,6 @@ module Volcano::Generated
         :'aws_application_name' => :'aws_application_name',
         :'last_invoked_at' => :'last_invoked_at',
         :'logo_url' => :'logo_url',
-        :'git_connection' => :'git_connection',
-        :'health' => :'health',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -111,8 +103,6 @@ module Volcano::Generated
         :'aws_application_name' => :'String',
         :'last_invoked_at' => :'Time',
         :'logo_url' => :'String',
-        :'git_connection' => :'ProjectGitConnectionSummary',
-        :'health' => :'ProjectHealthSummary',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -186,14 +176,6 @@ module Volcano::Generated
 
       if attributes.key?(:'logo_url')
         self.logo_url = attributes[:'logo_url']
-      end
-
-      if attributes.key?(:'git_connection')
-        self.git_connection = attributes[:'git_connection']
-      end
-
-      if attributes.key?(:'health')
-        self.health = attributes[:'health']
       end
 
       if attributes.key?(:'created_at')
@@ -357,8 +339,6 @@ module Volcano::Generated
           aws_application_name == o.aws_application_name &&
           last_invoked_at == o.last_invoked_at &&
           logo_url == o.logo_url &&
-          git_connection == o.git_connection &&
-          health == o.health &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -372,7 +352,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, name, status, plan, all_regions, selected_regions, aws_application_name, last_invoked_at, logo_url, git_connection, health, created_at, updated_at].hash
+      [id, name, status, plan, all_regions, selected_regions, aws_application_name, last_invoked_at, logo_url, created_at, updated_at].hash
     end
 
     # Builds the object from hash

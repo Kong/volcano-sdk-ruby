@@ -47,8 +47,10 @@ RSpec.describe Volcano::FunctionResolution do
     "https://#{function_id}.functions.test.run/"
   end
 
-  def client(service_key: 'service-key')
-    Volcano::Client.new(anon_key: 'anon-key', service_key: service_key, _transport: transport)
+  def client(service_key: 'service-key', api_url: nil)
+    arguments = { anon_key: 'anon-key', service_key: service_key, _transport: transport }
+    arguments[:api_url] = api_url if api_url
+    Volcano::Client.new(**arguments)
   end
 
   def resolve_calls
@@ -82,7 +84,8 @@ RSpec.describe Volcano::FunctionResolution do
     expect(calls.map(&:first)).to eq(%i[resolve_function_for_invocation invoke_function])
   end
 
-  ['', 'not-a-url', 'ftp://example.test/', '/relative'].each do |unusable|
+  # The last entry would downgrade a token the https API keeps encrypted.
+  ['', 'not-a-url', 'ftp://example.test/', '/relative', 'http://functions.test.run/'].each do |unusable|
     context "when the invocation endpoint is #{unusable.inspect}" do
       let(:resolve_payload) { super().merge('invoke_url' => unusable) }
 
@@ -91,6 +94,16 @@ RSpec.describe Volcano::FunctionResolution do
 
         expect(calls.map(&:first).last).to eq(:invoke_function)
       end
+    end
+  end
+
+  context 'when the API itself is plaintext' do
+    let(:resolve_payload) { super().merge('invoke_url' => 'http://127.0.0.1:9/') }
+
+    it 'accepts a plaintext invocation endpoint' do
+      client(api_url: 'http://127.0.0.1:8000').functions.invoke('send-welcome')
+
+      expect(calls.map(&:first).last).to eq(:invoke_function_url)
     end
   end
 

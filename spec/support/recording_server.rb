@@ -10,6 +10,9 @@ class RecordingServer
 
   def initialize(&respond)
     @server = TCPServer.new('127.0.0.1', 0)
+    # Connections are served one at a time, so the backlog has to hold every
+    # caller an example starts at once or the rest see a reset.
+    @server.listen(64)
     @requests = []
     @lock = Mutex.new
     @respond = respond

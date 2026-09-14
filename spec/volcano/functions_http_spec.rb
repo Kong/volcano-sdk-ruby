@@ -17,9 +17,12 @@ RSpec.describe Volcano::Functions do
     '00000000-0000-4000-8000-000000000040'
   end
 
-  def api_server(resolve_payload, status: 200)
+  def api_server(resolve_payload, status: 200, resolve_delay: 0)
     RecordingServer.new do |target|
-      target.start_with?('/functions/resolve') ? [status, resolve_payload] : [200, { 'ok' => 'via-api' }]
+      next [200, { 'ok' => 'via-api' }] unless target.start_with?('/functions/resolve')
+
+      sleep(resolve_delay) if resolve_delay.positive?
+      [status, resolve_payload]
     end
   end
 
@@ -72,6 +75,46 @@ RSpec.describe Volcano::Functions do
       end
 
       expect(api.targets).to eq(['/functions/resolve?name=missing-function'])
+    ensure
+      api.close
+    end
+  end
+
+  it 'shares one resolve across concurrent first invocations', :aggregate_failures do
+    api = api_server({
+                       'name' => 'send-welcome', 'function_id' => function_id,
+                       'invoke_url' => "#{functions_server.url}/", 'cache_ttl_seconds' => 300
+                     }, resolve_delay: 0.2)
+    begin
+      instance = client(api.url)
+      callers = Array.new(8) { Thread.new { instance.functions.invoke('send-welcome').status } }
+
+      expect(callers.map(&:value)).to all(eq(200))
+      expect(api.targets).to eq(['/functions/resolve?name=send-welcome'])
+      expect(functions_server.targets.length).to eq(8)
+    ensure
+      api.close
+    end
+  end
+
+  it 'resolves a recreated function again after a platform 404', :aggregate_failures do
+    invoked = 0
+    api = RecordingServer.new do |target|
+      if target.start_with?('/functions/resolve')
+        [200, { 'name' => 'send-welcome', 'function_id' => function_id, 'cache_ttl_seconds' => 300 }]
+      else
+        invoked += 1
+        # The first invocation finds the cached identity gone.
+        invoked == 1 ? [404, { 'error' => 'function not found' }] : [200, { 'ok' => true }]
+      end
+    end
+    begin
+      expect(client(api.url).functions.invoke('send-welcome').status).to eq(200)
+
+      expect(api.targets).to eq(
+        ['/functions/resolve?name=send-welcome', "/functions/#{function_id}/invoke",
+         '/functions/resolve?name=send-welcome', "/functions/#{function_id}/invoke"]
+      )
     ensure
       api.close
     end

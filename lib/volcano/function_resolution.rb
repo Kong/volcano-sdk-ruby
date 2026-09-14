@@ -21,24 +21,35 @@ module Volcano
 
     MAX_ENTRIES = 1024
     NEGATIVE_TTL_SECONDS = 30
-    ALLOWED_SCHEMES = %w[http https].freeze
-    private_constant :ALLOWED_SCHEMES
+
+    # Concurrent misses for one name serialize on a shared lock rather than
+    # each opening its own resolve. Striping keeps that bounded: a per-key lock
+    # table would grow with every name ever invoked.
+    LOCK_STRIPES = 64
+    private_constant :LOCK_STRIPES
 
     @lock = Mutex.new
     @entries = {}
+    @stripes = Array.new(LOCK_STRIPES) { Mutex.new }
 
     class << self
-      # Returns an absolute HTTP(S) invocation URL, or nil when unusable.
+      # Returns the lock that serializes resolving one name.
+      def resolve_lock(api_url, authorization, name)
+        @stripes[[api_url, authorization, name].hash % LOCK_STRIPES]
+      end
+
+      # Returns an absolute invocation URL, or nil when unusable.
       #
-      # The URL carries the caller's bearer token, so anything that is not a
-      # well-formed absolute HTTP(S) URL is discarded rather than requested.
-      def valid_invoke_url(value)
+      # The URL carries the caller's bearer token. Plaintext is accepted only
+      # when the API itself is plaintext, so a resolve response cannot
+      # downgrade a credential that is otherwise protected in transit.
+      def valid_invoke_url(value, api_url)
         return nil unless value.is_a?(String) && !value.empty?
 
         uri = URI.parse(value)
-        return nil unless ALLOWED_SCHEMES.include?(uri.scheme&.downcase) && !uri.host.to_s.empty?
+        return nil if uri.host.to_s.empty?
 
-        value
+        usable_scheme?(uri.scheme, api_url) ? value : nil
       rescue URI::InvalidURIError
         nil
       end
@@ -85,6 +96,14 @@ module Volcano
       end
 
       private
+
+      def usable_scheme?(scheme, api_url)
+        case scheme&.downcase
+        when 'https' then true
+        when 'http' then URI.parse(api_url).scheme&.downcase == 'http'
+        else false
+        end
+      end
 
       def write(key, outcome, ttl_seconds)
         @lock.synchronize do

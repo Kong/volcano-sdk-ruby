@@ -54,6 +54,17 @@ module Volcano
       cached = FunctionResolution.lookup(@api_url, authorization, name)
       return cached_resolution(cached) if cached
 
+      # Hold the name's lock across the round trip so concurrent callers wait
+      # for one resolve instead of each opening their own.
+      FunctionResolution.resolve_lock(@api_url, authorization, name).synchronize do
+        cached = FunctionResolution.lookup(@api_url, authorization, name)
+        next cached_resolution(cached) if cached
+
+        resolve_uncached(authorization, name)
+      end
+    end
+
+    def resolve_uncached(authorization, name)
       resolved = Transport.invoke do
         @transport.resolve_function_for_invocation(authorization: authorization, name: name)
       end
@@ -86,7 +97,7 @@ module Volcano
       # local development; the function is reached through the API instead.
       FunctionResolution::Resolution.new(
         function_id: function_id,
-        invoke_url: FunctionResolution.valid_invoke_url(payload['invoke_url'])
+        invoke_url: FunctionResolution.valid_invoke_url(payload['invoke_url'], @api_url)
       )
     end
 

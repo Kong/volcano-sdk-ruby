@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.3...v0.4.0) (2026-09-14)
+
+
+### Features
+
+* **projects:** add list metadata expansions ([#60](https://github.com/Kong/volcano-sdk-ruby/issues/60)) ([b5148f5](https://github.com/Kong/volcano-sdk-ruby/commit/b5148f561b80b9c6522c6eea5f28d0d3ac37a9c2))
+
 ## [0.3.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.2...v0.3.3) (2026-09-11)
 
 

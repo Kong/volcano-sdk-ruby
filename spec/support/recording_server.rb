@@ -48,16 +48,20 @@ class RecordingServer
   def handle(socket)
     request = read_request(socket)
     @lock.synchronize { @requests << request }
-    status, payload = @respond.call(request.target)
-    write_response(socket, status, JSON.generate(payload))
+    status, payload, extra = @respond.call(request.target)
+    write_response(socket, status, JSON.generate(payload), extra || {})
   ensure
     socket&.close
   end
 
-  def write_response(socket, status, body)
+  def write_response(socket, status, body, extra = {})
     reason = status == 200 ? 'OK' : 'Not Found'
+    # The server stamps the version on every response, errors included, so a
+    # spec that omits it would accept a client keying a retry off its absence.
+    headers = { 'X-Volcano-Version' => 'test-build' }.merge(extra)
+    stamped = headers.map { |name, value| "#{name}: #{value}\r\n" }.join
     socket.write("HTTP/1.1 #{status} #{reason}\r\nContent-Type: application/json\r\n" \
-                 "Content-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+                 "Content-Length: #{body.bytesize}\r\nConnection: close\r\n#{stamped}\r\n#{body}")
   end
 
   def read_request(socket)

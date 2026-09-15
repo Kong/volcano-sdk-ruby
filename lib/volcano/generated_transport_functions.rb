@@ -6,8 +6,13 @@ module Volcano
     def resolve_function_for_invocation(authorization:, name:)
       invoke do
         apis = @api_factory.call(authorization)
-        data, status, headers = apis.functions.resolve_function_for_invocation_with_http_info(name)
-        response(data, status, headers)
+        # Read the resolve body as JSON rather than the generated model: the
+        # model drops fields the vendored specification predates, and
+        # invoke_url is one of them.
+        data, status, headers = apis.functions.resolve_function_for_invocation_with_http_info(
+          name, debug_return_type: 'String'
+        )
+        response(resolve_body(data), status, headers)
       end
     end
 
@@ -18,7 +23,45 @@ module Volcano
       end
     end
 
+    def invoke_function_url(authorization:, invoke_url:, payload:)
+      invoke do
+        data, status, headers = function_url_response(authorization, invoke_url, payload)
+        response(function_body(data, headers), status, headers)
+      end
+    end
+
     private
+
+    def resolve_body(body)
+      return body unless body.is_a?(String)
+      return nil if body.empty?
+
+      JSON.parse(body)
+    rescue JSON::ParserError
+      nil
+    end
+
+    # The resolved endpoint is absolute and off the API host, so it cannot go
+    # through the generated client's configured base URL. The body still uses
+    # the invoke contract's { payload } envelope.
+    def function_url_response(authorization, invoke_url, payload)
+      request = Typhoeus::Request.new(
+        invoke_url,
+        method: :post,
+        body: JSON.generate(payload: payload),
+        headers: {
+          'Authorization' => "Bearer #{authorization}",
+          'Content-Type' => 'application/json',
+          'Accept' => 'application/json'
+        },
+        timeout: @timeout,
+        followlocation: false
+      )
+      result = request.run
+      raise Error::TransportError, (result.return_message || 'Volcano request failed') unless result.code.positive?
+
+      [result.body, result.code, result.headers || {}]
+    end
 
     def function_http_response(authorization, function_id, payload)
       apis = @api_factory.call(authorization)

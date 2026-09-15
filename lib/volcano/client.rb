@@ -106,7 +106,7 @@ module Volcano
 
     def initialize_facades(socket_factory, reconnect_delay)
       @auth = Auth.new(self, @transport, api_url: @api_url)
-      @functions = Functions.new(self, @transport)
+      @functions = Functions.new(self, @transport, api_url: @api_url)
       @logs = Logs.new(self, @transport)
       @storage = Storage.new(self, @transport, api_url: @api_url, anon_key: @anon_key)
       @locks = Locks.new(self, @transport)

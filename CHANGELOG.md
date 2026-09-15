@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.4.0...v0.5.0) (2026-09-15)
+
+
+### Features
+
+* **functions:** cache name resolution and invoke the resolved endpoint ([#117](https://github.com/Kong/volcano-sdk-ruby/issues/117)) ([ed3f786](https://github.com/Kong/volcano-sdk-ruby/commit/ed3f786a4bcee902d1a3b6a4a9423dfa4524e6d4))
+
 ## [0.4.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.3...v0.4.0) (2026-09-14)
 
 

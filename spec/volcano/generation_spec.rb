@@ -7,7 +7,7 @@ require 'tmpdir'
 
 RSpec.describe 'OpenAPI generation' do
   ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = 'e14c8b674ff2d4b61ade395c24936785b7c23ad3389db14aa22e3addca5a825c'
+  OPENAPI_SHA256 = 'b5a1dab08ba903ae65d590bcec3601e3b551318dd56637f0d1ed2bdb555e5457'
 
   it 'preserves explicit null without turning omitted object fields into null' do
     Dir.mktmpdir('volcano-ruby-nullable') do |directory|

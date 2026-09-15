@@ -24,7 +24,7 @@ module Volcano::Generated
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles.
-    # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for the Node runtimes; any other runtime is rejected with 400 and the response names the ones that work. 
+    # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for these runtimes only; any other runtime is rejected with 400 and the response names the ones that work. Note that a durable Python function needs a newer runtime than a standard one defaults to. &#x60;GET /functions/runtimes&#x60; reports &#x60;durable_capable&#x60; per runtime. 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. (default to 'handler')
     # @option opts [Boolean] :is_public Whether anon keys with &#x60;functions.invoke&#x60; may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts private.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
@@ -41,7 +41,7 @@ module Volcano::Generated
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles.
-    # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for the Node runtimes; any other runtime is rejected with 400 and the response names the ones that work. 
+    # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for these runtimes only; any other runtime is rejected with 400 and the response names the ones that work. Note that a durable Python function needs a newer runtime than a standard one defaults to. &#x60;GET /functions/runtimes&#x60; reports &#x60;durable_capable&#x60; per runtime. 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. (default to 'handler')
     # @option opts [Boolean] :is_public Whether anon keys with &#x60;functions.invoke&#x60; may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts private.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
@@ -78,7 +78,7 @@ module Volcano::Generated
         fail ArgumentError, "Missing the required parameter 'runtime' when calling DurableFunctionsApi.create_durable_function"
       end
       # verify enum value
-      allowable_values = ["nodejs22.x", "nodejs24.x"]
+      allowable_values = ["nodejs22.x", "nodejs24.x", "python3.13", "python3.14"]
       if @api_client.config.client_side_validation && !allowable_values.include?(runtime)
         fail ArgumentError, "invalid value for \"runtime\", must be one of #{allowable_values}"
       end

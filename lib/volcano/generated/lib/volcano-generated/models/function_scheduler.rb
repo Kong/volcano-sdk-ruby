@@ -21,6 +21,9 @@ module Volcano::Generated
 
     attr_accessor :function_id
 
+    # Which collection the scheduled function belongs to. A project-wide scheduler list mixes both kinds, and this is what says whether the function is read back from `/projects/{id}/functions` or `/projects/{id}/durable-functions` — and whether a tick invokes it or starts a durable execution. 
+    attr_accessor :function_kind
+
     attr_accessor :name
 
     attr_accessor :enabled
@@ -78,6 +81,7 @@ module Volcano::Generated
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'function_id' => :'function_id',
+        :'function_kind' => :'function_kind',
         :'name' => :'name',
         :'enabled' => :'enabled',
         :'schedule_kind' => :'schedule_kind',
@@ -111,6 +115,7 @@ module Volcano::Generated
         :'id' => :'String',
         :'project_id' => :'String',
         :'function_id' => :'String',
+        :'function_kind' => :'FunctionKind',
         :'name' => :'String',
         :'enabled' => :'Boolean',
         :'schedule_kind' => :'String',
@@ -160,6 +165,10 @@ module Volcano::Generated
 
       if attributes.key?(:'function_id')
         self.function_id = attributes[:'function_id']
+      end
+
+      if attributes.key?(:'function_kind')
+        self.function_kind = attributes[:'function_kind']
       end
 
       if attributes.key?(:'name')
@@ -258,6 +267,7 @@ module Volcano::Generated
           id == o.id &&
           project_id == o.project_id &&
           function_id == o.function_id &&
+          function_kind == o.function_kind &&
           name == o.name &&
           enabled == o.enabled &&
           schedule_kind == o.schedule_kind &&
@@ -283,7 +293,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, function_id, name, enabled, schedule_kind, cron_expression, payload, regions, regions_explicit, next_run_at, last_started_at, last_completed_at, last_error, run_count, created_at, updated_at].hash
+      [id, project_id, function_id, function_kind, name, enabled, schedule_kind, cron_expression, payload, regions, regions_explicit, next_run_at, last_started_at, last_completed_at, last_error, run_count, created_at, updated_at].hash
     end
 
     # Builds the object from hash

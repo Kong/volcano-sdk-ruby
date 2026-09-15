@@ -14,33 +14,31 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class Variable < ApiModelBase
-    # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
-    attr_accessor :shared
-
+  class DurableExecution < ApiModelBase
     attr_accessor :id
 
-    attr_accessor :project_id
+    attr_accessor :function_id
 
+    # Idempotency key for the execution. Supplied by the client through `X-Volcano-Execution-Name`, otherwise generated. 
     attr_accessor :name
 
-    attr_accessor :value
-
-    # Latest project variable propagation status, when a sync has run.
     attr_accessor :status
 
-    # Identifier of the latest variable propagation sync.
-    attr_accessor :current_sync_id
+    # Region the execution runs in. An execution is pinned to one region for its whole life because its checkpoints live there. 
+    attr_accessor :region
 
-    # Timestamp when the current variable propagation phase started.
-    attr_accessor :provisioning_started_at
+    # Whatever the function returned, verbatim. Absent while the execution is still running, absent when the result was too large to return and was checkpointed instead, and absent once the retention period has lapsed. 
+    attr_accessor :result
 
-    # What initiated the latest variable propagation sync, when one has run.
-    attr_accessor :deploy_source
+    # `true` when the execution is terminal but its result is no longer retained, which distinguishes a discarded result from an empty one. Shortly after that the execution itself is dropped and reads answer `404`.  A result that was checkpointed rather than returned leaves this unset, so it reads like a function that returned nothing. 
+    attr_accessor :result_expired
+
+    attr_accessor :error
 
     attr_accessor :created_at
 
-    attr_accessor :updated_at
+    # Present once the execution has reached a terminal status.
+    attr_accessor :completed_at
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -67,17 +65,16 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'shared' => :'shared',
         :'id' => :'id',
-        :'project_id' => :'project_id',
+        :'function_id' => :'function_id',
         :'name' => :'name',
-        :'value' => :'value',
         :'status' => :'status',
-        :'current_sync_id' => :'current_sync_id',
-        :'provisioning_started_at' => :'provisioning_started_at',
-        :'deploy_source' => :'deploy_source',
+        :'region' => :'region',
+        :'result' => :'result',
+        :'result_expired' => :'result_expired',
+        :'error' => :'error',
         :'created_at' => :'created_at',
-        :'updated_at' => :'updated_at'
+        :'completed_at' => :'completed_at'
       }
     end
 
@@ -94,23 +91,23 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'shared' => :'Boolean',
         :'id' => :'String',
-        :'project_id' => :'String',
+        :'function_id' => :'String',
         :'name' => :'String',
-        :'value' => :'String',
-        :'status' => :'String',
-        :'current_sync_id' => :'String',
-        :'provisioning_started_at' => :'Time',
-        :'deploy_source' => :'String',
+        :'status' => :'DurableExecutionStatus',
+        :'region' => :'String',
+        :'result' => :'Object',
+        :'result_expired' => :'Boolean',
+        :'error' => :'DurableExecutionError',
         :'created_at' => :'Time',
-        :'updated_at' => :'Time'
+        :'completed_at' => :'Time'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'result',
       ])
     end
 
@@ -118,21 +115,17 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::Variable` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableExecution` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::Variable`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableExecution`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
-
-      if attributes.key?(:'shared')
-        self.shared = attributes[:'shared']
-      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -140,10 +133,10 @@ module Volcano::Generated
         self.id = nil
       end
 
-      if attributes.key?(:'project_id')
-        self.project_id = attributes[:'project_id']
+      if attributes.key?(:'function_id')
+        self.function_id = attributes[:'function_id']
       else
-        self.project_id = nil
+        self.function_id = nil
       end
 
       if attributes.key?(:'name')
@@ -152,26 +145,28 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'value')
-        self.value = attributes[:'value']
-      else
-        self.value = nil
-      end
-
       if attributes.key?(:'status')
         self.status = attributes[:'status']
+      else
+        self.status = nil
       end
 
-      if attributes.key?(:'current_sync_id')
-        self.current_sync_id = attributes[:'current_sync_id']
+      if attributes.key?(:'region')
+        self.region = attributes[:'region']
+      else
+        self.region = nil
       end
 
-      if attributes.key?(:'provisioning_started_at')
-        self.provisioning_started_at = attributes[:'provisioning_started_at']
+      if attributes.key?(:'result')
+        self.result = attributes[:'result']
       end
 
-      if attributes.key?(:'deploy_source')
-        self.deploy_source = attributes[:'deploy_source']
+      if attributes.key?(:'result_expired')
+        self.result_expired = attributes[:'result_expired']
+      end
+
+      if attributes.key?(:'error')
+        self.error = attributes[:'error']
       end
 
       if attributes.key?(:'created_at')
@@ -180,10 +175,8 @@ module Volcano::Generated
         self.created_at = nil
       end
 
-      if attributes.key?(:'updated_at')
-        self.updated_at = attributes[:'updated_at']
-      else
-        self.updated_at = nil
+      if attributes.key?(:'completed_at')
+        self.completed_at = attributes[:'completed_at']
       end
     end
 
@@ -196,28 +189,24 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "id", id cannot be nil.')
       end
 
-      if @project_id.nil?
-        invalid_properties.push('invalid value for "project_id", project_id cannot be nil.')
+      if @function_id.nil?
+        invalid_properties.push('invalid value for "function_id", function_id cannot be nil.')
       end
 
       if @name.nil?
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @name.to_s.length > 256
-        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 256.')
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
-      if @value.nil?
-        invalid_properties.push('invalid value for "value", value cannot be nil.')
+      if @region.nil?
+        invalid_properties.push('invalid value for "region", region cannot be nil.')
       end
 
       if @created_at.nil?
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
-      end
-
-      if @updated_at.nil?
-        invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
       end
 
       invalid_properties
@@ -228,16 +217,11 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @id.nil?
-      return false if @project_id.nil?
+      return false if @function_id.nil?
       return false if @name.nil?
-      return false if @name.to_s.length > 256
-      return false if @value.nil?
-      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
-      return false unless status_validator.valid?(@status)
-      deploy_source_validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      return false unless deploy_source_validator.valid?(@deploy_source)
+      return false if @status.nil?
+      return false if @region.nil?
       return false if @created_at.nil?
-      return false if @updated_at.nil?
       true
     end
 
@@ -252,13 +236,13 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] project_id Value to be assigned
-    def project_id=(project_id)
-      if project_id.nil?
-        fail ArgumentError, 'project_id cannot be nil'
+    # @param [Object] function_id Value to be assigned
+    def function_id=(function_id)
+      if function_id.nil?
+        fail ArgumentError, 'function_id cannot be nil'
       end
 
-      @project_id = project_id
+      @function_id = function_id
     end
 
     # Custom attribute writer method with validation
@@ -268,41 +252,27 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
-      if name.to_s.length > 256
-        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 256.'
-      end
-
       @name = name
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] value Value to be assigned
-    def value=(value)
-      if value.nil?
-        fail ArgumentError, 'value cannot be nil'
-      end
-
-      @value = value
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] status Object to be assigned
+    # @param [Object] status Value to be assigned
     def status=(status)
-      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
-      unless validator.valid?(status)
-        fail ArgumentError, "invalid value for \"status\", must be one of #{validator.allowable_values}."
+      if status.nil?
+        fail ArgumentError, 'status cannot be nil'
       end
+
       @status = status
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] deploy_source Object to be assigned
-    def deploy_source=(deploy_source)
-      validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      unless validator.valid?(deploy_source)
-        fail ArgumentError, "invalid value for \"deploy_source\", must be one of #{validator.allowable_values}."
+    # Custom attribute writer method with validation
+    # @param [Object] region Value to be assigned
+    def region=(region)
+      if region.nil?
+        fail ArgumentError, 'region cannot be nil'
       end
-      @deploy_source = deploy_source
+
+      @region = region
     end
 
     # Custom attribute writer method with validation
@@ -315,32 +285,21 @@ module Volcano::Generated
       @created_at = created_at
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] updated_at Value to be assigned
-    def updated_at=(updated_at)
-      if updated_at.nil?
-        fail ArgumentError, 'updated_at cannot be nil'
-      end
-
-      @updated_at = updated_at
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          shared == o.shared &&
           id == o.id &&
-          project_id == o.project_id &&
+          function_id == o.function_id &&
           name == o.name &&
-          value == o.value &&
           status == o.status &&
-          current_sync_id == o.current_sync_id &&
-          provisioning_started_at == o.provisioning_started_at &&
-          deploy_source == o.deploy_source &&
+          region == o.region &&
+          result == o.result &&
+          result_expired == o.result_expired &&
+          error == o.error &&
           created_at == o.created_at &&
-          updated_at == o.updated_at
+          completed_at == o.completed_at
     end
 
     # @see the `==` method
@@ -352,7 +311,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [shared, id, project_id, name, value, status, current_sync_id, provisioning_started_at, deploy_source, created_at, updated_at].hash
+      [id, function_id, name, status, region, result, result_expired, error, created_at, completed_at].hash
     end
 
     # Builds the object from hash

@@ -19,7 +19,7 @@ module Volcano::Generated
     # Database name (must be unique within project)
     attr_accessor :name
 
-    # Region for database hosting
+    # Region for database hosting. The accepted values are the regions this environment runs in, so read them from `GET /databases/regions` rather than hardcoding a list. A region the environment does not offer is rejected with 400. 
     attr_accessor :region
 
     # PostgreSQL major version
@@ -164,8 +164,6 @@ module Volcano::Generated
       return false if @name.to_s.length > 64
       return false if @name !~ Regexp.new(/^[a-z0-9_]+$/)
       return false if @region.nil?
-      region_validator = EnumAttributeValidator.new('String', ["aws-us-east-1", "aws-us-east-2", "aws-us-west-2", "aws-eu-central-1", "aws-eu-west-2", "aws-ap-southeast-1", "aws-ap-southeast-2", "aws-sa-east-1"])
-      return false unless region_validator.valid?(@region)
       return false if @pg_version.nil?
       pg_version_validator = EnumAttributeValidator.new('String', ["15", "16"])
       return false unless pg_version_validator.valid?(@pg_version)
@@ -193,13 +191,13 @@ module Volcano::Generated
       @name = name
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] region Object to be assigned
+    # Custom attribute writer method with validation
+    # @param [Object] region Value to be assigned
     def region=(region)
-      validator = EnumAttributeValidator.new('String', ["aws-us-east-1", "aws-us-east-2", "aws-us-west-2", "aws-eu-central-1", "aws-eu-west-2", "aws-ap-southeast-1", "aws-ap-southeast-2", "aws-sa-east-1"])
-      unless validator.valid?(region)
-        fail ArgumentError, "invalid value for \"region\", must be one of #{validator.allowable_values}."
+      if region.nil?
+        fail ArgumentError, 'region cannot be nil'
       end
+
       @region = region
     end
 

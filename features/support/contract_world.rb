@@ -35,7 +35,7 @@ module VolcanoContract
     429 => 'rate limited'
   }.freeze
 
-  CREDENTIAL_KEYS = %w[anon_key service_key user_password].freeze
+  CREDENTIAL_KEYS = %w[anon_key service_key platform_token user_password].freeze
 
   def self.classify_error(error)
     category = ERROR_CATEGORIES.find { |error_type, _| error.is_a?(error_type) }&.last
@@ -56,7 +56,7 @@ module VolcanoContract
   class World
     attr_accessor :auth_state_sessions, :client, :last_outcome, :previous_session, :signed_out_session,
                   :subscriber, :publisher
-    attr_reader :fixture, :service_client, :storage_path, :storage_bytes,
+    attr_reader :fixture, :service_client, :storage_path, :storage_bytes, :suffix,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 
     def initialize(fixture)
@@ -69,6 +69,12 @@ module VolcanoContract
       @auth_state_sessions = []
       @realtime_clients = []
       @cleanup_callbacks = []
+    end
+
+    # Built on demand: only the durable scenarios hold the project's own token,
+    # which is the credential its owner-scoped half needs.
+    def durable
+      @durable ||= DurableExecutions.new(self)
     end
 
     def authenticate(client = @client)
@@ -125,7 +131,7 @@ module VolcanoContract
     end
 
     def initialize_resource_names
-      suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
+      @suffix = "rb-#{Process.pid}-#{SecureRandom.hex(5)}"
       @storage_path = "#{fixture.fetch('storage_path')}.#{suffix}"
       @storage_bytes = "volcano-sdk-contract-#{suffix}".b
       @realtime_channel = "#{fixture.fetch('realtime_channel')}-#{suffix}"

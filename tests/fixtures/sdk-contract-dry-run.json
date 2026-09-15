@@ -3,6 +3,7 @@
   "project_id": "dry-run-project",
   "anon_key": "dry-run-anon-key",
   "service_key": "dry-run-service-key",
+  "platform_token": "dry-run-platform-token",
   "user_id": "dry-run-user",
   "user_email": "dry-run@example.com",
   "user_password": "dry-run-password",
@@ -23,5 +24,6 @@
   "bucket_name": "dry-run",
   "storage_path": "dry-run/payload.txt",
   "realtime_channel": "dry-run",
-  "lock_key": "dry-run"
+  "lock_key": "dry-run",
+  "durable_function_name": "dry-run-durable"
 }

@@ -788,7 +788,8 @@ delivery.
 
 ## Dependencies
 
-Installing the gem pulls in six, plus their own transitive dependencies:
+Installing `volcano-sdk` pulls in six gems, plus their own transitive
+dependencies:
 
 | Gem                                                          | Why                                                                     |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------- |

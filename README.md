@@ -427,6 +427,54 @@ A function's own
 non-2xx response is returned when the version header proves it ran; platform
 failures raise typed SDK errors.
 
+### Start and follow a durable execution
+
+```ruby
+project_id = "00000000-0000-4000-8000-000000000001"
+handle = client.durable.start(
+  "charge-order",
+  { order_id: "order-9" },
+  execution_name: "order-9"
+)
+
+execution = client.durable.get(project_id, "charge-order", handle.id)
+puts [execution.status, execution.terminal?, execution.result]
+
+page = client.durable.list(project_id, "charge-order", status: "running")
+puts [page.total, page.has_more]
+
+client.durable.stop(project_id, "charge-order", handle.id)
+```
+
+`start` takes a durable function's name or its id and returns a handle, never a
+result: an execution can run for hours, so its result is read back with `get`.
+It uses the same credential `invoke` does — the active user session, then a
+configured service key, then the anonymous key — and is the only durable
+operation an application credential may perform. An `execution_name` makes the
+start idempotent: starting again under the same name returns the execution that
+already exists rather than beginning a second one.
+
+`get`, `list`, and `stop` are owner-scoped and require an active user session,
+because an execution is addressed by its id alone. `get` carries the deeply
+frozen `result` once the execution has succeeded, and `error` when it failed;
+`result_expired` separates a result the platform has discarded from a function
+that returned nothing. `terminal?` reports whether the execution has stopped
+changing, and counts `unknown` — the status the platform writes for an outcome
+it could not determine — as finished. `list` returns one page of executions,
+most recent first, each carrying the status last observed rather than a live
+one. `stop` is accepted rather than awaited: what it returns is the execution
+read back after asking, often still `running`, so poll `get` to see it reach
+`stopped`. Repeating a stop is safe.
+
+This gem starts and follows durable executions; it cannot write the durable
+function itself. Checkpointing a handler needs a durable authoring API, and
+there is no Ruby one, so Volcano hosts durable functions on `nodejs22.x`,
+`nodejs24.x`, `python3.13` and `python3.14`. Write the function in JavaScript
+or Python and drive it from Ruby; the operations above are the whole surface a
+caller needs.
+Ruby remains a fully supported runtime for [standard
+functions](https://volcano.dev/platform/functions/overview).
+
 ### Read project logs
 
 ```ruby
@@ -737,6 +785,23 @@ publications yet; presence channels rebuild their current snapshot.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.
+
+## Dependencies
+
+Installing the gem pulls in six, plus their own transitive dependencies:
+
+| Gem                                                          | Why                                                                     |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [`typhoeus`](https://rubygems.org/gems/typhoeus)             | The HTTP library the generated REST client uses                         |
+| [`logger`](https://rubygems.org/gems/logger)                 | Required by that client, and no longer a default gem                    |
+| [`async`](https://rubygems.org/gems/async)                   | The reactor realtime runs its connection and delivery on                |
+| [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |
+| [`async-websocket`](https://rubygems.org/gems/async-websocket) | The realtime transport itself                                         |
+| [`protocol-rack`](https://rubygems.org/gems/protocol-rack)   | A requirement of `async-websocket`, pinned here so the version is ours  |
+
+There is no optional durable dependency, because this gem starts and follows
+durable executions rather than writing them. See
+[Start and follow a durable execution](#start-and-follow-a-durable-execution).
 
 ## Generated boundary
 

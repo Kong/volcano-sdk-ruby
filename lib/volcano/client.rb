@@ -12,7 +12,7 @@ module Volcano
     end
     private_constant :SessionToken
 
-    attr_reader :auth, :functions, :logs, :storage, :locks, :realtime
+    attr_reader :auth, :functions, :durable, :logs, :storage, :locks, :realtime
 
     def initialize(
       anon_key:,
@@ -107,6 +107,7 @@ module Volcano
     def initialize_facades(socket_factory, reconnect_delay)
       @auth = Auth.new(self, @transport, api_url: @api_url)
       @functions = Functions.new(self, @transport)
+      @durable = Durable.new(self, @transport)
       @logs = Logs.new(self, @transport)
       @storage = Storage.new(self, @transport, api_url: @api_url, anon_key: @anon_key)
       @locks = Locks.new(self, @transport)

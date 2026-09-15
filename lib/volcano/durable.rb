@@ -1,0 +1,101 @@
+# frozen_string_literal: true
+
+module Volcano
+  # Starts and follows executions of deployed durable functions.
+  class Durable
+    include DurableResponses
+
+    def initialize(client, transport)
+      @client = client
+      @transport = transport
+    end
+
+    # Starts an execution and returns its handle. A durable function is never
+    # invoked synchronously: it can outlive any request a caller could hold
+    # open, so its result is read back with #get.
+    #
+    # Starting is the only durable operation an application credential may
+    # perform, and it takes the token an invoke takes. Passing an
+    # +execution_name+ makes the start idempotent: starting again under the
+    # same name returns the execution that already exists rather than
+    # beginning a second one.
+    def start(function_name, payload = {}, execution_name: nil)
+      # A durable function's id is accepted here as well as its name, so the
+      # DNS-safe name pattern an invoke checks would reject half the input.
+      function_id = identifier(function_name, 'function_name')
+      name = execution_name.nil? ? nil : identifier(execution_name, 'execution_name')
+      response = Transport.invoke do
+        @transport.start_durable_execution_from_application(
+          authorization: @client.function_token,
+          function_id: function_id, payload: payload.dup, execution_name: name
+        )
+      end
+      durable_execution(Transport.body(response, 202))
+    end
+
+    # Reads an execution, including its result once it has succeeded.
+    #
+    # Owner-scoped: an execution is addressed by its id alone and an anon key
+    # is held by everyone who loads the page, so this takes the project id and
+    # the project's own session. Poll it from a backend, not a browser.
+    def get(project_id, function_name, execution_id)
+      project, function_id, execution = execution_path(project_id, function_name, execution_id)
+      response = Transport.invoke do
+        @transport.get_durable_execution(
+          authorization: @client.session_token,
+          project_id: project, function_id: function_id, execution_id: execution
+        )
+      end
+      durable_execution(Transport.body(response, 200))
+    end
+
+    # Lists a durable function's executions, most recent first. Each entry
+    # carries the status the platform last observed rather than a live one;
+    # read a single execution for that. Owner-scoped, like #get.
+    def list(project_id, function_name, status: nil, page: nil, limit: nil)
+      project = identifier(project_id, 'project_id')
+      function_id = identifier(function_name, 'function_name')
+      response = Transport.invoke do
+        @transport.list_durable_executions(
+          authorization: @client.session_token, project_id: project, function_id: function_id,
+          options: { status: status, page: page, limit: limit }.compact
+        )
+      end
+      durable_execution_page(Transport.body(response, 200))
+    end
+
+    # Asks a running execution to stop. Accepted rather than awaited: what
+    # comes back is the execution read after asking, and it often still says
+    # +running+, so poll #get to see it reach +stopped+. Completed steps are
+    # not undone, and repeating a stop is safe — an execution that has already
+    # finished reports the state it settled in. Owner-scoped, like #get.
+    def stop(project_id, function_name, execution_id)
+      project, function_id, execution = execution_path(project_id, function_name, execution_id)
+      response = Transport.invoke do
+        @transport.stop_durable_execution(
+          authorization: @client.session_token,
+          project_id: project, function_id: function_id, execution_id: execution
+        )
+      end
+      durable_execution(Transport.body(response, 200))
+    end
+
+    private
+
+    def execution_path(project_id, function_name, execution_id)
+      [
+        identifier(project_id, 'project_id'),
+        identifier(function_name, 'function_name'),
+        identifier(execution_id, 'execution_id')
+      ]
+    end
+
+    # An empty path segment would address the collection instead of the
+    # execution, which is a different request rather than a failed one.
+    def identifier(value, field)
+      raise ArgumentError, "#{field} must be a non-empty String" unless present_string?(value)
+
+      value.strip.freeze
+    end
+  end
+end

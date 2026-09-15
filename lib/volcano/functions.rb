@@ -6,6 +6,10 @@ module Volcano
     FUNCTION_NAME = /\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/
     private_constant :FUNCTION_NAME
 
+    # Present only once the platform has dispatched to the function.
+    FUNCTION_INVOKED_HEADER = 'X-Volcano-Function-Invoked'
+    private_constant :FUNCTION_INVOKED_HEADER
+
     def initialize(client, transport, api_url:)
       @client = client
       @transport = transport
@@ -29,12 +33,14 @@ module Volcano
 
     private
 
-    # A platform 404 means the cached function identity is gone. A function
-    # that answers 404 itself carries the version header, and its response must
-    # be returned rather than retried: invoking twice would run the caller's
-    # side effects twice.
+    # A platform 404 means the cached function identity is gone. A function that
+    # answers 404 itself must be returned rather than retried: invoking twice
+    # would run the caller's side effects twice. The platform sets
+    # X-Volcano-Function-Invoked only after dispatch, so its absence is what
+    # separates the two. X-Volcano-Version cannot: the server stamps it on every
+    # response, including errors raised before the function is reached.
     def stale_mapping?(response)
-      response.status == 404 && header(response.headers, 'X-Volcano-Version').nil?
+      response.status == 404 && header(response.headers, FUNCTION_INVOKED_HEADER).nil?
     end
 
     def invoke_resolved(authorization, resolution, payload)

@@ -21,6 +21,8 @@ RSpec.describe Volcano::FunctionResolution do
     status = resolve_status
     statuses = invoke_plan.fetch(:statuses).dup
     version = invoke_plan.fetch(:version)
+    # Whether the platform got as far as dispatching, per invocation.
+    dispatches = invoke_plan.fetch(:dispatched, [true]).dup
     Object.new.tap do |fake|
       fake.define_singleton_method(:resolve_function_for_invocation) do |**arguments|
         call_log << [:resolve_function_for_invocation, arguments]
@@ -30,7 +32,10 @@ RSpec.describe Volcano::FunctionResolution do
         fake.define_singleton_method(operation) do |**arguments|
           call_log << [operation, arguments]
           invoke_status = statuses.length > 1 ? statuses.shift : statuses.first
-          headers = version.nil? ? {} : { 'X-Volcano-Version' => version }
+          dispatched = dispatches.length > 1 ? dispatches.shift : dispatches.first
+          headers = {}
+          headers['X-Volcano-Version'] = version unless version.nil?
+          headers['X-Volcano-Function-Invoked'] = 'true' if dispatched
           Volcano::Transport::Response.new(
             status: invoke_status, body: { 'ok' => true }, headers: headers, data: nil
           )
@@ -148,9 +153,10 @@ RSpec.describe Volcano::FunctionResolution do
   end
 
   context 'when the cached identity is gone' do
-    # A recreated function gets a new id, so the cached one answers 404. No
-    # version header: the 404 comes from the platform, not the function.
-    let(:invoke_plan) { { statuses: [404, 200], version: nil } }
+    # A recreated function gets a new id, so the cached one answers 404. The
+    # version header is still there — every response carries it — and only the
+    # dispatch marker is missing, which is what marks this as the platform's.
+    let(:invoke_plan) { { statuses: [404, 200], version: 'v1', dispatched: [false, true] } }
 
     it 'resolves again and retries once', :aggregate_failures do
       result = client.functions.invoke('send-welcome')
@@ -163,7 +169,8 @@ RSpec.describe Volcano::FunctionResolution do
   end
 
   context 'when the function itself answers 404' do
-    let(:invoke_plan) { { statuses: [404], version: 'v1' } }
+    # It ran, so the dispatch marker is present and a retry would run it twice.
+    let(:invoke_plan) { { statuses: [404], version: 'v1', dispatched: [true] } }
 
     it 'returns that response without invoking twice', :aggregate_failures do
       result = client.functions.invoke('send-welcome')

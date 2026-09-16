@@ -26,6 +26,8 @@ class BroadcastRecoverySocket
     respond(command.fetch('id'), result: result)
   end
 
+  def flush; end
+
   def read
     value = @incoming.dequeue
     raise value if value.is_a?(Exception)

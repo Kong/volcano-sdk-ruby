@@ -663,6 +663,10 @@ Async do
 end.wait
 ```
 
+`channel.unsubscribe` waits for the server acknowledgement and pauses delivery.
+Call `channel.subscribe` on the same channel to resume, then send as usual.
+These commands complete even when the connection is otherwise idle.
+
 ### Track presence
 
 Presence identity and metadata come from the authenticated user. `track` keeps

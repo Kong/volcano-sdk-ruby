@@ -19,6 +19,8 @@ class RecoveryDispatchSocket
 
   def write(message) = on_write&.call(JSON.parse(message))
 
+  def flush; end
+
   def read = @incoming.dequeue
 
   def receive(*frames) = @incoming.enqueue(frames.map { |frame| JSON.generate(frame) }.join("\n"))

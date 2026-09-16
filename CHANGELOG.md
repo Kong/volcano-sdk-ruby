@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.0...v0.5.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **realtime:** flush commands before waiting for replies ([#123](https://github.com/Kong/volcano-sdk-ruby/issues/123)) ([8797d18](https://github.com/Kong/volcano-sdk-ruby/commit/8797d18afb9c5614292b2d23f3dbdf9caed0c77e))
+
 ## [0.5.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.4.0...v0.5.0) (2026-09-15)
 
 

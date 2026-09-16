@@ -23,6 +23,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
       on_write&.call(JSON.parse(value))
     end
 
+    def flush; end
+
     def read
       @incoming.dequeue
     end
@@ -486,6 +488,19 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
       end.to raise_error(Volcano::Realtime::PendingLimitError)
       expect { pending.wait }.to raise_error(Volcano::Realtime::RequestTimeoutError)
       protocol.close
+    end.wait
+  end
+
+  it 'closes the socket and redacts failures while flushing a command' do
+    Async do |task|
+      socket = FakeSocket.new
+      socket.define_singleton_method(:flush) { raise IOError, 'flush failed for access-token' }
+      protocol = described_class.new(socket: socket, task: task, secrets: ['access-token'])
+
+      expect { protocol.connect(token: 'access-token') }.to raise_error(
+        Volcano::Realtime::ClosedError, 'flush failed for [REDACTED]'
+      )
+      expect(socket).to be_closed
     end.wait
   end
 

@@ -90,15 +90,24 @@ RSpec.describe Volcano::Realtime do
 
   class FacadeSocket
     attr_accessor :on_write
-    attr_reader :commands
+    attr_reader :commands, :reading
 
     def initialize
       @incoming = Async::Queue.new
       @commands = []
+      @buffer = []
       @closed = false
     end
 
     def write(frame)
+      @buffer << frame
+    end
+
+    def flush
+      dispatch(@buffer.shift) until @buffer.empty?
+    end
+
+    def dispatch(frame)
       command = JSON.parse(frame.to_str)
       @commands << command
       return if on_write&.call(command) == :defer
@@ -108,10 +117,14 @@ RSpec.describe Volcano::Realtime do
     end
 
     def read
+      flush
+      @reading = true
       value = @incoming.dequeue
       raise value if value.is_a?(Exception)
 
       value
+    ensure
+      @reading = false
     end
 
     def publication(channel:, data:)
@@ -200,6 +213,29 @@ RSpec.describe Volcano::Realtime do
       socket.respond(command.fetch('id'), result: { 'presence' => clients })
       :defer
     end
+  end
+
+  it 'sends commands while the socket reader is blocked waiting for data' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      task.yield
+      expect(socket.reading).to be true
+
+      task.with_timeout(0.2) do
+        channel.unsubscribe
+        channel.subscribe
+        channel.send(event: 'message', value: 'after resume')
+      end
+      expect(socket.commands.map { |command| (command.keys - ['id']).first }).to eq(
+        %w[connect subscribe unsubscribe subscribe publish]
+      )
+    ensure
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'exposes the canonical channel name' do

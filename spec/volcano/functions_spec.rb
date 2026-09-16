@@ -47,7 +47,12 @@ RSpec.describe Volcano::Functions do
         let(:invoked) do
           Typhoeus::Response.new(
             code: status, body: body,
-            headers: { 'Content-Type' => content_type, 'X-Volcano-Version' => 'v2' }
+            # The function ran and chose this status, the 422 included. Without
+            # the dispatch marker the platform would own the failure.
+            headers: {
+              'Content-Type' => content_type, 'X-Volcano-Version' => 'v2',
+              'X-Volcano-Function-Invoked' => 'true'
+            }
           )
         end
 

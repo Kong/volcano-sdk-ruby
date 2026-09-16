@@ -114,9 +114,14 @@ module Volcano
       ttl
     end
 
+    # A non-2xx the platform produced never reached the function, so it raises
+    # rather than being returned as the function's answer. That turns on the
+    # dispatch marker, not on the version stamp, which every response carries —
+    # keying on the stamp would hand back every platform failure as a reply.
     def function_response(response)
       version = header(response.headers, 'X-Volcano-Version')
-      Transport.body(response, 200) unless response.status.between?(200, 299) || version
+      dispatched = !header(response.headers, FUNCTION_INVOKED_HEADER).nil?
+      Transport.body(response, 200) unless response.status.between?(200, 299) || dispatched
 
       FunctionResponse.new(
         data: response.body, status: response.status,

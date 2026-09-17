@@ -33,19 +33,21 @@ or API key belongs in GitHub secrets. See the
 
 ## Review a package
 
-Run the `Release package` workflow from `main` with the desired published GitHub
-release tag and publishing disabled:
+Run the `Release package` workflow from `main` with the successful release build
+run ID and publishing disabled:
 
 ```sh
 gh workflow run publish.yml --repo Kong/volcano-sdk-ruby --ref main \
-  -f tag=v0.5.2 -F publish=false
+  -f run-id=35237976090 -F publish=false
 ```
 
-The workflow rejects draft releases, prereleases, malformed tags, commits outside
-`main`, and versions that differ from the release manifest or gem. CI and the
-build use the resolved tag commit, even when `main` has newer changes.
+Find the run ID in the successful release build's Actions URL. The workflow
+accepts only successful `publish.yml` release-event runs from this repository.
+It rejects draft releases, prereleases, moved tags, commits outside `main`,
+version mismatches, and missing or expired artifacts. The original release run
+must have passed CI and the unpacked gem smoke test.
 
-Download the successful run's `release-package` artifact. Review the gem's name,
+Download the manual run's `publish-package` artifact. Review the gem's name,
 version, file inventory (`package-files.txt`), and SHA-256 (`SHA256SUMS`), plus the
 source commit in the job summary. Unpack the gem when inspecting its contents:
 
@@ -63,12 +65,12 @@ workflow with publishing enabled:
 
 ```sh
 gh workflow run publish.yml --repo Kong/volcano-sdk-ruby --ref main \
-  -f tag=v0.5.2 -F publish=true
+  -f run-id=35237976090 -F publish=true
 ```
 
-This reruns validation and CI, rebuilds the selected tag, and publishes that run's
-verified artifact from the `rubygems` environment. Only the publishing job can
-request an OIDC token. It downloads the built gem without checking out or
+This validates the same successful release build and publishes its original gem
+bytes from the `rubygems` environment without rebuilding. Only the publishing job
+can request an OIDC token. It downloads the built gem without checking out or
 executing SDK code. A repeated push of an existing version fails; check RubyGems
 before retrying after an uncertain outcome. Publish a new version for corrections.
 

@@ -19,15 +19,20 @@ module Volcano
       raise Error::AuthenticationError, 'No active session' unless current
 
       payload = Transport.body(get_user_response(current.access_token), 200)
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      cache_current_user(payload, generation)
     end
 
     alias get_user user
 
     private
+
+    def cache_current_user(payload, generation)
+      profile = user_payload(payload)
+      user = build_user(profile)
+      raise Error::SessionChangedError unless @client.update_session_user_if_current?(profile, generation)
+
+      user
+    end
 
     def get_user_response(access_token)
       Transport.invoke do

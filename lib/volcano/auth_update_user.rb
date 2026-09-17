@@ -11,10 +11,7 @@ module Volcano
         update_user_response(current.access_token, password:, metadata:),
         200
       )
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      cache_current_user(payload, generation)
     end
 
     private

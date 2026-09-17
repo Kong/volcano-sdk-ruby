@@ -50,15 +50,24 @@ module Volcano
 
     def store_if_current?(session, generation, event: :signed_in, notifications: nil)
       dispatch = @mutex.synchronize do
-        callbacks = replace_if_current(session, generation, event)
-        return false unless callbacks
+        return false unless generation == @generation
 
-        enqueue_notification(callbacks, event, session)
+        enqueue_notification(replace(session, event), event, session)
       end
       return true unless dispatch
 
       notifications ? notifications.push(method(:drain_notifications)) : drain_notifications
       true
+    end
+
+    def update_user_if_current?(user, generation)
+      @mutex.synchronize do
+        return false unless generation == @generation && @session
+        raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == @session.user_id
+
+        @session = @session.with(user: user)
+        true
+      end
     end
 
     def subscribe(&callback)
@@ -77,12 +86,6 @@ module Volcano
       @generation += 1
       @lineage += 1 unless event == :token_refreshed
       @callbacks.keys
-    end
-
-    def replace_if_current(session, generation, event)
-      return unless generation == @generation
-
-      replace(session, event)
     end
 
     def register(callback)
@@ -130,7 +133,7 @@ module Volcano
     def notify(callback_ids, event, session)
       failure = nil
       callback_ids.each do |callback_id|
-        notify_callback(callback_id, event, session)
+        @mutex.synchronize { @callbacks[callback_id] }&.call(event, session)
       rescue StandardError => e
         Warning.warn("Volcano auth-state callback failed (#{e.class})\n")
       rescue *CALLBACK_FAILURES => e
@@ -138,11 +141,6 @@ module Volcano
         failure ||= e
       end
       failure
-    end
-
-    def notify_callback(callback_id, event, session)
-      callback = @mutex.synchronize { @callbacks[callback_id] }
-      callback&.call(event, session)
     end
   end
 end

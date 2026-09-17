@@ -4,15 +4,15 @@ Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
 ## Install
 
-The first RubyGems release is pending. Until it is published, add the tagged
-source to your Gemfile and run `bundle install`:
+Add the gem to your Gemfile and run `bundle install`:
 
 ```ruby
-gem "volcano-sdk", git: "https://github.com/Kong/volcano-sdk-ruby.git", tag: "v0.5.2"
+gem "volcano-sdk"
 ```
 
-After publication, install the `volcano-sdk` gem from RubyGems. The Ruby require
-path remains `volcano`.
+Require it with `require "volcano"`. New versions publish to RubyGems
+automatically after a Release Please release PR merges and the release checks
+pass.
 
 Maintainers: see [Publishing releases](https://github.com/Kong/volcano-sdk-ruby/blob/main/PUBLISHING.md) for trusted publisher setup
 and the release procedure.

@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.7.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.1...v0.7.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **auth:** refresh rejected profile requests within their session ([#136](https://github.com/Kong/volcano-sdk-ruby/issues/136)) ([cccd14e](https://github.com/Kong/volcano-sdk-ruby/commit/cccd14eda37478ddffd3b8b8cbb21d41347ed430))
+
+## [0.7.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.0...v0.7.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **storage:** refresh rejected sessions and replay bounded requests ([#133](https://github.com/Kong/volcano-sdk-ruby/issues/133)) ([94b02a1](https://github.com/Kong/volcano-sdk-ruby/commit/94b02a114498f83e147a06eff2e3e86ebaca4f7f))
+
+## [0.7.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.6.0...v0.7.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** synchronize session user after profile operations ([#131](https://github.com/Kong/volcano-sdk-ruby/issues/131)) ([88b1f50](https://github.com/Kong/volcano-sdk-ruby/commit/88b1f5087ae6f49ea49a42e5f23ad632bbb9ea79))
+
+## [0.6.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.3...v0.6.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** retain a local user snapshot in sessions ([#114](https://github.com/Kong/volcano-sdk-ruby/issues/114)) ([d8d02c5](https://github.com/Kong/volcano-sdk-ruby/commit/d8d02c58ea98516f1a56960ed4eff20a7e3be1e8))
+
+## [0.5.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.2...v0.5.3) (2026-09-17)
+
+
+### Bug Fixes
+
+* declare base64 runtime dependency ([#128](https://github.com/Kong/volcano-sdk-ruby/issues/128)) ([9516bdd](https://github.com/Kong/volcano-sdk-ruby/commit/9516bdd49b1d93bc6c797ccb39839b80cd3d2e2d))
+
+## [0.5.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.1...v0.5.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **functions:** retry a stale mapping on the dispatch signal ([#121](https://github.com/Kong/volcano-sdk-ruby/issues/121)) ([ae923ff](https://github.com/Kong/volcano-sdk-ruby/commit/ae923ff391966bd992057e5da6715940d1989a24))
+
+## [0.5.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.0...v0.5.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **realtime:** flush commands before waiting for replies ([#123](https://github.com/Kong/volcano-sdk-ruby/issues/123)) ([8797d18](https://github.com/Kong/volcano-sdk-ruby/commit/8797d18afb9c5614292b2d23f3dbdf9caed0c77e))
+
 ## [0.5.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.4.0...v0.5.0) (2026-09-15)
 
 

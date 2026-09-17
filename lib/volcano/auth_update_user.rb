@@ -4,17 +4,11 @@ module Volcano
   # Current-user update behavior for the authentication facade.
   class Auth
     def update_user(password: nil, metadata: nil)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(
-        update_user_response(current.access_token, password:, metadata:),
-        200
-      )
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      profile_request do
+        request_password = password&.dup&.freeze
+        request_metadata = metadata.nil? ? nil : JSON.parse(JSON.generate(Hash(metadata)), freeze: true)
+        ->(token) { update_user_response(token, password: request_password, metadata: request_metadata) }
+      end
     end
 
     private

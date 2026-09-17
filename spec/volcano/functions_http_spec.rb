@@ -97,23 +97,52 @@ RSpec.describe Volcano::Functions do
     end
   end
 
-  it 'resolves a recreated function again after a platform 404', :aggregate_failures do
+  # The first invocation finds the cached identity gone. The platform answers
+  # without the dispatch marker, which is the only thing telling this apart from
+  # the function itself returning 404.
+  def recreated_function_server
     invoked = 0
-    api = RecordingServer.new do |target|
-      if target.start_with?('/functions/resolve')
-        [200, { 'name' => 'send-welcome', 'function_id' => function_id, 'cache_ttl_seconds' => 300 }]
-      else
-        invoked += 1
-        # The first invocation finds the cached identity gone.
-        invoked == 1 ? [404, { 'error' => 'function not found' }] : [200, { 'ok' => true }]
-      end
+    RecordingServer.new do |target|
+      next resolve_answer if target.start_with?('/functions/resolve')
+
+      invoked += 1
+      next [404, { 'error' => 'function not found' }] if invoked == 1
+
+      [200, { 'ok' => true }, { 'X-Volcano-Function-Invoked' => 'true' }]
     end
+  end
+
+  def resolve_answer
+    [200, { 'name' => 'send-welcome', 'function_id' => function_id, 'cache_ttl_seconds' => 300 }]
+  end
+
+  it 'resolves a recreated function again after a platform 404', :aggregate_failures do
+    api = recreated_function_server
     begin
       expect(client(api.url).functions.invoke('send-welcome').status).to eq(200)
 
       expect(api.targets).to eq(
         ['/functions/resolve?name=send-welcome', "/functions/#{function_id}/invoke",
          '/functions/resolve?name=send-welcome', "/functions/#{function_id}/invoke"]
+      )
+    ensure
+      api.close
+    end
+  end
+
+  it 'returns a function-authored 404 without invoking it twice', :aggregate_failures do
+    api = RecordingServer.new do |target|
+      next resolve_answer if target.start_with?('/functions/resolve')
+
+      # The function ran and chose 404. Retrying would repeat whatever it did on
+      # the way to deciding that.
+      [404, { 'error' => 'no such record' }, { 'X-Volcano-Function-Invoked' => 'true' }]
+    end
+    begin
+      expect(client(api.url).functions.invoke('send-welcome').status).to eq(404)
+
+      expect(api.targets).to eq(
+        ['/functions/resolve?name=send-welcome', "/functions/#{function_id}/invoke"]
       )
     ensure
       api.close

@@ -433,13 +433,15 @@ Given('the client replaces its access token with a rejected token') do
   )
 end
 
-Then('the database read replaces the rejected token for the same user') do
-  session = contract.client.auth.current_session
-  raise 'current session is missing' unless session
-  raise 'access token is missing' if session.access_token.to_s.empty?
-  raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
-  raise 'refresh token is missing' if session.refresh_token.to_s.empty?
-  raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
+['database read', 'storage operation', 'profile read'].each do |operation|
+  Then("the #{operation} replaces the rejected token for the same user") do
+    session = contract.client.auth.current_session
+    raise 'current session is missing' unless session
+    raise 'access token is missing' if session.access_token.to_s.empty?
+    raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
+    raise 'refresh token is missing' if session.refresh_token.to_s.empty?
+    raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
+  end
 end
 
 When('one client pauses delivery for 1 second and then resumes with the same handler') do
@@ -473,4 +475,31 @@ end
 
 Then('the subscriber receives the contract message within 10 seconds') do
   raise 'realtime message did not match' unless contract.last_outcome.value == contract.realtime_message
+end
+
+When('the client invokes the contract function by name') do
+  contract.record do
+    contract.service_client.functions.invoke(
+      contract.fixture.fetch('function_name'), { 'value' => 'contract' }
+    )
+  end
+end
+
+# The function is reachable only at the endpoint the platform resolved, on a
+# domain the API URL does not name, so an echo coming back is what proves the
+# SDK sent the request there rather than somewhere it guessed.
+Then('the function echoes the payload') do
+  response = contract.last_outcome.value
+  raise "function returned #{response.status}" unless response.status == 200
+  raise "function echoed #{response.data.inspect}" unless response.data == { 'echoed' => 'contract' }
+end
+
+When('the client loads its server-validated profile') do
+  contract.record { contract.client.auth.user }
+end
+
+Then('the returned and cached profiles belong to the contract user') do
+  expected = contract.fixture.fetch('user_id')
+  raise 'profile belongs to another user' unless contract.last_outcome.value.id == expected
+  raise 'cached profile belongs to another user' unless contract.client.current_session.user.fetch('id') == expected
 end

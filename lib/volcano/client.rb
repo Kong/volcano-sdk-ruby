@@ -49,8 +49,8 @@ module Volcano
       session.access_token
     end
 
-    def session_request(&)
-      @auth.session_request(&)
+    def session_request(...)
+      @auth.session_request(...)
     end
 
     alias session_read session_request
@@ -87,6 +87,10 @@ module Volcano
 
     def subscribe_auth_state_change(...)
       @auth_state.subscribe(...)
+    end
+
+    def update_session_user_if_current?(...)
+      @auth_state.update_user_if_current?(...)
     end
 
     private

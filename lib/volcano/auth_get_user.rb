@@ -15,19 +15,29 @@ module Volcano
                      :USER_OPTIONAL_VALUES, :USER_STATUSES, :USER_TIMESTAMPS
 
     def user
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(get_user_response(current.access_token), 200)
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      profile_request { method(:get_user_response) }
     end
 
     alias get_user user
 
     private
+
+    def profile_request
+      binding = @client.capture_session_binding
+      raise Error::AuthenticationError, 'No active session' unless binding.last
+
+      request = yield
+      payload = Transport.body(session_request(binding: binding, &request), 200)
+      cache_current_user(payload, owned_session_binding(binding).first)
+    end
+
+    def cache_current_user(payload, generation)
+      profile = user_payload(payload)
+      user = build_user(profile)
+      raise Error::SessionChangedError unless @client.update_session_user_if_current?(profile, generation)
+
+      user
+    end
 
     def get_user_response(access_token)
       Transport.invoke do

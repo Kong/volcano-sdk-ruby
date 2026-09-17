@@ -1,9 +1,25 @@
 # Volcano Ruby SDK
 
-Official Ruby SDK for Volcano. This repository is a private proof of concept;
-the gem is not published yet.
+Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
-## Proof-of-concept API
+Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
+
+## Install
+
+Add the gem to your Gemfile and run `bundle install`:
+
+```ruby
+gem "volcano-sdk"
+```
+
+Require it with `require "volcano"`. New versions publish to RubyGems
+automatically after a Release Please release PR merges and the release checks
+pass.
+
+Maintainers: see [Publishing releases](https://github.com/Kong/volcano-sdk-ruby/blob/main/PUBLISHING.md) for trusted publisher setup
+and the release procedure.
+
+## Create a client
 
 Create a client with the project URL and anonymous key from Volcano:
 
@@ -55,6 +71,20 @@ raise "session changed" unless current_session == session
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
 
+Sessions returned by authentication retain the user payload in `session.user`,
+including metadata. The snapshot is deeply immutable and available without a
+request. It is cached data, not proof of authentication; use `auth.user` to fetch
+the server-validated profile. Existing three-field `Session` construction still
+works, with `user: nil`. An adopted snapshot must have the same user ID.
+Snapshots contain deeply frozen JSON data. Plain `Time` timestamps become UTC
+ISO8601 strings with nanosecond precision; symbols become strings. Custom objects,
+container/string/time subclasses, non-finite numbers, duplicate JSON keys, and
+structures deeper than 100 levels raise `TypeError`. Use the typed `auth.user`
+profile when you need Ruby `Time` values. Successful `user`, `update_user`,
+`convert_anonymous`, and `confirm_email_change` calls update this snapshot
+without changing credentials or emitting an authentication-state event.
+Previously returned sessions remain unchanged.
+
 ### Get the current user
 
 ```ruby
@@ -64,8 +94,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `user` sends the active access token to Volcano and returns an immutable,
 server-validated `Volcano::User`. The SDK recursively freezes its strings and
-metadata, but does not cache the profile or replace the session. A session
-change while the request is in flight raises
+metadata and updates `current_session.user`. A session change while the request
+is in flight raises
 `Volcano::Error::SessionChangedError` instead of returning a stale profile.
 `get_user` is available as a cross-SDK alias.
 
@@ -81,8 +111,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `update_user` changes the current user's password, metadata, or both. Metadata
 is a shallow patch: omitted keys remain unchanged, and a `nil` value removes
-that key. The method returns an immutable `Volcano::User` without replacing the
-active session. It rejects a response if another authentication operation
+that key. The method returns an immutable `Volcano::User` and updates the local
+user snapshot. It rejects a response if another authentication operation
 replaces the session while the request is in flight.
 
 ### Request a password reset email
@@ -145,8 +175,8 @@ user = client.auth.confirm_email_change(token: "email-change-token")
 puts user.email
 ```
 
-The method returns the immutable updated user without replacing the active
-session. A successful stale response is rejected if another authentication
+The method returns the immutable updated user and updates the local user
+snapshot. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
 ### List sessions
@@ -414,7 +444,11 @@ result = client.functions.invoke(
 puts [result.status, result.version, result.data]
 ```
 
-`invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
+`invoke` resolves a DNS-safe function name and sends a JSON object. The request
+goes to the function's own domain rather than to `api_url`, so an egress rule
+that allows only the API host will block it; the resolved endpoint is cached for
+the lifetime the platform gives it. Deployments with no public function domain
+invoke through the API host instead. It uses the
 active user session when present, then a configured service key, then the
 anonymous key. An anonymous key can invoke a public function without a user
 session; the function receives no user identity. The immutable result includes
@@ -503,7 +537,8 @@ syntax. Both methods require an active user session.
 rows = client.database("main").from("items").select("*").eq("slug", "a").execute
 ```
 
-Database selects, inserts, updates, deletes, and log reads refresh the captured
+Database selects, inserts, updates, deletes, log reads, and authenticated storage
+requests (including upload sessions and parts) refresh the captured
 session after an HTTP 401 and retry the same request once. Concurrent requests reuse a successful
 refresh for that session.
 Replacing or signing out the session before replay, or while replay is in flight,
@@ -710,6 +745,10 @@ Async do
   stop_connect.call
 end.wait
 ```
+
+`channel.unsubscribe` waits for the server acknowledgement and pauses delivery.
+Call `channel.subscribe` on the same channel to resume, then send as usual.
+These commands complete even when the connection is otherwise idle.
 
 ### Track presence
 

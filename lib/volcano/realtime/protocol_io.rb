@@ -36,7 +36,10 @@ module Volcano
         def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
 
         def write_serialized_frame(frame)
-          @write_lock.acquire { @socket.write(frame) }
+          @write_lock.acquire do
+            @socket.write(frame)
+            @socket.flush
+          end
         rescue StandardError => e
           failure = closed_error(e)
           close_with(failure, notify_error: true)

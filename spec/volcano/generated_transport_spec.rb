@@ -6,7 +6,7 @@ require 'tempfile'
 RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   unless const_defined?(:GeneratedApis)
     GeneratedApis = Data.define(
-      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+      :authentication, :oauth, :database, :storage, :locks, :functions, :logs, :durable
     )
   end
   InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
@@ -18,6 +18,50 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     def to_hash
       @value
+    end
+  end
+
+  # Records what the transport passes the generated durable client, which is the
+  # only place the header, the UUID arguments and the list options are assembled.
+  class FakeDurableApi
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def start_durable_execution_from_application_with_http_info(function_id, options = {})
+      @calls << [:start, function_id, options]
+      [FakeGeneratedModel.new(execution), 202, { 'X-Volcano-Version' => 'staging-v1' }]
+    end
+
+    def get_durable_execution_with_http_info(project_id, function_id, execution_id)
+      @calls << [:get, project_id, function_id, execution_id]
+      [FakeGeneratedModel.new(execution), 200, {}]
+    end
+
+    def list_durable_executions_with_http_info(project_id, function_id, options = {})
+      @calls << [:list, project_id, function_id, options]
+      page = { data: [execution], page: 2, limit: 5, total: 6, has_more: false }
+      [FakeGeneratedModel.new(page), 200, {}]
+    end
+
+    def stop_durable_execution_with_http_info(project_id, function_id, execution_id)
+      @calls << [:stop, project_id, function_id, execution_id]
+      [FakeGeneratedModel.new(execution.merge(status: 'stopped')), 200, {}]
+    end
+
+    private
+
+    def execution
+      {
+        id: '00000000-0000-4000-8000-000000000041',
+        function_id: '00000000-0000-4000-8000-000000000042',
+        name: 'charge-order-1',
+        status: 'running',
+        region: 'aws-us-east-1',
+        created_at: '2026-01-01T00:00:00Z'
+      }
     end
   end
 
@@ -482,7 +526,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
       storage: FakeStorageApi.new,
       locks: FakeLocksApi.new,
       functions: FakeFunctionsApi.new,
-      logs: FakeLogsApi.new
+      logs: FakeLogsApi.new,
+      durable: FakeDurableApi.new
     )
   end
   let(:authorizations) { [] }
@@ -582,7 +627,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         storage: storage,
         locks: empty,
         functions: empty,
-        logs: empty
+        logs: empty,
+        durable: empty
       )
     end
     described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
@@ -1562,7 +1608,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     factory = lambda do |_authorization|
       GeneratedApis.new(
         authentication: authentication, oauth: empty, database: empty,
-        storage: empty, locks: empty, functions: empty, logs: empty
+        storage: empty, locks: empty, functions: empty, logs: empty, durable: empty
       )
     end
     transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
@@ -1576,5 +1622,81 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(response.status).to eq(409)
     expect(response.body).to eq('error' => 'already held', 'code' => 'lock_conflict')
     expect(response.headers).to eq('Retry-After' => '3')
+  end
+
+  it 'sends a durable start with the execution name as a header' do
+    response = transport.start_durable_execution_from_application(
+      authorization: 'service-key',
+      function_id: 'charge-order',
+      payload: { 'order' => 7 },
+      execution_name: 'charge-order-1'
+    )
+
+    expect(response).to have_attributes(status: 202)
+    operation, function_id, options = apis.durable.calls.last
+    expect([operation, function_id]).to eq([:start, 'charge-order'])
+    expect(options).to eq(
+      body: { 'order' => 7 }, x_volcano_execution_name: 'charge-order-1'
+    )
+  end
+
+  it 'omits the execution name when a start does not carry one' do
+    transport.start_durable_execution_from_application(
+      authorization: 'service-key',
+      function_id: 'charge-order',
+      payload: { 'order' => 7 }
+    )
+
+    # Omitted rather than sent as nil: an absent name asks the platform to
+    # generate one, where an empty header is a name it would have to refuse.
+    _operation, _function_id, options = apis.durable.calls.last
+    expect(options).to eq(body: { 'order' => 7 })
+  end
+
+  it 'addresses one durable execution by project, function and execution' do
+    response = transport.get_durable_execution(
+      authorization: 'platform-token',
+      project_id: '00000000-0000-4000-8000-000000000001',
+      function_id: 'charge-order',
+      execution_id: '00000000-0000-4000-8000-000000000041'
+    )
+
+    expect(response).to have_attributes(status: 200)
+    expect(apis.durable.calls.last).to eq(
+      [
+        :get,
+        '00000000-0000-4000-8000-000000000001',
+        'charge-order',
+        '00000000-0000-4000-8000-000000000041'
+      ]
+    )
+  end
+
+  it "passes a listing's filter and paging through as options" do
+    response = transport.list_durable_executions(
+      authorization: 'platform-token',
+      project_id: '00000000-0000-4000-8000-000000000001',
+      function_id: 'charge-order',
+      options: { status: 'running', page: 2, limit: 5 }
+    )
+
+    expect(response).to have_attributes(status: 200)
+    _operation, project_id, function_id, options = apis.durable.calls.last
+    expect([project_id, function_id]).to eq(
+      %w[00000000-0000-4000-8000-000000000001 charge-order]
+    )
+    expect(options).to eq(status: 'running', page: 2, limit: 5)
+  end
+
+  it 'stops a durable execution through the execution route' do
+    response = transport.stop_durable_execution(
+      authorization: 'platform-token',
+      project_id: '00000000-0000-4000-8000-000000000001',
+      function_id: 'charge-order',
+      execution_id: '00000000-0000-4000-8000-000000000041'
+    )
+
+    expect(response).to have_attributes(status: 200)
+    expect(apis.durable.calls.last.first).to eq(:stop)
   end
 end

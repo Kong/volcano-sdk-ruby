@@ -26,14 +26,10 @@ module Volcano
     end
 
     def confirm_email_change(token:)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(confirm_email_change_response(current.access_token, token), 200)
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      profile_request do
+        request_token = token.dup.freeze
+        ->(access_token) { confirm_email_change_response(access_token, request_token) }
+      end
     end
 
     private

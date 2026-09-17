@@ -9,9 +9,30 @@ module Volcano
   end
   private_constant :SESSION_USER_CODER
 
-  # In-memory credentials with an optional, unverified local user snapshot.
+  # Copies caller-owned credentials without inventing a validated identity.
+  module SessionBootstrap
+    def self.build(access_token, refresh_token)
+      raise ArgumentError, 'refresh_token requires access_token' if access_token.nil? && !refresh_token.nil?
+      return if access_token.nil?
+
+      Session.new(access_token: credential(access_token, :access_token),
+                  refresh_token: credential(refresh_token, :refresh_token))
+    end
+
+    def self.credential(value, name)
+      return if value.nil?
+
+      raise ArgumentError, "#{name} must be a non-empty string" unless value.is_a?(String) && !value.strip.empty?
+
+      value.dup.freeze
+    end
+    private_class_method :credential
+  end
+  private_constant :SessionBootstrap
+
+  # Local credentials; refresh credentials and user identity may be unknown.
   Session = Data.define(:access_token, :refresh_token, :user_id, :user) do
-    def initialize(access_token:, refresh_token:, user_id:, user: nil)
+    def initialize(access_token:, refresh_token: nil, user_id: nil, user: nil)
       super(access_token:, refresh_token:, user_id:, user: immutable_user(user))
     end
 

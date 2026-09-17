@@ -78,6 +78,8 @@ module Volcano
     end
 
     def perform_refresh(binding, notifications)
+      raise Error::AuthenticationError, 'No refresh token' unless binding.last.refresh_token
+
       session = refreshed_session(binding, notifications)
       stored = @client.store_session_if_current?(
         session, binding.first, event: :token_refreshed, notifications: notifications

@@ -24,5 +24,10 @@ ruby -rvolcano -e '
   abort "Wrong gem version" unless spec.version.to_s == ARGV.fetch(0) && Volcano::VERSION == ARGV.fetch(0)
   abort "Loaded outside isolated install" unless spec.full_gem_path.start_with?(ENV.fetch("GEM_HOME") + "/")
   abort "Client missing" unless Volcano::Client
+  client = Volcano::Client.new(anon_key: "example", access_token: "supplied-access")
+  session = client.current_session
+  abort "Token bootstrap failed" unless session.access_token == "supplied-access" && session.refresh_token.nil? && session.user_id.nil?
+  client.auth.sign_out
+  abort "Token-only sign-out failed" unless client.current_session.nil?
   puts "Loaded volcano-sdk #{Volcano::VERSION} from the isolated gem install"
 ' "$version"

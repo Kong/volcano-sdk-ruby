@@ -50,6 +50,33 @@ When('the client refreshes the current session') do
   contract.record { contract.client.auth.refresh_session }
 end
 
+When('a fresh client starts with only the current access token') do
+  source = contract.client
+  contract.previous_session = source.current_session
+  raise 'current session is missing' unless contract.previous_session
+
+  contract.register_cleanup(-> { source.auth.sign_out })
+  contract.client = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: contract.previous_session.access_token
+  )
+  contract.record { contract.client.current_session }
+end
+
+Then('the token-only session has no cached user') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'token-only session invented a user' unless session.user_id.nil? && session.user.nil?
+end
+
+Then('the session retains only the supplied access token') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'supplied access token changed' unless session.access_token == contract.previous_session.access_token
+  raise 'token-only session invented a refresh token' unless session.refresh_token.nil?
+end
+
 When('the client signs out') do
   contract.signed_out_session = contract.client.auth.current_session
   raise 'current session is missing' unless contract.signed_out_session

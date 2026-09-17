@@ -19,13 +19,14 @@ module Volcano
       api_url: 'https://api.volcano.dev',
       service_key: nil,
       timeout: 60,
-      **adapters
+      **options
     )
-      transport, socket_factory, reconnect_delay = extract_adapters(adapters)
+      session = SessionBootstrap.build(options.delete(:access_token), options.delete(:refresh_token))
+      transport, socket_factory, reconnect_delay = extract_adapters(options)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
-      @auth_state = AuthState.new
+      @auth_state = AuthState.new(session: session)
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
       initialize_facades(socket_factory, reconnect_delay)
     end

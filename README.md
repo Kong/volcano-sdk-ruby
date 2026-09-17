@@ -378,6 +378,16 @@ Success returns `nil`. The reset revokes the recovered account's existing
 sessions and does not sign it in. The client keeps any unrelated local session
 unchanged; sign in with the new password when the reset flow completes.
 
+### Start with a supplied access token
+
+Pass `access_token` to `Volcano::Client.new` to start without a refresh token or
+known user identity. Construction makes no request and leaves `refresh_token`,
+`user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
+without changing credentials. Without a refresh token, `refresh_session` raises
+`Volcano::Error::AuthenticationError` and `sign_out` clears only local state.
+Supply `refresh_token` alongside `access_token` to enable refresh and revocation.
+See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
+
 ### Adopt an existing session
 
 ```ruby

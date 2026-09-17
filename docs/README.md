@@ -72,6 +72,29 @@ The SDK does not persist tokens for you.
 For operations that require a [service key](/platform/authentication/security/service-keys), pass `service_key` to the constructor in trusted server code.
 Keep service keys and user credentials out of source control and client applications.
 
+## Use a supplied access token
+
+For a server request that already carries a user's access token, create a client for that request:
+
+```ruby
+require "volcano"
+
+client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_ACCESS_TOKEN")
+)
+user = client.auth.user
+puts user.id
+client.auth.sign_out
+```
+
+Construction makes no request and does not persist credentials.
+The initial snapshot has `nil` refresh credentials, user ID, and cached user.
+A successful profile read fills in the validated identity and cached user while retaining the supplied access token.
+Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` clears only the local session without a request.
+Pass `refresh_token` alongside `access_token` when the client should refresh or revoke that session.
+Assigning `auth.current_session` still requires complete credentials and identity.
+
 ## Use the rest of the API
 
 The SDK repository contains [examples for every public facade](https://github.com/Kong/volcano-sdk-ruby#create-a-client), including database filters and mutations, resumable uploads, function invocation, log queries, lock guards, and realtime presence and database changes.

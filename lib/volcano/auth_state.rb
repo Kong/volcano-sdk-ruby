@@ -24,11 +24,11 @@ module Volcano
     CALLBACK_FAILURES = [Exception].freeze
     private_constant :CALLBACK_FAILURES
 
-    def initialize
+    def initialize(session: nil)
       @mutex = Mutex.new
       @generation = 0
       @lineage = 0
-      @session = nil
+      @session = session
       @callbacks = {}
       @next_callback_id = 0
       @notifications = []
@@ -63,9 +63,11 @@ module Volcano
     def update_user_if_current?(user, generation)
       @mutex.synchronize do
         return false unless generation == @generation && @session
-        raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == @session.user_id
 
-        @session = Session.new(**@session.to_h, user: user)
+        user_id = (@session.user_id || user.fetch('id')).dup.freeze
+        raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == user_id
+
+        @session = Session.new(**@session.to_h, user_id: user_id, user: user)
         true
       end
     end

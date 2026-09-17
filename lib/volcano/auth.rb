@@ -76,6 +76,8 @@ module Volcano
     end
 
     def revocation_error(refresh_token)
+      return unless refresh_token
+
       Transport.body(logout_response(refresh_token), 204)
       nil
     rescue Error::VolcanoError => e

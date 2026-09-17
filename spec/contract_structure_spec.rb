@@ -50,6 +50,13 @@ RSpec.describe 'shared SDK contract bindings' do
       .to eq('df46f1c374fcbdeb790cde0781ff14f580e56c44ac9aa6445d97469a385f6f51')
   end
 
+  it 'stages the proposed token bootstrap scenario without activating it for older hosting' do
+    path = File.expand_path('../features/staged/auth-token-bootstrap.feature', __dir__)
+
+    expect(Digest::SHA256.file(path).hexdigest)
+      .to eq('ec7954819e8accf783e4d9adebf227b8f4b8bcbebc9cfdec0916d21e3b683102')
+  end
+
   it 'requires an absolute contract fixture path' do
     require_relative '../features/support/fixture'
 

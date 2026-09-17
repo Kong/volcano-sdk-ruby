@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.6.0...v0.7.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** synchronize session user after profile operations ([#131](https://github.com/Kong/volcano-sdk-ruby/issues/131)) ([88b1f50](https://github.com/Kong/volcano-sdk-ruby/commit/88b1f5087ae6f49ea49a42e5f23ad632bbb9ea79))
+
 ## [0.6.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.3...v0.6.0) (2026-09-17)
 
 

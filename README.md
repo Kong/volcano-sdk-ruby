@@ -78,7 +78,10 @@ Snapshots contain deeply frozen JSON data. Plain `Time` timestamps become UTC
 ISO8601 strings with nanosecond precision; symbols become strings. Custom objects,
 container/string/time subclasses, non-finite numbers, duplicate JSON keys, and
 structures deeper than 100 levels raise `TypeError`. Use the typed `auth.user`
-profile when you need Ruby `Time` values.
+profile when you need Ruby `Time` values. Successful `user`, `update_user`,
+`convert_anonymous`, and `confirm_email_change` calls update this snapshot
+without changing credentials or emitting an authentication-state event.
+Previously returned sessions remain unchanged.
 
 ### Get the current user
 
@@ -89,8 +92,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `user` sends the active access token to Volcano and returns an immutable,
 server-validated `Volcano::User`. The SDK recursively freezes its strings and
-metadata, but does not cache the profile or replace the session. A session
-change while the request is in flight raises
+metadata and updates `current_session.user`. A session change while the request
+is in flight raises
 `Volcano::Error::SessionChangedError` instead of returning a stale profile.
 `get_user` is available as a cross-SDK alias.
 
@@ -106,8 +109,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `update_user` changes the current user's password, metadata, or both. Metadata
 is a shallow patch: omitted keys remain unchanged, and a `nil` value removes
-that key. The method returns an immutable `Volcano::User` without replacing the
-active session. It rejects a response if another authentication operation
+that key. The method returns an immutable `Volcano::User` and updates the local
+user snapshot. It rejects a response if another authentication operation
 replaces the session while the request is in flight.
 
 ### Request a password reset email
@@ -170,8 +173,8 @@ user = client.auth.confirm_email_change(token: "email-change-token")
 puts user.email
 ```
 
-The method returns the immutable updated user without replacing the active
-session. A successful stale response is rejected if another authentication
+The method returns the immutable updated user and updates the local user
+snapshot. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
 ### List sessions

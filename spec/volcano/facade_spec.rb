@@ -1104,7 +1104,7 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#convert_anonymous' do
-    it 'returns the converted user without replacing the session', :aggregate_failures do
+    it 'returns the converted user without changing credentials', :aggregate_failures do
       established = client.auth.sign_in_anonymously
 
       user = client.auth.convert_anonymous(
@@ -1116,7 +1116,7 @@ RSpec.describe Volcano::Client do
       expect(user).to have_attributes(
         id: 'anonymous-user', email: 'converted@example.com', email_confirmed: false
       )
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session.to_h.except(:user)).to eq(established.to_h.except(:user))
       expect(transport.calls_for(:auth_convert_anonymous).last.fetch(1)).to eq(
         authorization: 'anonymous-access',
         email: 'converted@example.com',
@@ -1243,13 +1243,13 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#confirm_email_change' do
-    it 'returns the updated user without replacing the session', :aggregate_failures do
+    it 'returns the updated user without changing credentials', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
       user = client.auth.confirm_email_change(token: 'change-token')
 
       expect(user).to have_attributes(email: 'new@example.com', status: 'active')
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session.to_h.except(:user)).to eq(established.to_h.except(:user))
       expect(transport.calls_for(:auth_confirm_email_change).last.fetch(1)).to eq(
         authorization: 'access-token', token: 'change-token'
       )
@@ -2100,12 +2100,12 @@ RSpec.describe Volcano::Client do
       )
     end
 
-    it 'does not replace the current session' do
+    it 'preserves the current session credentials' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
       client.auth.user
 
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session.to_h.except(:user)).to eq(established.to_h.except(:user))
     end
 
     it 'accepts a profile without an email address' do
@@ -2206,7 +2206,7 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#update_user' do
-    it 'returns the updated profile without replacing the session', :aggregate_failures do
+    it 'returns the updated profile without changing credentials', :aggregate_failures do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
       user = client.auth.update_user(
@@ -2220,7 +2220,7 @@ RSpec.describe Volcano::Client do
         password: 'new-secret',
         metadata: { display_name: 'Grace', avatar: nil }
       )
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session.to_h.except(:user)).to eq(established.to_h.except(:user))
     end
 
     it 'rejects a missing session before transport' do

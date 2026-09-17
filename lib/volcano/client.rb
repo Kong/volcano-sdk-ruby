@@ -89,6 +89,10 @@ module Volcano
       @auth_state.subscribe(...)
     end
 
+    def update_session_user_if_current?(...)
+      @auth_state.update_user_if_current?(...)
+    end
+
     private
 
     def database_with_token(name, token)

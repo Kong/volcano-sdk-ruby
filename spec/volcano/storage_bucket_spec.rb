@@ -226,6 +226,35 @@ RSpec.describe Volcano::StorageBucket do
       expect(transport).to have_received(:auth_refresh).once
     end
 
+    it 'retains the session that owned the upload source before reading' do
+      replacement = Volcano::Session.new('replacement', 'replacement-refresh', 'other')
+      source = StringIO.new('private')
+      allow(source).to receive(:read) do
+        client.auth.current_session = replacement
+        'private'
+      end
+      allow(transport).to receive(:upload_storage_object).and_return(response(201, object_payload))
+
+      expect { bucket.upload('file.bin', source) }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.current_session).to eq(replacement)
+      expect(transport).not_to have_received(:upload_storage_object)
+    end
+
+    it 'refreshes each rejected path from its current generation' do
+      calls = []
+      allow(transport).to receive(:delete_storage_object) do |**kwargs|
+        calls << kwargs.fetch(:authorization)
+        calls.size.odd? ? response(401) : response(200, {})
+      end
+      rotated = response(200, 'access_token' => 'second-access', 'refresh_token' => 'second-refresh',
+                              'user' => { 'id' => 'user' })
+      allow(transport).to receive(:auth_refresh).and_return(refresh_response, rotated)
+      bucket.remove(%w[first second])
+
+      expect(calls).to eq(%w[old-access new-access new-access second-access])
+      expect(transport).to have_received(:auth_refresh).with(authorization: 'anon', refresh_token: 'new-refresh').once
+    end
+
     it 'stops deleting when a different session is adopted between paths' do
       replacement = Volcano::Session.new('replacement', 'replacement-refresh', 'other')
       allow(transport).to receive(:delete_storage_object) do

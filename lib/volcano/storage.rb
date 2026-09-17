@@ -37,9 +37,10 @@ module Volcano
     def upload(path, value, content_type: nil)
       mime_type = upload_content_type(content_type)
       path = storage_paths(path).first
+      binding = @client.capture_session_binding
       @client.session_token
       content = upload_bytes(value).freeze
-      response = storage_request do |token|
+      response = storage_request(binding: binding) do |token|
         @transport.upload_storage_object(
           authorization: token,
           bucket_name: @name,

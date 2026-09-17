@@ -21,8 +21,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-package-${{ inputs.run-id || github.event.release.tag_name }}
+  group: publish-sdk
   cancel-in-progress: false
+  # Retain pending runs for versions that already have a GitHub release.
+  queue: max
 
 defaults:
   run:
@@ -30,7 +32,9 @@ defaults:
 
 jobs:
   validate:
-    if: github.event_name == 'release' && github.event.release.prerelease == false
+    if: >-
+      github.event_name == 'release' && github.event.release.prerelease == false &&
+      github.event.release.draft == false && github.event.release.author.login == 'kong-volcano-app[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -55,6 +59,8 @@ jobs:
     needs: [validate, check]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      version: ${{ steps.package.outputs.version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -70,14 +76,37 @@ jobs:
           version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
           # An absolute require cannot fall back to the source checkout.
           bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"
-      - name: Check package version against the release
+      - name: Verify and record the release package
+        id: package
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: test "v$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')" = "$RELEASE_TAG"
+        run: |
+          version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
+          test "v$version" = "$RELEASE_TAG"
+          ruby -rrubygems/package -e '
+            path = "volcano-sdk-#{ARGV.fetch(0)}.gem"
+            abort "Expected one release gem" unless Dir["*.gem"] == [path]
+            package = Gem::Package.new(path)
+            package.verify
+            abort "Unexpected gem identity" unless package.spec.name == "volcano-sdk" && package.spec.version.to_s == ARGV.fetch(0)
+            puts package.spec.files.sort
+          ' "$version" > package-files.txt
+          sha256sum "volcano-sdk-$version.gem" > SHA256SUMS
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          {
+            echo "Package: volcano-sdk $version"
+            echo "Source: $RELEASE_TAG ($GITHUB_SHA)"
+            echo '```text'
+            cat SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-package
-          path: volcano-sdk-*.gem
+          path: |
+            volcano-sdk-*.gem
+            SHA256SUMS
+            package-files.txt
           if-no-files-found: error
 
   prepare:
@@ -171,8 +200,14 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
-    needs: prepare
+    if: >-
+      !cancelled() &&
+      ((github.event_name == 'release' && needs.build.result == 'success') ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish &&
+        github.ref == 'refs/heads/main' && needs.prepare.result == 'success'))
+    needs: [build, prepare]
+    outputs:
+      version: ${{ steps.push.outputs.version }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: rubygems
@@ -180,11 +215,11 @@ jobs:
       contents: read
       id-token: write
     env:
-      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      RELEASE_VERSION: ${{ needs.build.outputs.version || needs.prepare.outputs.version }}
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: publish-package
+          name: ${{ github.event_name == 'release' && 'release-package' || 'publish-package' }}
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
           ruby-version: '3.4'
@@ -193,5 +228,29 @@ jobs:
       - uses: rubygems/configure-rubygems-credentials@2a7221c7c44c30ebc68eda38fa25c60b918245c7
         with:
           trusted-publisher: true
-      - name: Push the reviewed gem
-        run: gem push "volcano-sdk-$RELEASE_VERSION.gem" --host https://rubygems.org
+      - name: Push the validated gem
+        id: push
+        run: |
+          gem push "volcano-sdk-$RELEASE_VERSION.gem" --host https://rubygems.org
+          echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+
+  release-link:
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Link the published RubyGems version in the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          tag="v$RELEASE_VERSION"
+          notes="$(gh release view "$tag" --json body --jq '.body')"
+          link="[View $tag on RubyGems](https://rubygems.org/gems/volcano-sdk/versions/$RELEASE_VERSION)"
+          if [[ "$notes" != *"$link"* ]]; then
+            printf '%s\n\n%s\n' "$notes" "$link" | gh release edit "$tag" --notes-file -
+          fi

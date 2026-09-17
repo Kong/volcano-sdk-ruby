@@ -1,7 +1,33 @@
 # Publishing releases
 
-Release Please maintains the version, changelog, and GitHub releases. Publishing
-a GitHub release runs CI and builds a gem; it does not publish to RubyGems.
+Merging a Release Please release PR automatically publishes its version to
+RubyGems after the release checks pass. No separate publish action is required.
+
+## Automatic release flow
+
+1. Release Please uses the Kong GitHub App token to create the version tag and
+   publish the GitHub release after its PR merges into `main`.
+2. The `release: published` event starts `publish.yml`. Only stable, non-draft
+   releases authored by `kong-volcano-app[bot]` enter the automatic path.
+3. The workflow verifies tag ancestry and the release manifest, runs CI on Ruby
+   3.2 and 3.4, and builds and smoke-tests the gem. The gem name and version must
+   match the release. It records the file inventory and SHA-256 with the artifact.
+4. A separate job downloads that artifact, verifies its checksum, obtains a
+   short-lived RubyGems OIDC credential, and pushes the gem from the `rubygems`
+   environment. This job never checks out or executes SDK code.
+5. A final job adds the RubyGems version link to the GitHub release notes.
+
+Releases queue without cancelling pending versions, matching the JavaScript SDK
+release pipeline. RubyGems selects its latest version by version number; there
+is no npm-style `latest` tag to move.
+
+Keep the GitHub App token in `release-please.yml`: releases created with the
+repository's `GITHUB_TOKEN` do not trigger a new release workflow. See
+[GitHub's workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
+
+A failed validation, CI run, build, or package check blocks publication. The
+release workflow's result is the publication result; check it before announcing
+the version.
 
 ## Configure RubyGems once
 
@@ -25,16 +51,25 @@ reserve the gem name. RubyGems displays its expiry; recreate it if it expires
 before the first push. For an existing gem, verify its owners and add the same
 publisher from that gem's Trusted publishers page instead.
 
-The GitHub `rubygems` environment must permit the `main` branch. Keep any existing
-reviewer and branch protections. RubyGems accepts the short-lived GitHub OIDC
+The GitHub `rubygems` environment permits `v*` tags for automatic releases and
+`main` for manual recovery. Preserve these restrictions and any existing
+protections. A required environment reviewer pauses publication for approval;
+the current environment has no reviewer gate. RubyGems accepts the short-lived GitHub OIDC
 token only for this repository, workflow, and environment. No RubyGems password
 or API key belongs in GitHub secrets. See the
 [RubyGems trusted publishing guide](https://guides.rubygems.org/trusted-publishing/).
 
-## Review a package
+## Inspect a release or recover publication
 
-Run the `Release package` workflow from `main` with the successful release build
-run ID and publishing disabled:
+Normal releases publish automatically. If publication fails, inspect the failed
+job and rerun it after addressing the cause. If the push may already have
+succeeded, check RubyGems before retrying: a repeated push of an existing version
+fails. Publish a new version for corrections.
+
+For a successful package-only run from before automatic publishing was enabled,
+the manual path can publish its original artifact without rebuilding. First run
+`Release package` from `main` with that release build run ID and publishing
+disabled:
 
 ```sh
 gh workflow run publish.yml --repo Kong/volcano-sdk-ruby --ref main \
@@ -58,7 +93,7 @@ gem unpack volcano-sdk-0.5.2.gem --target unpacked
 
 On macOS, use `shasum -a 256 -c SHA256SUMS` to check the checksum.
 
-## Publish the approved version
+### Publish an existing package-only build
 
 After reviewing the package and confirming its RubyGems publisher, run the same
 workflow with publishing enabled and the reviewed gem checksum. The values below
@@ -72,13 +107,6 @@ gh workflow run publish.yml --repo Kong/volcano-sdk-ruby --ref main \
 ```
 
 This validates the same successful release build and publishes its original gem
-bytes from the `rubygems` environment without rebuilding. A missing or different
-checksum blocks publication. Only the publishing job
-can request an OIDC token. It downloads the built gem without checking out or
-executing SDK code. A repeated push of an existing version fails; check RubyGems
-before retrying after an uncertain outcome. Publish a new version for corrections.
-
-Verify the version, ownership, and installation on
-[the gem page](https://rubygems.org/gems/volcano-sdk). After the first successful
-publication, replace the README's temporary Git-source installation with
-`gem "volcano-sdk"`.
+bytes without rebuilding. A missing or different checksum blocks manual
+publication. Verify the version, ownership, and installation on
+[the gem page](https://rubygems.org/gems/volcano-sdk).

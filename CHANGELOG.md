@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.3...v0.6.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** retain a local user snapshot in sessions ([#114](https://github.com/Kong/volcano-sdk-ruby/issues/114)) ([d8d02c5](https://github.com/Kong/volcano-sdk-ruby/commit/d8d02c58ea98516f1a56960ed4eff20a7e3be1e8))
+
 ## [0.5.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.2...v0.5.3) (2026-09-17)
 
 

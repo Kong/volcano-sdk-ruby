@@ -15,9 +15,9 @@ module Volcano
         total_size: total_size,
         part_size: part_size
       )
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.create_upload_session(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           request: request
         )
@@ -32,9 +32,9 @@ module Volcano
         part_number: part_number,
         data: upload_bytes(data)
       )
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.upload_part(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           request: request
         )
@@ -44,9 +44,9 @@ module Volcano
 
     def complete_upload_session(path, session_id:)
       request = UploadSessionReference.new(path: path, session_id: session_id)
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.complete_upload_session(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           request: request
         )
@@ -56,9 +56,9 @@ module Volcano
 
     def get_upload_session(path, session_id:)
       request = UploadSessionReference.new(path: path, session_id: session_id)
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.get_upload_session(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           request: request
         )
@@ -68,9 +68,9 @@ module Volcano
 
     def abort_upload_session(path, session_id:)
       request = UploadSessionReference.new(path: path, session_id: session_id)
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.abort_upload_session(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           request: request
         )

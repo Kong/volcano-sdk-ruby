@@ -28,7 +28,7 @@ module Volcano
     def initialize(client, transport, name, api_url:, anon_key:)
       @client = client
       @transport = transport
-      @name = name
+      @name = name.dup.freeze
       @api_url = api_url.dup.freeze
       @anon_key = anon_key.dup.freeze
       freeze
@@ -36,12 +36,15 @@ module Volcano
 
     def upload(path, value, content_type: nil)
       mime_type = upload_content_type(content_type)
-      response = Transport.invoke do
+      path = storage_paths(path).first
+      @client.session_token
+      content = upload_bytes(value).freeze
+      response = storage_request do |token|
         @transport.upload_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           path: path,
-          data: upload_bytes(value),
+          data: content,
           content_type: mime_type
         )
       end
@@ -49,9 +52,11 @@ module Volcano
     end
 
     def download(path, range: nil)
-      response = Transport.invoke do
+      path = storage_paths(path).first
+      range = range&.dup&.freeze
+      response = storage_request do |token|
         @transport.download_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           path: path,
           byte_range: range
@@ -63,9 +68,11 @@ module Volcano
     end
 
     def list(prefix = '', limit: nil, cursor: nil)
-      response = Transport.invoke do
+      prefix = prefix.dup.freeze
+      cursor = cursor&.dup&.freeze
+      response = storage_request do |token|
         @transport.list_storage_objects(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           prefix: prefix,
           limit: limit,
@@ -81,6 +88,10 @@ module Volcano
     end
 
     private
+
+    def storage_request(binding: @client.capture_session_binding)
+      @client.session_request(binding: binding) { |token| Transport.invoke { yield(token) } }
+    end
 
     def upload_content_type(value)
       return if value.nil?

@@ -10,11 +10,10 @@ module Volcano
       refresh_captured_session(binding)
     end
 
-    def session_request
-      binding = @client.capture_session_binding
+    def session_request(binding: @client.capture_session_binding)
       raise Error::AuthenticationError, 'No active session' unless binding.last
 
-      response = yield(binding.last.access_token)
+      response = yield(owned_session_binding(binding).last.access_token)
       return response unless response.status == 401
 
       session = retry_session(binding)

@@ -373,13 +373,15 @@ Given('the client replaces its access token with a rejected token') do
   )
 end
 
-Then('the database read replaces the rejected token for the same user') do
-  session = contract.client.auth.current_session
-  raise 'current session is missing' unless session
-  raise 'access token is missing' if session.access_token.to_s.empty?
-  raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
-  raise 'refresh token is missing' if session.refresh_token.to_s.empty?
-  raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
+['database read', 'storage operation'].each do |operation|
+  Then("the #{operation} replaces the rejected token for the same user") do
+    session = contract.client.auth.current_session
+    raise 'current session is missing' unless session
+    raise 'access token is missing' if session.access_token.to_s.empty?
+    raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
+    raise 'refresh token is missing' if session.refresh_token.to_s.empty?
+    raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
+  end
 end
 
 When('one client pauses delivery for 1 second and then resumes with the same handler') do

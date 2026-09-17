@@ -36,6 +36,13 @@ RSpec.describe 'shared SDK contract bindings' do
     expect(actual).to eq(expected_hashes)
   end
 
+  it 'stages the proposed storage scenario without activating it for older hosting' do
+    path = File.expand_path('../features/staged/storage-refresh.feature', __dir__)
+
+    expect(Digest::SHA256.file(path).hexdigest)
+      .to eq('00257b455f9897791db7fd82c4166c7f34c7134b5b9f4ea92f509bba533751a1')
+  end
+
   it 'requires an absolute contract fixture path' do
     require_relative '../features/support/fixture'
 

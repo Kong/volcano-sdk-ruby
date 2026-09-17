@@ -49,8 +49,8 @@ module Volcano
       session.access_token
     end
 
-    def session_request(&)
-      @auth.session_request(&)
+    def session_request(...)
+      @auth.session_request(...)
     end
 
     alias session_read session_request

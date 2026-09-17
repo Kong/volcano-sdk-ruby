@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'async', '2.20.0'
   spec.add_dependency 'async-http', '0.94.2'
   spec.add_dependency 'async-websocket', '0.30.0'
+  spec.add_dependency 'base64', '~> 0.2'
   spec.add_dependency 'logger', '~> 1.7'
   spec.add_dependency 'protocol-rack', '0.21.1'
   spec.add_dependency 'typhoeus', '~> 1.4'

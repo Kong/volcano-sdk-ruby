@@ -71,11 +71,7 @@ jobs:
           bundler-cache: true
       - run: gem build volcano-sdk.gemspec
       - name: Smoke test the gem
-        run: |
-          gem unpack volcano-sdk-*.gem --target unpacked
-          version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
-          # An absolute require cannot fall back to the source checkout.
-          bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"
+        run: bash .github/scripts/smoke-gem.sh volcano-sdk-*.gem
       - name: Verify and record the release package
         id: package
         env:

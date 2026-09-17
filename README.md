@@ -69,6 +69,17 @@ raise "session changed" unless current_session == session
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
 
+Sessions returned by authentication retain the user payload in `session.user`,
+including metadata. The snapshot is deeply immutable and available without a
+request. It is cached data, not proof of authentication; use `auth.user` to fetch
+the server-validated profile. Existing three-field `Session` construction still
+works, with `user: nil`. An adopted snapshot must have the same user ID.
+Snapshots contain deeply frozen JSON data. Plain `Time` timestamps become UTC
+ISO8601 strings with nanosecond precision; symbols become strings. Custom objects,
+container/string/time subclasses, non-finite numbers, duplicate JSON keys, and
+structures deeper than 100 levels raise `TypeError`. Use the typed `auth.user`
+profile when you need Ruby `Time` values.
+
 ### Get the current user
 
 ```ruby

@@ -3,6 +3,7 @@
 require_relative 'volcano/version'
 require_relative 'volcano/connection_string'
 require_relative 'volcano/models'
+require_relative 'volcano/session'
 require_relative 'volcano/function_response'
 require_relative 'volcano/log_responses'
 require_relative 'volcano/storage_models'

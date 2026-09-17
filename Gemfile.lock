@@ -5,6 +5,7 @@ PATH
       async (= 2.20.0)
       async-http (= 0.94.2)
       async-websocket (= 0.30.0)
+      base64 (~> 0.2)
       logger (~> 1.7)
       protocol-rack (= 0.21.1)
       typhoeus (~> 1.4)

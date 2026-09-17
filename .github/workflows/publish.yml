@@ -1,14 +1,27 @@
-name: Check release package
+name: Release package
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: Successful release-package workflow run ID
+        required: true
+        type: string
+      sha256:
+        description: Reviewed gem SHA-256 (required when publishing)
+        type: string
+      publish:
+        description: Publish the reviewed gem to RubyGems.org
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: check-release-package-${{ github.event.release.tag_name }}
+  group: release-package-${{ inputs.run-id || github.event.release.tag_name }}
   cancel-in-progress: false
 
 defaults:
@@ -17,7 +30,7 @@ defaults:
 
 jobs:
   validate:
-    if: github.event.release.prerelease == false
+    if: github.event_name == 'release' && github.event.release.prerelease == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -66,3 +79,119 @@ jobs:
           name: release-package
           path: volcano-sdk-*.gem
           if-no-files-found: error
+
+  prepare:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    env:
+      RELEASE_RUN_ID: ${{ inputs.run-id }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate the source release build
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$RELEASE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN_ID" > release-run.json
+          jq -e --arg repo "$GITHUB_REPOSITORY" '
+            .repository.full_name == $repo and .event == "release" and
+            .path == ".github/workflows/publish.yml" and
+            .status == "completed" and .conclusion == "success"
+          ' release-run.json
+          tag="$(jq -er '.head_branch' release-run.json)"
+          commit="$(jq -er '.head_sha' release-run.json)"
+          [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" |
+            jq -e --arg tag "$tag" '.tag_name == $tag and .draft == false and .prerelease == false'
+          test "$commit" = "$(git rev-parse "refs/tags/$tag^{commit}")"
+          git merge-base --is-ancestor "$commit" origin/main
+          test "$tag" = "v$(git show "$commit:.release-please-manifest.json" | jq -er '.["."]')"
+          artifact_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN_ID/artifacts" --paginate --slurp |
+            jq -er '[.[].artifacts[] | select(.name == "release-package" and .expired == false)] |
+              if length == 1 then .[0].id else error("Expected one unexpired release-package artifact") end')"
+          echo "artifact-id=$artifact_id" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "Source: $tag ($commit), release build $RELEASE_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ steps.release.outputs.artifact-id }}
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: package
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+      - name: Verify and record the package
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+        run: |
+          ruby -rrubygems/package -e '
+            path = "package/volcano-sdk-#{ENV.fetch("RELEASE_VERSION")}.gem"
+            abort "Expected one release gem" unless Dir["package/*.gem"] == [path]
+            package = Gem::Package.new(path)
+            package.verify
+            abort "Unexpected gem identity" unless package.spec.name == "volcano-sdk" && package.spec.version.to_s == ENV.fetch("RELEASE_VERSION")
+            puts package.spec.files.sort
+          ' > package/package-files.txt
+          cd package
+          sha256sum "volcano-sdk-$RELEASE_VERSION.gem" > SHA256SUMS
+          if [[ "$PUBLISH_REQUESTED" == "true" ]]; then
+            [[ "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]
+            test "$(cut -d ' ' -f 1 SHA256SUMS)" = "$EXPECTED_SHA256"
+          fi
+          {
+            echo "Package: volcano-sdk $RELEASE_VERSION"
+            echo '```text'
+            cat SHA256SUMS
+            echo '```'
+            echo 'The publish-package artifact includes the original gem, checksum, and file inventory.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publish-package
+          path: |
+            package/volcano-sdk-*.gem
+            package/SHA256SUMS
+            package/package-files.txt
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: publish-package
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+      - run: sha256sum --check SHA256SUMS
+      - uses: rubygems/configure-rubygems-credentials@2a7221c7c44c30ebc68eda38fa25c60b918245c7
+        with:
+          trusted-publisher: true
+      - name: Push the reviewed gem
+        run: gem push "volcano-sdk-$RELEASE_VERSION.gem" --host https://rubygems.org

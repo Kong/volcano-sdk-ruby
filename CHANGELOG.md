@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.2...v0.5.3) (2026-09-17)
+
+
+### Bug Fixes
+
+* declare base64 runtime dependency ([#128](https://github.com/Kong/volcano-sdk-ruby/issues/128)) ([9516bdd](https://github.com/Kong/volcano-sdk-ruby/commit/9516bdd49b1d93bc6c797ccb39839b80cd3d2e2d))
+
 ## [0.5.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.1...v0.5.2) (2026-09-17)
 
 

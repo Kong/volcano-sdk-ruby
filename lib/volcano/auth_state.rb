@@ -65,7 +65,7 @@ module Volcano
         return false unless generation == @generation && @session
         raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == @session.user_id
 
-        @session = @session.with(user: user)
+        @session = Session.new(**@session.to_h, user: user)
         true
       end
     end

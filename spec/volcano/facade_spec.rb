@@ -1121,7 +1121,7 @@ RSpec.describe Volcano::Client do
         authorization: 'anonymous-access',
         email: 'converted@example.com',
         password: 'secret',
-        metadata: { display_name: 'Ada' }
+        metadata: { 'display_name' => 'Ada' }
       )
     end
 
@@ -2125,14 +2125,16 @@ RSpec.describe Volcano::Client do
       expect(transport.calls).to be_empty
     end
 
-    it 'preserves the current session after an authentication failure' do
+    it 'preserves the refreshed session after an authentication failure' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
       transport.user_response = Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
       )
 
       expect { client.auth.user }.to raise_error(Volcano::Error::AuthenticationError, 'expired')
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session).to have_attributes(
+        access_token: 'access-2', refresh_token: 'refresh-2', user_id: established.user_id
+      )
     end
 
     it 'rejects a malformed successful profile' do
@@ -2218,7 +2220,7 @@ RSpec.describe Volcano::Client do
       expect(transport.calls_for(:auth_update_user).last.fetch(1)).to eq(
         authorization: 'access-token',
         password: 'new-secret',
-        metadata: { display_name: 'Grace', avatar: nil }
+        metadata: { 'display_name' => 'Grace', 'avatar' => nil }
       )
       expect(client.auth.current_session.to_h.except(:user)).to eq(established.to_h.except(:user))
     end
@@ -2231,7 +2233,7 @@ RSpec.describe Volcano::Client do
       expect(transport.calls).to be_empty
     end
 
-    it 'preserves the current session after an authentication failure' do
+    it 'preserves the refreshed session after an authentication failure' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
       transport.update_user_response = Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
@@ -2241,7 +2243,9 @@ RSpec.describe Volcano::Client do
         Volcano::Error::AuthenticationError,
         'expired'
       )
-      expect(client.auth.current_session).to be(established)
+      expect(client.auth.current_session).to have_attributes(
+        access_token: 'access-2', refresh_token: 'refresh-2', user_id: established.user_id
+      )
     end
 
     it 'rejects a profile returned for a replaced session' do

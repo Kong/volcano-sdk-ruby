@@ -60,7 +60,9 @@ A client holds its current session in memory.
 Use a separate client for each independent user session; do not share one mutable client across users in a web server.
 `client.current_session` and `client.auth.current_session` read the local immutable snapshot without a request.
 Use `client.auth.user` when you need a server-validated profile; `get_user` is an alias.
-Successful profile operations update the cached user without replacing credentials.
+Successful profile operations update the cached user while preserving the current credentials.
+If `user`, `update_user`, `convert_anonymous`, or `confirm_email_change` receives an HTTP 401 and the session has a usable refresh token, the client refreshes once and retries with the original request values.
+These operations do not retry other HTTP failures or ambiguous network failures, and they never retry under a replacement session.
 
 `sign_up` returns an acknowledgement without signing in by default.
 Pass `sign_in_when_allowed: true` to sign in only when the project does not require email confirmation.

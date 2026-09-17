@@ -13,14 +13,12 @@ module Volcano
     end
 
     def convert_anonymous(email:, password:, metadata: {})
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(
-        anonymous_conversion_response(current.access_token, email, password, metadata),
-        200
-      )
-      cache_current_user(payload, generation)
+      profile_request do
+        request_email = email.dup.freeze
+        request_password = password.dup.freeze
+        request_metadata = JSON.parse(JSON.generate(Hash(metadata)), freeze: true)
+        ->(token) { anonymous_conversion_response(token, request_email, request_password, request_metadata) }
+      end
     end
 
     private

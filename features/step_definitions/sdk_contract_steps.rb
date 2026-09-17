@@ -373,7 +373,7 @@ Given('the client replaces its access token with a rejected token') do
   )
 end
 
-['database read', 'storage operation'].each do |operation|
+['database read', 'storage operation', 'profile read'].each do |operation|
   Then("the #{operation} replaces the rejected token for the same user") do
     session = contract.client.auth.current_session
     raise 'current session is missing' unless session
@@ -432,4 +432,14 @@ Then('the function echoes the payload') do
   response = contract.last_outcome.value
   raise "function returned #{response.status}" unless response.status == 200
   raise "function echoed #{response.data.inspect}" unless response.data == { 'echoed' => 'contract' }
+end
+
+When('the client loads its server-validated profile') do
+  contract.record { contract.client.auth.user }
+end
+
+Then('the returned and cached profiles belong to the contract user') do
+  expected = contract.fixture.fetch('user_id')
+  raise 'profile belongs to another user' unless contract.last_outcome.value.id == expected
+  raise 'cached profile belongs to another user' unless contract.client.current_session.user.fetch('id') == expected
 end

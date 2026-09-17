@@ -1,14 +1,24 @@
-name: Check release package
+name: Release package
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published GitHub release tag (for example, v0.5.2)
+        required: true
+        type: string
+      publish:
+        description: Publish the validated gem to RubyGems.org
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: check-release-package-${{ github.event.release.tag_name }}
+  group: release-package-${{ inputs.tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 defaults:
@@ -17,35 +27,55 @@ defaults:
 
 jobs:
   validate:
-    if: github.event.release.prerelease == false
+    if: >-
+      (github.event_name == 'release' && github.event.release.prerelease == false) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
+      version: ${{ steps.release.outputs.version }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
     steps:
+      - name: Require a published stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" |
+            jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .draft == false and .prerelease == false'
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           fetch-depth: 0
           persist-credentials: false
       - name: Validate release tag and ancestry
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        id: release
         run: |
           git merge-base --is-ancestor HEAD origin/main
-          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
           test "$RELEASE_TAG" = "v$(jq -er '.["."]' .release-please-manifest.json)"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
 
   check:
     needs: validate
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.validate.outputs.commit }}
 
   build:
     needs: [validate, check]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+          ref: ${{ needs.validate.outputs.commit }}
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
           ruby-version: '3.4'
@@ -57,12 +87,56 @@ jobs:
           version="$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')"
           # An absolute require cannot fall back to the source checkout.
           bundle exec ruby -e 'require File.expand_path("lib/volcano.rb", ARGV.fetch(0)); abort unless Volcano::Client' "unpacked/volcano-sdk-$version"
-      - name: Check package version against the release
+      - name: Record the release package
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: test "v$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')" = "$RELEASE_TAG"
+          RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
+        run: |
+          test "$(ruby -Ilib -rvolcano/version -e 'puts Volcano::VERSION')" = "$RELEASE_VERSION"
+          ruby -rrubygems/package -e '
+            package = Gem::Package.new(ARGV.fetch(0))
+            abort "Unexpected gem identity" unless package.spec.name == "volcano-sdk" && package.spec.version.to_s == ENV.fetch("RELEASE_VERSION")
+            puts package.spec.files.sort
+          ' "volcano-sdk-$RELEASE_VERSION.gem" > package-files.txt
+          sha256sum "volcano-sdk-$RELEASE_VERSION.gem" > SHA256SUMS
+          {
+            echo "Package: volcano-sdk $RELEASE_VERSION"
+            echo "Source commit: $RELEASE_COMMIT"
+            echo '```text'
+            cat SHA256SUMS
+            echo '```'
+            echo 'The release-package artifact includes the gem, checksum, and file inventory.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-package
-          path: volcano-sdk-*.gem
+          path: |
+            volcano-sdk-*.gem
+            SHA256SUMS
+            package-files.txt
           if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-package
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+      - run: sha256sum --check SHA256SUMS
+      - uses: rubygems/configure-rubygems-credentials@2a7221c7c44c30ebc68eda38fa25c60b918245c7
+        with:
+          trusted-publisher: true
+      - name: Push the validated gem
+        run: gem push "volcano-sdk-$RELEASE_VERSION.gem" --host https://rubygems.org

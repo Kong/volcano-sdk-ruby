@@ -1,9 +1,23 @@
 # Volcano Ruby SDK
 
-Official Ruby SDK for Volcano. This repository is a private proof of concept;
-the gem is not published yet.
+Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
-## Proof-of-concept API
+## Install
+
+The first RubyGems release is pending. Until it is published, add the tagged
+source to your Gemfile and run `bundle install`:
+
+```ruby
+gem "volcano-sdk", git: "https://github.com/Kong/volcano-sdk-ruby.git", tag: "v0.5.2"
+```
+
+After publication, install the `volcano-sdk` gem from RubyGems. The Ruby require
+path remains `volcano`.
+
+Maintainers: see [Publishing releases](https://github.com/Kong/volcano-sdk-ruby/blob/main/PUBLISHING.md) for trusted publisher setup
+and the release procedure.
+
+## Create a client
 
 Create a client with the project URL and anonymous key from Volcano:
 

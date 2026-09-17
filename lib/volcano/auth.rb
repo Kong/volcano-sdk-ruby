@@ -86,14 +86,21 @@ module Volcano
       owned_session(
         access_token: payload.fetch('access_token'),
         refresh_token: payload.fetch('refresh_token'),
-        user_id: payload.fetch('user').fetch('id')
+        user_id: payload.fetch('user').fetch('id'),
+        user: payload.fetch('user')
       )
     end
 
     def complete_session?(session)
       return false unless session.is_a?(Session)
 
-      session.to_h.values.all? { |value| value.is_a?(String) && !value.strip.empty? }
+      values = [session.access_token, session.refresh_token, session.user_id]
+      values.all? { |value| value.is_a?(String) && !value.strip.empty? } &&
+        matching_session_user?(session)
+    end
+
+    def matching_session_user?(session)
+      session.user.nil? || (session.user.is_a?(Hash) && session.user['id'] == session.user_id)
     end
 
     def owned_complete_session(session)
@@ -102,11 +109,12 @@ module Volcano
       owned_session(**session.to_h)
     end
 
-    def owned_session(access_token:, refresh_token:, user_id:)
+    def owned_session(access_token:, refresh_token:, user_id:, user: nil)
       Session.new(
         access_token: access_token.dup.freeze,
         refresh_token: refresh_token.dup.freeze,
-        user_id: user_id.dup.freeze
+        user_id: user_id.dup.freeze,
+        user: user
       )
     end
   end

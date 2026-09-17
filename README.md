@@ -2,6 +2,8 @@
 
 Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
+Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
+
 ## Install
 
 Add the gem to your Gemfile and run `bundle install`:

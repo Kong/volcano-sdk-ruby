@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.1...v0.7.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **auth:** refresh rejected profile requests within their session ([#136](https://github.com/Kong/volcano-sdk-ruby/issues/136)) ([cccd14e](https://github.com/Kong/volcano-sdk-ruby/commit/cccd14eda37478ddffd3b8b8cbb21d41347ed430))
+
 ## [0.7.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.0...v0.7.1) (2026-09-17)
 
 

@@ -414,3 +414,20 @@ end
 Then('the subscriber receives the contract message within 10 seconds') do
   raise 'realtime message did not match' unless contract.last_outcome.value == contract.realtime_message
 end
+
+When('the client invokes the contract function by name') do
+  contract.record do
+    contract.service_client.functions.invoke(
+      contract.fixture.fetch('function_name'), { 'value' => 'contract' }
+    )
+  end
+end
+
+# The function is reachable only at the endpoint the platform resolved, on a
+# domain the API URL does not name, so an echo coming back is what proves the
+# SDK sent the request there rather than somewhere it guessed.
+Then('the function echoes the payload') do
+  response = contract.last_outcome.value
+  raise "function returned #{response.status}" unless response.status == 200
+  raise "function echoed #{response.data.inspect}" unless response.data == { 'echoed' => 'contract' }
+end

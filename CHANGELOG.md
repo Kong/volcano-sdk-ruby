@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.0...v0.7.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **storage:** refresh rejected sessions and replay bounded requests ([#133](https://github.com/Kong/volcano-sdk-ruby/issues/133)) ([94b02a1](https://github.com/Kong/volcano-sdk-ruby/commit/94b02a114498f83e147a06eff2e3e86ebaca4f7f))
+
 ## [0.7.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.6.0...v0.7.0) (2026-09-17)
 
 

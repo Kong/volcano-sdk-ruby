@@ -61,15 +61,19 @@ On macOS, use `shasum -a 256 -c SHA256SUMS` to check the checksum.
 ## Publish the approved version
 
 After reviewing the package and confirming its RubyGems publisher, run the same
-workflow with publishing enabled:
+workflow with publishing enabled and the reviewed gem checksum. The values below
+identify the existing `v0.5.2` build; use the run ID and checksum you reviewed for
+other releases:
 
 ```sh
 gh workflow run publish.yml --repo Kong/volcano-sdk-ruby --ref main \
-  -f run-id=35237976090 -F publish=true
+  -f run-id=35237976090 -F publish=true \
+  -f sha256=8a03d6e4d1424644140e4b2f47597ca64e4c771d74a9394e4f36c2faa1a41e7a
 ```
 
 This validates the same successful release build and publishes its original gem
-bytes from the `rubygems` environment without rebuilding. Only the publishing job
+bytes from the `rubygems` environment without rebuilding. A missing or different
+checksum blocks publication. Only the publishing job
 can request an OIDC token. It downloads the built gem without checking out or
 executing SDK code. A repeated push of an existing version fails; check RubyGems
 before retrying after an uncertain outcome. Publish a new version for corrections.

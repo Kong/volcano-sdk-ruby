@@ -9,6 +9,9 @@ on:
         description: Successful release-package workflow run ID
         required: true
         type: string
+      sha256:
+        description: Reviewed gem SHA-256 (required when publishing)
+        type: string
       publish:
         description: Publish the reviewed gem to RubyGems.org
         default: false
@@ -134,6 +137,8 @@ jobs:
       - name: Verify and record the package
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
         run: |
           ruby -rrubygems/package -e '
             path = "package/volcano-sdk-#{ENV.fetch("RELEASE_VERSION")}.gem"
@@ -145,6 +150,10 @@ jobs:
           ' > package/package-files.txt
           cd package
           sha256sum "volcano-sdk-$RELEASE_VERSION.gem" > SHA256SUMS
+          if [[ "$PUBLISH_REQUESTED" == "true" ]]; then
+            [[ "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]
+            test "$(cut -d ' ' -f 1 SHA256SUMS)" = "$EXPECTED_SHA256"
+          fi
           {
             echo "Package: volcano-sdk $RELEASE_VERSION"
             echo '```text'

@@ -1,0 +1,16 @@
+name: Lint docs
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/lint-docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    uses: Kong/volcano-docs/.github/workflows/lint-docs.yml@main
+    with:
+      path: docs

@@ -281,4 +281,20 @@ RSpec.describe Volcano::Client do
         expect(error).to have_attributes(status: 503, code: 'function_not_ready')
       end
   end
+
+  # The generated client validates this header and the paging bounds itself, and
+  # answers with its own vocabulary: the operation's name and the option key it
+  # knows the header by. A caller reads a message about what they passed
+  # instead.
+  it 'refuses an execution name the platform would not accept' do
+    expect { client.durable.start('charge-order', {}, execution_name: 'order 9') }
+      .to raise_error(ArgumentError, /execution_name must be 1-255 characters/)
+  end
+
+  it 'refuses paging arguments outside what the API serves' do
+    expect { client.durable.list('project-1', 'charge-order', limit: 101) }
+      .to raise_error(ArgumentError, /limit must be an Integer between 1 and 100/)
+    expect { client.durable.list('project-1', 'charge-order', page: 0) }
+      .to raise_error(ArgumentError, /page must be a positive Integer/)
+  end
 end

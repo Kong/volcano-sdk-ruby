@@ -47,8 +47,7 @@ module Volcano
         return nil unless value.is_a?(String) && !value.empty?
 
         uri = URI.parse(value)
-        # URI accepts a port outside the range a connection can use.
-        return nil if uri.host.to_s.empty? || !uri.port.to_i.between?(1, 65_535)
+        return nil if uri.host.to_s.empty?
 
         usable_scheme?(uri.scheme, api_url) ? value : nil
       rescue URI::InvalidURIError

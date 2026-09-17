@@ -3,6 +3,11 @@
 module Volcano
   # Starts and follows executions of deployed durable functions.
   class Durable
+    # What the platform accepts as an execution name, and the page size it
+    # serves at most. Mirrored from the wire contract so a refusal is the
+    # facade's rather than the generated client's.
+    EXECUTION_NAME = /\A[A-Za-z0-9._-]{1,255}\z/
+    MAX_PAGE_SIZE = 100
     include DurableResponses
 
     def initialize(client, transport)
@@ -23,7 +28,7 @@ module Volcano
       # A durable function's id is accepted here as well as its name, so the
       # DNS-safe name pattern an invoke checks would reject half the input.
       function_id = identifier(function_name, 'function_name')
-      name = execution_name.nil? ? nil : identifier(execution_name, 'execution_name')
+      name = execution_name.nil? ? nil : execution_name_argument(execution_name)
       response = Transport.invoke do
         @transport.start_durable_execution_from_application(
           authorization: @client.function_token,
@@ -55,6 +60,7 @@ module Volcano
     def list(project_id, function_name, status: nil, page: nil, limit: nil)
       project = identifier(project_id, 'project_id')
       function_id = identifier(function_name, 'function_name')
+      validate_paging(page, limit)
       response = Transport.invoke do
         @transport.list_durable_executions(
           authorization: @client.session_token, project_id: project, function_id: function_id,
@@ -96,6 +102,34 @@ module Volcano
       raise ArgumentError, "#{field} must be a non-empty String" unless present_string?(value)
 
       value.strip.freeze
+    end
+
+    # The generated client validates this header against the same pattern and
+    # raises its own message, naming the operation and the option key it knows
+    # the header by. Checked here first so the caller reads a message about the
+    # argument they passed, the way Functions#invoke does for a function name.
+    def execution_name_argument(value)
+      name = identifier(value, 'execution_name')
+      unless EXECUTION_NAME.match?(name)
+        raise ArgumentError,
+              'execution_name must be 1-255 characters of letters, numbers, dots, dashes or underscores'
+      end
+
+      name
+    end
+
+    # Same reason: the generated client enforces the page and limit bounds and
+    # answers with its own vocabulary.
+    def validate_paging(page, limit)
+      raise ArgumentError, 'page must be a positive Integer' unless page.nil? || positive_integer?(page)
+
+      return if limit.nil? || (positive_integer?(limit) && limit <= MAX_PAGE_SIZE)
+
+      raise ArgumentError, "limit must be an Integer between 1 and #{MAX_PAGE_SIZE}"
+    end
+
+    def positive_integer?(value)
+      value.is_a?(Integer) && value.positive?
     end
   end
 end

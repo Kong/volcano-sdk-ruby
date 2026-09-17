@@ -414,7 +414,11 @@ result = client.functions.invoke(
 puts [result.status, result.version, result.data]
 ```
 
-`invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
+`invoke` resolves a DNS-safe function name and sends a JSON object. The request
+goes to the function's own domain rather than to `api_url`, so an egress rule
+that allows only the API host will block it; the resolved endpoint is cached for
+the lifetime the platform gives it. Deployments with no public function domain
+invoke through the API host instead. It uses the
 active user session when present, then a configured service key, then the
 anonymous key. An anonymous key can invoke a public function without a user
 session; the function receives no user identity. The immutable result includes

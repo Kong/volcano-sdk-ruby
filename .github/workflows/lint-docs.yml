@@ -11,6 +11,6 @@ permissions:
 
 jobs:
   docs:
-    uses: Kong/volcano-docs/.github/workflows/lint-docs.yml@main
+    uses: Kong/volcano-docs/.github/workflows/lint-docs.yml@2eed9e93cae0b070f57788e7c270ccfbb4cd4579
     with:
       path: docs

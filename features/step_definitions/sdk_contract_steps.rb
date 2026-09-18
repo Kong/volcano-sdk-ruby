@@ -806,3 +806,19 @@ end
 Then('activity counts exactly that event in its function and level buckets') do
   @logs_contract.verify_activity(contract.last_outcome.value)
 end
+
+When('one presence client joins and leaves while the other remains subscribed') do
+  raise contract.last_outcome.error if contract.last_outcome && !contract.last_outcome.ok
+
+  contract.record do
+    Async do |task|
+      VolcanoContract::PresenceMembership.new(contract).run(task)
+    ensure
+      contract.realtime_clients.reverse_each { |client| client.realtime.disconnect }
+    end.wait
+  end
+end
+
+Then('both rosters identify the contract user and the original handler observes membership changes') do
+  raise 'presence membership did not match' unless contract.last_outcome.value == [1, 2, 1]
+end

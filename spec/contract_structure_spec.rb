@@ -131,4 +131,11 @@ RSpec.describe 'shared SDK contract bindings' do
       '5616e288fe1a68e13fa70416fe0323a5ce830c0edaa885a387efbf9e5bb2a269'
     )
   end
+
+  it 'stages the canonical presence membership feature' do
+    path = File.expand_path('../features/staged/realtime-presence.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      'b4429f6e3df60a6a98be4daf1d8517e2cd7cee651f9eb6463a1090ab49a102b5'
+    )
+  end
 end

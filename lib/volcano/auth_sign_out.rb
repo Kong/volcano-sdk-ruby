@@ -5,7 +5,7 @@ module Volcano
   class Auth
     def sign_out
       binding = @client.capture_session_binding
-      return unless binding.last
+      return binding[1].wait_for_sign_out unless binding.last
 
       notifications = []
       binding[1].sign_out do |preceding, pending|
@@ -44,10 +44,9 @@ module Volcano
 
     def revocation_error(session, owner, refresh_error, joined:)
       session_id = access_token_session_id(session.access_token)
-      if session_id && !owner.verified_pair?(session)
-        return revoke_access_session(session, session_id, refresh_error, joined: joined)
-      end
-      return refresh_error if refresh_error
+      verified = owner.verified_pair?(session)
+      return revoke_access_session(session, session_id, refresh_error, joined: joined) if session_id && !verified
+      return refresh_error if refresh_error && !verified
       return unless session.refresh_token
 
       Transport.body(logout_response(session.refresh_token), 204)

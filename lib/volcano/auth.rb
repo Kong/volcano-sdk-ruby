@@ -53,6 +53,15 @@ module Volcano
       end
     end
 
+    def refresh_response(refresh_token)
+      Transport.invoke do
+        @transport.auth_refresh(
+          authorization: @client.anon_token,
+          refresh_token: refresh_token
+        )
+      end
+    end
+
     def build_session(payload)
       owned_session(
         access_token: payload.fetch('access_token'),

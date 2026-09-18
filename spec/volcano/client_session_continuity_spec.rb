@@ -174,6 +174,22 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  it 'revokes a verified pair after joining a throttled refresh' do
+    entered, release, captured = Array.new(3) { Queue.new }
+    allow(transport).to receive(:auth_signin).and_return(refresh_response(session_a))
+    client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
+    signal_logout_capture(captured)
+    allow(transport).to receive(:auth_refresh) do
+      entered << true
+      Timeout.timeout(2) { release.pop }
+      response(429, 'error' => 'throttled')
+    end
+    _, outcome = complete_refresh_and_logout(entered, release, captured)
+    expect(outcome).to be_nil
+    expect(transport).to have_received(:auth_logout).once
+    expect(transport).not_to have_received(:auth_delete_my_session)
+  end
+
   def finish_refresh_before_logout_claim(release, refreshing)
     allow(client).to receive(:capture_session_binding).and_wrap_original do |original|
       binding = original.call
@@ -234,18 +250,29 @@ RSpec.describe Volcano::Client do
     end
 
     def signal_second_logout_capture
-      allow(client).to receive(:capture_session_binding).and_wrap_original do |original|
-        original.call.tap { signals[:captured] << true }
+      owner = client.capture_session_binding[1]
+      allow(owner).to receive(:result).and_wrap_original do |original, *args|
+        signals[:captured] << true
+        original.call(*args)
       end
     end
 
-    [204, 503].each do |status|
-      context "when revocation returns #{status}" do
+    def pause_logout
+      signals[:entered] << true
+      Timeout.timeout(2) { signals[:release].pop }
+    end
+
+    [204, 503].product([false, true]).each do |status, after_clear|
+      context "when revocation returns #{status}, after clear: #{after_clear}" do
         before do
           allow(transport).to receive(:auth_delete_my_session) do
-            signals[:entered] << true
-            Timeout.timeout(2) { signals[:release].pop }
+            pause_logout unless after_clear
             response(status, 'error' => 'unavailable')
+          end
+          if after_clear
+            allow(client).to receive(:clear_session_if_current?).and_wrap_original do |original, *args, **kwargs|
+              original.call(*args, **kwargs).tap { pause_logout }
+            end
           end
         end
 
@@ -264,14 +291,18 @@ RSpec.describe Volcano::Client do
     end
   end
 
-  it 'revokes a server-issued pair without requiring access renewal' do
-    allow(transport).to receive_messages(auth_signin: refresh_response(session_a), auth_logout: response(204),
-                                         auth_delete_my_session: response(401), auth_refresh: response(429))
-    client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
-    client.auth.sign_out
-    expect(transport).to have_received(:auth_logout).with(authorization: 'anon', refresh_token: 'rotated').once
-    expect(transport).not_to have_received(:auth_refresh)
-    expect(transport).not_to have_received(:auth_delete_my_session)
+  [false, true].each do |refresh_first|
+    it "revokes a server-issued pair without access renewal, preceding429: #{refresh_first}" do
+      allow(transport).to receive_messages(auth_signin: refresh_response(session_a), auth_logout: response(204),
+                                           auth_delete_my_session: response(401), auth_refresh: response(429))
+      issued = client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
+      owner = client.capture_session_binding[1]
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::RateLimitedError) if refresh_first
+      client.auth.sign_out
+      expect(transport).to have_received(:auth_logout).with(authorization: 'anon', refresh_token: 'rotated').once
+      expect(transport).not_to have_received(:auth_delete_my_session)
+      expect(owner).not_to be_verified_pair(issued)
+    end
   end
 
   def adopt_supplied_session(session, hosted)

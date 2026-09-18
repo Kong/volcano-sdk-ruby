@@ -43,7 +43,16 @@ module Volcano
         @sign_out ||= Outcome.new(false)
         [@sign_out, first, @refresh, @refresh && !@refresh.done]
       end
-      execute(operation, owner) { yield(preceding, pending) }
+      execute(operation, owner) do
+        yield(preceding, pending)
+      ensure
+        @mutex.synchronize { @verified_pair = @refresh = nil }
+      end
+    end
+
+    def wait_for_sign_out
+      operation = @mutex.synchronize { @sign_out unless @sign_out&.done }
+      result(operation)
     end
 
     def result(operation)

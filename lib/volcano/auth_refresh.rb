@@ -96,20 +96,15 @@ module Volcano
 
     def refreshed_session(binding, notifications)
       owner = binding[1]
+      verified = owner.verified_pair?(binding.last)
       owner.verify_pair(nil)
       session = parse_refresh_session(refresh_payload(binding, notifications))
       SessionCredentials.validate_refresh(binding.last, session)
       owner.verify_pair(session)
       session
-    end
-
-    def refresh_response(refresh_token)
-      Transport.invoke do
-        @transport.auth_refresh(
-          authorization: @client.anon_token,
-          refresh_token: refresh_token
-        )
-      end
+    rescue Error::RateLimitedError
+      owner.verify_pair(binding.last) if verified
+      raise
     end
 
     def refresh_payload(binding, notifications)

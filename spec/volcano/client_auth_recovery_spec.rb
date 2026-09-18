@@ -5,8 +5,14 @@ require 'spec_helper'
 RSpec.describe Volcano::Client do
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { described_class.new(anon_key: 'anon', _transport: transport) }
-  let(:session) { Volcano::Session.new('access-1', 'refresh-1', 'user') }
-  let(:refresh_body) { { 'access_token' => 'access-2', 'refresh_token' => 'refresh-2', 'user' => { 'id' => 'user' } } }
+  let(:session) { Volcano::Session.new(initial_token, 'refresh-1', 'user') }
+  let(:refresh_body) do
+    { 'access_token' => renewed_token,
+      'refresh_token' => 'refresh-2', 'user' => { 'id' => 'user' } }
+  end
+
+  def initial_token = access_token('00000000-0000-4000-8000-000000000010')
+  def renewed_token = access_token('00000000-0000-4000-8000-000000000010', renewed: true)
 
   def response(status, body = nil)
     Volcano::Transport::Response.new(status: status, body: body, headers: {}, data: nil)
@@ -39,10 +45,10 @@ RSpec.describe Volcano::Client do
         allow(transport).to receive(transport_operation).and_return(response(401), response(status, body))
         allow(transport).to receive(:auth_refresh).and_return(response(200, refresh_body))
         invoke_operation.call
-        expect(transport).to have_received(transport_operation).with(hash_including(authorization: 'access-1')).once
-        expect(transport).to have_received(transport_operation).with(hash_including(authorization: 'access-2')).once
+        expect(transport).to have_received(transport_operation).with(hash_including(authorization: initial_token)).once
+        expect(transport).to have_received(transport_operation).with(hash_including(authorization: renewed_token)).once
         expect(transport).to have_received(:auth_refresh).with(authorization: 'anon', refresh_token: 'refresh-1').once
-        expect(client.current_session.access_token).to eq('access-2')
+        expect(client.current_session.access_token).to eq(renewed_token)
       end
 
       it 'bounds repeated authentication rejection to one refresh' do

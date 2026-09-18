@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 
 RSpec.describe Volcano::Session do
+  include SessionFixtures
+
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon', _transport: transport) }
   let(:profile) { { 'id' => 'user', 'email' => 'user@example.com', 'user_metadata' => { 'roles' => ['reader'] } } }
@@ -11,12 +14,12 @@ RSpec.describe Volcano::Session do
     it "retains the local user snapshot after #{operation}" do
       response = Volcano::Transport::Response.new(
         status: operation == :sign_in_anonymously ? 201 : 200,
-        body: { 'access_token' => 'access', 'refresh_token' => 'refresh', 'user' => profile },
+        body: { 'access_token' => access_token, 'refresh_token' => 'refresh', 'user' => profile },
         headers: {}, data: nil
       )
       allow(transport).to receive_messages(auth_signin: response, auth_signup_anonymous: response,
                                            auth_refresh: response)
-      client.auth.current_session = described_class.new(access_token: 'old', refresh_token: 'old-refresh',
+      client.auth.current_session = described_class.new(access_token: access_token('old'), refresh_token: 'old-refresh',
                                                         user_id: 'user')
 
       session = if operation == :sign_in

@@ -440,11 +440,14 @@ client.auth.sign_out
 raise "still signed in" if client.auth.current_session
 ```
 
-`sign_out` uses the access-token session when available, even if a refresh token was supplied.
+Sign-out uses the refresh token directly when the SDK received both credentials together from
+sign-in or a validated refresh. Supplied credentials use the access-token session; on HTTP 401,
+the SDK can refresh once and revoke that same session without adopting the renewed credentials.
 It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
-fails, the SDK still clears that session and raises the typed error. A concurrent
-refresh of the same session is cleared; a separate sign-in or adoption remains current.
+fails, the SDK still clears that session and raises the typed error. Sign-out waits for an already-running refresh and uses its validated credentials.
+Later refresh attempts raise `Volcano::Error::SessionChangedError` without a request.
+Concurrent sign-out calls share one result. A separate sign-in or adoption remains current.
 
 ### Invoke a function
 
@@ -526,13 +529,17 @@ functions](https://volcano.dev/platform/functions/overview).
 
 ```ruby
 project_id = "00000000-0000-4000-8000-000000000001"
-page = client.logs.search(
+logs_client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_PROJECT_ACCESS_TOKEN")
+)
+page = logs_client.logs.search(
   project_id,
   { resource: { type: "function" }, limit: 100 }
 )
 page.data.each { |event| puts [event["timestamp"], event["body"]] }
 
-activity = client.logs.activity(
+activity = logs_client.logs.activity(
   project_id,
   { resource: { type: "function" }, bucket_count: 24 }
 )
@@ -542,7 +549,9 @@ puts activity.total
 `search` returns an immutable page of retained runtime or deployment log
 events. Pass `next_cursor` back as `cursor` to continue a search. `activity`
 returns immutable time buckets using the same resource selector and query
-syntax. Both methods require an active user session.
+syntax. Both methods require a platform user token or a project access token.
+A `read_only` project token is sufficient; end-user sessions cannot read project logs.
+See the [logs guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/logs.md).
 
 ### Query a database
 

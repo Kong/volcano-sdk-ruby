@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.1...v0.9.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* **auth:** recover rejected authenticated facade requests ([754f5a8](https://github.com/Kong/volcano-sdk-ruby/commit/754f5a8cb18300e79467a3c80310dd30272585fc))
+* **auth:** recover rejected authenticated facade requests ([d5488e8](https://github.com/Kong/volcano-sdk-ruby/commit/d5488e818b444b90d007a4549fbcae665f324966))
+* **auth:** validate ownership after response conversion ([38e61c5](https://github.com/Kong/volcano-sdk-ruby/commit/38e61c52e3abc053d240441d175b269cc5f2b28d))
+
+## [0.9.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.0...v0.9.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* **auth:** coordinate revocation per captured session ([#141](https://github.com/Kong/volcano-sdk-ruby/issues/141)) ([bf4847d](https://github.com/Kong/volcano-sdk-ruby/commit/bf4847d63f16ecd05c2030e3fc2482f15742853c))
+
 ## [0.9.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.8.0...v0.9.0) (2026-09-18)
 
 

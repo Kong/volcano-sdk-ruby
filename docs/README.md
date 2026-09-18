@@ -61,7 +61,8 @@ Use a separate client for each independent user session; do not share one mutabl
 `client.current_session` and `client.auth.current_session` read the local immutable snapshot without a request.
 Use `client.auth.user` when you need a server-validated profile; `get_user` is an alias.
 Successful profile operations update the cached user while preserving the current credentials.
-If `user`, `update_user`, `convert_anonymous`, or `confirm_email_change` receives an HTTP 401 and the session has a usable refresh token, the client refreshes once and retries with the original request values.
+Authenticated profile, session-list/deletion, email-change request/cancellation, linked-provider, provider-token, and provider-API operations refresh a usable session once after HTTP 401 and replay the original request values.
+Deleting the current server session also clears its refreshed local credentials; a separately adopted session remains current.
 These operations do not retry other HTTP failures or ambiguous network failures, and they never retry under a replacement session.
 
 `sign_up` returns an acknowledgement without signing in by default.
@@ -97,8 +98,10 @@ Construction makes no request and does not persist credentials.
 The initial snapshot has `nil` refresh credentials, user ID, and cached user.
 A successful profile read fills in the validated identity and cached user while retaining the supplied access token.
 Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` revokes the server session identified by the access token before clearing local state.
-Refresh must preserve the server session identified by the access JWT, even before a profile is loaded. A different session is rejected, including another session for the same user. An unknown identity without a readable session identifier cannot refresh.
-Sign-out revokes the access-token session. On HTTP 401, it can refresh once and revoke that same session; it never adopts the renewed credentials locally. A refresh of the revoked session is cleared, while a separate sign-in or adoption is preserved.
+Refresh must preserve the server session identified by the access JWT, even before a profile is loaded. A different session is rejected, including another session for the same user. Supplied credentials need a readable session identifier to refresh, even when you provide a user profile or load it from the server. Profile data does not prove that access and refresh tokens belong together.
+For supplied credentials, sign-out revokes the access-token session. On HTTP 401, it can refresh once and revoke that same session without adopting the renewed credentials locally.
+When the SDK received both credentials together from sign-in or a validated refresh, it uses the refresh token directly, even if access has expired.
+Sign-out joins an existing refresh and prevents later refresh attempts for that session. Concurrent sign-outs share one result; a separate sign-in or adoption remains current.
 Pass `refresh_token` alongside `access_token` when the client should refresh that session.
 A revocation failure is reported after local clearing; it does not prove that copied tokens are invalid.
 Assigning `auth.current_session` still requires complete credentials and identity.
@@ -112,3 +115,9 @@ See [release notes](https://github.com/Kong/volcano-sdk-ruby/releases) for versi
 Include the gem version, Ruby version, and a minimal reproduction without credentials.
 
 See [Distributed locks](./locks.md) for acquisition recovery, renewal, and fencing.
+
+Read the [database guide](./database.md) for projection, filters, ordered pagination, and mutations.
+
+For uploads, visibility, and resumable sessions, see [Storage](./storage.md).
+
+See [Logs](./logs.md) for project-token authentication, search, pagination, and activity.

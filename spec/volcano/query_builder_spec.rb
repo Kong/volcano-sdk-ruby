@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 
 RSpec.describe Volcano::QueryBuilder do
+  include SessionFixtures
+
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon', _transport: transport) }
   let(:query) { client.database('db').from('items').select('id').eq('id', 1).limit(2) }
@@ -12,7 +15,7 @@ RSpec.describe Volcano::QueryBuilder do
 
   before do
     client.auth.current_session = Volcano::Session.new(
-      access_token: 'old-access', refresh_token: 'old-refresh', user_id: 'user'
+      access_token: access_token('old'), refresh_token: 'old-refresh', user_id: 'user'
     )
     allow(transport).to receive(:query_database_select).and_return(
       response(401), response(200, 'data' => [{ 'id' => 1 }])
@@ -25,7 +28,7 @@ RSpec.describe Volcano::QueryBuilder do
   end
 
   def refresh_response
-    response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
+    response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
   end
 
   %i[client auth].each do |entry_point|
@@ -34,11 +37,11 @@ RSpec.describe Volcano::QueryBuilder do
       receiver = entry_point == :client ? client : client.auth
       result = receiver.session_read do |token|
         tokens << token
-        response(token == 'old-access' ? 401 : 200)
+        response(token == access_token('old') ? 401 : 200)
       end
 
       expect(result.status).to eq(200)
-      expect(tokens).to eq(%w[old-access new-access])
+      expect(tokens).to eq([access_token('old'), access_token('new')])
       expect(transport).to have_received(:auth_refresh).once
     end
   end
@@ -64,7 +67,7 @@ RSpec.describe Volcano::QueryBuilder do
     started = Queue.new
     release = Queue.new
     allow(transport).to receive(:query_database_select) do |authorization:, **|
-      if authorization == 'old-access'
+      if authorization == access_token('old')
         started << true
         release.pop
         response(401)
@@ -99,7 +102,7 @@ RSpec.describe Volcano::QueryBuilder do
 
     before do
       allow(transport).to receive(:query_database_select) do |authorization:, **|
-        if authorization == 'old-access'
+        if authorization == access_token('old')
           coordination[:started] << true
           coordination[:release].pop
           response(401)
@@ -153,7 +156,7 @@ RSpec.describe Volcano::QueryBuilder do
   it 'refreshes once and replays the same select under the refreshed token' do
     expect(query.execute).to eq([{ 'id' => 1 }])
     expect(transport).to have_received(:auth_refresh).with(authorization: 'anon', refresh_token: 'old-refresh').once
-    %w[old-access new-access].each do |token|
+    [access_token('old'), access_token('new')].each do |token|
       expect(transport).to have_received(:query_database_select).with(
         authorization: token, database_name: 'db',
         body: { 'table' => 'items', 'select' => ['id'],
@@ -224,7 +227,7 @@ RSpec.describe Volcano::QueryBuilder do
 
   it 'rejects rows if the session changes during replay' do
     allow(transport).to receive(:query_database_select) do |authorization:, **|
-      next response(401) if authorization == 'old-access'
+      next response(401) if authorization == access_token('old')
 
       client.auth.current_session = replacement
       response(200, 'data' => [{ 'id' => 1 }])
@@ -255,7 +258,7 @@ RSpec.describe Volcano::QueryBuilder do
       end
       mutation = operation == :delete ? query.delete : query.public_send(operation, 'id' => 1)
       expect(mutation.execute).to eq([{ 'id' => 1 }])
-      expect(calls.map { |call| call.fetch(:authorization) }).to eq(%w[old-access new-access])
+      expect(calls.map { |call| call.fetch(:authorization) }).to eq([access_token('old'), access_token('new')])
       expect(calls.first.except(:authorization)).to eq(calls.last.except(:authorization))
       expect(transport).to have_received(:auth_refresh).once
     end

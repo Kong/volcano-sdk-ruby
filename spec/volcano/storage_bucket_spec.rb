@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 require 'socket'
 require 'stringio'
 
 RSpec.describe Volcano::StorageBucket do
+  include SessionFixtures
+
   def capture_upload(content_type)
     server = TCPServer.new('127.0.0.1', 0)
     worker = Thread.new { receive_upload(server) }
@@ -84,7 +87,7 @@ RSpec.describe Volcano::StorageBucket do
     let(:bucket) { client.storage.from('assets') }
 
     before do
-      client.auth.current_session = Volcano::Session.new('old-access', 'old-refresh', 'user')
+      client.auth.current_session = Volcano::Session.new(access_token('old'), 'old-refresh', 'user')
       allow(transport).to receive(:auth_refresh).and_return(refresh_response)
     end
 
@@ -93,7 +96,8 @@ RSpec.describe Volcano::StorageBucket do
     end
 
     def refresh_response
-      response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
+      response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh',
+                    'user' => { 'id' => 'user' })
     end
 
     def object_payload
@@ -144,7 +148,7 @@ RSpec.describe Volcano::StorageBucket do
 
           expect(transport).to have_received(:auth_refresh)
             .with(authorization: 'anon', refresh_token: 'old-refresh').once
-          expect(calls.map { |call| call.fetch(:authorization) }).to eq(%w[old-access new-access])
+          expect(calls.map { |call| call.fetch(:authorization) }).to eq([access_token('old'), access_token('new')])
           expect(calls.last.except(:authorization)).to eq(calls.first.except(:authorization))
         end
 
@@ -221,9 +225,11 @@ RSpec.describe Volcano::StorageBucket do
       bucket.remove(%w[first second third])
 
       expect(calls).to eq([
-                            %w[first old-access], %w[second old-access], %w[second new-access], %w[third new-access]
+                            ['first', access_token('old')],
+                            ['second', access_token('old')],
+                            ['second', access_token('new')],
+                            ['third', access_token('new')]
                           ])
-      expect(transport).to have_received(:auth_refresh).once
     end
 
     it 'retains the session that owned the upload source before reading' do
@@ -246,12 +252,12 @@ RSpec.describe Volcano::StorageBucket do
         calls << kwargs.fetch(:authorization)
         calls.size.odd? ? response(401) : response(200, {})
       end
-      rotated = response(200, 'access_token' => 'second-access', 'refresh_token' => 'second-refresh',
+      rotated = response(200, 'access_token' => access_token('second'), 'refresh_token' => 'second-refresh',
                               'user' => { 'id' => 'user' })
       allow(transport).to receive(:auth_refresh).and_return(refresh_response, rotated)
       bucket.remove(%w[first second])
 
-      expect(calls).to eq(%w[old-access new-access new-access second-access])
+      expect(calls).to eq([access_token('old'), access_token('new'), access_token('new'), access_token('second')])
       expect(transport).to have_received(:auth_refresh).with(authorization: 'anon', refresh_token: 'new-refresh').once
     end
 

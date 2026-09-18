@@ -3,6 +3,8 @@ Feature: SDK token-only authentication
   @auth @SDK-AUTH-008
   Scenario: A client uses a supplied access token without inventing session fields
     Given an authenticated client
+    When a fresh client tries to refresh a supplied profile without a session identifier
+    Then the SDK operation fails
     When a fresh client starts with only the current access token
     Then the SDK operation succeeds
     And the token-only session has no cached user

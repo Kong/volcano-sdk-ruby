@@ -35,7 +35,7 @@ module VolcanoContract
     429 => 'rate limited'
   }.freeze
 
-  CREDENTIAL_KEYS = %w[anon_key service_key platform_token user_password].freeze
+  CREDENTIAL_KEYS = %w[anon_key service_key platform_token user_password logs_access_token].freeze
 
   def self.classify_error(error)
     category = ERROR_CATEGORIES.find { |error_type, _| error.is_a?(error_type) }&.last

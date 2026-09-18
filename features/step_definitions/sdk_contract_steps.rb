@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'net/http'
+
 ACCESS_TOKEN_CLOCK_TICK_SECONDS = 1.1
 
 def contract
@@ -48,6 +50,17 @@ When('the client refreshes the current session') do
 
   sleep ACCESS_TOKEN_CLOCK_TICK_SECONDS
   contract.record { contract.client.auth.refresh_session }
+end
+
+When('a fresh client tries to refresh a supplied profile without a session identifier') do
+  source = contract.client.current_session
+  raise 'current session is missing' unless source
+
+  target = Volcano::Client.new(api_url: contract.fixture.fetch('api_url'), anon_key: contract.fixture.fetch('anon_key'))
+  supplied = source.with(access_token: 'sdk-contract-rejected-access-token')
+  target.auth.current_session = supplied
+  contract.record { target.auth.refresh_session }
+  raise 'supplied credentials changed' unless target.current_session == supplied
 end
 
 When('a fresh client starts with only the current access token') do
@@ -180,6 +193,64 @@ end
 Then('exactly the fixture row is returned') do
   expected_rows = [contract.fixture.fetch('fixture_row')]
   raise 'database result did not match the fixture row' unless contract.last_outcome.value == expected_rows
+end
+
+def query_fixture_table
+  contract.client.database(contract.fixture.fetch('database_name')).from(contract.fixture.fetch('query_table_name'))
+end
+
+def query_fixture_filters(filters)
+  contract.record do
+    table = query_fixture_table
+    filters.transform_values do |operator, column, value|
+      table.select('slug').public_send(operator, column, value).order('rank').execute
+    end
+  end
+end
+
+When('the client selects a projected page of query fixture members') do
+  contract.record do
+    query_fixture_table.select('slug', 'rank').in('slug', %w[alpha beta gamma delta])
+                       .order('enabled').order('rank', ascending: false).offset(1).limit(2).execute
+  end
+end
+
+Then('the projected page contains only beta and gamma in that order') do
+  expected = [{ 'slug' => 'beta', 'rank' => 20 }, { 'slug' => 'gamma', 'rank' => 30 }]
+  raise 'projected page differs' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with each comparison filter') do
+  query_fixture_filters(neq: [:neq, 'rank', 20], gt: [:gt, 'rank', 20], gte: [:gte, 'rank', 20],
+                        lt: [:lt, 'rank', 30], lte: [:lte, 'rank', 30])
+end
+
+Then('each comparison returns exactly the matching query fixture rows') do
+  expected = {
+    neq: %w[alpha gamma delta epsilon], gt: %w[gamma delta epsilon], gte: %w[beta gamma delta epsilon],
+    lt: %w[alpha beta], lte: %w[alpha beta gamma]
+  }.transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'comparison results differ' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with case-sensitive and insensitive patterns') do
+  query_fixture_filters(like: [:like, 'label', 'Case_%'], ilike: [:ilike, 'label', 'case_%'])
+end
+
+Then('each pattern returns exactly the matching query fixture rows') do
+  expected = { like: %w[alpha epsilon], ilike: %w[alpha beta epsilon] }
+             .transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'pattern results differ' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with null and boolean filters') do
+  query_fixture_filters(null: [:is, 'label', nil], enabled: [:is, 'enabled', true], disabled: [:is, 'enabled', false])
+end
+
+Then('each identity filter returns exactly the matching query fixture rows') do
+  expected = { null: %w[gamma], enabled: %w[alpha gamma epsilon], disabled: %w[beta delta] }
+             .transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'identity results differ' unless contract.last_outcome.value == expected
 end
 
 When('the client inserts its contract row') do
@@ -372,6 +443,132 @@ Then('removing the moved object leaves the original unchanged') do
   raise 'remove changed original bytes' unless value.fetch('bytes').fetch(3) == contract.storage_bytes
 end
 
+def storage_contract_bucket
+  contract.client.storage.from(contract.fixture.fetch('bucket_name'))
+end
+
+def clean_storage_contract_object
+  bucket = storage_contract_bucket
+  bucket.remove(contract.storage_path) if bucket.list(contract.storage_path).objects.any? do |item|
+    item.name == contract.storage_path
+  end
+end
+
+def register_storage_session_cleanup(bucket, session)
+  contract.register_cleanup(lambda do
+    bucket.abort_upload_session(contract.storage_path, session_id: session.session_id)
+  rescue Volcano::Error::NotFoundError
+    nil
+  end)
+  contract.register_cleanup(-> { clean_storage_contract_object })
+end
+
+def start_storage_session(bucket, bytes)
+  session = bucket.create_upload_session(
+    contract.storage_path, total_size: bytes.bytesize,
+                           part_size: 5 * 1024 * 1024, content_type: 'application/octet-stream'
+  )
+  register_storage_session_cleanup(bucket, session)
+  session
+end
+
+def partial_storage_upload
+  bucket = storage_contract_bucket
+  bytes = ('x' * (5 * 1024 * 1024)).b + contract.storage_bytes
+  session = start_storage_session(bucket, bytes)
+  part = bucket.upload_part(contract.storage_path, session_id: session.session_id, part_number: 1,
+                                                   data: bytes.byteslice(0, session.part_size))
+  { 'session' => session, 'part' => part, 'bytes' => bytes }
+end
+
+When('the client uploads one part and resumes the contract upload') do
+  contract.record do
+    value = partial_storage_upload
+    bucket = storage_contract_bucket
+    session = value.fetch('session')
+    value['progress'] = bucket.get_upload_session(contract.storage_path, session_id: session.session_id)
+    bucket.upload_part(contract.storage_path, session_id: session.session_id, part_number: 2,
+                                              data: value.fetch('bytes').byteslice(session.part_size..))
+    value['object'] = bucket.complete_upload_session(contract.storage_path, session_id: session.session_id)
+    value['download'] = bucket.download(contract.storage_path)
+    value
+  end
+end
+
+Then('upload progress describes exactly the first uploaded part') do
+  value = contract.last_outcome.value
+  progress, session, part = value.values_at('progress', 'session', 'part')
+  expected = { session_id: session.session_id, path: contract.storage_path,
+               content_type: 'application/octet-stream', status: 'uploading',
+               total_size: value.fetch('bytes').bytesize, part_size: 5 * 1024 * 1024, total_parts: 2,
+               parts_uploaded: 1, bytes_uploaded: 5 * 1024 * 1024, parts: [part] }
+  raise 'upload progress differs' unless progress.to_h.slice(*expected.keys) == expected
+  raise 'session chunking differs' unless session.part_size == expected[:part_size] && session.total_parts == 2
+  raise 'uploaded part differs' unless part.part_number == 1 && part.size == session.part_size && !part.etag.empty?
+end
+
+Then('the completed multipart object preserves its path, type, and bytes') do
+  value = contract.last_outcome.value
+  expected = { name: contract.storage_path, mime_type: 'application/octet-stream', size: value.fetch('bytes').bytesize }
+  raise 'completed metadata differs' unless value.fetch('object').to_h.slice(*expected.keys) == expected
+  raise 'completed bytes differ' unless value.fetch('download') == value.fetch('bytes')
+end
+
+When('the client uploads one part and aborts the contract upload') do
+  contract.record do
+    session = partial_storage_upload.fetch('session')
+    bucket = storage_contract_bucket
+    bucket.abort_upload_session(contract.storage_path, session_id: session.session_id)
+    {
+      session: -> { bucket.get_upload_session(contract.storage_path, session_id: session.session_id) },
+      object: -> { bucket.download(contract.storage_path) }
+    }.transform_values do |read|
+      read.call
+      'unexpected success'
+    rescue Volcano::Error::NotFoundError
+      'not found'
+    end
+  end
+end
+
+Then('the aborted session and unfinished object are not found') do
+  expected = { session: 'not found', object: 'not found' }
+  raise 'aborted upload remains accessible' unless contract.last_outcome.value == expected
+end
+
+def anonymous_storage_read(url)
+  uri = URI(url)
+  Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https', open_timeout: 10, read_timeout: 10) do |http|
+    http.get(uri.request_uri)
+  end
+end
+
+When('the client makes the contract object public and private again') do
+  contract.record do
+    bucket = storage_contract_bucket
+    contract.register_cleanup(-> { clean_storage_contract_object })
+    bucket.upload(contract.storage_path, contract.storage_bytes)
+    url = bucket.get_public_url(contract.storage_path)
+    before = anonymous_storage_read(url)
+    public_object = bucket.update_visibility(contract.storage_path, public: true)
+    visible = anonymous_storage_read(url)
+    private_object = bucket.update_visibility(contract.storage_path, public: false)
+    after = anonymous_storage_read(url)
+    { statuses: [before.code, visible.code, after.code], bytes: visible.body.b,
+      visibility: [public_object.is_public, private_object.is_public],
+      private_bytes: [before.body.to_s.b, after.body.to_s.b] }
+  end
+end
+
+Then('anonymous reads return the original bytes only while the object is public') do
+  expected = { statuses: %w[404 200 404], bytes: contract.storage_bytes, visibility: [true, false] }
+  value = contract.last_outcome.value
+  if value.fetch(:private_bytes).any? { |body| body.include?(contract.storage_bytes) }
+    raise 'private response leaked bytes'
+  end
+  raise 'anonymous visibility differs' unless value.slice(*expected.keys) == expected
+end
+
 Then('the stored object path equals the contract path') do
   raise 'stored object path changed' unless contract.last_outcome.value.fetch('path') == contract.storage_path
 end
@@ -545,19 +742,24 @@ Given('the client replaces its access token with a rejected token') do
   session = contract.client.auth.current_session
   raise 'current session is missing' unless session
 
-  contract.client.auth.current_session = Volcano::Session.new(
-    access_token: 'sdk-contract-rejected-access-token',
+  parts = session.access_token.split('.')
+  raise 'access token has no session claims' unless parts.length == 3
+
+  rejected = [parts[0], parts[1], 'sdk-contract-rejected-signature'].join('.')
+  contract.previous_session = Volcano::Session.new(
+    access_token: rejected,
     refresh_token: session.refresh_token,
     user_id: session.user_id
   )
+  contract.client.auth.current_session = contract.previous_session
 end
 
-['database read', 'storage operation', 'profile read'].each do |operation|
+['database read', 'storage operation', 'profile read', 'session list'].each do |operation|
   Then("the #{operation} replaces the rejected token for the same user") do
     session = contract.client.auth.current_session
     raise 'current session is missing' unless session
     raise 'access token is missing' if session.access_token.to_s.empty?
-    raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
+    raise 'access token was not replaced' if session.access_token == contract.previous_session.access_token
     raise 'refresh token is missing' if session.refresh_token.to_s.empty?
     raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
   end
@@ -613,6 +815,20 @@ Then('the function echoes the payload') do
   raise "function echoed #{response.data.inspect}" unless response.data == { 'echoed' => 'contract' }
 end
 
+When('the client lists its server sessions') do
+  contract.record { contract.client.auth.list_sessions(page: 1, limit: 100) }
+end
+
+Then('the session list contains the current session for the contract user') do
+  page = contract.last_outcome.value
+  raise 'expected first session page' unless page.page == 1
+  raise 'missing server sessions' unless page.total >= page.sessions.length && !page.sessions.empty?
+  raise 'session has the wrong user' unless page.sessions.all? do |session|
+    session.user_id == contract.fixture.fetch('user_id')
+  end
+  raise 'current session is missing or duplicated' unless page.sessions.one?(&:is_current)
+end
+
 When('the client loads its server-validated profile') do
   contract.record { contract.client.auth.user }
 end
@@ -621,4 +837,32 @@ Then('the returned and cached profiles belong to the contract user') do
   expected = contract.fixture.fetch('user_id')
   raise 'profile belongs to another user' unless contract.last_outcome.value.id == expected
   raise 'cached profile belongs to another user' unless contract.client.current_session.user.fetch('id') == expected
+end
+
+Given('a read-only project logs client') do
+  @logs_contract = VolcanoContract::Logs.new(contract)
+end
+
+When('the contract function emits three unique structured log events') do
+  @logs_contract.emit(3)
+end
+
+When('the contract function emits one unique structured log event') do
+  @logs_contract.emit(1)
+end
+
+When('the client searches and paginates those events within 240 seconds') do
+  contract.record { @logs_contract.search }
+end
+
+When('the client reads matching log activity within 120 seconds') do
+  contract.record { @logs_contract.activity }
+end
+
+Then('all three structured events retain their metadata without duplicates') do
+  @logs_contract.verify_events(contract.last_outcome.value)
+end
+
+Then('activity counts exactly that event in its function and level buckets') do
+  @logs_contract.verify_activity(contract.last_outcome.value)
 end

@@ -14,17 +14,31 @@
     "value": "dry-run"
   },
   "mutation_rows": {
-    "insert": { "slug": "contract-insert", "value": "insert" },
-    "update": {
-      "before": { "slug": "contract-update", "value": "before" },
-      "after": { "slug": "contract-update", "value": "after" }
+    "insert": {
+      "slug": "contract-insert",
+      "value": "insert"
     },
-    "delete": { "slug": "contract-delete", "value": "delete" }
+    "update": {
+      "before": {
+        "slug": "contract-update",
+        "value": "before"
+      },
+      "after": {
+        "slug": "contract-update",
+        "value": "after"
+      }
+    },
+    "delete": {
+      "slug": "contract-delete",
+      "value": "delete"
+    }
   },
   "bucket_name": "dry-run",
   "storage_path": "dry-run/payload.txt",
   "realtime_channel": "dry-run",
   "lock_key": "dry-run",
   "function_name": "dry-run",
-  "durable_function_name": "dry-run-durable"
+  "durable_function_name": "dry-run-durable",
+  "logs_access_token": "dry-run-project-token",
+  "function_id": "dry-run-function-id"
 }

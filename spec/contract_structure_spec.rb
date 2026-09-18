@@ -55,7 +55,7 @@ RSpec.describe 'shared SDK contract bindings' do
     path = File.expand_path('../features/staged/auth-token-bootstrap.feature', __dir__)
 
     expect(Digest::SHA256.file(path).hexdigest)
-      .to eq('9438248ff4778e1bdc1671e6552a3e95221bc90b29a5766cd889589e4f2f4f14')
+      .to eq('7f2cef1489ce2cb5a9f3ba230d7f411197415a0f4a3c14f38361c5ce0522e0ac')
   end
 
   it 'requires an absolute contract fixture path' do
@@ -103,5 +103,33 @@ RSpec.describe 'shared SDK contract bindings' do
       )
       expect(files.grep(%r{\Alib/volcano/generated/(?!lib/)})).to be_empty
     end
+  end
+
+  it 'stages the canonical authenticated request recovery feature' do
+    path = File.expand_path('../features/staged/auth-request-recovery.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '9fa6f8d6cb3bca89501d32d950f06b8982ed34b888cce134465e0358b8261e8f'
+    )
+  end
+
+  it 'stages the canonical database query feature' do
+    path = File.expand_path('../features/staged/database-queries.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '37d7f2e8fd4efb035cbc094c9c91a44a86f15fbcd689627e525e8d04f033a928'
+    )
+  end
+
+  it 'stages the canonical storage session feature' do
+    path = File.expand_path('../features/staged/storage-sessions.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '037c60a8da27ec4cc5777596ba0c669b8309181a54b27aa61882535ed2f6beb1'
+    )
+  end
+
+  it 'stages the canonical logs feature' do
+    path = File.expand_path('../features/staged/logs.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '5616e288fe1a68e13fa70416fe0323a5ce830c0edaa885a387efbf9e5bb2a269'
+    )
   end
 end

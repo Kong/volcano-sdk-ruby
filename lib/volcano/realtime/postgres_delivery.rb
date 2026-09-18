@@ -103,8 +103,8 @@ module Volcano
       def postgres_stop?(request) = request.equal?(STOP)
 
       def current_postgres_request?(request)
-        _, lineage, = @realtime.__send__(:capture_session_binding)
-        @subscribed && request.subscription_epoch == @postgres_epoch &&
+        _, lineage, session = @realtime.__send__(:capture_session_binding)
+        @subscribed && session && request.subscription_epoch == @postgres_epoch &&
           request.session_lineage == lineage
       end
     end

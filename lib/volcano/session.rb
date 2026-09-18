@@ -28,16 +28,15 @@ module Volcano
     end
     private_class_method :credential
 
-    def self.validate_refresh_source(current)
-      return if current.user_id || session_id(current.access_token)
+    def self.validate_refresh_source(current, verified: false)
+      return if verified || session_id(current.access_token)
 
-      raise Error::AuthenticationError, 'Cannot refresh unknown identity without a session identifier'
+      raise Error::AuthenticationError, 'Cannot refresh supplied credentials without a session identifier'
     end
 
     def self.validate_refresh(current, refreshed)
       return unless current
 
-      validate_refresh_source(current)
       expected = session_id(current.access_token)
       if expected && expected != session_id(refreshed&.access_token)
         raise Error::AuthenticationError, 'Refreshed credentials belong to a different server session'

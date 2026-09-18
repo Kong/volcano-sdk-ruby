@@ -27,7 +27,7 @@ module Volcano
     def initialize(session: nil)
       @mutex = Mutex.new
       @generation = 0
-      @lineage = 0
+      @lineage = SessionOperations.new
       @session = session
       @callbacks = {}
       @next_callback_id = 0
@@ -51,8 +51,9 @@ module Volcano
     def store_if_current?(session, generation, event: :signed_in, notifications: nil, lineage: nil)
       dispatch = @mutex.synchronize do
         return false unless lineage.nil? ? generation == @generation : lineage == @lineage
+        return true if session.nil? && @session.nil?
 
-        enqueue_notification(replace(session, event), event, session)
+        enqueue_notification(replace(session, event, verified_pair: session), event, session)
       end
       return true unless dispatch
 
@@ -80,19 +81,19 @@ module Volcano
 
     private
 
-    def replace(session, event)
+    def replace(session, event, verified_pair: nil)
       SessionCredentials.validate_refresh(@session, session) if event == :token_refreshed
       @session = session
       @generation += 1
-      @lineage += 1 unless event == :token_refreshed
+      @lineage.clear_local_credentials unless session
+      @lineage = SessionOperations.new(verified_pair) if session && event != :token_refreshed
       @callbacks.keys
     end
 
     def register(callback)
-      callback_id = @next_callback_id
       @next_callback_id += 1
-      @callbacks[callback_id] = callback
-      [callback_id, @session]
+      @callbacks[@next_callback_id] = callback
+      [@next_callback_id, @session]
     end
 
     def unsubscribe(callback_id)

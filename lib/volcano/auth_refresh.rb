@@ -52,10 +52,12 @@ module Volcano
 
     def refresh_with_notifications(binding)
       notifications = []
-      @refresh_lock.synchronize do
-        active_generation, = owned_session_binding(binding)
-        perform_refresh(binding, notifications) if active_generation == binding.first
-      end
+      active_generation, = owned_session_binding(binding)
+      binding[1].refresh { perform_refresh(binding, notifications) } if active_generation == binding.first
+      raise Error::SessionChangedError if binding[1].closing?
+    rescue Error::VolcanoError
+      validate_read_failure(binding)
+      raise
     ensure
       # Only the dispatcher owner drains, after refresh coordination is released.
       notifications.each(&:call)
@@ -74,50 +76,48 @@ module Volcano
     def rejected_refresh?(binding, active)
       generation, lineage, = binding
       @rejected_refresh == [generation, lineage] &&
-        active == [generation + 1, lineage + 1, nil]
+        active.first == generation + 1 && active.last.nil?
     end
 
     def perform_refresh(binding, notifications)
+      active = owned_session_binding(binding)
+      return active.last if active.first != binding.first
       raise Error::AuthenticationError, 'No refresh token' unless binding.last.refresh_token
 
-      SessionCredentials.validate_refresh_source(binding.last)
       session = refreshed_session(binding, notifications)
-      stored = @client.store_session_if_current?(
-        session, binding.first, event: :token_refreshed, notifications: notifications
-      )
-      raise Error::SessionChangedError unless stored
+      unless binding[1].closing?
+        @client.store_session_if_current?(
+          session, binding.first, event: :token_refreshed, notifications: notifications
+        )
+      end
+      session
     end
 
     def refreshed_session(binding, notifications)
-      parse_refresh_session(refresh_payload(binding, notifications))
+      _, owner, current = binding
+      verified = owner.verified_pair?(current)
+      SessionCredentials.validate_refresh_source(current, verified: verified)
+      owner.verify_pair(nil)
+      session = parse_refresh_session(refresh_payload(binding, notifications))
+      verify_refreshed_session(owner, current, session)
+      session
+    rescue Error::RateLimitedError
+      owner.verify_pair(current) if verified
+      raise
     end
 
-    def parse_refresh_session(payload)
-      owned_complete_session(build_session(payload))
-    rescue KeyError, TypeError, NoMethodError, ArgumentError => e
-      raise Error::TransportError, INCOMPLETE_SESSION, cause: e
-    end
-
-    def refresh_response(refresh_token)
-      Transport.invoke do
-        @transport.auth_refresh(
-          authorization: @client.anon_token,
-          refresh_token: refresh_token
-        )
-      end
+    def verify_refreshed_session(owner, current, session)
+      SessionCredentials.validate_refresh(current, session)
+      owner.verify_pair(session)
     end
 
     def refresh_payload(binding, notifications)
       Transport.body(refresh_response(binding.last.refresh_token), 200)
     rescue Error::AuthenticationError
-      generation, lineage, = binding
-      cleared = @client.clear_session_if_current?(generation, notifications: notifications)
-      raise Error::SessionChangedError unless cleared
-
-      @rejected_refresh = [generation, lineage]
-      raise
-    rescue Error::VolcanoError
-      owned_session_binding(binding)
+      generation, owner, = binding
+      if !owner.closing? && @client.clear_session_if_current?(generation, notifications: notifications)
+        @rejected_refresh = [generation, owner]
+      end
       raise
     end
   end

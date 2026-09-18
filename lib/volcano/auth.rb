@@ -33,6 +33,14 @@ module Volcano
 
     private
 
+    def session_payload(status)
+      binding = @client.capture_session_binding
+      request = yield
+      payload = Transport.body(session_request(binding: binding, &request), status)
+      owned_session_binding(binding)
+      payload
+    end
+
     def sign_in_for_generation(email:, password:, generation:)
       raise Error::SessionChangedError unless @client.capture_session.first == generation
 

@@ -47,31 +47,23 @@ module Volcano
     include SessionPageMapping
 
     def list_sessions(page: 1, limit: 20)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      body = Transport.body(list_sessions_response(current.access_token, page, limit), 200)
-      result = session_page(body)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      body = session_payload(200) { ->(token) { list_sessions_response(token, page, limit) } }
+      session_page(body)
     end
 
     def delete_all_other_sessions
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      Transport.body(delete_all_other_sessions_response(current.access_token), 204)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
+      session_payload(204) { ->(token) { delete_all_other_sessions_response(token) } }
+      nil
     end
 
     def delete_session(session_id)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
+      binding = @client.capture_session_binding
+      raise Error::AuthenticationError, 'No active session' unless binding.last
 
-      deletes_current = same_session_id?(current.access_token, session_id)
-      error = delete_session_error(current.access_token, session_id)
-      current_unchanged = session_unchanged_after_deletion?(deletes_current, error, generation)
+      request_id = session_id.dup.freeze
+      deletes_current = same_session_id?(binding.last.access_token, request_id)
+      error = delete_bound_session_error(binding, request_id)
+      current_unchanged = session_unchanged_after_deletion?(deletes_current, error, binding)
       raise Error::SessionChangedError, cause: error unless current_unchanged
 
       raise error if error
@@ -111,11 +103,20 @@ module Volcano
       e
     end
 
-    def session_unchanged_after_deletion?(deletes_current, error, generation)
-      uncertain = error.nil? || error.is_a?(Error::TransportError)
-      return @client.clear_session_if_current?(generation) if deletes_current && uncertain
+    def delete_bound_session_error(binding, session_id)
+      response = session_request(binding: binding) { |token| delete_session_response(token, session_id) }
+      Transport.body(response, 204)
+      nil
+    rescue Error::VolcanoError => e
+      e
+    end
 
-      @client.capture_session.first == generation
+    def session_unchanged_after_deletion?(deletes_current, error, binding)
+      uncertain = error.nil? || error.is_a?(Error::TransportError)
+      return @client.clear_session_if_current?(binding.first, lineage: binding[1]) if deletes_current && uncertain
+
+      active = @client.capture_session_binding
+      active[1] == binding[1] || rejected_refresh?(binding, active)
     end
 
     def same_session_id?(access_token, session_id)

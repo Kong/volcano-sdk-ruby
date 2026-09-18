@@ -7,35 +7,22 @@ module Volcano
     private_constant :OAUTH_PROVIDERS
 
     def list_linked_oauth_providers
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      body = Transport.body(list_oauth_providers_response(current.access_token), 200)
-      result = linked_oauth_providers(body)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      session_payload(200, decode: :linked_oauth_providers) { ->(token) { list_oauth_providers_response(token) } }
     end
 
     def link_oauth_provider(provider)
-      provider_name = oauth_provider_name(provider)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      body = Transport.body(link_oauth_provider_response(current.access_token, provider_name), 200)
-      result = oauth_authorization_url(body)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      session_payload(200, decode: :oauth_authorization_url) do
+        provider_name = oauth_provider_name(provider)
+        ->(token) { link_oauth_provider_response(token, provider_name) }
+      end
     end
 
     def unlink_oauth_provider(provider)
-      provider_name = oauth_provider_name(provider)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      Transport.body(unlink_oauth_provider_response(current.access_token, provider_name), 204)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
+      session_payload(204) do
+        provider_name = oauth_provider_name(provider)
+        ->(token) { unlink_oauth_provider_response(token, provider_name) }
+      end
+      nil
     end
 
     private
@@ -59,7 +46,7 @@ module Volcano
     end
 
     def oauth_provider_name(provider)
-      return provider if provider.is_a?(String) && OAUTH_PROVIDERS.include?(provider)
+      return provider.dup.freeze if provider.is_a?(String) && OAUTH_PROVIDERS.include?(provider)
 
       raise ArgumentError, 'Unsupported OAuth provider'
     end

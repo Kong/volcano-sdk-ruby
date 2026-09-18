@@ -508,7 +508,7 @@ Given('the client replaces its access token with a rejected token') do
   contract.client.auth.current_session = contract.previous_session
 end
 
-['database read', 'storage operation', 'profile read'].each do |operation|
+['database read', 'storage operation', 'profile read', 'session list'].each do |operation|
   Then("the #{operation} replaces the rejected token for the same user") do
     session = contract.client.auth.current_session
     raise 'current session is missing' unless session
@@ -567,6 +567,20 @@ Then('the function echoes the payload') do
   response = contract.last_outcome.value
   raise "function returned #{response.status}" unless response.status == 200
   raise "function echoed #{response.data.inspect}" unless response.data == { 'echoed' => 'contract' }
+end
+
+When('the client lists its server sessions') do
+  contract.record { contract.client.auth.list_sessions(page: 1, limit: 100) }
+end
+
+Then('the session list contains the current session for the contract user') do
+  page = contract.last_outcome.value
+  raise 'expected first session page' unless page.page == 1
+  raise 'missing server sessions' unless page.total >= page.sessions.length && !page.sessions.empty?
+  raise 'session has the wrong user' unless page.sessions.all? do |session|
+    session.user_id == contract.fixture.fetch('user_id')
+  end
+  raise 'current session is missing or duplicated' unless page.sessions.one?(&:is_current)
 end
 
 When('the client loads its server-validated profile') do

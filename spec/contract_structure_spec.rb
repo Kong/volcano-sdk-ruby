@@ -138,4 +138,11 @@ RSpec.describe 'shared SDK contract bindings' do
       'b4429f6e3df60a6a98be4daf1d8517e2cd7cee651f9eb6463a1090ab49a102b5'
     )
   end
+
+  it 'stages the canonical Postgres change feature' do
+    path = File.expand_path('../features/staged/realtime-postgres.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '794c2ecbb94fd262a37840f4c3fe3bd9f9ee58c22fda9df2a46de60f93e52c91'
+    )
+  end
 end

@@ -91,11 +91,12 @@ client.realtime.remove_channel("public:messages", type: :postgres)
 ```
 
 Insert a row from another client during the listening period.
+Automatic row lookup requires a primary key named `id`. It reads the current row after the notification; rapid updates may have already changed that row.
 Matching insert and update notifications can fetch full rows using the subscription's user token.
 Compatible row lookups are batched while publication order is preserved.
 Defaults are a 20 millisecond window and 50 rows; set `fetch_batch_window_ms:` and `fetch_max_batch_size:` on the channel to change them.
 Both values must be positive integers, and the maximum batch size is 128.
-Use `auto_fetch: false` to retain lightweight notifications without row lookups.
+Set `auto_fetch: false` when first creating the channel to retain lightweight notifications without row lookups.
 A failed lookup reports an error and delivers the original lightweight change.
 Deletes use `old_record` or the row ID and do not query the database.
 

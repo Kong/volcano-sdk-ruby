@@ -8,17 +8,34 @@ module VolcanoContract
   class ChangeObserver
     attr_reader :events, :inserts, :wrong_table
 
-    def initialize(channel, table)
+    def initialize(channel, table, row_id)
+      @row_id = row_id
       @events = []
       @inserts = []
       @wrong_table = []
       @queue = Async::Queue.new
-      channel.on_postgres_changes('*', schema: 'public', table: table) do |event|
-        @events << event
-        @queue.enqueue(event)
+      observe(channel, table)
+    end
+
+    def observe(channel, table)
+      channel.on_postgres_changes('*', schema: 'public', table: table) { |event| record(event) }
+      channel.on_postgres_changes('INSERT', schema: 'public', table: table) do |event|
+        @inserts << event if owns?(event)
       end
-      channel.on_postgres_changes('INSERT', schema: 'public', table: table) { |event| @inserts << event }
-      channel.on_postgres_changes('*', schema: 'public', table: "#{table}_other") { |event| @wrong_table << event }
+      channel.on_postgres_changes('*', schema: 'public', table: "#{table}_other") do |event|
+        @wrong_table << event if owns?(event)
+      end
+    end
+
+    def record(event)
+      return unless owns?(event)
+
+      @events << event
+      @queue.enqueue(event)
+    end
+
+    def owns?(event)
+      (event.record ? event.record['id'] : event.id) == @row_id
     end
 
     def next(task)
@@ -40,7 +57,7 @@ module VolcanoContract
     end
 
     def run(task)
-      observers = @channels.map { |channel| ChangeObserver.new(channel, @table_name) }
+      observers = @channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) }
       @channels.each(&:subscribe)
       %w[INSERT UPDATE].each_with_index { |kind, index| change_and_receive(task, observers, kind, index) }
       observers.each(&:verify_filters)
@@ -73,9 +90,13 @@ module VolcanoContract
                   end
       raise 'Postgres mutation result changed' unless operation.execute == [expected]
 
-      observers.each_with_index do |observer, client_index|
-        verify_change(observer.next(task), kind, expected, automatic: client_index.zero?)
+      receive_changes(task, observers).each_with_index do |event, client_index|
+        verify_change(event, kind, expected, automatic: client_index.zero?)
       end
+    end
+
+    def receive_changes(task, observers)
+      task.with_timeout(10) { observers.map { |observer| observer.next(task) } }
     end
 
     def verify_change(event, kind, expected, automatic:)
@@ -89,7 +110,9 @@ module VolcanoContract
 
     def verify_body(event, expected, automatic:)
       if automatic
-        raise 'automatic row lookup did not retain values' unless event.record == expected
+        unless [event.record, event.id, event.mode] == [expected, nil, nil]
+          raise 'automatic row lookup did not retain values or clear lightweight fields'
+        end
       elsif event.id != expected.fetch('id') || event.mode != 'lightweight' || !event.record.nil?
         raise 'lightweight notification changed'
       end

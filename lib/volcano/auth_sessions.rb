@@ -47,8 +47,7 @@ module Volcano
     include SessionPageMapping
 
     def list_sessions(page: 1, limit: 20)
-      body = session_payload(200) { ->(token) { list_sessions_response(token, page, limit) } }
-      session_page(body)
+      session_payload(200, decode: :session_page) { ->(token) { list_sessions_response(token, page, limit) } }
     end
 
     def delete_all_other_sessions
@@ -116,7 +115,7 @@ module Volcano
       return @client.clear_session_if_current?(binding.first, lineage: binding[1]) if deletes_current && uncertain
 
       active = @client.capture_session_binding
-      active[1] == binding[1] || rejected_refresh?(binding, active)
+      (active.last && active[1] == binding[1]) || (error && rejected_refresh?(binding, active))
     end
 
     def same_session_id?(access_token, session_id)

@@ -7,11 +7,10 @@ module Volcano
     private_constant :INVALID_EMAIL_CHANGE_RESULT
 
     def request_email_change(new_email:)
-      payload = session_payload(200) do
+      session_payload(200, decode: :email_change_result) do
         request_email = new_email.dup.freeze
         ->(token) { email_change_response(token, request_email) }
       end
-      email_change_result(payload)
     end
 
     def cancel_email_change

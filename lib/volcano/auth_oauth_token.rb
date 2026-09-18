@@ -4,19 +4,17 @@ module Volcano
   # Server-held OAuth-provider token metadata behavior for the auth facade.
   class Auth
     def get_oauth_provider_token(provider)
-      body = session_payload(200) do
+      session_payload(200, decode: :oauth_provider_token_status) do
         provider_name = oauth_provider_name(provider)
         ->(token) { oauth_provider_token_response(token, provider_name) }
       end
-      oauth_provider_token_status(body)
     end
 
     def refresh_oauth_provider_token(provider)
-      body = session_payload(200) do
+      session_payload(200, decode: :oauth_provider_token_status) do
         provider_name = oauth_provider_name(provider)
         ->(token) { refresh_oauth_provider_token_response(token, provider_name) }
       end
-      oauth_provider_token_status(body)
     end
 
     private

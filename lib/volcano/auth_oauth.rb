@@ -7,16 +7,14 @@ module Volcano
     private_constant :OAUTH_PROVIDERS
 
     def list_linked_oauth_providers
-      body = session_payload(200) { ->(token) { list_oauth_providers_response(token) } }
-      linked_oauth_providers(body)
+      session_payload(200, decode: :linked_oauth_providers) { ->(token) { list_oauth_providers_response(token) } }
     end
 
     def link_oauth_provider(provider)
-      body = session_payload(200) do
+      session_payload(200, decode: :oauth_authorization_url) do
         provider_name = oauth_provider_name(provider)
         ->(token) { link_oauth_provider_response(token, provider_name) }
       end
-      oauth_authorization_url(body)
     end
 
     def unlink_oauth_provider(provider)

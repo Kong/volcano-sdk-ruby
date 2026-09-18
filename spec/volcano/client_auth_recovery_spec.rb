@@ -21,25 +21,41 @@ RSpec.describe Volcano::Client do
   before { client.auth.current_session = session }
 
   [
-    [:request_email_change, [[], { new_email: 'new@example.com' }], :auth_request_email_change, 200, {}],
-    [:cancel_email_change, [[], {}], :auth_cancel_email_change, 200, {}],
-    [:list_sessions, [[], { page: 2, limit: 10 }], :auth_get_my_sessions, 200,
-     { 'sessions' => [], 'total' => 0, 'page' => 2, 'limit' => 10, 'total_pages' => 0 }],
-    [:delete_all_other_sessions, [[], {}], :auth_delete_all_my_sessions, 204, nil],
-    [:delete_session, [['00000000-0000-4000-8000-000000000009'], {}], :auth_delete_my_session, 204, nil],
-    [:list_linked_oauth_providers, [[], {}], :auth_list_oauth_providers, 200, { 'providers' => [] }],
-    [:link_oauth_provider, [['github'], {}], :auth_link_oauth_provider, 200,
-     { 'authorization_url' => 'https://provider.example/authorize' }],
-    [:unlink_oauth_provider, [['github'], {}], :auth_unlink_oauth_provider, 204, nil],
-    [:get_oauth_provider_token, [['github'], {}], :auth_get_oauth_provider_token, 200,
-     { 'message' => 'valid', 'provider' => 'github', 'expires_in' => 30 }],
-    [:refresh_oauth_provider_token, [['github'], {}], :auth_refresh_oauth_provider_token, 200,
-     { 'message' => 'valid', 'provider' => 'github', 'expires_in' => 30 }],
+    [:request_email_change, [[], { new_email: 'new@example.com' }],
+     :auth_request_email_change, [200, {}, :email_change_result]],
+    [:cancel_email_change, [[], {}], :auth_cancel_email_change, [200, {}]],
+    [:list_sessions, [[], { page: 2, limit: 10 }], :auth_get_my_sessions,
+     [200, { 'sessions' => [], 'total' => 0, 'page' => 2, 'limit' => 10, 'total_pages' => 0 }, :session_page]],
+    [:delete_all_other_sessions, [[], {}], :auth_delete_all_my_sessions, [204, nil]],
+    [:delete_session, [['00000000-0000-4000-8000-000000000009'], {}], :auth_delete_my_session, [204, nil]],
+    [:list_linked_oauth_providers, [[], {}],
+     :auth_list_oauth_providers, [200, { 'providers' => [] }, :linked_oauth_providers]],
+    [:link_oauth_provider, [['github'], {}], :auth_link_oauth_provider,
+     [200, { 'authorization_url' => 'https://provider.example/authorize' }, :oauth_authorization_url]],
+    [:unlink_oauth_provider, [['github'], {}], :auth_unlink_oauth_provider, [204, nil]],
+    [:get_oauth_provider_token, [['github'], {}], :auth_get_oauth_provider_token,
+     [200, { 'message' => 'valid', 'provider' => 'github', 'expires_in' => 30 }, :oauth_provider_token_status]],
+    [:refresh_oauth_provider_token, [['github'], {}], :auth_refresh_oauth_provider_token,
+     [200, { 'message' => 'valid', 'provider' => 'github', 'expires_in' => 30 }, :oauth_provider_token_status]],
     [:call_oauth_api, [['github'], { endpoint: '/user', method: 'POST', body: { 'name' => 'original' } }],
-     :auth_call_oauth_api, 200, { 'data' => { 'ok' => true } }]
-  ].each do |operation, call, transport_operation, status, body|
+     :auth_call_oauth_api, [200, { 'data' => { 'ok' => true } }, :oauth_api_data]]
+  ].each do |operation, call, transport_operation, (status, body, decoder)|
     context operation.to_s do
       let(:invoke_operation) { -> { client.auth.public_send(operation, *call[0], **call[1]) } }
+
+      if decoder
+        it 'rejects replacement during response conversion' do
+          replacement = Volcano::Session.new('other', 'other-refresh', 'other-user')
+          allow(transport).to receive(transport_operation).and_return(response(status, body))
+          allow(client.auth).to receive(decoder).and_wrap_original do |original, *args|
+            result = original.call(*args)
+            client.auth.current_session = replacement
+            result
+          end
+          expect { invoke_operation.call }.to raise_error(Volcano::Error::SessionChangedError)
+          expect(client.current_session).to eq(replacement)
+        end
+      end
 
       it 'refreshes once after 401 and replays with the new credential' do
         allow(transport).to receive(transport_operation).and_return(response(401), response(status, body))
@@ -143,6 +159,25 @@ RSpec.describe Volcano::Client do
     expect(calls.map { |call| call.except(:authorization) }).to eq(
       Array.new(2, { provider: 'github', endpoint: '/user', method: 'POST', body: { 'names' => ['original'] } })
     )
+  end
+
+  %i[sign_out rejected_refresh].each do |clearing|
+    it "rejects non-current deletion completion after #{clearing}" do
+      other_id = '00000000-0000-4000-8000-000000000009'
+      allow(transport).to receive(:auth_refresh).and_return(response(401))
+      allow(transport).to receive(:auth_delete_my_session) do |**args|
+        if args.fetch(:session_id) == other_id
+          if clearing == :sign_out
+            client.auth.sign_out
+          else
+            expect { client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError)
+          end
+        end
+        response(204)
+      end
+      expect { client.auth.delete_session(other_id) }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(client.current_session).to be_nil
+    end
   end
 
   it 'captures ownership before OAuth request serialization' do

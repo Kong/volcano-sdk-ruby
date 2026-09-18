@@ -4,13 +4,12 @@ module Volcano
   # Fixed-host OAuth-provider API proxy behavior for the auth facade.
   class Auth
     def call_oauth_api(provider, endpoint:, method: 'GET', body: nil)
-      payload = session_payload(200) do
+      session_payload(200, decode: :oauth_api_data) do
         provider_name = oauth_provider_name(provider)
         request = { endpoint: endpoint.dup.freeze, method: method.dup.freeze,
                     body: body.nil? ? nil : JSON.parse(JSON.generate(body), freeze: true) }
         ->(token) { oauth_api_response(token, provider_name, **request) }
       end
-      oauth_api_data(payload)
     end
 
     private

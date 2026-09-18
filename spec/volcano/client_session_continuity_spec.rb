@@ -386,4 +386,28 @@ RSpec.describe Volcano::Client do
   ensure
     refreshing&.kill&.join
   end
+
+  def pause_refresh_claim(owner, entered, release)
+    allow(owner).to receive(:refresh).and_wrap_original do |original, &operation|
+      entered << true
+      Timeout.timeout(2) { release.pop }
+      original.call(&operation)
+    end
+  end
+
+  it 'rejects a refresh captured before an ambiguous deletion cleared local state' do
+    entered = Queue.new
+    release = Queue.new
+    owner = client.capture_session_binding[1]
+    pause_refresh_claim(owner, entered, release)
+    allow(transport).to receive(:auth_delete_my_session).and_raise(Volcano::Error::TransportError, 'response lost')
+    refreshing = refresh_thread
+    Timeout.timeout(2) { entered.pop }
+    expect { client.auth.delete_session(session_a) }.to raise_error(Volcano::Error::TransportError)
+    release << true
+    expect(Timeout.timeout(2) { refreshing.value }).to be_a(Volcano::Error::SessionChangedError)
+    expect(client.current_session).to be_nil
+  ensure
+    refreshing&.kill&.join
+  end
 end

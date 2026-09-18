@@ -41,7 +41,7 @@ module Volcano
 
     def refresh(&)
       operation, owner = @mutex.synchronize do
-        raise Error::SessionChangedError if @sign_out
+        raise Error::SessionChangedError if @sign_out || @locally_cleared
         next [@refresh, false] if @refresh && !@refresh.done
 
         @refresh = Outcome.new(false)

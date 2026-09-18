@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'monitor'
-
 module Volcano
   # Authenticates users and updates the client session.
   class Auth
@@ -12,7 +10,6 @@ module Volcano
       @client = client
       @transport = transport
       @api_url = api_url
-      @refresh_lock = Monitor.new
     end
 
     def current_session
@@ -63,6 +60,12 @@ module Volcano
         user_id: payload.fetch('user').fetch('id'),
         user: payload.fetch('user')
       )
+    end
+
+    def parse_refresh_session(payload)
+      owned_complete_session(build_session(payload))
+    rescue KeyError, TypeError, NoMethodError, ArgumentError => e
+      raise Error::TransportError, INCOMPLETE_SESSION, cause: e
     end
 
     def complete_session?(session)

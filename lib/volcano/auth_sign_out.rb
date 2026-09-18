@@ -8,26 +8,29 @@ module Volcano
       return unless binding.last
 
       notifications = []
-      @refresh_lock.synchronize { sign_out_captured(binding, notifications) }
+      binding[1].sign_out do |preceding, pending|
+        sign_out_captured(binding, preceding, pending, notifications)
+      end
     ensure
       notifications&.each(&:call)
     end
 
     private
 
-    def sign_out_captured(binding, notifications)
-      generation, lineage, current = revocation_binding(binding)
-      error = revocation_error(current)
-      lineage = nil unless access_token_session_id(current.access_token)
-      cleared = @client.clear_session_if_current?(generation, lineage: lineage, notifications: notifications)
+    def sign_out_captured(binding, preceding, pending, notifications)
+      generation, owner, = binding
+      current, refresh_error = revocation_credentials(binding, preceding)
+      error = revocation_error(current, owner, pending ? refresh_error : nil, joined: pending)
+      cleared = @client.clear_session_if_current?(generation, lineage: owner, notifications: notifications)
       raise Error::SessionChangedError, cause: error unless cleared
 
       raise error if error
     end
 
-    def revocation_binding(binding)
-      active = @client.capture_session_binding
-      active.last && active[1] == binding[1] ? active : binding
+    def revocation_credentials(binding, preceding)
+      [binding[1].result(preceding) || binding.last, nil]
+    rescue Error::VolcanoError => e
+      [binding.last, e]
     end
 
     def logout_response(refresh_token)
@@ -39,9 +42,12 @@ module Volcano
       end
     end
 
-    def revocation_error(session)
+    def revocation_error(session, owner, refresh_error, joined:)
       session_id = access_token_session_id(session.access_token)
-      return revoke_access_session(session, session_id) if session_id
+      if session_id && !owner.verified_pair?(session)
+        return revoke_access_session(session, session_id, refresh_error, joined: joined)
+      end
+      return refresh_error if refresh_error
       return unless session.refresh_token
 
       Transport.body(logout_response(session.refresh_token), 204)
@@ -50,9 +56,10 @@ module Volcano
       e
     end
 
-    def revoke_access_session(session, session_id)
+    def revoke_access_session(session, session_id, refresh_error, joined:)
       error = delete_session_error(session.access_token, session_id)
       return error unless error&.status == 401 && session.refresh_token
+      return refresh_error || error if joined
 
       refreshed = parse_refresh_session(Transport.body(refresh_response(session.refresh_token), 200))
       SessionCredentials.validate_refresh(session, refreshed)

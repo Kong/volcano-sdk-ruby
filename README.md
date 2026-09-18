@@ -440,11 +440,14 @@ client.auth.sign_out
 raise "still signed in" if client.auth.current_session
 ```
 
-`sign_out` uses the access-token session when available, even if a refresh token was supplied.
+Sign-out uses the refresh token directly when the SDK received both credentials together from
+sign-in or a validated refresh. Supplied credentials use the access-token session; on HTTP 401,
+the SDK can refresh once and revoke that same session without adopting the renewed credentials.
 It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
-fails, the SDK still clears that session and raises the typed error. A concurrent
-refresh of the same session is cleared; a separate sign-in or adoption remains current.
+fails, the SDK still clears that session and raises the typed error. Sign-out waits for an already-running refresh and uses its validated credentials.
+Later refresh attempts raise `Volcano::Error::SessionChangedError` without a request.
+Concurrent sign-out calls share one result. A separate sign-in or adoption remains current.
 
 ### Invoke a function
 

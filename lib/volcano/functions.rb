@@ -88,15 +88,17 @@ module Volcano
       resolved = Transport.invoke do
         @transport.resolve_function_for_invocation(authorization: authorization, name: name)
       end
-      FunctionResolution.store_missing(@api_url, authorization, name) if resolved.status == 404
       payload = Transport.body(resolved, 200)
       resolution = resolved_resolution(payload)
       FunctionResolution.store(@api_url, authorization, name, resolution, cache_ttl(payload))
       resolution
+    rescue Error::NotFoundError => e
+      FunctionResolution.store_missing(@api_url, authorization, name, e)
+      raise
     end
 
     def cached_resolution(cached)
-      cached.resolution || raise(Error::NotFoundError.new('Function was not found', status: 404))
+      cached.resolution || raise(cached.failure.exception)
     end
 
     def validate_invocation(name, payload)

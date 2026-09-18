@@ -73,4 +73,25 @@ RSpec.describe Volcano::Functions do
       end
     end
   end
+
+  it 'preserves owned error metadata across negative cache hits' do
+    response = Typhoeus::Response.new(
+      code: 404, body: JSON.generate(error: 'Unknown function', code: 'function_missing'),
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    allow(Typhoeus::Request).to receive(:new).and_return(
+      instance_double(Typhoeus::Request, run: response, options: {})
+    )
+    first = nil
+    expect { client.functions.invoke('missing-function') }.to raise_error(Volcano::Error::NotFoundError) do |error|
+      first = error
+      error.code.replace('changed')
+    end
+    expect { client.functions.invoke('missing-function') }.to raise_error(Volcano::Error::NotFoundError) do |error|
+      expect(error).to have_attributes(message: 'Unknown function', status: 404,
+                                       code: 'function_missing', retry_after: nil)
+      expect(error).not_to equal(first)
+    end
+    expect(Typhoeus::Request).to have_received(:new).once
+  end
 end

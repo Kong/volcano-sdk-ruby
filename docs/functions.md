@@ -22,7 +22,7 @@ puts result.data
 puts result.version
 ```
 
-The SDK resolves the function's invocation endpoint and caches it for the lifetime provided by Volcano.
+The SDK resolves the function's invocation endpoint and caches it for the lifetime provided by Volcano. Repeated resolution of a missing name raises a new `Volcano::Error::NotFoundError` with the original message, status, and error code while the cached miss remains valid.
 Allow outbound requests to the resolved function domain as well as the API host.
 Deployments without a separate function domain use the API invocation endpoint.
 

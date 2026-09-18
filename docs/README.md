@@ -115,3 +115,5 @@ See [release notes](https://github.com/Kong/volcano-sdk-ruby/releases) for versi
 Include the gem version, Ruby version, and a minimal reproduction without credentials.
 
 See [Distributed locks](./locks.md) for acquisition recovery, renewal, and fencing.
+
+Read the [database guide](./database.md) for projection, filters, ordered pagination, and mutations.

@@ -82,8 +82,8 @@ module Volcano
       @auth_state.store_if_current?(session, generation, event: event, notifications: notifications)
     end
 
-    def clear_session_if_current?(generation, event: :signed_out, notifications: nil)
-      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications)
+    def clear_session_if_current?(generation, event: :signed_out, notifications: nil, lineage: nil)
+      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications, lineage: lineage)
     end
 
     def subscribe_auth_state_change(...)

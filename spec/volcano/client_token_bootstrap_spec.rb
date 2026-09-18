@@ -7,6 +7,11 @@ RSpec.describe Volcano::Client do
   let(:client) { described_class.new(anon_key: 'anon', access_token: 'supplied-access', _transport: transport) }
   let(:profile) { { 'id' => 'user', 'email' => 'user@example.com', 'status' => 'active' } }
 
+  def bootstrap_token(renewed: false)
+    payload = [{ session_id: 'bootstrap-session', renewed: renewed }.to_json].pack('m0')
+    "header.#{payload.tr('+/', '-_').delete('=')}.signature"
+  end
+
   def response(status, body)
     Volcano::Transport::Response.new(status: status, body: body, headers: {}, data: nil)
   end
@@ -46,14 +51,16 @@ RSpec.describe Volcano::Client do
   end
 
   it 'can refresh when the caller supplied a refresh token' do
-    bootstrapped = described_class.new(anon_key: 'anon', access_token: 'old', refresh_token: 'refresh',
+    bootstrapped = described_class.new(anon_key: 'anon', access_token: bootstrap_token, refresh_token: 'refresh',
                                        _transport: transport)
-    allow(transport).to receive(:auth_get_user).with(authorization: 'old').and_return(response(401,
-                                                                                               'error' => 'expired'))
-    refreshed = response(200, 'access_token' => 'new', 'refresh_token' => 'rotated', 'user' => profile)
+    allow(transport).to receive(:auth_get_user).with(authorization: bootstrap_token)
+                                               .and_return(response(401, 'error' => 'expired'))
+    refreshed = response(200, 'access_token' => bootstrap_token(renewed: true),
+                              'refresh_token' => 'rotated', 'user' => profile)
     allow(transport).to receive(:auth_refresh).with(authorization: 'anon', refresh_token: 'refresh')
                                               .and_return(refreshed)
-    allow(transport).to receive(:auth_get_user).with(authorization: 'new').and_return(response(200, 'user' => profile))
+    allow(transport).to receive(:auth_get_user).with(authorization: bootstrap_token(renewed: true))
+                                               .and_return(response(200, 'user' => profile))
     expect(bootstrapped.auth.user.id).to eq('user')
     expect(bootstrapped.current_session.refresh_token).to eq('rotated')
     expect(transport).to have_received(:auth_refresh).once
@@ -98,19 +105,19 @@ RSpec.describe Volcano::Client do
 
   [false, true].each do |enrich_during_refresh|
     it "rejects another user's refresh when profile enrichment happens during refresh: #{enrich_during_refresh}" do
-      bootstrapped = described_class.new(anon_key: 'anon', access_token: 'access', refresh_token: 'refresh',
+      bootstrapped = described_class.new(anon_key: 'anon', access_token: bootstrap_token, refresh_token: 'refresh',
                                          _transport: transport)
       allow(transport).to receive(:auth_get_user).and_return(response(200, 'user' => profile))
       allow(transport).to receive(:auth_refresh) do
         bootstrapped.auth.user if enrich_during_refresh
-        response(200, 'access_token' => 'other-access', 'refresh_token' => 'other-refresh',
+        response(200, 'access_token' => bootstrap_token(renewed: true), 'refresh_token' => 'other-refresh',
                       'user' => profile.merge('id' => 'other-user'))
       end
       bootstrapped.auth.user unless enrich_during_refresh
 
       expect { bootstrapped.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError, /different user/)
       expect(bootstrapped.current_session.user_id).to eq('user')
-      expect(bootstrapped.current_session.access_token).to eq('access')
+      expect(bootstrapped.current_session.access_token).to eq(bootstrap_token)
     end
   end
 
@@ -142,6 +149,7 @@ RSpec.describe Volcano::Client do
         bootstrapped.auth.current_session = replacement if replace
         response(status, status == 204 ? nil : { 'error' => 'revocation failed' })
       end
+      allow(transport).to receive(:auth_refresh).and_return(response(401, 'error' => 'revocation failed'))
       if replace || status != 204
         expect { bootstrapped.auth.sign_out }
           .to raise_error(replace ? Volcano::Error::SessionChangedError : Volcano::Error::VolcanoError)

@@ -23,8 +23,6 @@ module Volcano
         _, lineage, session = @client.capture_session_binding
         raise Error::AuthenticationError, 'No active session' unless session
 
-        # Pin identity before a socket can outlive the bootstrap credentials.
-        @client.auth.user unless session.user_id
         session_for_lineage(lineage)
         lineage
       end

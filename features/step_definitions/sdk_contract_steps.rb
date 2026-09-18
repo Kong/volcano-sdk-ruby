@@ -55,7 +55,7 @@ When('a fresh client starts with only the current access token') do
   contract.previous_session = source.current_session
   raise 'current session is missing' unless contract.previous_session
 
-  contract.register_cleanup(-> { source.auth.sign_out })
+  contract.bootstrap_cleanup = contract.register_cleanup(-> { source.auth.sign_out })
   contract.client = Volcano::Client.new(
     api_url: contract.fixture.fetch('api_url'),
     anon_key: contract.fixture.fetch('anon_key'),
@@ -92,6 +92,10 @@ When('the client signs out') do
   raise 'current session is missing' unless contract.signed_out_session
 
   contract.record { contract.client.auth.sign_out }
+  if contract.last_outcome.ok && contract.bootstrap_cleanup
+    contract.remove_cleanup(contract.bootstrap_cleanup)
+    contract.bootstrap_cleanup = nil
+  end
 end
 
 When('a fresh client loads a profile with the signed-out access token') do

@@ -34,16 +34,6 @@ module Volcano
       sign_in_for_generation(email:, password:, generation:)
     end
 
-    def sign_out
-      generation, current = @client.capture_session
-      return unless current
-
-      error = revocation_error(current)
-      raise Error::SessionChangedError, cause: error unless @client.clear_session_if_current?(generation)
-
-      raise error if error
-    end
-
     private
 
     def sign_in_for_generation(email:, password:, generation:)
@@ -64,26 +54,6 @@ module Volcano
           password: password
         )
       end
-    end
-
-    def logout_response(refresh_token)
-      Transport.invoke do
-        @transport.auth_logout(
-          authorization: @client.anon_token,
-          refresh_token: refresh_token
-        )
-      end
-    end
-
-    def revocation_error(session)
-      session_id = access_token_session_id(session.access_token)
-      return delete_session_error(session.access_token, session_id) if session_id
-      return unless session.refresh_token
-
-      Transport.body(logout_response(session.refresh_token), 204)
-      nil
-    rescue Error::VolcanoError => e
-      e
     end
 
     def build_session(payload)

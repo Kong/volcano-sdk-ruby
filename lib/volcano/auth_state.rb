@@ -48,9 +48,9 @@ module Volcano
       drain_notifications if dispatch
     end
 
-    def store_if_current?(session, generation, event: :signed_in, notifications: nil)
+    def store_if_current?(session, generation, event: :signed_in, notifications: nil, lineage: nil)
       dispatch = @mutex.synchronize do
-        return false unless generation == @generation
+        return false unless lineage.nil? ? generation == @generation : lineage == @lineage
 
         enqueue_notification(replace(session, event), event, session)
       end

@@ -443,8 +443,8 @@ raise "still signed in" if client.auth.current_session
 `sign_out` uses the access-token session when available, even if a refresh token was supplied.
 It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
-fails, the SDK still clears that session and raises the typed error. A session
-established while sign-out is pending remains current.
+fails, the SDK still clears that session and raises the typed error. A concurrent
+refresh of the same session is cleared; a separate sign-in or adoption remains current.
 
 ### Invoke a function
 

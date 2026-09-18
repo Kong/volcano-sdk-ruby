@@ -849,28 +849,35 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
-  it 'pins a bootstrap identity before opening realtime and rejects a mismatched refresh' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
-    profile = { 'id' => 'user-123', 'email' => 'u@example.com', 'status' => 'active' }
-    allow(transport).to receive_messages(
-      auth_get_user: RealtimeResponse.new(status: 200, body: { 'user' => profile }, headers: {}, data: nil),
-      auth_refresh: RealtimeResponse.new(
-        status: 200, headers: {}, data: nil,
-        body: { 'access_token' => 'other-access', 'refresh_token' => 'other-refresh',
-                'user' => profile.merge('id' => 'other-user') }
+  [false, true].each do |same_session|
+    it "binds bootstrap realtime without a profile preflight, same session: #{same_session}" do
+      token = lambda do |session_id|
+        "header.#{[{ session_id: session_id }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
+      end
+      socket = FacadeSocket.new
+      transport = RealtimeDatabaseTransport.new
+      allow(transport).to receive(:auth_refresh).and_return(
+        RealtimeResponse.new(status: 200, headers: {}, data: nil,
+                             body: { 'access_token' => token.call(same_session ? 'session-a' : 'session-b'),
+                                     'refresh_token' => 'rotated', 'user' => { 'id' => 'user-123' } })
       )
-    )
-    client = Volcano::Client.new(anon_key: 'anon', access_token: 'access-token', refresh_token: 'other-refresh',
-                                 _transport: transport, _realtime_socket_factory: ->(_address) { socket })
-    Async do
-      client.realtime.channel('contract').subscribe
-      expect(client.current_session.user_id).to eq('user-123')
-      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError, /different user/)
-      expect(client.current_session.access_token).to eq('access-token')
-    ensure
-      client.realtime.disconnect
-    end.wait
+      client = Volcano::Client.new(anon_key: 'anon', access_token: token.call('session-a'), refresh_token: 'refresh',
+                                   _transport: transport, _realtime_socket_factory: ->(_address) { socket })
+      Async do
+        client.realtime.channel('contract').subscribe
+        expect(client.current_session.user_id).to be_nil
+        if same_session
+          client.auth.refresh_session
+          client.realtime.channel('another').subscribe
+        else
+          expect { client.auth.refresh_session }
+            .to raise_error(Volcano::Error::AuthenticationError, /different server session/)
+        end
+        expect(client.current_session.access_token).to eq(token.call('session-a'))
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
   end
 
   it 'keeps a token-only connection usable after its profile establishes the user identity' do

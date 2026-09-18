@@ -36,6 +36,15 @@ An invocation authorized only by the anonymous key has no user identity.
 Supply `service_key:` to the client constructor for trusted server operations that require it.
 Use a separate client for each independent user session.
 
+## Recover a rejected session
+
+Function resolution and invocation recover from a platform HTTP 401 before dispatch:
+the SDK refreshes the captured session and retries the rejected request once.
+Concurrent calls share successful recovery. Replacing or signing out that session
+prevents replay under another identity. The call preserves its original payload values.
+A function's own response, HTTP 403, or a network failure never triggers this retry.
+Anonymous and service keys do not refresh.
+
 ## Read the result
 
 `Volcano::FunctionResponse` is immutable and exposes `status`, `headers`, `version`, and `data`.

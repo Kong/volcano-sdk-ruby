@@ -694,7 +694,7 @@ Given('the client replaces its access token with a rejected token') do
   contract.client.auth.current_session = contract.previous_session
 end
 
-['database read', 'storage operation', 'profile read', 'session list'].each do |operation|
+['database read', 'storage operation', 'profile read', 'session list', 'function invocation'].each do |operation|
   Then("the #{operation} replaces the rejected token for the same user") do
     session = contract.client.auth.current_session
     raise 'current session is missing' unless session
@@ -736,6 +736,14 @@ end
 
 Then('the subscriber receives the contract message within 10 seconds') do
   raise 'realtime message did not match' unless contract.last_outcome.value == contract.realtime_message
+end
+
+When('the authenticated client invokes the contract function by name') do
+  contract.record do
+    contract.client.functions.invoke(
+      contract.fixture.fetch('function_name'), { 'value' => 'contract' }
+    )
+  end
 end
 
 When('the client invokes the contract function by name') do

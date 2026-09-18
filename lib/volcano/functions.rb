@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'function_auth'
+
 module Volcano
   # Invokes deployed Volcano functions by name.
   class Functions
@@ -17,21 +19,33 @@ module Volcano
     end
 
     def invoke(name, payload = {})
+      auth = FunctionAuth.new(@client)
       validate_invocation(name, payload)
-      authorization = @client.function_token
-      resolution = resolve(authorization, name)
-      response = Transport.invoke { invoke_resolved(authorization, resolution, payload.dup) }
+      invoke_owned(auth, name.dup.freeze, ImmutableQueryValue.capture(payload))
+    end
+
+    private
+
+    def invoke_owned(auth, name, payload)
+      authorization, resolution = auth.run { |token| [token, resolve(token, name)] }
+      response = authenticated_invoke(auth, resolution, payload)
       if stale_mapping?(response)
-        # The function was deleted and recreated, so the cached identity no
-        # longer exists. Resolve again before giving up.
         FunctionResolution.forget(@api_url, authorization, name)
-        resolution = resolve(authorization, name)
-        response = Transport.invoke { invoke_resolved(authorization, resolution, payload.dup) }
+        resolution = auth.run { |token| resolve(token, name) }
+        response = authenticated_invoke(auth, resolution, payload)
       end
       function_response(response)
     end
 
-    private
+    def authenticated_invoke(auth, resolution, payload)
+      auth.run do |token|
+        response = Transport.invoke { invoke_resolved(token, resolution, payload) }
+        if response.status == 401 && header(response.headers, FUNCTION_INVOKED_HEADER).nil?
+          Transport.body(response, 200)
+        end
+        response
+      end
+    end
 
     # A platform 404 means the cached function identity is gone. A function that
     # answers 404 itself must be returned rather than retried: invoking twice
@@ -82,9 +96,7 @@ module Volcano
     end
 
     def cached_resolution(cached)
-      return cached.resolution if cached.resolution
-
-      raise Error::NotFoundError.new('Function was not found', status: 404)
+      cached.resolution || raise(Error::NotFoundError.new('Function was not found', status: 404))
     end
 
     def validate_invocation(name, payload)
@@ -101,10 +113,8 @@ module Volcano
 
       # Absent when the deployment serves no public invocation domain, as in
       # local development; the function is reached through the API instead.
-      FunctionResolution::Resolution.new(
-        function_id: function_id,
-        invoke_url: FunctionResolution.valid_invoke_url(payload['invoke_url'], @api_url)
-      )
+      invoke_url = FunctionResolution.valid_invoke_url(payload['invoke_url'], @api_url)
+      FunctionResolution::Resolution.new(function_id: function_id, invoke_url: invoke_url)
     end
 
     def cache_ttl(payload)
@@ -129,8 +139,6 @@ module Volcano
       )
     end
 
-    def header(headers, name)
-      headers&.find { |key, _| key.casecmp?(name) }&.last
-    end
+    def header(headers, name) = headers&.find { |key, _| key.casecmp?(name) }&.last
   end
 end

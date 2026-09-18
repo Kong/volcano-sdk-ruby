@@ -483,8 +483,15 @@ deeply frozen. Invalid JSON or JSON that cannot decode to valid UTF-8 is
 returned as the original decoded response text; malformed Unicode is not repaired.
 Ruby's standard JSON nesting limit (100) also falls back to text.
 A function's own
-non-2xx response is returned when Volcano confirms it ran; platform
-failures raise typed SDK errors.
+non-2xx response is returned when Volcano confirms it ran; non-success platform
+HTTP responses raise typed SDK errors.
+
+Function resolution and invocation recover from a platform HTTP 401 before dispatch:
+the SDK refreshes the captured session and retries the rejected request once.
+Concurrent calls share successful recovery. Replacing or signing out that session
+prevents replay under another identity. The call preserves its original payload values.
+A function's own response, HTTP 403, or a network failure never triggers this retry.
+Anonymous and service keys do not refresh.
 
 See the [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md).
 

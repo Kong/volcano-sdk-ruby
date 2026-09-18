@@ -671,6 +671,13 @@ client.locks.with_lock("deploy", ttl: 30) do |guard|
 end
 ```
 
+Acquisition accepts caller-owned UUID `token` and `request_id` values and retries
+an ambiguous transport failure or HTTP 503 once with the same request and credential.
+Retain those IDs to recover an uncertain acquisition. Other lock methods accept
+`request_id`; block-scoped helpers forward initial IDs only to acquisition.
+See the [lock guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/locks.md)
+for examples and fencing requirements.
+
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
 `locks.renew` returns a new immutable lease and leaves the previous value

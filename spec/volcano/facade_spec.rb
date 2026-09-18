@@ -2509,7 +2509,8 @@ RSpec.describe Volcano::Client do
   end
 
   it 'gets immutable current lock state' do
-    state = client.locks.get('build')
+    request_id = '00000000-0000-4000-8000-000000000002'
+    state = client.locks.get('build', request_id: request_id)
 
     expect(state).to eq(
       Volcano::LockState.new(
@@ -2520,17 +2521,18 @@ RSpec.describe Volcano::Client do
     )
     expect(state.to_h.values).to all(be_frozen)
     expect(transport.calls).to eq(
-      [[:get_project_lock, { authorization: 'service-key', key: 'build' }]]
+      [[:get_project_lock, { authorization: 'service-key', key: 'build', request_id: request_id }]]
     )
   end
 
   it 'renews a lock lease without mutating the original' do
+    request_id = '00000000-0000-4000-8000-000000000002'
     lease = Volcano::LockLease.new(
       key: 'build', token: '00000000-0000-4000-8000-000000000001',
       expires_at: Time.iso8601('2026-08-26T12:00:30Z'), fencing_token: 7
     )
 
-    renewed = client.locks.renew('build', lease, ttl: 60)
+    renewed = client.locks.renew('build', lease, ttl: 60, request_id: request_id)
 
     expect(renewed).to eq(
       Volcano::LockLease.new(
@@ -2541,7 +2543,7 @@ RSpec.describe Volcano::Client do
     expect(lease.expires_at).to eq(Time.iso8601('2026-08-26T12:00:30Z'))
     expect(transport.calls).to eq(
       [[:renew_project_lock, {
-        authorization: 'service-key', key: 'build', ttl: 60, token: lease.token
+        authorization: 'service-key', key: 'build', request_id: request_id, ttl: 60, token: lease.token
       }]]
     )
   end
@@ -2565,11 +2567,12 @@ RSpec.describe Volcano::Client do
   end
 
   it 'force releases a lock without an ownership token' do
-    result = client.locks.force_release('build')
+    request_id = '00000000-0000-4000-8000-000000000002'
+    result = client.locks.force_release('build', request_id: request_id)
 
     expect(result).to be_nil
     expect(transport.calls).to eq(
-      [[:force_release_project_lock, { authorization: 'service-key', key: 'build' }]]
+      [[:force_release_project_lock, { authorization: 'service-key', key: 'build', request_id: request_id }]]
     )
   end
 

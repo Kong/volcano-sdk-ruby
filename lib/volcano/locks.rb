@@ -13,8 +13,8 @@ module Volcano
       @transport = transport
     end
 
-    def get(key)
-      payload = Transport.body(get_response(key), 200)
+    def get(key, request_id: nil)
+      payload = lock_request(:get_project_lock, 200, key: key, request_id: request_id)
       LockState.new(
         held: payload.fetch('held'),
         expires_at: parse_time(payload['expires_at']),
@@ -22,84 +22,68 @@ module Volcano
       )
     end
 
-    def acquire(key, ttl:)
-      token = SecureRandom.uuid
-      payload = Transport.body(acquire_response(key, ttl, token), 201)
-      LockLease.new(
-        key: key,
-        token: token,
-        expires_at: parse_time(payload['expires_at']),
-        fencing_token: payload['fencing_token']
-      )
+    def acquire(key, ttl:, token: nil, request_id: nil)
+      validate_ttl(ttl)
+      parameters = {
+        authorization: @client.service_token.dup.freeze, key: key.dup.freeze,
+        ttl: ttl, token: request_uuid(token, 'token'), request_id: request_uuid(request_id, 'request_id')
+      }.freeze
+      payload = acquire_payload(parameters)
+      build_lease(parameters[:key], parameters[:token], payload)
     end
 
-    def renew(key, lease, ttl:)
-      payload = Transport.body(renew_response(key, lease, ttl), 200)
-      LockLease.new(
-        key: key,
-        token: lease.token,
-        expires_at: parse_time(payload['expires_at']),
-        fencing_token: payload['fencing_token']
-      )
+    def renew(key, lease, ttl:, request_id: nil)
+      validate_ttl(ttl)
+      payload = lock_request(:renew_project_lock, 200, key: key, ttl: ttl,
+                                                       token: lease.token, request_id: request_id)
+      build_lease(key, lease.token, payload)
     end
 
-    def release(key, lease)
-      response = Transport.invoke do
-        @transport.release_project_lock(
-          authorization: @client.service_token,
-          key: key,
-          token: lease.token
-        )
-      end
-      Transport.body(response, 204)
+    def release(key, lease, request_id: nil)
+      lock_request(:release_project_lock, 204, key: key, token: lease.token, request_id: request_id)
       nil
     end
 
-    def force_release(key)
-      Transport.body(force_release_response(key), 204)
+    def force_release(key, request_id: nil)
+      lock_request(:force_release_project_lock, 204, key: key, request_id: request_id)
       nil
     end
 
     private
 
-    def get_response(key)
-      Transport.invoke do
-        @transport.get_project_lock(
-          authorization: @client.service_token,
-          key: key
-        )
-      end
+    def acquire_payload(parameters)
+      perform_request(:acquire_project_lock, 201, parameters)
+    rescue Error::TransportError, Error::ServerError => e
+      raise unless e.status.nil? || e.status == 503
+
+      perform_request(:acquire_project_lock, 201, parameters)
     end
 
-    def force_release_response(key)
-      Transport.invoke do
-        @transport.force_release_project_lock(
-          authorization: @client.service_token,
-          key: key
-        )
-      end
+    def lock_request(operation, status, **parameters)
+      parameters[:authorization] = @client.service_token
+      parameters[:request_id] = request_uuid(parameters[:request_id], 'request_id')
+      perform_request(operation, status, parameters)
     end
 
-    def acquire_response(key, ttl, token)
-      Transport.invoke do
-        @transport.acquire_project_lock(
-          authorization: @client.service_token,
-          key: key,
-          ttl: ttl,
-          token: token
-        )
-      end
+    def perform_request(operation, status, parameters)
+      response = Transport.invoke { @transport.public_send(operation, **parameters) }
+      Transport.body(response, status)
     end
 
-    def renew_response(key, lease, ttl)
-      Transport.invoke do
-        @transport.renew_project_lock(
-          authorization: @client.service_token,
-          key: key,
-          ttl: ttl,
-          token: lease.token
-        )
-      end
+    def request_uuid(value, name)
+      return SecureRandom.uuid.freeze if value.nil?
+
+      valid = value.is_a?(String) && value.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
+      raise ArgumentError, "#{name} must be a UUID string" unless valid
+
+      value.dup.freeze
+    end
+
+    def build_lease(key, token, payload)
+      LockLease.new(
+        key: key, token: token, expires_at: parse_time(payload['expires_at']),
+        fencing_token: payload['fencing_token']
+      )
     end
 
     def parse_time(value)

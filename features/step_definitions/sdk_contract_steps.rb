@@ -399,6 +399,71 @@ Then('the released lease is no longer held') do
   raise 'released lock could not be acquired again' unless contract.last_outcome.value.fetch('released')
 end
 
+When('the client recovers the contract lock with caller-owned tokens') do
+  contract.record do
+    locks = contract.service_client.locks
+    key = contract.lock_key
+    token = SecureRandom.uuid
+    request_id = SecureRandom.uuid
+    lease = locks.acquire(key, ttl: 30, token: token, request_id: request_id)
+    cleanup = contract.register_lock_cleanup(key, lease)
+    recovered = locks.acquire(key, ttl: 30, token: token, request_id: request_id)
+    held = locks.get(key, request_id: SecureRandom.uuid)
+    renewed = locks.renew(key, recovered, ttl: 60, request_id: SecureRandom.uuid)
+    locks.release(key, renewed, request_id: SecureRandom.uuid)
+    available = locks.get(key, request_id: SecureRandom.uuid)
+    { 'token' => token, 'cleanup' => cleanup, 'lease' => lease, 'recovered' => recovered, 'held' => held,
+      'renewed' => renewed, 'available' => available }
+  end
+end
+
+Then('recovery and renewal preserve the held lease until release') do
+  value = contract.last_outcome.value
+  raise 'recovered lease is not held' unless value.fetch('held').held
+  raise 'released lease is still held' if value.fetch('available').held
+
+  contract.remove_cleanup(value.fetch('cleanup'))
+
+  leases = value.values_at('lease', 'recovered', 'renewed')
+  raise 'ownership token changed' unless leases.all? { |lease| lease.token == value.fetch('token') }
+
+  fences = [*leases, value.fetch('held')].map(&:fencing_token)
+  raise 'fencing token changed or missing' unless fences.first && fences.uniq.length == 1
+end
+
+When('the client acquires and force releases the contract lock') do
+  contract.record do
+    locks = contract.service_client.locks
+    lease = locks.acquire(contract.lock_key, ttl: 30)
+    cleanup = contract.register_lock_cleanup(contract.lock_key, lease)
+    locks.force_release(contract.lock_key, request_id: SecureRandom.uuid)
+    { 'lease' => lease, 'cleanup' => cleanup, 'available' => locks.get(contract.lock_key) }
+  end
+end
+
+Then('the force-released lock is available') do
+  value = contract.last_outcome.value
+  raise 'force-released lease is still held' if value.fetch('available').held
+
+  contract.remove_cleanup(value.fetch('cleanup'))
+end
+
+When('the client reacquires the force-released contract lock') do
+  original = contract.last_outcome.value.fetch('lease')
+  contract.record do
+    replacement = contract.service_client.locks.acquire(contract.lock_key, ttl: 30)
+    contract.register_lock_cleanup(contract.lock_key, replacement)
+    { 'original' => original, 'replacement' => replacement }
+  end
+end
+
+Then('the replacement owner receives a higher fencing token') do
+  original, replacement = contract.last_outcome.value.fetch_values('original', 'replacement')
+  raise 'new acquisition reused the ownership token' if original.token == replacement.token
+  raise 'original fencing token is missing' unless original.fencing_token
+  raise 'replacement fencing token did not advance' unless replacement.fencing_token > original.fencing_token
+end
+
 Given('two authenticated realtime clients') do
   contract.record do
     clients = [

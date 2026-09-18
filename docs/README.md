@@ -110,3 +110,5 @@ Follow the realtime examples to connect and disconnect channels within their sup
 
 See [release notes](https://github.com/Kong/volcano-sdk-ruby/releases) for version changes and [GitHub issues](https://github.com/Kong/volcano-sdk-ruby/issues) to report a problem.
 Include the gem version, Ruby version, and a minimal reproduction without credentials.
+
+See [Distributed locks](./locks.md) for acquisition recovery, renewal, and fencing.

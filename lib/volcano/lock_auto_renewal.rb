@@ -10,10 +10,11 @@ module Volcano
     RENEWAL_REQUEST_BUDGET_SECONDS = 1.0
     RENEWER_SHUTDOWN_TIMEOUT_SECONDS = 1.0
 
-    def with_lock(key, ttl:, &)
+    def with_lock(key, ttl:, token: nil, request_id: nil, &)
       validate_ttl(ttl)
       started_at = LockLeaseClock.capture
-      guard = LockGuard.new(acquire(key, ttl: ttl), ttl: ttl, started_at: started_at)
+      lease = acquire(key, ttl: ttl, token: token, request_id: request_id)
+      guard = LockGuard.new(lease, ttl: ttl, started_at: started_at)
       owned_key = guard.lease.key
       renewer = lock_renewer(owned_key, guard, ttl)
       LockSession.new(self, owned_key, guard, renewer, method(:renewal_delay)).run(&)

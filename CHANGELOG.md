@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.2...v0.8.0) (2026-09-18)
+
+
+### Features
+
+* **auth:** add token bootstrap with server session continuity ([#138](https://github.com/Kong/volcano-sdk-ruby/issues/138)) ([6fb69b5](https://github.com/Kong/volcano-sdk-ruby/commit/6fb69b5f54f09444c4a520663f27c16ab5603752))
+
 ## [0.7.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.1...v0.7.2) (2026-09-17)
 
 

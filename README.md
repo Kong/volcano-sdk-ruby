@@ -343,9 +343,10 @@ replacement as an "other" session. If replacement occurs, the method raises
 client.auth.delete_session('00000000-0000-4000-8000-000000000099')
 ```
 
-The request uses the current access token. Deleting that token's own session
-clears local credentials, including when the request outcome is uncertain;
-deleting another session preserves them. If another authentication operation
+The request uses the current access token. When its JWT contains a readable UUID `session_id`,
+deleting that session clears local credentials even if the request outcome is uncertain.
+Without that identifier, the SDK cannot recognize self-deletion. Other deletions retain the
+local session, though automatic HTTP 401 recovery can rotate credentials and emit `:token_refreshed`. If another authentication operation
 replaces the session before deletion finishes, the method raises
 `Volcano::Error::SessionChangedError` instead of clearing the replacement or
 acknowledging a stale result.
@@ -389,8 +390,8 @@ known user identity. Construction makes no request and leaves `refresh_token`,
 `user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
 without changing credentials. Without a refresh token, `refresh_session` raises
 `Volcano::Error::AuthenticationError`. `sign_out` clears local state and revokes the server
-session when the access JWT contains a readable UUID `session_id`. Supply `refresh_token` alongside
-`access_token` to enable refresh.
+session when the access JWT contains a readable UUID `session_id`. Supplied credentials require both a refresh token and an access JWT with a readable UUID
+`session_id` to enable refresh.
 See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
 
 ### Adopt an existing session
@@ -472,7 +473,7 @@ goes to the function's own domain rather than to `api_url`, so an egress rule
 that allows only the API host will block it; the resolved endpoint is cached for
 the lifetime the platform gives it. Deployments with no public function domain
 invoke through the API host instead. It uses the
-active user session when present, then a configured service key, then the
+current session token, including a supplied `access_token`, then a configured service key, then the
 anonymous key. An anonymous key can invoke a public function without a user
 session; the function receives no user identity. The immutable result includes
 the response body, status, headers, and `X-Volcano-Version`. The body can be a

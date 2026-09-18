@@ -28,7 +28,8 @@ Deployments without a separate function domain use the API invocation endpoint.
 
 ## Choose the invocation identity
 
-The SDK uses the current user's access token when a session exists, otherwise a configured service key, otherwise the anonymous key.
+The SDK uses the current session's access token, including a supplied `access_token`, before a configured service key or anonymous key.
+A rejected or unsupported session token does not fall back to a key. Use an end-user access token when the function requires a user identity.
 Use the [quickstart](./README.md) to sign in before invoking a function that requires a user.
 An invocation authorized only by the anonymous key has no user identity.
 

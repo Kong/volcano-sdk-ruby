@@ -112,5 +112,5 @@ Callbacks receive immutable contexts and run outside connection processing.
 Unexpected transport loss reconnects with bounded backoff and restores active subscriptions.
 Broadcast recovery stays within one client lifetime and one authenticated session lineage; it is not persisted across processes.
 Postgres subscriptions do not recover missed publications.
-After changing users, disconnect before subscribing for the new session.
+`disconnect` permanently closes that realtime facade. To change users, disconnect the old client and create a fresh client before authenticating and subscribing as the replacement user.
 Do not use realtime delivery as a durable record of every database change.

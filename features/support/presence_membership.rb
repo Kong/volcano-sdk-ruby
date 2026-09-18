@@ -11,14 +11,10 @@ module VolcanoContract
       @user_id = user_id
       @snapshots = []
       @changed = Async::Queue.new
-      @unsubscribe = channel.on_presence_sync do |state|
+      channel.on_presence_sync do |state|
         @snapshots << state.keys.sort
         @changed.enqueue(true)
       end
-    end
-
-    def close
-      @unsubscribe.call
     end
 
     def wait(task)
@@ -55,8 +51,6 @@ module VolcanoContract
       peer = PresenceObserver.new(second, @world.fixture.fetch('user_id'))
       check_membership(task, observer, peer)
     ensure
-      observer&.close
-      peer&.close
       @channels.each(&:unsubscribe)
     end
 

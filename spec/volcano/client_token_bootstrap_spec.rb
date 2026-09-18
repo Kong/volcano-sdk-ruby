@@ -131,10 +131,11 @@ RSpec.describe Volcano::Client do
     expect(bootstrapped.current_session.user_id).to eq('user')
   end
 
-  [204, 401, 503].product([false, true]).each do |status, replace|
-    it "revokes the captured token-only session with status #{status} and replacement #{replace}" do
+  [204, 401, 503].product([false, true], [nil, 'another-session-refresh']).each do |status, replace, refresh|
+    it "revokes captured access: status #{status}, replacement #{replace}, refresh #{refresh.inspect}" do
       token = "header.#{[{ session_id: 'original-session' }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
-      bootstrapped = described_class.new(anon_key: 'anon', access_token: token, _transport: transport)
+      bootstrapped = described_class.new(anon_key: 'anon', access_token: token, refresh_token: refresh,
+                                         _transport: transport)
       replacement = Volcano::Session.new('replacement', 'refresh', 'user')
       allow(transport).to receive(:auth_delete_my_session).with(authorization: token,
                                                                 session_id: 'original-session') do

@@ -50,7 +50,7 @@ end
 ```
 
 Run it with `bundle exec ruby quickstart.rb`.
-It signs in, fetches the server-validated profile, prints the user's email, revokes its refresh token, and clears the local session.
+It signs in, fetches the server-validated profile, prints the user's email, revokes its server session, and clears the local session.
 An invalid email or password raises `Volcano::Error::AuthenticationError`; failed network requests raise `Volcano::Error::TransportError`.
 Both inherit from `Volcano::Error::VolcanoError`.
 
@@ -97,6 +97,8 @@ Construction makes no request and does not persist credentials.
 The initial snapshot has `nil` refresh credentials, user ID, and cached user.
 A successful profile read fills in the validated identity and cached user while retaining the supplied access token.
 Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` revokes the server session identified by the access token before clearing local state.
+Before opening realtime, the client validates an unknown identity with `auth.user`.
+Sign-out uses the access-token session even when a refresh token was supplied. An expired access token can make revocation fail; local clearing still occurs and the error is raised.
 Pass `refresh_token` alongside `access_token` when the client should refresh that session.
 A revocation failure is reported after local clearing; it does not prove that copied tokens are invalid.
 Assigning `auth.current_session` still requires complete credentials and identity.

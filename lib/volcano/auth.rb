@@ -76,10 +76,9 @@ module Volcano
     end
 
     def revocation_error(session)
-      unless session.refresh_token
-        session_id = access_token_session_id(session.access_token)
-        return session_id && delete_session_error(session.access_token, session_id)
-      end
+      session_id = access_token_session_id(session.access_token)
+      return delete_session_error(session.access_token, session_id) if session_id
+      return unless session.refresh_token
 
       Transport.body(logout_response(session.refresh_token), 204)
       nil

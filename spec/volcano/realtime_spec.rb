@@ -849,6 +849,30 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'pins a bootstrap identity before opening realtime and rejects a mismatched refresh' do
+    socket = FacadeSocket.new
+    transport = RealtimeDatabaseTransport.new
+    profile = { 'id' => 'user-123', 'email' => 'u@example.com', 'status' => 'active' }
+    allow(transport).to receive_messages(
+      auth_get_user: RealtimeResponse.new(status: 200, body: { 'user' => profile }, headers: {}, data: nil),
+      auth_refresh: RealtimeResponse.new(
+        status: 200, headers: {}, data: nil,
+        body: { 'access_token' => 'other-access', 'refresh_token' => 'other-refresh',
+                'user' => profile.merge('id' => 'other-user') }
+      )
+    )
+    client = Volcano::Client.new(anon_key: 'anon', access_token: 'access-token', refresh_token: 'other-refresh',
+                                 _transport: transport, _realtime_socket_factory: ->(_address) { socket })
+    Async do
+      client.realtime.channel('contract').subscribe
+      expect(client.current_session.user_id).to eq('user-123')
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError, /different user/)
+      expect(client.current_session.access_token).to eq('access-token')
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'keeps a token-only connection usable after its profile establishes the user identity' do
     socket = FacadeSocket.new
     transport = RealtimeDatabaseTransport.new

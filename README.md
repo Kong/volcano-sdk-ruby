@@ -345,8 +345,9 @@ client.auth.delete_session('00000000-0000-4000-8000-000000000099')
 
 The request uses the current access token. When its JWT contains a readable UUID `session_id`,
 deleting that session clears local credentials even if the request outcome is uncertain.
-Without that identifier, the SDK cannot recognize self-deletion. Other deletions retain the
-local session, though automatic HTTP 401 recovery can rotate credentials and emit `:token_refreshed`. If another authentication operation
+Without that identifier, the SDK cannot recognize self-deletion. Deleting another session does not
+itself clear local state. HTTP 401 recovery can rotate credentials and emit `:token_refreshed`;
+a server-rejected refresh clears the captured session before the operation raises. If another authentication operation
 replaces the session before deletion finishes, the method raises
 `Volcano::Error::SessionChangedError` instead of clearing the replacement or
 acknowledging a stale result.

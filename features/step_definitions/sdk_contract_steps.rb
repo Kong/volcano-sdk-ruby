@@ -555,13 +555,18 @@ When('the client makes the contract object public and private again') do
     private_object = bucket.update_visibility(contract.storage_path, public: false)
     after = anonymous_storage_read(url)
     { statuses: [before.code, visible.code, after.code], bytes: visible.body.b,
-      visibility: [public_object.is_public, private_object.is_public] }
+      visibility: [public_object.is_public, private_object.is_public],
+      private_bytes: [before.body.to_s.b, after.body.to_s.b] }
   end
 end
 
 Then('anonymous reads return the original bytes only while the object is public') do
   expected = { statuses: %w[404 200 404], bytes: contract.storage_bytes, visibility: [true, false] }
-  raise 'anonymous visibility differs' unless contract.last_outcome.value == expected
+  value = contract.last_outcome.value
+  if value.fetch(:private_bytes).any? { |body| body.include?(contract.storage_bytes) }
+    raise 'private response leaked bytes'
+  end
+  raise 'anonymous visibility differs' unless value.slice(*expected.keys) == expected
 end
 
 Then('the stored object path equals the contract path') do

@@ -14,7 +14,14 @@ module Volcano
     Resolution = Data.define(:function_id, :invoke_url)
 
     # A cached resolve result. A nil resolution is a remembered miss.
-    Outcome = Data.define(:resolution)
+    Outcome = Data.define(:resolution, :failure)
+
+    Failure = Data.define(:message, :code, :retry_after) do
+      def exception
+        Error::NotFoundError.new(message.dup, status: 404, code: code&.dup, retry_after: retry_after)
+      end
+    end
+    private_constant :Failure
 
     Entry = Data.define(:outcome, :expires_at)
     private_constant :Entry
@@ -72,13 +79,15 @@ module Volcano
 
       # Caches a resolution for the server-advertised lifetime.
       def store(api_url, authorization, name, resolution, ttl_seconds)
-        write([api_url, authorization, name], Outcome.new(resolution: resolution), ttl_seconds)
+        write([api_url, authorization, name], Outcome.new(resolution: resolution, failure: nil), ttl_seconds)
       end
 
       # Remembers briefly that a name does not resolve, so a caller retrying an
       # unknown name in a loop does not re-ask the server on every attempt.
-      def store_missing(api_url, authorization, name)
-        write([api_url, authorization, name], Outcome.new(resolution: nil), NEGATIVE_TTL_SECONDS)
+      def store_missing(api_url, authorization, name, error)
+        failure = Failure.new(message: error.message.dup.freeze, code: error.code&.dup&.freeze,
+                              retry_after: error.retry_after)
+        write([api_url, authorization, name], Outcome.new(resolution: nil, failure: failure), NEGATIVE_TTL_SECONDS)
       end
 
       # Drops one cached resolution that turned out to be stale.

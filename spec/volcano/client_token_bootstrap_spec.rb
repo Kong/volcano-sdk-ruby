@@ -23,7 +23,7 @@ RSpec.describe Volcano::Client do
     expect(client.current_session.user_id).to be_frozen
   end
 
-  it 'never refreshes or revokes without a refresh token' do
+  it 'retains an invalid token until local sign-out' do
     allow(transport).to receive(:auth_get_user).and_return(response(401, 'error' => 'expired supplied token'))
     initial = client.current_session
     expect { client.auth.user }.to raise_error(Volcano::Error::AuthenticationError, /expired supplied token/)
@@ -94,5 +94,61 @@ RSpec.describe Volcano::Client do
     expect do
       described_class.new(anon_key: 'anon', refresh_token: 'refresh')
     end.to raise_error(ArgumentError, /access_token/)
+  end
+
+  [false, true].each do |enrich_during_refresh|
+    it "rejects another user's refresh when profile enrichment happens during refresh: #{enrich_during_refresh}" do
+      bootstrapped = described_class.new(anon_key: 'anon', access_token: 'access', refresh_token: 'refresh',
+                                         _transport: transport)
+      allow(transport).to receive(:auth_get_user).and_return(response(200, 'user' => profile))
+      allow(transport).to receive(:auth_refresh) do
+        bootstrapped.auth.user if enrich_during_refresh
+        response(200, 'access_token' => 'other-access', 'refresh_token' => 'other-refresh',
+                      'user' => profile.merge('id' => 'other-user'))
+      end
+      bootstrapped.auth.user unless enrich_during_refresh
+
+      expect { bootstrapped.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError, /different user/)
+      expect(bootstrapped.current_session.user_id).to eq('user')
+      expect(bootstrapped.current_session.access_token).to eq('access')
+    end
+  end
+
+  it 'does not replay a mutation under another user after refresh' do
+    bootstrapped = described_class.new(anon_key: 'anon', access_token: 'access', refresh_token: 'refresh',
+                                       _transport: transport)
+    allow(transport).to receive_messages(
+      auth_get_user: response(200, 'user' => profile),
+      query_database_insert: response(401, 'error' => 'expired'),
+      auth_refresh: response(200, 'access_token' => 'other-access', 'refresh_token' => 'other-refresh',
+                                  'user' => profile.merge('id' => 'other-user'))
+    )
+    bootstrapped.auth.user
+
+    expect { bootstrapped.database('main').from('items').insert(name: 'example').execute }
+      .to raise_error(Volcano::Error::AuthenticationError, /expired/)
+    expect(transport).to have_received(:query_database_insert).once
+    expect(bootstrapped.current_session.user_id).to eq('user')
+  end
+
+  [204, 401, 503].product([false, true]).each do |status, replace|
+    it "revokes the captured token-only session with status #{status} and replacement #{replace}" do
+      token = "header.#{[{ session_id: 'original-session' }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
+      bootstrapped = described_class.new(anon_key: 'anon', access_token: token, _transport: transport)
+      replacement = Volcano::Session.new('replacement', 'refresh', 'user')
+      allow(transport).to receive(:auth_delete_my_session).with(authorization: token,
+                                                                session_id: 'original-session') do
+        bootstrapped.auth.current_session = replacement if replace
+        response(status, status == 204 ? nil : { 'error' => 'revocation failed' })
+      end
+      if replace || status != 204
+        expect { bootstrapped.auth.sign_out }
+          .to raise_error(replace ? Volcano::Error::SessionChangedError : Volcano::Error::VolcanoError)
+      else
+        bootstrapped.auth.sign_out
+      end
+      expect(transport).to have_received(:auth_delete_my_session).once
+      expect(bootstrapped.current_session).to eq(replace ? replacement : nil)
+    end
   end
 end

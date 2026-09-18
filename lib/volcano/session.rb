@@ -9,8 +9,8 @@ module Volcano
   end
   private_constant :SESSION_USER_CODER
 
-  # Copies caller-owned credentials without inventing a validated identity.
-  module SessionBootstrap
+  # Owns credential snapshots and preserves validated identity during refresh.
+  module SessionCredentials
     def self.build(access_token, refresh_token)
       raise ArgumentError, 'refresh_token requires access_token' if access_token.nil? && !refresh_token.nil?
       return if access_token.nil?
@@ -27,8 +27,21 @@ module Volcano
       value.dup.freeze
     end
     private_class_method :credential
+
+    def self.validate_refresh(current, refreshed)
+      return unless current&.user_id && current.user_id != refreshed&.user_id
+
+      raise Error::AuthenticationError, 'Refreshed session belongs to a different user'
+    end
+
+    def self.with_user(session, user)
+      user_id = (session.user_id || user.fetch('id')).dup.freeze
+      raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == user_id
+
+      Session.new(**session.to_h, user_id: user_id, user: user)
+    end
   end
-  private_constant :SessionBootstrap
+  private_constant :SessionCredentials
 
   # Local credentials; refresh credentials and user identity may be unknown.
   Session = Data.define(:access_token, :refresh_token, :user_id, :user) do

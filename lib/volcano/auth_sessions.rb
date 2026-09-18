@@ -124,14 +124,20 @@ module Volcano
     end
 
     def access_token_session_id(access_token)
+      payload = access_token_payload(access_token)
+      return unless payload.is_a?(Hash)
+
+      session_id = payload['session_id']
+      session_id.strip if session_id.is_a?(String) && !session_id.strip.empty?
+    end
+
+    def access_token_payload(access_token)
       parts = access_token.split('.')
       return unless parts.length == 3
 
       encoded = parts.fetch(1).tr('-_', '+/')
       padding = '=' * (-encoded.length % 4)
-      payload = JSON.parse((encoded + padding).unpack1('m0'))
-      session_id = payload['session_id']
-      session_id if session_id.is_a?(String) && !session_id.empty?
+      JSON.parse((encoded + padding).unpack1('m0'))
     rescue ArgumentError, JSON::ParserError
       nil
     end

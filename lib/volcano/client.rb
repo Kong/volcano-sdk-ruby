@@ -21,7 +21,7 @@ module Volcano
       timeout: 60,
       **options
     )
-      session = SessionBootstrap.build(options.delete(:access_token), options.delete(:refresh_token))
+      session = SessionCredentials.build(options.delete(:access_token), options.delete(:refresh_token))
       transport, socket_factory, reconnect_delay = extract_adapters(options)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key

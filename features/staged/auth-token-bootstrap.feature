@@ -14,3 +14,16 @@ Feature: SDK token-only authentication
     When the client signs out
     Then the SDK operation succeeds
     And the current session is empty
+    When a fresh client loads a profile with the signed-out access token
+    Then the SDK operation fails with an authentication error
+    When a fresh client starts with a rejected access token
+    And the client loads its server-validated profile
+    Then the SDK operation fails with an authentication error
+    And the session retains only the supplied access token
+    And the token-only session has no cached user
+    When the client refreshes the current session
+    Then the SDK operation fails
+    And the session retains only the supplied access token
+    When the client signs out
+    Then the SDK operation succeeds
+    And the current session is empty

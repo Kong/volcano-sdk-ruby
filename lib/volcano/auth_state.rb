@@ -64,10 +64,7 @@ module Volcano
       @mutex.synchronize do
         return false unless generation == @generation && @session
 
-        user_id = (@session.user_id || user.fetch('id')).dup.freeze
-        raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == user_id
-
-        @session = Session.new(**@session.to_h, user_id: user_id, user: user)
+        @session = SessionCredentials.with_user(@session, user)
         true
       end
     end
@@ -84,6 +81,7 @@ module Volcano
     private
 
     def replace(session, event)
+      SessionCredentials.validate_refresh(@session, session) if event == :token_refreshed
       @session = session
       @generation += 1
       @lineage += 1 unless event == :token_refreshed

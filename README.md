@@ -384,8 +384,9 @@ Pass `access_token` to `Volcano::Client.new` to start without a refresh token or
 known user identity. Construction makes no request and leaves `refresh_token`,
 `user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
 without changing credentials. Without a refresh token, `refresh_session` raises
-`Volcano::Error::AuthenticationError` and `sign_out` clears only local state.
-Supply `refresh_token` alongside `access_token` to enable refresh and revocation.
+`Volcano::Error::AuthenticationError`. `sign_out` revokes the server session using
+the access token and clears local state. Supply `refresh_token` alongside
+`access_token` to enable refresh.
 See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
 
 ### Adopt an existing session
@@ -439,7 +440,7 @@ client.auth.sign_out
 raise "still signed in" if client.auth.current_session
 ```
 
-`sign_out` revokes the current refresh token and clears the captured in-memory
+`sign_out` revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
 fails, the SDK still clears that session and raises the typed error. A session
 established while sign-out is pending remains current.

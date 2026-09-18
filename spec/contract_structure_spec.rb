@@ -54,7 +54,7 @@ RSpec.describe 'shared SDK contract bindings' do
     path = File.expand_path('../features/staged/auth-token-bootstrap.feature', __dir__)
 
     expect(Digest::SHA256.file(path).hexdigest)
-      .to eq('ec7954819e8accf783e4d9adebf227b8f4b8bcbebc9cfdec0916d21e3b683102')
+      .to eq('9438248ff4778e1bdc1671e6552a3e95221bc90b29a5766cd889589e4f2f4f14')
   end
 
   it 'requires an absolute contract fixture path' do

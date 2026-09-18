@@ -79,20 +79,26 @@ For a server request that already carries a user's access token, create a client
 ```ruby
 require "volcano"
 
-client = Volcano::Client.new(
-  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
-  access_token: ENV.fetch("VOLCANO_ACCESS_TOKEN")
-)
-user = client.auth.user
-puts user.id
-client.auth.sign_out
+def load_request_user(access_token)
+  client = Volcano::Client.new(
+    anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+    access_token: access_token
+  )
+  client.auth.user
+end
 ```
 
+Call this helper from your request handler with the bearer token from that request.
+For a Volcano function, use the access token in `event.fetch("__volcano_auth")` supplied for that invocation.
+The helper validates the token with Volcano before returning the user.
+
+Once a user identity has been validated, a refresh response for another user is rejected and leaves the current credentials unchanged.
 Construction makes no request and does not persist credentials.
 The initial snapshot has `nil` refresh credentials, user ID, and cached user.
 A successful profile read fills in the validated identity and cached user while retaining the supplied access token.
-Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` clears only the local session without a request.
-Pass `refresh_token` alongside `access_token` when the client should refresh or revoke that session.
+Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` revokes the server session identified by the access token before clearing local state.
+Pass `refresh_token` alongside `access_token` when the client should refresh that session.
+A revocation failure is reported after local clearing; it does not prove that copied tokens are invalid.
 Assigning `auth.current_session` still requires complete credentials and identity.
 
 ## Use the rest of the API

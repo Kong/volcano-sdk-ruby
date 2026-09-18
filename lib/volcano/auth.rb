@@ -38,7 +38,7 @@ module Volcano
       generation, current = @client.capture_session
       return unless current
 
-      error = revocation_error(current.refresh_token)
+      error = revocation_error(current)
       raise Error::SessionChangedError, cause: error unless @client.clear_session_if_current?(generation)
 
       raise error if error
@@ -75,10 +75,13 @@ module Volcano
       end
     end
 
-    def revocation_error(refresh_token)
-      return unless refresh_token
+    def revocation_error(session)
+      unless session.refresh_token
+        session_id = access_token_session_id(session.access_token)
+        return session_id && delete_session_error(session.access_token, session_id)
+      end
 
-      Transport.body(logout_response(refresh_token), 204)
+      Transport.body(logout_response(session.refresh_token), 204)
       nil
     rescue Error::VolcanoError => e
       e

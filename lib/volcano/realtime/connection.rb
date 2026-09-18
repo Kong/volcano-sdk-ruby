@@ -13,17 +13,18 @@ module Volcano
         session = session_for_lineage(session_lineage)
         protocol = build_protocol(socket)
         result = protocol.connect(token: session.access_token)
-        session = session_for_lineage(session_lineage)
-        activate_protocol(protocol, session, result)
+        session_for_lineage(session_lineage)
+        activate_protocol(protocol, session_lineage, result)
       rescue StandardError => e
         handle_connection_failure(socket, e)
       end
 
       def active_session_lineage
         _, lineage, session = @client.capture_session_binding
-        return lineage if session
+        raise Error::AuthenticationError, 'No active session' unless session
 
-        raise Error::AuthenticationError, 'No active session'
+        session_for_lineage(lineage)
+        lineage
       end
 
       def session_for_lineage(expected_lineage)
@@ -33,9 +34,9 @@ module Volcano
         raise Error::SessionChangedError
       end
 
-      def activate_protocol(protocol, session, result)
+      def activate_protocol(protocol, session_lineage, result)
         @protocol = protocol
-        @protocol_user_id = session.user_id
+        @protocol_session_lineage = session_lineage
         protocol_connected(result)
         protocol
       end
@@ -55,7 +56,7 @@ module Volcano
       ensure
         @manual_disconnect = false
         @channels.each_value(&:mark_closed)
-        @protocol_user_id = nil
+        @protocol_session_lineage = nil
       end
 
       def handle_connection_failure(socket, error)

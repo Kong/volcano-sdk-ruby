@@ -9,9 +9,78 @@ module Volcano
   end
   private_constant :SESSION_USER_CODER
 
-  # In-memory credentials with an optional, unverified local user snapshot.
+  # Owns credential snapshots and preserves validated identity during refresh.
+  module SessionCredentials
+    def self.build(access_token, refresh_token)
+      raise ArgumentError, 'refresh_token requires access_token' if access_token.nil? && !refresh_token.nil?
+      return if access_token.nil?
+
+      Session.new(access_token: credential(access_token, :access_token),
+                  refresh_token: credential(refresh_token, :refresh_token))
+    end
+
+    def self.credential(value, name)
+      return if value.nil?
+
+      raise ArgumentError, "#{name} must be a non-empty string" unless value.is_a?(String) && !value.strip.empty?
+
+      value.dup.freeze
+    end
+    private_class_method :credential
+
+    def self.validate_refresh_source(current)
+      return if current.user_id || session_id(current.access_token)
+
+      raise Error::AuthenticationError, 'Cannot refresh unknown identity without a session identifier'
+    end
+
+    def self.validate_refresh(current, refreshed)
+      return unless current
+
+      validate_refresh_source(current)
+      expected = session_id(current.access_token)
+      if expected && expected != session_id(refreshed&.access_token)
+        raise Error::AuthenticationError, 'Refreshed credentials belong to a different server session'
+      end
+      return unless current.user_id && current.user_id != refreshed&.user_id
+
+      raise Error::AuthenticationError, 'Refreshed session belongs to a different user'
+    end
+
+    # Untrusted continuity constraint, never authenticated user identity.
+    def self.session_id(access_token)
+      payload = token_payload(access_token)
+      return unless payload.is_a?(Hash)
+
+      value = payload['session_id']
+      value.downcase if value.is_a?(String) && value.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
+    end
+
+    def self.token_payload(access_token)
+      return unless access_token.is_a?(String)
+
+      parts = access_token.split('.')
+      return unless parts.length == 3
+
+      encoded = parts.fetch(1).tr('-_', '+/')
+      JSON.parse((encoded + ('=' * (-encoded.length % 4))).unpack1('m0'))
+    rescue ArgumentError, JSON::ParserError
+      nil
+    end
+    private_class_method :token_payload
+
+    def self.with_user(session, user)
+      user_id = (session.user_id || user.fetch('id')).dup.freeze
+      raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == user_id
+
+      Session.new(**session.to_h, user_id: user_id, user: user)
+    end
+  end
+  private_constant :SessionCredentials
+
+  # Local credentials; refresh credentials and user identity may be unknown.
   Session = Data.define(:access_token, :refresh_token, :user_id, :user) do
-    def initialize(access_token:, refresh_token:, user_id:, user: nil)
+    def initialize(access_token:, refresh_token: nil, user_id: nil, user: nil)
       super(access_token:, refresh_token:, user_id:, user: immutable_user(user))
     end
 

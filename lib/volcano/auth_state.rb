@@ -24,11 +24,11 @@ module Volcano
     CALLBACK_FAILURES = [Exception].freeze
     private_constant :CALLBACK_FAILURES
 
-    def initialize
+    def initialize(session: nil)
       @mutex = Mutex.new
       @generation = 0
       @lineage = 0
-      @session = nil
+      @session = session
       @callbacks = {}
       @next_callback_id = 0
       @notifications = []
@@ -48,9 +48,9 @@ module Volcano
       drain_notifications if dispatch
     end
 
-    def store_if_current?(session, generation, event: :signed_in, notifications: nil)
+    def store_if_current?(session, generation, event: :signed_in, notifications: nil, lineage: nil)
       dispatch = @mutex.synchronize do
-        return false unless generation == @generation
+        return false unless lineage.nil? ? generation == @generation : lineage == @lineage
 
         enqueue_notification(replace(session, event), event, session)
       end
@@ -63,9 +63,8 @@ module Volcano
     def update_user_if_current?(user, generation)
       @mutex.synchronize do
         return false unless generation == @generation && @session
-        raise Error::AuthenticationError, 'Profile belongs to a different user' unless user['id'] == @session.user_id
 
-        @session = Session.new(**@session.to_h, user: user)
+        @session = SessionCredentials.with_user(@session, user)
         true
       end
     end
@@ -82,6 +81,7 @@ module Volcano
     private
 
     def replace(session, event)
+      SessionCredentials.validate_refresh(@session, session) if event == :token_refreshed
       @session = session
       @generation += 1
       @lineage += 1 unless event == :token_refreshed

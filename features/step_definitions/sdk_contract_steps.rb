@@ -50,11 +50,61 @@ When('the client refreshes the current session') do
   contract.record { contract.client.auth.refresh_session }
 end
 
+When('a fresh client starts with only the current access token') do
+  source = contract.client
+  contract.previous_session = source.current_session
+  raise 'current session is missing' unless contract.previous_session
+
+  contract.bootstrap_cleanup = contract.register_cleanup(-> { source.auth.sign_out })
+  contract.client = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: contract.previous_session.access_token
+  )
+  contract.record { contract.client.current_session }
+end
+
+Then('the token-only session has no cached user') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'token-only session invented a user' unless session.user_id.nil? && session.user.nil?
+end
+
+When('a fresh client starts with a rejected access token') do
+  contract.client = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: 'sdk-contract-rejected-access-token'
+  )
+  contract.previous_session = contract.client.current_session
+  contract.record { contract.client.current_session }
+end
+
+Then('the session retains only the supplied access token') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'supplied access token changed' unless session.access_token == contract.previous_session.access_token
+  raise 'token-only session invented a refresh token' unless session.refresh_token.nil?
+end
+
 When('the client signs out') do
   contract.signed_out_session = contract.client.auth.current_session
   raise 'current session is missing' unless contract.signed_out_session
 
   contract.record { contract.client.auth.sign_out }
+  if contract.last_outcome.ok && contract.bootstrap_cleanup
+    contract.remove_cleanup(contract.bootstrap_cleanup)
+    contract.bootstrap_cleanup = nil
+  end
+end
+
+When('a fresh client loads a profile with the signed-out access token') do
+  target = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: contract.signed_out_session.access_token
+  )
+  contract.record { target.auth.user }
 end
 
 When('a fresh client tries to refresh the signed-out session') do
@@ -78,6 +128,10 @@ Then('the SDK operation succeeds') do
   outcome = contract.last_outcome
   raise 'SDK operation did not run' unless outcome
   raise "SDK operation failed (#{outcome.category}): #{outcome.error}" unless outcome.ok
+end
+
+Then('the SDK operation fails') do
+  raise 'SDK operation did not fail' unless contract.last_outcome && !contract.last_outcome.ok
 end
 
 Then('the SDK operation fails with an authentication error') do

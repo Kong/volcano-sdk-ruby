@@ -19,13 +19,14 @@ module Volcano
       api_url: 'https://api.volcano.dev',
       service_key: nil,
       timeout: 60,
-      **adapters
+      **options
     )
-      transport, socket_factory, reconnect_delay = extract_adapters(adapters)
+      session = SessionCredentials.build(options.delete(:access_token), options.delete(:refresh_token))
+      transport, socket_factory, reconnect_delay = extract_adapters(options)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
-      @auth_state = AuthState.new
+      @auth_state = AuthState.new(session: session)
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
       initialize_facades(socket_factory, reconnect_delay)
     end
@@ -81,8 +82,8 @@ module Volcano
       @auth_state.store_if_current?(session, generation, event: event, notifications: notifications)
     end
 
-    def clear_session_if_current?(generation, event: :signed_out, notifications: nil)
-      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications)
+    def clear_session_if_current?(generation, event: :signed_out, notifications: nil, lineage: nil)
+      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications, lineage: lineage)
     end
 
     def subscribe_auth_state_change(...)

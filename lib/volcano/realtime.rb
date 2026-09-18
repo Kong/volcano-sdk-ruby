@@ -73,7 +73,7 @@ module Volcano
       @channels = {}
       @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
       @next_connection_callback_id = 0
-      @protocol_user_id = nil
+      @protocol_session_lineage = nil
       @reconnect_task = nil
       @closed = false
     end

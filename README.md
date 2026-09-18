@@ -378,6 +378,17 @@ Success returns `nil`. The reset revokes the recovered account's existing
 sessions and does not sign it in. The client keeps any unrelated local session
 unchanged; sign in with the new password when the reset flow completes.
 
+### Start with a supplied access token
+
+Pass `access_token` to `Volcano::Client.new` to start without a refresh token or
+known user identity. Construction makes no request and leaves `refresh_token`,
+`user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
+without changing credentials. Without a refresh token, `refresh_session` raises
+`Volcano::Error::AuthenticationError`. `sign_out` revokes the server session using
+the access token and clears local state. Supply `refresh_token` alongside
+`access_token` to enable refresh.
+See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
+
 ### Adopt an existing session
 
 ```ruby
@@ -429,10 +440,11 @@ client.auth.sign_out
 raise "still signed in" if client.auth.current_session
 ```
 
-`sign_out` revokes the current refresh token and clears the captured in-memory
+`sign_out` uses the access-token session when available, even if a refresh token was supplied.
+It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
-fails, the SDK still clears that session and raises the typed error. A session
-established while sign-out is pending remains current.
+fails, the SDK still clears that session and raises the typed error. A concurrent
+refresh of the same session is cleared; a separate sign-in or adoption remains current.
 
 ### Invoke a function
 
@@ -708,6 +720,13 @@ client.locks.with_lock("deploy", ttl: 30) do |guard|
 end
 ```
 
+Acquisition accepts caller-owned UUID `token` and `request_id` values and retries
+an ambiguous transport failure or HTTP 503 once with the same request and credential.
+Retain those IDs to recover an uncertain acquisition. Other lock methods accept
+`request_id`; block-scoped helpers forward initial IDs only to acquisition.
+See the [lock guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/locks.md)
+for examples and fencing requirements.
+
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
 `locks.renew` returns a new immutable lease and leaves the previous value
@@ -828,7 +847,7 @@ delivery.
 
 ## Dependencies
 
-Installing `volcano-sdk` pulls in six gems, plus their own transitive
+Installing `volcano-sdk` pulls in eight gems, plus their own transitive
 dependencies:
 
 | Gem                                                          | Why                                                                     |
@@ -839,6 +858,8 @@ dependencies:
 | [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |
 | [`async-websocket`](https://rubygems.org/gems/async-websocket) | The realtime transport itself                                         |
 | [`protocol-rack`](https://rubygems.org/gems/protocol-rack)   | A requirement of `async-websocket`, pinned here so the version is ours  |
+| [`base64`](https://rubygems.org/gems/base64)                 | Required by the generated client, and no longer a default gem since Ruby 3.4 |
+| [`json`](https://rubygems.org/gems/json)                     | Request and response encoding for the generated client                  |
 
 There is no optional durable dependency, because this gem starts and follows
 durable executions rather than writing them. See

@@ -30,15 +30,14 @@ module Volcano
 
       def capture_protocol_session
         generation, lineage, session = capture_session_binding
-        return [generation, lineage, session] if session && session.user_id == @protocol_user_id
+        return [generation, lineage, session] if session && lineage == @protocol_session_lineage
 
         raise Error::SessionChangedError
       end
 
       def access_token_for_protocol_lineage(expected_lineage)
         _, lineage, session = capture_session_binding
-        return session.access_token if session && lineage == expected_lineage &&
-                                       session.user_id == @protocol_user_id
+        return session.access_token if session && lineage == expected_lineage && lineage == @protocol_session_lineage
 
         raise Error::SessionChangedError
       end

@@ -122,7 +122,7 @@ RSpec.describe Volcano::Client do
 
     expect(calls.map(&:first)).to eq([:get_durable_execution])
     expect(calls.first.last).to eq(
-      authorization: 'service-key', project_id: 'project-1',
+      authorization: 'access-token', project_id: 'project-1',
       function_id: 'charge-order', execution_id: 'execution-1'
     )
   end
@@ -179,7 +179,7 @@ RSpec.describe Volcano::Client do
     expect(page.executions.map(&:id)).to eq(%w[execution-1 execution-2])
     expect(page.executions).to be_frozen
     expect(calls.first.last).to eq(
-      authorization: 'service-key', project_id: 'project-1',
+      authorization: 'access-token', project_id: 'project-1',
       function_id: 'charge-order', options: { status: 'running' }
     )
   end
@@ -203,7 +203,7 @@ RSpec.describe Volcano::Client do
     expect(result).to have_attributes(status: 'running')
     expect(result.terminal?).to be(false)
     expect(calls.first.last).to eq(
-      authorization: 'service-key', project_id: 'project-1',
+      authorization: 'access-token', project_id: 'project-1',
       function_id: 'charge-order', execution_id: 'execution-1'
     )
   end
@@ -239,12 +239,15 @@ RSpec.describe Volcano::Client do
     expect(calls).to be_empty
   end
 
-  it 'uses the service key for owner-scoped operations without a session', :aggregate_failures do
+  # The routes take a user token: list, get and stop sit behind RequireUserAuth,
+  # so a service key is answered 401. Sending one would mean a backend holding a
+  # platform token never sent it.
+  it 'sends the session token for owner-scoped operations', :aggregate_failures do
     responses[:get_durable_execution] = transport_response(200, execution(status: 'running'))
 
-    client.durable.get('project-1', 'charge-order', 'execution-1')
+    owner.durable.get('project-1', 'charge-order', 'execution-1')
 
-    expect(calls.first.last.fetch(:authorization)).to eq('service-key')
+    expect(calls.first.last.fetch(:authorization)).to eq('access-token')
   end
 
   it 'requires a platform credential for owner-scoped operations', :aggregate_failures do

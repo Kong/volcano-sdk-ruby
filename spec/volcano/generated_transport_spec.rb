@@ -689,6 +689,20 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     expect(activity_call.last).to eq(debug_return_type: 'String')
   end
 
+  [
+    [:acquire_project_lock, { ttl: 30, token: 'owner' }, 3],
+    [:get_project_lock, {}, 2],
+    [:renew_project_lock, { ttl: 30, token: 'owner' }, 3],
+    [:release_project_lock, { token: 'owner' }, 3],
+    [:force_release_project_lock, {}, 2]
+  ].each do |operation, options, request_index|
+    it "forwards the supplied request ID through #{operation}" do
+      request_id = '00000000-0000-4000-8000-000000000002'
+      transport.public_send(operation, authorization: 'service-key', key: 'build', request_id: request_id, **options)
+      expect(apis.locks.calls.last.fetch(request_index)).to eq(request_id)
+    end
+  end
+
   it 'reads a lock through the generated API' do
     response = transport.get_project_lock(authorization: 'service-key', key: 'build:queue')
 

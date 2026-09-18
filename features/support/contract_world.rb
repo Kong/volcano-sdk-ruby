@@ -54,8 +54,8 @@ module VolcanoContract
   end
 
   class World
-    attr_accessor :auth_state_sessions, :client, :last_outcome, :previous_session, :signed_out_session,
-                  :subscriber, :publisher
+    attr_accessor :bootstrap_cleanup, :auth_state_sessions, :client, :last_outcome, :previous_session,
+                  :signed_out_session, :subscriber, :publisher
     attr_reader :fixture, :service_client, :storage_path, :storage_bytes, :suffix,
                 :realtime_channel, :realtime_message, :lock_key, :realtime_clients
 

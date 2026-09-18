@@ -849,6 +849,72 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  [false, true].each do |same_session|
+    it "binds bootstrap realtime without a profile preflight, same session: #{same_session}" do
+      token = lambda do |session_id|
+        "header.#{[{ session_id: session_id }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
+      end
+      session_a = '00000000-0000-4000-8000-000000000001'
+      session_b = '00000000-0000-4000-8000-000000000002'
+      socket = FacadeSocket.new
+      transport = RealtimeDatabaseTransport.new
+      allow(transport).to receive(:auth_refresh).and_return(
+        RealtimeResponse.new(status: 200, headers: {}, data: nil,
+                             body: { 'access_token' => token.call(same_session ? session_a : session_b),
+                                     'refresh_token' => 'rotated', 'user' => { 'id' => 'user-123' } })
+      )
+      client = Volcano::Client.new(anon_key: 'anon', access_token: token.call(session_a), refresh_token: 'refresh',
+                                   _transport: transport, _realtime_socket_factory: ->(_address) { socket })
+      Async do
+        client.realtime.channel('contract').subscribe
+        expect(client.current_session.user_id).to be_nil
+        if same_session
+          client.auth.refresh_session
+          client.realtime.channel('another').subscribe
+        else
+          expect { client.auth.refresh_session }
+            .to raise_error(Volcano::Error::AuthenticationError, /different server session/)
+        end
+        expect(client.current_session.access_token).to eq(token.call(session_a))
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
+  end
+
+  it 'keeps a token-only connection usable after its profile establishes the user identity' do
+    socket = FacadeSocket.new
+    transport = RealtimeDatabaseTransport.new
+    allow(transport).to receive(:auth_get_user).and_return(
+      RealtimeResponse.new(status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => 'u@example.com',
+                                                            'status' => 'active' } }, headers: {}, data: nil)
+    )
+    client = Volcano::Client.new(anon_key: 'anon', access_token: 'access-token', _transport: transport,
+                                 _realtime_socket_factory: ->(_address) { socket })
+    Async do |task|
+      broadcast = client.realtime.channel('contract')
+      broadcast.subscribe
+      client.auth.user
+      broadcast.unsubscribe
+      expect { broadcast.subscribe }.not_to raise_error
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { |change| received.enqueue(change) }
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+        }
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }.record).to eq('id' => 42, 'body' => 'fetched')
+      expect(transport.queries.dig(0, :authorization)).to eq('access-token')
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'preserves a queued change when the same user refreshes their token' do
     socket = FacadeSocket.new
     transport = BlockingRealtimeDatabaseTransport.new

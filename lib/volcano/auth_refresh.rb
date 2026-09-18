@@ -78,6 +78,9 @@ module Volcano
     end
 
     def perform_refresh(binding, notifications)
+      raise Error::AuthenticationError, 'No refresh token' unless binding.last.refresh_token
+
+      SessionCredentials.validate_refresh_source(binding.last)
       session = refreshed_session(binding, notifications)
       stored = @client.store_session_if_current?(
         session, binding.first, event: :token_refreshed, notifications: notifications
@@ -86,7 +89,11 @@ module Volcano
     end
 
     def refreshed_session(binding, notifications)
-      owned_complete_session(build_session(refresh_payload(binding, notifications)))
+      parse_refresh_session(refresh_payload(binding, notifications))
+    end
+
+    def parse_refresh_session(payload)
+      owned_complete_session(build_session(payload))
     rescue KeyError, TypeError, NoMethodError, ArgumentError => e
       raise Error::TransportError, INCOMPLETE_SESSION, cause: e
     end

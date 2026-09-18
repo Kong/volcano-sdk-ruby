@@ -50,11 +50,61 @@ When('the client refreshes the current session') do
   contract.record { contract.client.auth.refresh_session }
 end
 
+When('a fresh client starts with only the current access token') do
+  source = contract.client
+  contract.previous_session = source.current_session
+  raise 'current session is missing' unless contract.previous_session
+
+  contract.bootstrap_cleanup = contract.register_cleanup(-> { source.auth.sign_out })
+  contract.client = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: contract.previous_session.access_token
+  )
+  contract.record { contract.client.current_session }
+end
+
+Then('the token-only session has no cached user') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'token-only session invented a user' unless session.user_id.nil? && session.user.nil?
+end
+
+When('a fresh client starts with a rejected access token') do
+  contract.client = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: 'sdk-contract-rejected-access-token'
+  )
+  contract.previous_session = contract.client.current_session
+  contract.record { contract.client.current_session }
+end
+
+Then('the session retains only the supplied access token') do
+  session = contract.client.current_session
+  raise 'token-only session is missing' unless session
+  raise 'supplied access token changed' unless session.access_token == contract.previous_session.access_token
+  raise 'token-only session invented a refresh token' unless session.refresh_token.nil?
+end
+
 When('the client signs out') do
   contract.signed_out_session = contract.client.auth.current_session
   raise 'current session is missing' unless contract.signed_out_session
 
   contract.record { contract.client.auth.sign_out }
+  if contract.last_outcome.ok && contract.bootstrap_cleanup
+    contract.remove_cleanup(contract.bootstrap_cleanup)
+    contract.bootstrap_cleanup = nil
+  end
+end
+
+When('a fresh client loads a profile with the signed-out access token') do
+  target = Volcano::Client.new(
+    api_url: contract.fixture.fetch('api_url'),
+    anon_key: contract.fixture.fetch('anon_key'),
+    access_token: contract.signed_out_session.access_token
+  )
+  contract.record { target.auth.user }
 end
 
 When('a fresh client tries to refresh the signed-out session') do
@@ -78,6 +128,10 @@ Then('the SDK operation succeeds') do
   outcome = contract.last_outcome
   raise 'SDK operation did not run' unless outcome
   raise "SDK operation failed (#{outcome.category}): #{outcome.error}" unless outcome.ok
+end
+
+Then('the SDK operation fails') do
+  raise 'SDK operation did not fail' unless contract.last_outcome && !contract.last_outcome.ok
 end
 
 Then('the SDK operation fails with an authentication error') do
@@ -403,6 +457,71 @@ end
 Then('the listed executions include the started execution') do
   listed = contract.last_outcome.value.executions.map(&:id)
   raise 'the started execution was not listed' unless listed.include?(contract.durable.started.id)
+end
+
+When('the client recovers the contract lock with caller-owned tokens') do
+  contract.record do
+    locks = contract.service_client.locks
+    key = contract.lock_key
+    token = SecureRandom.uuid
+    request_id = SecureRandom.uuid
+    lease = locks.acquire(key, ttl: 30, token: token, request_id: request_id)
+    cleanup = contract.register_lock_cleanup(key, lease)
+    recovered = locks.acquire(key, ttl: 30, token: token, request_id: request_id)
+    held = locks.get(key, request_id: SecureRandom.uuid)
+    renewed = locks.renew(key, recovered, ttl: 60, request_id: SecureRandom.uuid)
+    locks.release(key, renewed, request_id: SecureRandom.uuid)
+    available = locks.get(key, request_id: SecureRandom.uuid)
+    { 'token' => token, 'cleanup' => cleanup, 'lease' => lease, 'recovered' => recovered, 'held' => held,
+      'renewed' => renewed, 'available' => available }
+  end
+end
+
+Then('recovery and renewal preserve the held lease until release') do
+  value = contract.last_outcome.value
+  raise 'recovered lease is not held' unless value.fetch('held').held
+  raise 'released lease is still held' if value.fetch('available').held
+
+  contract.remove_cleanup(value.fetch('cleanup'))
+
+  leases = value.values_at('lease', 'recovered', 'renewed')
+  raise 'ownership token changed' unless leases.all? { |lease| lease.token == value.fetch('token') }
+
+  fences = [*leases, value.fetch('held')].map(&:fencing_token)
+  raise 'fencing token changed or missing' unless fences.first && fences.uniq.length == 1
+end
+
+When('the client acquires and force releases the contract lock') do
+  contract.record do
+    locks = contract.service_client.locks
+    lease = locks.acquire(contract.lock_key, ttl: 30)
+    cleanup = contract.register_lock_cleanup(contract.lock_key, lease)
+    locks.force_release(contract.lock_key, request_id: SecureRandom.uuid)
+    { 'lease' => lease, 'cleanup' => cleanup, 'available' => locks.get(contract.lock_key) }
+  end
+end
+
+Then('the force-released lock is available') do
+  value = contract.last_outcome.value
+  raise 'force-released lease is still held' if value.fetch('available').held
+
+  contract.remove_cleanup(value.fetch('cleanup'))
+end
+
+When('the client reacquires the force-released contract lock') do
+  original = contract.last_outcome.value.fetch('lease')
+  contract.record do
+    replacement = contract.service_client.locks.acquire(contract.lock_key, ttl: 30)
+    contract.register_lock_cleanup(contract.lock_key, replacement)
+    { 'original' => original, 'replacement' => replacement }
+  end
+end
+
+Then('the replacement owner receives a higher fencing token') do
+  original, replacement = contract.last_outcome.value.fetch_values('original', 'replacement')
+  raise 'new acquisition reused the ownership token' if original.token == replacement.token
+  raise 'original fencing token is missing' unless original.fencing_token
+  raise 'replacement fencing token did not advance' unless replacement.fencing_token > original.fencing_token
 end
 
 Given('two authenticated realtime clients') do

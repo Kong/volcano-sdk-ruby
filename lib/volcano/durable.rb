@@ -48,7 +48,7 @@ module Volcano
       project, function_id, execution = execution_path(project_id, function_name, execution_id)
       response = Transport.invoke do
         @transport.get_durable_execution(
-          authorization: @client.owner_token,
+          authorization: @client.session_token,
           project_id: project, function_id: function_id, execution_id: execution
         )
       end
@@ -64,7 +64,7 @@ module Volcano
       validate_paging(page, limit)
       response = Transport.invoke do
         @transport.list_durable_executions(
-          authorization: @client.owner_token, project_id: project, function_id: function_id,
+          authorization: @client.session_token, project_id: project, function_id: function_id,
           options: { status: status, page: page, limit: limit }.compact
         )
       end
@@ -80,7 +80,7 @@ module Volcano
       project, function_id, execution = execution_path(project_id, function_name, execution_id)
       response = Transport.invoke do
         @transport.stop_durable_execution(
-          authorization: @client.owner_token,
+          authorization: @client.session_token,
           project_id: project, function_id: function_id, execution_id: execution
         )
       end

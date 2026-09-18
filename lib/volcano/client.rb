@@ -19,13 +19,14 @@ module Volcano
       api_url: 'https://api.volcano.dev',
       service_key: nil,
       timeout: 60,
-      **adapters
+      **options
     )
-      transport, socket_factory, reconnect_delay = extract_adapters(adapters)
+      session = SessionCredentials.build(options.delete(:access_token), options.delete(:refresh_token))
+      transport, socket_factory, reconnect_delay = extract_adapters(options)
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
-      @auth_state = AuthState.new
+      @auth_state = AuthState.new(session: session)
       @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
       initialize_facades(socket_factory, reconnect_delay)
     end
@@ -61,13 +62,6 @@ module Volcano
       @service_key
     end
 
-    # Owner-scoped project routes take a platform UserToken, not an auth-user
-    # access token from sign-in. A configured service key is that credential.
-    # Otherwise the session must already hold a platform token.
-    def owner_token
-      @service_key || session_token
-    end
-
     def function_token
       current_session&.access_token || @service_key || @anon_key
     end
@@ -88,8 +82,8 @@ module Volcano
       @auth_state.store_if_current?(session, generation, event: event, notifications: notifications)
     end
 
-    def clear_session_if_current?(generation, event: :signed_out, notifications: nil)
-      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications)
+    def clear_session_if_current?(generation, event: :signed_out, notifications: nil, lineage: nil)
+      @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications, lineage: lineage)
     end
 
     def subscribe_auth_state_change(...)

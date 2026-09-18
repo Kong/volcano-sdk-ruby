@@ -53,7 +53,7 @@ module Volcano
       return unless payload.is_a?(Hash)
 
       value = payload['session_id']
-      value.strip if value.is_a?(String) && !value.strip.empty?
+      value.downcase if value.is_a?(String) && value.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
     end
 
     def self.token_payload(access_token)

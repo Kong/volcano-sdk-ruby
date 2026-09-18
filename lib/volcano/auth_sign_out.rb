@@ -4,18 +4,31 @@ module Volcano
   # Revokes the captured server session and clears its local lineage.
   class Auth
     def sign_out
-      generation, lineage, current = @client.capture_session_binding
-      return unless current
+      binding = @client.capture_session_binding
+      return unless binding.last
 
+      notifications = []
+      @refresh_lock.synchronize { sign_out_captured(binding, notifications) }
+    ensure
+      notifications&.each(&:call)
+    end
+
+    private
+
+    def sign_out_captured(binding, notifications)
+      generation, lineage, current = revocation_binding(binding)
       error = revocation_error(current)
       lineage = nil unless access_token_session_id(current.access_token)
-      cleared = @client.clear_session_if_current?(generation, lineage: lineage)
+      cleared = @client.clear_session_if_current?(generation, lineage: lineage, notifications: notifications)
       raise Error::SessionChangedError, cause: error unless cleared
 
       raise error if error
     end
 
-    private
+    def revocation_binding(binding)
+      active = @client.capture_session_binding
+      active.last && active[1] == binding[1] ? active : binding
+    end
 
     def logout_response(refresh_token)
       Transport.invoke do

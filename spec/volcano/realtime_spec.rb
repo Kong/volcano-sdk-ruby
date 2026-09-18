@@ -854,14 +854,16 @@ RSpec.describe Volcano::Realtime do
       token = lambda do |session_id|
         "header.#{[{ session_id: session_id }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
       end
+      session_a = '00000000-0000-4000-8000-000000000001'
+      session_b = '00000000-0000-4000-8000-000000000002'
       socket = FacadeSocket.new
       transport = RealtimeDatabaseTransport.new
       allow(transport).to receive(:auth_refresh).and_return(
         RealtimeResponse.new(status: 200, headers: {}, data: nil,
-                             body: { 'access_token' => token.call(same_session ? 'session-a' : 'session-b'),
+                             body: { 'access_token' => token.call(same_session ? session_a : session_b),
                                      'refresh_token' => 'rotated', 'user' => { 'id' => 'user-123' } })
       )
-      client = Volcano::Client.new(anon_key: 'anon', access_token: token.call('session-a'), refresh_token: 'refresh',
+      client = Volcano::Client.new(anon_key: 'anon', access_token: token.call(session_a), refresh_token: 'refresh',
                                    _transport: transport, _realtime_socket_factory: ->(_address) { socket })
       Async do
         client.realtime.channel('contract').subscribe
@@ -873,7 +875,7 @@ RSpec.describe Volcano::Realtime do
           expect { client.auth.refresh_session }
             .to raise_error(Volcano::Error::AuthenticationError, /different server session/)
         end
-        expect(client.current_session.access_token).to eq(token.call('session-a'))
+        expect(client.current_session.access_token).to eq(token.call(session_a))
       ensure
         client.realtime.disconnect
       end.wait

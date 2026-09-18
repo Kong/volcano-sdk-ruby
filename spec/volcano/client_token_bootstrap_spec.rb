@@ -3,12 +3,13 @@
 require 'spec_helper'
 
 RSpec.describe Volcano::Client do
+  let(:logout_session_id) { '00000000-0000-4000-8000-000000000011' }
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { described_class.new(anon_key: 'anon', access_token: 'supplied-access', _transport: transport) }
   let(:profile) { { 'id' => 'user', 'email' => 'user@example.com', 'status' => 'active' } }
 
-  def bootstrap_token(renewed: false)
-    payload = [{ session_id: 'bootstrap-session', renewed: renewed }.to_json].pack('m0')
+  def bootstrap_token(renewed: false, session_id: '00000000-0000-4000-8000-000000000012')
+    payload = [{ session_id: session_id, renewed: renewed }.to_json].pack('m0')
     "header.#{payload.tr('+/', '-_').delete('=')}.signature"
   end
 
@@ -140,12 +141,12 @@ RSpec.describe Volcano::Client do
 
   [204, 401, 503].product([false, true], [nil, 'another-session-refresh']).each do |status, replace, refresh|
     it "revokes captured access: status #{status}, replacement #{replace}, refresh #{refresh.inspect}" do
-      token = "header.#{[{ session_id: 'original-session' }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
+      token = bootstrap_token(session_id: logout_session_id)
       bootstrapped = described_class.new(anon_key: 'anon', access_token: token, refresh_token: refresh,
                                          _transport: transport)
       replacement = Volcano::Session.new('replacement', 'refresh', 'user')
       allow(transport).to receive(:auth_delete_my_session).with(authorization: token,
-                                                                session_id: 'original-session') do
+                                                                session_id: logout_session_id) do
         bootstrapped.auth.current_session = replacement if replace
         response(status, status == 204 ? nil : { 'error' => 'revocation failed' })
       end

@@ -103,4 +103,11 @@ RSpec.describe 'shared SDK contract bindings' do
       expect(files.grep(%r{\Alib/volcano/generated/(?!lib/)})).to be_empty
     end
   end
+
+  it 'stages the canonical authenticated request recovery feature' do
+    path = File.expand_path('../features/staged/auth-request-recovery.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '9fa6f8d6cb3bca89501d32d950f06b8982ed34b888cce134465e0358b8261e8f'
+    )
+  end
 end

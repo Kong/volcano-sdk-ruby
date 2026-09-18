@@ -61,7 +61,8 @@ Use a separate client for each independent user session; do not share one mutabl
 `client.current_session` and `client.auth.current_session` read the local immutable snapshot without a request.
 Use `client.auth.user` when you need a server-validated profile; `get_user` is an alias.
 Successful profile operations update the cached user while preserving the current credentials.
-If `user`, `update_user`, `convert_anonymous`, or `confirm_email_change` receives an HTTP 401 and the session has a usable refresh token, the client refreshes once and retries with the original request values.
+Authenticated profile, session-list/deletion, email-change request/cancellation, linked-provider, provider-token, and provider-API operations refresh a usable session once after HTTP 401 and replay the original request values.
+Deleting the current server session also clears its refreshed local credentials; a separately adopted session remains current.
 These operations do not retry other HTTP failures or ambiguous network failures, and they never retry under a replacement session.
 
 `sign_up` returns an acknowledgement without signing in by default.

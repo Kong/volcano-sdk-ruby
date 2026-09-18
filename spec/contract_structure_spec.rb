@@ -117,4 +117,11 @@ RSpec.describe 'shared SDK contract bindings' do
       '37d7f2e8fd4efb035cbc094c9c91a44a86f15fbcd689627e525e8d04f033a928'
     )
   end
+
+  it 'stages the canonical storage session feature' do
+    path = File.expand_path('../features/staged/storage-sessions.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '037c60a8da27ec4cc5777596ba0c669b8309181a54b27aa61882535ed2f6beb1'
+    )
+  end
 end

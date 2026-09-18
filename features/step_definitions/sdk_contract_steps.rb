@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'net/http'
+
 ACCESS_TOKEN_CLOCK_TICK_SECONDS = 1.1
 
 def contract
@@ -439,6 +441,127 @@ Then('removing the moved object leaves the original unchanged') do
   value = contract.last_outcome.value
   raise 'remove left unexpected paths' unless value.fetch('after_remove') == [contract.storage_path]
   raise 'remove changed original bytes' unless value.fetch('bytes').fetch(3) == contract.storage_bytes
+end
+
+def storage_contract_bucket
+  contract.client.storage.from(contract.fixture.fetch('bucket_name'))
+end
+
+def clean_storage_contract_object
+  bucket = storage_contract_bucket
+  bucket.remove(contract.storage_path) if bucket.list(contract.storage_path).objects.any? do |item|
+    item.name == contract.storage_path
+  end
+end
+
+def register_storage_session_cleanup(bucket, session)
+  contract.register_cleanup(lambda do
+    bucket.abort_upload_session(contract.storage_path, session_id: session.session_id)
+  rescue Volcano::Error::NotFoundError
+    nil
+  end)
+  contract.register_cleanup(-> { clean_storage_contract_object })
+end
+
+def start_storage_session(bucket, bytes)
+  session = bucket.create_upload_session(
+    contract.storage_path, total_size: bytes.bytesize,
+                           part_size: 5 * 1024 * 1024, content_type: 'application/octet-stream'
+  )
+  register_storage_session_cleanup(bucket, session)
+  session
+end
+
+def partial_storage_upload
+  bucket = storage_contract_bucket
+  bytes = ('x' * (5 * 1024 * 1024)).b + contract.storage_bytes
+  session = start_storage_session(bucket, bytes)
+  part = bucket.upload_part(contract.storage_path, session_id: session.session_id, part_number: 1,
+                                                   data: bytes.byteslice(0, session.part_size))
+  { 'session' => session, 'part' => part, 'bytes' => bytes }
+end
+
+When('the client uploads one part and resumes the contract upload') do
+  contract.record do
+    value = partial_storage_upload
+    bucket = storage_contract_bucket
+    session = value.fetch('session')
+    value['progress'] = bucket.get_upload_session(contract.storage_path, session_id: session.session_id)
+    bucket.upload_part(contract.storage_path, session_id: session.session_id, part_number: 2,
+                                              data: value.fetch('bytes').byteslice(session.part_size..))
+    value['object'] = bucket.complete_upload_session(contract.storage_path, session_id: session.session_id)
+    value['download'] = bucket.download(contract.storage_path)
+    value
+  end
+end
+
+Then('upload progress describes exactly the first uploaded part') do
+  value = contract.last_outcome.value
+  progress, session, part = value.values_at('progress', 'session', 'part')
+  expected = { session_id: session.session_id, path: contract.storage_path,
+               content_type: 'application/octet-stream', status: 'uploading',
+               total_size: value.fetch('bytes').bytesize, part_size: 5 * 1024 * 1024, total_parts: 2,
+               parts_uploaded: 1, bytes_uploaded: 5 * 1024 * 1024, parts: [part] }
+  raise 'upload progress differs' unless progress.to_h.slice(*expected.keys) == expected
+  raise 'session chunking differs' unless session.part_size == expected[:part_size] && session.total_parts == 2
+  raise 'uploaded part differs' unless part.part_number == 1 && part.size == session.part_size && !part.etag.empty?
+end
+
+Then('the completed multipart object preserves its path, type, and bytes') do
+  value = contract.last_outcome.value
+  expected = { name: contract.storage_path, mime_type: 'application/octet-stream', size: value.fetch('bytes').bytesize }
+  raise 'completed metadata differs' unless value.fetch('object').to_h.slice(*expected.keys) == expected
+  raise 'completed bytes differ' unless value.fetch('download') == value.fetch('bytes')
+end
+
+When('the client uploads one part and aborts the contract upload') do
+  contract.record do
+    session = partial_storage_upload.fetch('session')
+    bucket = storage_contract_bucket
+    bucket.abort_upload_session(contract.storage_path, session_id: session.session_id)
+    {
+      session: -> { bucket.get_upload_session(contract.storage_path, session_id: session.session_id) },
+      object: -> { bucket.download(contract.storage_path) }
+    }.transform_values do |read|
+      read.call
+      'unexpected success'
+    rescue Volcano::Error::NotFoundError
+      'not found'
+    end
+  end
+end
+
+Then('the aborted session and unfinished object are not found') do
+  expected = { session: 'not found', object: 'not found' }
+  raise 'aborted upload remains accessible' unless contract.last_outcome.value == expected
+end
+
+def anonymous_storage_read(url)
+  uri = URI(url)
+  Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https', open_timeout: 10, read_timeout: 10) do |http|
+    http.get(uri.request_uri)
+  end
+end
+
+When('the client makes the contract object public and private again') do
+  contract.record do
+    bucket = storage_contract_bucket
+    contract.register_cleanup(-> { clean_storage_contract_object })
+    bucket.upload(contract.storage_path, contract.storage_bytes)
+    url = bucket.get_public_url(contract.storage_path)
+    before = anonymous_storage_read(url)
+    public_object = bucket.update_visibility(contract.storage_path, public: true)
+    visible = anonymous_storage_read(url)
+    private_object = bucket.update_visibility(contract.storage_path, public: false)
+    after = anonymous_storage_read(url)
+    { statuses: [before.code, visible.code, after.code], bytes: visible.body.b,
+      visibility: [public_object.is_public, private_object.is_public] }
+  end
+end
+
+Then('anonymous reads return the original bytes only while the object is public') do
+  expected = { statuses: %w[404 200 404], bytes: contract.storage_bytes, visibility: [true, false] }
+  raise 'anonymous visibility differs' unless contract.last_outcome.value == expected
 end
 
 Then('the stored object path equals the contract path') do

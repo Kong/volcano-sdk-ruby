@@ -43,7 +43,7 @@ failures raise typed errors under `Volcano::Error`.
 ```ruby
 result = client.auth.sign_up(
   email: "new-user@example.com",
-  password: "secret",
+  password: "correct-horse-battery-staple",
   metadata: { display_name: "New User" }
 )
 puts result.message if result.confirmation_required
@@ -55,7 +55,7 @@ addresses. Pass `sign_in_when_allowed: true` to follow it with `sign_in` only wh
 confirmation is not required:
 
 ```ruby
-result = client.auth.sign_up(email: "new-user@example.com", password: "secret", sign_in_when_allowed: true)
+result = client.auth.sign_up(email: "new-user@example.com", password: "correct-horse-battery-staple", sign_in_when_allowed: true)
 session = result.session # nil when no follow-up sign-in ran.
 ```
 
@@ -65,7 +65,7 @@ A failed follow-up raises its usual typed error; it does not undo the successful
 ### Sign in
 
 ```ruby
-session = client.auth.sign_in(email: "user@example.com", password: "secret")
+session = client.auth.sign_in(email: "user@example.com", password: "correct-horse-battery-staple")
 current_session = client.auth.current_session
 raise "session changed" unless current_session == session
 ```
@@ -105,7 +105,7 @@ is in flight raises
 
 ```ruby
 user = client.auth.update_user(
-  password: "new-secret",
+  password: "new-correct-horse-battery-staple",
   metadata: { display_name: "Grace", avatar: nil }
 )
 raise "wrong user" unless user.id == session.user_id
@@ -209,8 +209,9 @@ hosted_url = client.auth.get_hosted_auth_url(
 ```
 
 Store `hosted_state` in the user's signed server-side session before redirecting
-to `hosted_url`. After parsing the returned fragment into a `Volcano::Session`,
-validate and adopt it atomically:
+to `hosted_url`. In the callback, atomically fetch and delete the stored state before validation,
+even if validation or adoption fails. Reject a missing or already-consumed state.
+After parsing the returned fragment into a `Volcano::Session`, validate and adopt it:
 
 ```ruby
 session = client.auth.adopt_hosted_auth_session(
@@ -241,8 +242,9 @@ authorization_url = client.auth.sign_in_with_oauth(
 ```
 
 Store `oauth_state` in the user's signed server-side session, then redirect the
-user to the returned URL. In the callback, pass the returned and stored states
-to the SDK so it rejects login CSRF before exchanging the one-time code:
+user to the returned URL. In the callback, atomically fetch and delete the stored nonce as `stored_oauth_state`;
+reject a missing or already-consumed nonce. Pass the returned and consumed states to
+the SDK so it rejects login CSRF before exchanging the one-time code:
 
 ```ruby
 session = client.auth.exchange_oauth_code(
@@ -373,7 +375,7 @@ as verified.
 ### Reset the password
 
 ```ruby
-client.auth.reset_password(token: "recovery-token", new_password: "new-secret")
+client.auth.reset_password(token: "recovery-token", new_password: "new-correct-horse-battery-staple")
 ```
 
 Success returns `nil`. The reset revokes the recovered account's existing
@@ -414,8 +416,9 @@ raise "refresh failed" unless client.auth.current_session.equal?(refreshed)
 ```
 
 On success, `refresh_session` replaces the in-memory session and returns the
-immutable new snapshot. An authentication failure clears the session that
-initiated the request. Server and transport failures preserve it, and a late
+immutable new snapshot. An authentication rejection from the refresh endpoint clears the captured session.
+Missing refresh credentials, failed session-continuity checks, server errors, and
+transport failures preserve it, and a late
 response never replaces a newer session. The SDK does not persist sessions.
 
 ### Observe auth-state changes

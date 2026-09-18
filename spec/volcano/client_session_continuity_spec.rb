@@ -331,4 +331,59 @@ RSpec.describe Volcano::Client do
     expect(transport).to have_received(:auth_logout).with(authorization: 'anon', refresh_token: 'refresh').once
     expect(malformed.current_session).to be_nil
   end
+
+  [false, true].each do |enriched|
+    it "does not trust a supplied profile without a session ID, enriched: #{enriched}" do
+      allow(transport).to receive_messages(
+        auth_get_user: response(200, 'user' => { 'id' => 'user-a', 'email' => 'u@example.com', 'status' => 'active' }),
+        auth_refresh: refresh_response(session_b)
+      )
+      client.auth.current_session = Volcano::Session.new('opaque', 'foreign-refresh', 'user-a')
+      client.auth.user if enriched
+      expect { client.auth.refresh_session }.to raise_error(Volcano::Error::AuthenticationError, /session identifier/)
+      expect(transport).not_to have_received(:auth_refresh)
+      expect(client.current_session.access_token).to eq('opaque')
+    end
+  end
+
+  deletion_outcomes = [false, true]
+  deletion_outcomes.each do |fails|
+    it "discards retained credentials after current-session deletion, failure: #{fails}" do
+      allow(transport).to receive_messages(auth_signin: refresh_response(session_a),
+                                           auth_refresh: refresh_response(session_a))
+      allow(transport).to receive(:auth_delete_my_session) do
+        raise Volcano::Error::TransportError, 'response lost' if fails
+
+        response(204)
+      end
+      session = client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
+      client.auth.refresh_session
+      if fails
+        expect { client.auth.delete_session(session_a) }.to raise_error(Volcano::Error::TransportError)
+      else
+        client.auth.delete_session(session_a)
+      end
+      expect(client.current_session).to be_nil
+      expect(client.capture_session_binding[1]).not_to be_verified_pair(session)
+      expect(client.capture_session_binding[1].instance_variable_get(:@refresh)).to be_nil
+    end
+  end
+
+  it 'does not retain a refresh result that completes after current-session deletion' do
+    entered = Queue.new
+    release = Queue.new
+    stub_refresh_owner(entered, release)
+    allow(transport).to receive(:auth_delete_my_session).and_return(response(204))
+    owner = client.capture_session_binding[1]
+    refreshing = refresh_thread
+    Timeout.timeout(2) { entered.pop }
+    client.auth.delete_session(session_a)
+    release << true
+    expect(Timeout.timeout(2) { refreshing.value }).to be_a(Volcano::Error::SessionChangedError)
+    expect(client.current_session).to be_nil
+    expect(owner.instance_variable_get(:@verified_pair)).to be_nil
+    expect(owner.instance_variable_get(:@refresh)).to be_nil
+  ensure
+    refreshing&.kill&.join
+  end
 end

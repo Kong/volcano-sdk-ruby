@@ -50,6 +50,17 @@ When('the client refreshes the current session') do
   contract.record { contract.client.auth.refresh_session }
 end
 
+When('a fresh client tries to refresh a supplied profile without a session identifier') do
+  source = contract.client.current_session
+  raise 'current session is missing' unless source
+
+  target = Volcano::Client.new(api_url: contract.fixture.fetch('api_url'), anon_key: contract.fixture.fetch('anon_key'))
+  supplied = source.with(access_token: 'sdk-contract-rejected-access-token')
+  target.auth.current_session = supplied
+  contract.record { target.auth.refresh_session }
+  raise 'supplied credentials changed' unless target.current_session == supplied
+end
+
 When('a fresh client starts with only the current access token') do
   source = contract.client
   contract.previous_session = source.current_session

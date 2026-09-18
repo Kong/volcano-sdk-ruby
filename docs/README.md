@@ -97,7 +97,7 @@ Construction makes no request and does not persist credentials.
 The initial snapshot has `nil` refresh credentials, user ID, and cached user.
 A successful profile read fills in the validated identity and cached user while retaining the supplied access token.
 Without a refresh token, an HTTP 401 remains an authentication error, `refresh_session` raises `Volcano::Error::AuthenticationError`, and `sign_out` revokes the server session identified by the access token before clearing local state.
-Refresh must preserve the server session identified by the access JWT, even before a profile is loaded. A different session is rejected, including another session for the same user. An unknown identity without a readable session identifier cannot refresh.
+Refresh must preserve the server session identified by the access JWT, even before a profile is loaded. A different session is rejected, including another session for the same user. Supplied credentials need a readable session identifier to refresh, even when you provide a user profile or load it from the server. Profile data does not prove that access and refresh tokens belong together.
 For supplied credentials, sign-out revokes the access-token session. On HTTP 401, it can refresh once and revoke that same session without adopting the renewed credentials locally.
 When the SDK received both credentials together from sign-in or a validated refresh, it uses the refresh token directly, even if access has expired.
 Sign-out joins an existing refresh and prevents later refresh attempts for that session. Concurrent sign-outs share one result; a separate sign-in or adoption remains current.

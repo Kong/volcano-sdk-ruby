@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 
 RSpec.describe Volcano::Logs do
+  include SessionFixtures
+
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon', _transport: transport) }
   let(:request) { { 'resource' => { 'type' => 'function' } } }
@@ -12,7 +15,7 @@ RSpec.describe Volcano::Logs do
 
   before do
     client.auth.current_session = Volcano::Session.new(
-      access_token: 'old-access', refresh_token: 'old-refresh', user_id: 'user'
+      access_token: access_token('old'), refresh_token: 'old-refresh', user_id: 'user'
     )
     allow(transport).to receive(:auth_refresh).and_return(refresh_response)
   end
@@ -22,7 +25,7 @@ RSpec.describe Volcano::Logs do
   end
 
   def refresh_response
-    response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
+    response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'user' })
   end
 
   { search: :search_project_logs, activity: :get_project_log_activity }.each do |operation, endpoint|
@@ -38,7 +41,7 @@ RSpec.describe Volcano::Logs do
       it 'refreshes once and replays the same request' do
         expect(read.call.data).to eq([])
         expect(transport).to have_received(:auth_refresh).with(authorization: 'anon', refresh_token: 'old-refresh').once
-        %w[old-access new-access].freeze.each do |token|
+        [access_token('old'), access_token('new')].freeze.each do |token|
           expect(transport).to have_received(endpoint).with(
             authorization: token, project_id: 'project-1', request: request
           ).once

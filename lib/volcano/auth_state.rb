@@ -85,15 +85,15 @@ module Volcano
       SessionCredentials.validate_refresh(@session, session) if event == :token_refreshed
       @session = session
       @generation += 1
+      @lineage.clear_local_credentials unless session
       @lineage = SessionOperations.new(verified_pair) if session && event != :token_refreshed
       @callbacks.keys
     end
 
     def register(callback)
-      callback_id = @next_callback_id
       @next_callback_id += 1
-      @callbacks[callback_id] = callback
-      [callback_id, @session]
+      @callbacks[@next_callback_id] = callback
+      [@next_callback_id, @session]
     end
 
     def unsubscribe(callback_id)

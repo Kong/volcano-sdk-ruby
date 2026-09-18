@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 
 RSpec.describe Volcano::Auth do
+  include SessionFixtures
+
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon', _transport: transport) }
   let(:roles) { ['editor'] }
@@ -26,9 +29,9 @@ RSpec.describe Volcano::Auth do
   end
 
   before do
-    client.auth.current_session = Volcano::Session.new('old-access', 'old-refresh', 'user')
+    client.auth.current_session = Volcano::Session.new(access_token('old'), 'old-refresh', 'user')
     allow(transport).to receive(:auth_refresh).and_return(
-      response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => profile)
+      response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh', 'user' => profile)
     )
   end
 
@@ -57,14 +60,17 @@ RSpec.describe Volcano::Auth do
         allow(transport).to receive(:auth_refresh) do
           roles << 'changed while refreshing'
           arguments.each_value { |value| value.replace('changed') if value.is_a?(String) }
-          response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => profile)
+          response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh', 'user' => profile)
         end
 
         user = client.auth.public_send(operation, **arguments)
         expect(user.email).to eq(profile.fetch('email'))
-        expect(requests.map { |request| request.fetch(:authorization) }).to eq(%w[old-access new-access])
+        expect(requests.map do |request|
+          request.fetch(:authorization)
+        end).to eq([access_token('old'), access_token('new')])
         expect(requests.first.except(:authorization)).to eq(requests.last.except(:authorization))
-        expect(client.current_session.to_h.slice(:access_token, :user)).to eq(access_token: 'new-access', user: profile)
+        expect(client.current_session.to_h.slice(:access_token,
+                                                 :user)).to eq(access_token: access_token('new'), user: profile)
         expect(events).to eq(%i[initial_session token_refreshed])
       end
 
@@ -112,7 +118,7 @@ RSpec.describe Volcano::Auth do
           end
           allow(transport).to receive(:auth_refresh) do
             client.auth.current_session = replacement if replace_at == :refresh
-            response(200, 'access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'user' => profile)
+            response(200, 'access_token' => access_token('new'), 'refresh_token' => 'new-refresh', 'user' => profile)
           end
 
           expect { client.auth.public_send(operation, **arguments) }.to raise_error(Volcano::Error::SessionChangedError)

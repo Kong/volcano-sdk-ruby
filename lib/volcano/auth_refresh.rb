@@ -84,7 +84,6 @@ module Volcano
       return active.last if active.first != binding.first
       raise Error::AuthenticationError, 'No refresh token' unless binding.last.refresh_token
 
-      SessionCredentials.validate_refresh_source(binding.last)
       session = refreshed_session(binding, notifications)
       unless binding[1].closing?
         @client.store_session_if_current?(
@@ -95,16 +94,21 @@ module Volcano
     end
 
     def refreshed_session(binding, notifications)
-      owner = binding[1]
-      verified = owner.verified_pair?(binding.last)
+      _, owner, current = binding
+      verified = owner.verified_pair?(current)
+      SessionCredentials.validate_refresh_source(current, verified: verified)
       owner.verify_pair(nil)
       session = parse_refresh_session(refresh_payload(binding, notifications))
-      SessionCredentials.validate_refresh(binding.last, session)
-      owner.verify_pair(session)
+      verify_refreshed_session(owner, current, session)
       session
     rescue Error::RateLimitedError
-      owner.verify_pair(binding.last) if verified
+      owner.verify_pair(current) if verified
       raise
+    end
+
+    def verify_refreshed_session(owner, current, session)
+      SessionCredentials.validate_refresh(current, session)
+      owner.verify_pair(session)
     end
 
     def refresh_payload(binding, notifications)

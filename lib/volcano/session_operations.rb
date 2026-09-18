@@ -13,11 +13,24 @@ module Volcano
       @condition = ConditionVariable.new
       @refresh = nil
       @sign_out = nil
+      @locally_cleared = false
       verify_pair(verified)
     end
 
     def verify_pair(session)
-      @mutex.synchronize { @verified_pair = session && [session.access_token, session.refresh_token].freeze }
+      @mutex.synchronize do
+        @verified_pair = session && [session.access_token, session.refresh_token].freeze unless @locally_cleared
+      end
+    end
+
+    def clear_local_credentials
+      @mutex.synchronize do
+        return if @sign_out
+
+        @locally_cleared = true
+        @verified_pair = nil
+        @refresh = nil if @refresh&.done
+      end
     end
 
     def verified_pair?(session)
@@ -84,6 +97,7 @@ module Volcano
         operation.value = value
         operation.error = error
         operation.done = true
+        @refresh = nil if @locally_cleared && @refresh == operation
         @condition.broadcast
       end
     end

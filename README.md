@@ -4,6 +4,8 @@ Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
 Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
 
+See [Authentication](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/authentication.md) for account, session, email, and OAuth workflows.
+
 ## Install
 
 Add the gem to your Gemfile and run `bundle install`:
@@ -473,8 +475,10 @@ deeply frozen. Invalid JSON or JSON that cannot decode to valid UTF-8 is
 returned as the original decoded response text; malformed Unicode is not repaired.
 Ruby's standard JSON nesting limit (100) also falls back to text.
 A function's own
-non-2xx response is returned when the version header proves it ran; platform
+non-2xx response is returned when Volcano confirms it ran; platform
 failures raise typed SDK errors.
+
+See the [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md).
 
 ### Read project logs
 

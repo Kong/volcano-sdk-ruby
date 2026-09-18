@@ -274,14 +274,22 @@ RSpec.describe Volcano::Client do
     expect(transport).not_to have_received(:auth_delete_my_session)
   end
 
-  it 'drops server pair provenance on explicit adoption' do
-    allow(transport).to receive_messages(auth_signin: refresh_response(session_a),
-                                         auth_delete_my_session: response(204))
-    original = client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
-    client.auth.current_session = Volcano::Session.new(token(session_b), original.refresh_token, 'other')
-    client.auth.sign_out
-    expect(transport).to have_received(:auth_delete_my_session)
-      .with(authorization: token(session_b), session_id: session_b).once
+  def adopt_supplied_session(session, hosted)
+    return client.auth.adopt_hosted_auth_session(session, state: 'nonce', expected_state: 'nonce') if hosted
+
+    client.auth.current_session = session
+  end
+
+  [false, true].each do |hosted|
+    it "drops server pair provenance on explicit adoption, hosted: #{hosted}" do
+      allow(transport).to receive_messages(auth_signin: refresh_response(session_a),
+                                           auth_delete_my_session: response(204))
+      original = client.auth.sign_in(email: 'u@example.com', password: 'synthetic')
+      adopt_supplied_session(Volcano::Session.new(token(session_b), original.refresh_token, 'other'), hosted)
+      client.auth.sign_out
+      expect(transport).to have_received(:auth_delete_my_session)
+        .with(authorization: token(session_b), session_id: session_b).once
+    end
   end
 
   it 'uses refresh-token logout for a malformed session claim' do

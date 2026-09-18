@@ -53,7 +53,7 @@ module Volcano
         return false unless lineage.nil? ? generation == @generation : lineage == @lineage
         return true if session.nil? && @session.nil?
 
-        enqueue_notification(replace(session, event), event, session)
+        enqueue_notification(replace(session, event, verified_pair: session), event, session)
       end
       return true unless dispatch
 
@@ -81,11 +81,11 @@ module Volcano
 
     private
 
-    def replace(session, event)
+    def replace(session, event, verified_pair: nil)
       SessionCredentials.validate_refresh(@session, session) if event == :token_refreshed
       @session = session
       @generation += 1
-      @lineage = SessionOperations.new(event ? session : nil) if session && event != :token_refreshed
+      @lineage = SessionOperations.new(verified_pair) if session && event != :token_refreshed
       @callbacks.keys
     end
 

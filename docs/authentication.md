@@ -74,7 +74,8 @@ container/string/time subclasses, non-finite numbers, duplicate JSON keys, and
 structures deeper than 100 levels raise `TypeError`. Use the typed `auth.user`
 profile when you need Ruby `Time` values. Successful `user`, `update_user`,
 `convert_anonymous`, and `confirm_email_change` calls update this snapshot
-without changing credentials or emitting an authentication-state event.
+without changing credentials or emitting an authentication-state event unless an HTTP 401
+requires automatic refresh. Successful recovery rotates credentials and emits `:token_refreshed`.
 Previously returned sessions remain unchanged.
 
 ## Get the current user
@@ -348,13 +349,12 @@ session = client.auth.sign_in_anonymously(metadata: { device: "mobile" })
 Anonymous sign-ins must be enabled for the project. Convert the account before
 signing out if the user needs to recover it later.
 
-Attach email credentials without changing the anonymous user's ID or current
-session:
+Attach email credentials while preserving the anonymous user's ID:
 
 ```ruby
 user = client.auth.convert_anonymous(
   email: "user@example.com",
-  password: "secure-password",
+  password: "a-long-example-password-2026",
   metadata: { display_name: "Ada" }
 )
 ```
@@ -378,8 +378,8 @@ Pass `access_token` to `Volcano::Client.new` to start without a refresh token or
 known user identity. Construction makes no request and leaves `refresh_token`,
 `user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
 without changing credentials. Without a refresh token, `refresh_session` raises
-`Volcano::Error::AuthenticationError`. `sign_out` revokes the server session using
-the access token and clears local state. Supply `refresh_token` alongside
+`Volcano::Error::AuthenticationError`. `sign_out` clears local state and revokes the server
+session when the access JWT contains a readable UUID `session_id`. Supply `refresh_token` alongside
 `access_token` to enable refresh.
 See the [token bootstrap example](./README.md#use-a-supplied-access-token).
 
@@ -425,7 +425,8 @@ subscription.unsubscribe
 Registration immediately yields `:initial_session`. Successful session
 creation, refresh, and local clearing yield `:signed_in`, `:token_refreshed`,
 and `:signed_out`. Callbacks are delivered locally in transition order after the
-state lock is released, and callback failures cannot interrupt auth operations.
+state lock is released. Callback `StandardError` failures are isolated; exceptions such as
+`Interrupt` propagate after the session transition has committed.
 The SDK does not broadcast between processes or persist sessions.
 
 ## Sign out the current session
@@ -436,8 +437,10 @@ raise "still signed in" if client.auth.current_session
 ```
 
 Sign-out uses the refresh token directly when the SDK received both credentials together from
-sign-in or a validated refresh. Supplied credentials use the access-token session; on HTTP 401,
-the SDK can refresh once and revoke that same session without adopting the renewed credentials.
+sign-in or a validated refresh. Supplied credentials use the access-token session when its JWT
+contains a readable UUID `session_id`; on HTTP 401, the SDK can refresh once and revoke that
+same session without adopting the renewed credentials. Without that identifier, sign-out uses
+the supplied refresh token, or only clears local state if no refresh token is available.
 It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
 fails, the SDK still clears that session and raises the typed error. Sign-out waits for an already-running refresh and uses its validated credentials.

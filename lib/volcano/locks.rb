@@ -76,7 +76,7 @@ module Volcano
       valid = value.is_a?(String) && value.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
       raise ArgumentError, "#{name} must be a UUID string" unless valid
 
-      value.downcase.freeze
+      value.dup.freeze
     end
 
     def build_lease(key, token, payload)

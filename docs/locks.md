@@ -81,6 +81,7 @@ lease = client.locks.acquire(
 )
 ```
 
+Caller-supplied UUID strings retain their exact spelling across retries and lease operations.
 Every lock method accepts `request_id:`. `with_lock` also accepts `token:` and
 `request_id:` for acquisition; its renewal and release calls use new request IDs.
 

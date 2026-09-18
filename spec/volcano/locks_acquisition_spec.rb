@@ -7,8 +7,8 @@ RSpec.describe Volcano::Locks do
 
   let(:client) { Struct.new(:service_token).new('service-key') }
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
-  let(:owner_token) { '00000000-0000-4000-8000-000000000001' }
-  let(:request_id) { '00000000-0000-4000-8000-000000000002' }
+  let(:owner_token) { 'ABCDEFAB-1234-4567-89AB-ABCDEFABCDEF' }
+  let(:request_id) { 'BBCDEFAB-1234-4567-89AB-ABCDEFABCDEF' }
   let(:lease_body) { { 'expires_at' => '2026-09-18T18:00:00Z', 'fencing_token' => 7 } }
 
   def response(status, body)

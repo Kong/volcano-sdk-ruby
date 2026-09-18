@@ -193,6 +193,64 @@ Then('exactly the fixture row is returned') do
   raise 'database result did not match the fixture row' unless contract.last_outcome.value == expected_rows
 end
 
+def query_fixture_table
+  contract.client.database(contract.fixture.fetch('database_name')).from(contract.fixture.fetch('query_table_name'))
+end
+
+def query_fixture_filters(filters)
+  contract.record do
+    table = query_fixture_table
+    filters.transform_values do |operator, column, value|
+      table.select('slug').public_send(operator, column, value).order('rank').execute
+    end
+  end
+end
+
+When('the client selects a projected page of query fixture members') do
+  contract.record do
+    query_fixture_table.select('slug', 'rank').in('slug', %w[alpha beta gamma delta])
+                       .order('enabled').order('rank', ascending: false).offset(1).limit(2).execute
+  end
+end
+
+Then('the projected page contains only beta and gamma in that order') do
+  expected = [{ 'slug' => 'beta', 'rank' => 20 }, { 'slug' => 'gamma', 'rank' => 30 }]
+  raise 'projected page differs' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with each comparison filter') do
+  query_fixture_filters(neq: [:neq, 'rank', 20], gt: [:gt, 'rank', 20], gte: [:gte, 'rank', 20],
+                        lt: [:lt, 'rank', 30], lte: [:lte, 'rank', 30])
+end
+
+Then('each comparison returns exactly the matching query fixture rows') do
+  expected = {
+    neq: %w[alpha gamma delta epsilon], gt: %w[gamma delta epsilon], gte: %w[beta gamma delta epsilon],
+    lt: %w[alpha beta], lte: %w[alpha beta gamma]
+  }.transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'comparison results differ' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with case-sensitive and insensitive patterns') do
+  query_fixture_filters(like: [:like, 'label', 'Case_%'], ilike: [:ilike, 'label', 'case_%'])
+end
+
+Then('each pattern returns exactly the matching query fixture rows') do
+  expected = { like: %w[alpha epsilon], ilike: %w[alpha beta epsilon] }
+             .transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'pattern results differ' unless contract.last_outcome.value == expected
+end
+
+When('the client selects query fixture rows with null and boolean filters') do
+  query_fixture_filters(null: [:is, 'label', nil], enabled: [:is, 'enabled', true], disabled: [:is, 'enabled', false])
+end
+
+Then('each identity filter returns exactly the matching query fixture rows') do
+  expected = { null: %w[gamma], enabled: %w[alpha gamma epsilon], disabled: %w[beta delta] }
+             .transform_values { |slugs| slugs.map { |slug| { 'slug' => slug } } }
+  raise 'identity results differ' unless contract.last_outcome.value == expected
+end
+
 When('the client inserts its contract row') do
   row = contract.fixture.fetch('mutation_rows').fetch('insert')
   contract.record do

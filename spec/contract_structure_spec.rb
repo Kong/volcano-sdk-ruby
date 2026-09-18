@@ -110,4 +110,11 @@ RSpec.describe 'shared SDK contract bindings' do
       '9fa6f8d6cb3bca89501d32d950f06b8982ed34b888cce134465e0358b8261e8f'
     )
   end
+
+  it 'stages the canonical database query feature' do
+    path = File.expand_path('../features/staged/database-queries.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '37d7f2e8fd4efb035cbc094c9c91a44a86f15fbcd689627e525e8d04f033a928'
+    )
+  end
 end

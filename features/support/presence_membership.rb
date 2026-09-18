@@ -41,7 +41,7 @@ module VolcanoContract
     def initialize(world)
       @world = world
       @channels = world.realtime_clients.map do |client|
-        client.realtime.channel("#{world.realtime_channel}-presence", type: :presence)
+        client.realtime.channel(world.realtime_channel, type: :presence)
       end
     end
 

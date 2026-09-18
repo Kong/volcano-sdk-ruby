@@ -13,3 +13,6 @@ Feature: SDK lock recovery and lifecycle
     When the client acquires and force releases the contract lock
     Then the SDK operation succeeds
     And the force-released lock is available
+    When the client reacquires the force-released contract lock
+    Then the SDK operation succeeds
+    And the replacement owner receives a higher fencing token

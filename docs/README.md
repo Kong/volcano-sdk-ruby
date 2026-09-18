@@ -119,3 +119,5 @@ See [Distributed locks](./locks.md) for acquisition recovery, renewal, and fenci
 Read the [database guide](./database.md) for projection, filters, ordered pagination, and mutations.
 
 For uploads, visibility, and resumable sessions, see [Storage](./storage.md).
+
+See [Logs](./logs.md) for project-token authentication, search, pagination, and activity.

@@ -480,13 +480,17 @@ failures raise typed SDK errors.
 
 ```ruby
 project_id = "00000000-0000-4000-8000-000000000001"
-page = client.logs.search(
+logs_client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_PROJECT_ACCESS_TOKEN")
+)
+page = logs_client.logs.search(
   project_id,
   { resource: { type: "function" }, limit: 100 }
 )
 page.data.each { |event| puts [event["timestamp"], event["body"]] }
 
-activity = client.logs.activity(
+activity = logs_client.logs.activity(
   project_id,
   { resource: { type: "function" }, bucket_count: 24 }
 )
@@ -496,7 +500,9 @@ puts activity.total
 `search` returns an immutable page of retained runtime or deployment log
 events. Pass `next_cursor` back as `cursor` to continue a search. `activity`
 returns immutable time buckets using the same resource selector and query
-syntax. Both methods require an active user session.
+syntax. Both methods require a platform user token or a project access token.
+A `read_only` project token is sufficient; end-user sessions cannot read project logs.
+See the [logs guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/logs.md).
 
 ### Query a database
 

@@ -778,3 +778,31 @@ Then('the returned and cached profiles belong to the contract user') do
   raise 'profile belongs to another user' unless contract.last_outcome.value.id == expected
   raise 'cached profile belongs to another user' unless contract.client.current_session.user.fetch('id') == expected
 end
+
+Given('a read-only project logs client') do
+  @logs_contract = VolcanoContract::Logs.new(contract)
+end
+
+When('the contract function emits three unique structured log events') do
+  @logs_contract.emit(3)
+end
+
+When('the contract function emits one unique structured log event') do
+  @logs_contract.emit(1)
+end
+
+When('the client searches and paginates those events within 240 seconds') do
+  contract.record { @logs_contract.search }
+end
+
+When('the client reads matching log activity within 120 seconds') do
+  contract.record { @logs_contract.activity }
+end
+
+Then('all three structured events retain their metadata without duplicates') do
+  @logs_contract.verify_events(contract.last_outcome.value)
+end
+
+Then('activity counts exactly that event in its function and level buckets') do
+  @logs_contract.verify_activity(contract.last_outcome.value)
+end

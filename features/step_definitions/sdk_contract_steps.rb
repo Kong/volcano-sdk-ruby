@@ -496,11 +496,16 @@ Given('the client replaces its access token with a rejected token') do
   session = contract.client.auth.current_session
   raise 'current session is missing' unless session
 
-  contract.client.auth.current_session = Volcano::Session.new(
-    access_token: 'sdk-contract-rejected-access-token',
+  parts = session.access_token.split('.')
+  raise 'access token has no session claims' unless parts.length == 3
+
+  rejected = [parts[0], parts[1], 'sdk-contract-rejected-signature'].join('.')
+  contract.previous_session = Volcano::Session.new(
+    access_token: rejected,
     refresh_token: session.refresh_token,
     user_id: session.user_id
   )
+  contract.client.auth.current_session = contract.previous_session
 end
 
 ['database read', 'storage operation', 'profile read'].each do |operation|
@@ -508,7 +513,7 @@ end
     session = contract.client.auth.current_session
     raise 'current session is missing' unless session
     raise 'access token is missing' if session.access_token.to_s.empty?
-    raise 'access token was not replaced' if session.access_token == 'sdk-contract-rejected-access-token'
+    raise 'access token was not replaced' if session.access_token == contract.previous_session.access_token
     raise 'refresh token is missing' if session.refresh_token.to_s.empty?
     raise 'session has the wrong user' unless session.user_id == contract.fixture.fetch('user_id')
   end

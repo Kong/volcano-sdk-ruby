@@ -124,4 +124,11 @@ RSpec.describe 'shared SDK contract bindings' do
       '037c60a8da27ec4cc5777596ba0c669b8309181a54b27aa61882535ed2f6beb1'
     )
   end
+
+  it 'stages the canonical logs feature' do
+    path = File.expand_path('../features/staged/logs.feature', __dir__)
+    expect(Digest::SHA256.file(path).hexdigest).to eq(
+      '5616e288fe1a68e13fa70416fe0323a5ce830c0edaa885a387efbf9e5bb2a269'
+    )
+  end
 end

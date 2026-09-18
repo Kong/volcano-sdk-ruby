@@ -47,57 +47,57 @@ module Volcano
       @api_factory = api_factory || method(:build_apis)
     end
 
-    def acquire_project_lock(authorization:, key:, ttl:, token:)
+    def acquire_project_lock(authorization:, key:, ttl:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
-        result = apis.locks.acquire_project_lock_with_http_info(key, token, SecureRandom.uuid, body)
+        result = apis.locks.acquire_project_lock_with_http_info(key, token, request_id, body)
         data, status, headers = result
         response(data, status, headers)
       end
     end
 
-    def get_project_lock(authorization:, key:)
+    def get_project_lock(authorization:, key:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.get_project_lock_with_http_info(
           key,
-          SecureRandom.uuid
+          request_id
         )
         response(data, status, headers)
       end
     end
 
-    def force_release_project_lock(authorization:, key:)
+    def force_release_project_lock(authorization:, key:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.force_release_project_lock_with_http_info(
           key,
-          SecureRandom.uuid
+          request_id
         )
         response(data, status, headers)
       end
     end
 
-    def renew_project_lock(authorization:, key:, ttl:, token:)
+    def renew_project_lock(authorization:, key:, ttl:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
         result = apis.locks.renew_project_lock_with_http_info(
-          key, token, SecureRandom.uuid, body
+          key, token, request_id, body
         )
         data, status, headers = result
         response(data, status, headers)
       end
     end
 
-    def release_project_lock(authorization:, key:, token:)
+    def release_project_lock(authorization:, key:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.release_project_lock_with_http_info(
           key,
           token,
-          SecureRandom.uuid
+          request_id
         )
         response(data, status, headers)
       end

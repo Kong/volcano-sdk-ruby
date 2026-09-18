@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.2...v0.9.3) (2026-09-18)
+
+
+### Bug Fixes
+
+* **functions:** recover rejected user sessions before dispatch ([#153](https://github.com/Kong/volcano-sdk-ruby/issues/153)) ([ac19960](https://github.com/Kong/volcano-sdk-ruby/commit/ac19960aedf137b8efe815d1f90b84c21f99c86a))
+
 ## [0.9.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.1...v0.9.2) (2026-09-18)
 
 

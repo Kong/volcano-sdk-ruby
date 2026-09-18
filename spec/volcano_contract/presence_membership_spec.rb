@@ -8,8 +8,14 @@ RSpec.describe VolcanoContract::PresenceMembership do
   it 'cleans up using the native channel API' do
     clients = Array.new(2) { Volcano::Client.new(anon_key: 'anon', api_url: 'https://api.test') }
     world = instance_double(VolcanoContract::World, realtime_clients: clients,
-                                                    realtime_channel: 'lobby', fixture: { 'user_id' => 'user' })
+                                                    realtime_channel: 'x' * 64, fixture: { 'user_id' => 'user' })
+    clients.each do |client|
+      allow(client.realtime).to receive(:channel).and_call_original
+    end
     verifier = described_class.new(world)
+    clients.each do |client|
+      expect(client.realtime).to have_received(:channel).with('x' * 64, type: :presence)
+    end
     allow(verifier).to receive(:check_membership).and_return([1, 2, 1])
 
     expect(Async { |task| verifier.run(task) }.wait).to eq([1, 2, 1])

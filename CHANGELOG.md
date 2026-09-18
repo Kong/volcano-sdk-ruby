@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.0...v0.9.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* **auth:** coordinate revocation per captured session ([#141](https://github.com/Kong/volcano-sdk-ruby/issues/141)) ([bf4847d](https://github.com/Kong/volcano-sdk-ruby/commit/bf4847d63f16ecd05c2030e3fc2482f15742853c))
+
 ## [0.9.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.8.0...v0.9.0) (2026-09-18)
 
 

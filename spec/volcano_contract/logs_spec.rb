@@ -49,4 +49,19 @@ RSpec.describe VolcanoContract::Logs do
     response = Volcano::LogActivityResponse.new(total: 1, data: data)
     expect { contract.verify_activity(response) }.to raise_error(RuntimeError, 'resource counts changed')
   end
+
+  [-120, 120].each do |skew|
+    it "allows server clock skew of #{skew} seconds" do
+      response = Struct.new(:status, :data).new(200, { 'echoed' => 'contract' })
+      functions = instance_double(Volcano::Functions, invoke: response)
+      client = instance_double(Volcano::Client, functions: functions)
+      allow(world).to receive(:service_client).and_return(client)
+      fixture['function_name'] = 'function'
+      server_time = Time.now.utc + skew
+      contract.emit(1)
+      request = contract.instance_variable_get(:@request)
+      expect(Time.iso8601(request[:start_time])).to be < server_time
+      expect(Time.iso8601(request[:end_time])).to be > server_time
+    end
+  end
 end

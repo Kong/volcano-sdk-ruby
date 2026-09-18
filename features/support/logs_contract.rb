@@ -17,7 +17,7 @@ module VolcanoContract
       @marker = "sdklogs#{SecureRandom.hex(16)}"
       @request = {
         resource: { type: 'function', ids: [@fixture.fetch('function_id')] },
-        q: @marker, start_time: (Time.now.utc - 5).iso8601(6)
+        q: @marker, start_time: (Time.now.utc - 300).iso8601(6)
       }
     end
 
@@ -30,7 +30,7 @@ module VolcanoContract
         raise 'function invocation did not echo the payload' unless response.status == 200 &&
                                                                     response.data == { 'echoed' => 'contract' }
       end
-      @request[:end_time] = (Time.now.utc + 1).iso8601(6)
+      @request[:end_time] = (Time.now.utc + 300).iso8601(6)
     end
 
     def search

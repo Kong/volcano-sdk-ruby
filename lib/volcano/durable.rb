@@ -42,12 +42,13 @@ module Volcano
     #
     # Owner-scoped: an execution is addressed by its id alone and an anon key
     # is held by everyone who loads the page, so this takes the project id and
-    # the project's own session. Poll it from a backend, not a browser.
+    # a platform token or service key. An auth-user session from sign-in is
+    # not enough. Poll it from a backend, not a browser.
     def get(project_id, function_name, execution_id)
       project, function_id, execution = execution_path(project_id, function_name, execution_id)
       response = Transport.invoke do
         @transport.get_durable_execution(
-          authorization: @client.session_token,
+          authorization: @client.owner_token,
           project_id: project, function_id: function_id, execution_id: execution
         )
       end
@@ -63,7 +64,7 @@ module Volcano
       validate_paging(page, limit)
       response = Transport.invoke do
         @transport.list_durable_executions(
-          authorization: @client.session_token, project_id: project, function_id: function_id,
+          authorization: @client.owner_token, project_id: project, function_id: function_id,
           options: { status: status, page: page, limit: limit }.compact
         )
       end
@@ -79,7 +80,7 @@ module Volcano
       project, function_id, execution = execution_path(project_id, function_name, execution_id)
       response = Transport.invoke do
         @transport.stop_durable_execution(
-          authorization: @client.session_token,
+          authorization: @client.owner_token,
           project_id: project, function_id: function_id, execution_id: execution
         )
       end

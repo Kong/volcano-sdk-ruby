@@ -61,6 +61,13 @@ module Volcano
       @service_key
     end
 
+    # Owner-scoped project routes take a platform UserToken, not an auth-user
+    # access token from sign-in. A configured service key is that credential.
+    # Otherwise the session must already hold a platform token.
+    def owner_token
+      @service_key || session_token
+    end
+
     def function_token
       current_session&.access_token || @service_key || @anon_key
     end

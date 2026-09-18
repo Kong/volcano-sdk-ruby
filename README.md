@@ -488,8 +488,9 @@ operation an application credential may perform. An `execution_name` makes the
 start idempotent: starting again under the same name returns the execution that
 already exists rather than beginning a second one.
 
-`get`, `list`, and `stop` are owner-scoped and require an active user session,
-because an execution is addressed by its id alone. `get` carries the deeply
+`get`, `list`, and `stop` are owner-scoped and require a platform token or a
+configured service key, because an execution is addressed by its id alone. An
+auth-user session from sign-in is not accepted. `get` carries the deeply
 frozen `result` once the execution has succeeded, and `error` when it failed;
 `result_expired` separates a result the platform has discarded from a function
 that returned nothing. `terminal?` reports whether the execution has stopped

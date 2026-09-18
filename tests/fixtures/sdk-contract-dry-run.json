@@ -38,5 +38,6 @@
   "lock_key": "dry-run",
   "function_name": "dry-run",
   "logs_access_token": "dry-run-project-token",
-  "function_id": "dry-run-function-id"
+  "function_id": "dry-run-function-id",
+  "realtime_table_name": "sdk_contract_dryrun_rt"
 }

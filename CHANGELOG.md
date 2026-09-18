@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.3...v0.9.4) (2026-09-18)
+
+
+### Bug Fixes
+
+* **functions:** preserve cached resolution error metadata ([#156](https://github.com/Kong/volcano-sdk-ruby/issues/156)) ([d69fa62](https://github.com/Kong/volcano-sdk-ruby/commit/d69fa62e24966481aa6c982f7c0720f9c5f00c87))
+
 ## [0.9.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.2...v0.9.3) (2026-09-18)
 
 

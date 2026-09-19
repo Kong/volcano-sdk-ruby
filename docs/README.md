@@ -127,3 +127,5 @@ See [Realtime](./realtime.md) for broadcasts, presence, database changes, and sh
 See [Authentication](./authentication.md) for account, session, email, and OAuth workflows.
 
 See [Functions](./functions.md) for invocation identity, response values, and error handling.
+
+See [Versions and compatibility](./versions.md) for runtime support, upgrades, and restoring a tested dependency set.

@@ -6,7 +6,7 @@ require 'socket'
 # A local HTTP server that answers from a caller-supplied block and records
 # what it received, so specs can assert which host a request actually reached.
 class RecordingServer
-  Request = Struct.new(:target, :body, :authorization)
+  Request = Struct.new(:target, :body, :authorization, :http_method)
 
   def initialize(&respond)
     @server = TCPServer.new('127.0.0.1', 0)
@@ -49,7 +49,8 @@ class RecordingServer
     request = read_request(socket)
     @lock.synchronize { @requests << request }
     status, payload, extra = @respond.call(request.target)
-    write_response(socket, status, JSON.generate(payload), extra || {})
+    body = status == 204 ? '' : JSON.generate(payload)
+    write_response(socket, status, body, extra || {})
   ensure
     socket&.close
   end
@@ -71,7 +72,8 @@ class RecordingServer
     Request.new(
       lines.first.split[1],
       length.positive? ? socket.read(length) : nil,
-      header(lines, 'authorization')
+      header(lines, 'authorization'),
+      lines.first.split.first
     )
   end
 

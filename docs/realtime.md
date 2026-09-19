@@ -58,7 +58,9 @@ Application code owns any work its callbacks start and should await that work du
 
 ```ruby
 lobby = client.realtime.channel("lobby", type: :presence)
-lobby.on_presence_sync { |state| puts "Online #{state.length}" }
+lobby.on_presence_sync do |state|
+  state.each { |connection_id, info| puts "#{connection_id}: #{info.user}" }
+end
 lobby.on("join") { |info| puts "Joined #{info.user}" }
 lobby.on("leave") { |info| puts "Left #{info.user}" }
 lobby.subscribe
@@ -71,6 +73,7 @@ client.realtime.remove_channel("lobby", type: :presence)
 Presence identity and metadata come from the authenticated user.
 `track` stores optional local application state; it does not replace server-managed presence metadata.
 The roster maps connection IDs to immutable client identity and user metadata snapshots.
+Each entry's `client` matches its connection ID; `user` identifies the authenticated user.
 One user can have several connections. The original sync callback observes connections joining and leaving.
 `get_presence_state` is an alias for `presence_state`.
 Presence rebuilds its current roster after reconnection.

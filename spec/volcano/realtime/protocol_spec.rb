@@ -103,11 +103,11 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     )
   end
 
-  it 'returns presence command results' do
+  it 'returns typed presence command results' do
     Async do |task|
       socket = FakeSocket.new
       socket.on_write = lambda do |command|
-        socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {
+        socket.receive(JSON.generate('id' => command.fetch('id'), 'presence' => {
                                        'presence' => { 'client-1' => { 'client' => 'client-1' } }
                                      }))
       end

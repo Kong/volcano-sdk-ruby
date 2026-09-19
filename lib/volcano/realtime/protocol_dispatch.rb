@@ -30,7 +30,7 @@ module Volcano
         pending = @pending[frame.fetch('id')]
         return unless pending
 
-        reply = reply_value(frame)
+        reply = reply_value(frame, pending.reply_key)
         pending.queue.enqueue(apply_reply_hook(pending, reply))
       end
 
@@ -43,9 +43,9 @@ module Volcano
         Protocol::Failure.new(error: e)
       end
 
-      def reply_value(frame)
+      def reply_value(frame, reply_key)
         error = frame['error']
-        return frame['result'] || frame.except('id') unless error
+        return frame.fetch(reply_key) { frame.fetch('result') { frame.except('id') } } unless error
 
         message = error['message'] || 'realtime command failed'
         Protocol::Failure.new(error: ServerError.new(message, code: error['code']))

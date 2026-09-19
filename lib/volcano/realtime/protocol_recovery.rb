@@ -15,7 +15,7 @@ module Volcano
           end
         end
 
-        request(on_reply:) do |id|
+        request('subscribe', on_reply:) do |id|
           self.class.subscribe(
             id: id,
             channel: channel,

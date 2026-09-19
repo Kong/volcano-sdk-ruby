@@ -150,7 +150,9 @@ RSpec.describe Volcano::Realtime do
     end
 
     def respond(id, result: {})
-      @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
+      command = @commands.reverse_each.find { |item| item.fetch('id') == id }
+      reply_key = command.keys.find { |key| key != 'id' }
+      @incoming.enqueue(JSON.generate('id' => id, reply_key => result))
     end
 
     def receive_raw(frame)
@@ -172,7 +174,7 @@ RSpec.describe Volcano::Realtime do
     end
 
     def connect_then_invalid(id)
-      reply = JSON.generate('id' => id, 'result' => { 'client' => 'client-123' })
+      reply = JSON.generate('id' => id, 'connect' => { 'client' => 'client-123' })
       @incoming.enqueue("#{reply}\n{")
     end
 
@@ -1196,6 +1198,26 @@ RSpec.describe Volcano::Realtime do
         'UPSERT', schema: 'public', table: 'messages', &callback
       )
     end.to raise_error(ArgumentError, 'unsupported postgres change event: UPSERT')
+  end
+
+  it 'preserves connection and user identities from typed presence replies' do
+    socket = FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+
+      expect(channel.presence_state).to eq(
+        'alice-client' => Volcano::Realtime::PresenceInfo.new(
+          client: 'alice-client', user: 'alice', data: alice.fetch('conn_info')
+        )
+      )
+    ensure
+      client.realtime.disconnect
+    end.wait
   end
 
   it 'tracks an immutable presence snapshot through sync, join, leave, and unsubscribe', :aggregate_failures do

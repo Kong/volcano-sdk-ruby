@@ -35,7 +35,7 @@ module Volcano
       include ProtocolRecoveryPosition
 
       Failure = Data.define(:error)
-      Pending = Data.define(:queue, :on_reply)
+      Pending = Data.define(:queue, :on_reply, :reply_key)
       private_constant :Pending
       Events = Data.define(:on_close, :on_error, :on_failure)
       DEFAULT_REQUEST_TIMEOUT = 10
@@ -81,7 +81,7 @@ module Volcano
       end
 
       def connect(token:)
-        result = request { |id| self.class.connect(id: id, token: token) }
+        result = request('connect') { |id| self.class.connect(id: id, token: token) }
         ensure_open!
         @connected = true
         result
@@ -99,20 +99,22 @@ module Volcano
         end
       end
 
-      def publish(channel:, data:) = request { |id| self.class.publish(id: id, channel: channel, data: data) }
+      def publish(channel:, data:)
+        request('publish') { |id| self.class.publish(id: id, channel: channel, data: data) }
+      end
 
       def unsubscribe(channel:)
         @subscription_lock.acquire do
           ensure_open!
           next {} unless @subscriptions.include?(channel)
 
-          result = request { |id| self.class.unsubscribe(id: id, channel: channel) }
+          result = request('unsubscribe') { |id| self.class.unsubscribe(id: id, channel: channel) }
           @subscriptions.delete(channel)
           result
         end
       end
 
-      def presence(channel:) = request { |id| self.class.presence(id: id, channel: channel) }
+      def presence(channel:) = request('presence') { |id| self.class.presence(id: id, channel: channel) }
 
       def close
         return nil if @closed

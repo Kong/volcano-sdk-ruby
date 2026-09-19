@@ -63,7 +63,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.cancel_project_source_export",
@@ -137,7 +137,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.connect_project_git",
@@ -259,7 +259,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.disconnect_project_git",
@@ -333,7 +333,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExport'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.export_project_source",
@@ -394,7 +394,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_git_connection",
@@ -455,7 +455,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_git_deploy_settings",
@@ -518,7 +518,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExportState'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_source_export",
@@ -849,7 +849,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.set_project_git_production_branch",
@@ -990,7 +990,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.update_project_git_deploy_settings",

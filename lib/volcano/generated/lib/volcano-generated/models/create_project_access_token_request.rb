@@ -14,17 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. A declared frontend entry without `custom_domain` deletes an existing custom domain. 
-  class ProjectConfigFrontend < ApiModelBase
-    # All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
-    attr_accessor :variable_scope
-
-    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
-    attr_accessor :variables
-
+  class CreateProjectAccessTokenRequest < ApiModelBase
+    # Held by any of the project's tokens you have not revoked, including one that has expired. Creating a duplicate returns 409 with code `access_token_name_exists`; revoking the holder frees the name, so a rotation can keep the name its caller already references. 
     attr_accessor :name
 
-    attr_accessor :custom_domain
+    attr_accessor :scope
+
+    # Omit for a token that does not expire.
+    attr_accessor :expires_at
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -51,10 +48,9 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'variable_scope' => :'variable_scope',
-        :'variables' => :'variables',
         :'name' => :'name',
-        :'custom_domain' => :'custom_domain'
+        :'scope' => :'scope',
+        :'expires_at' => :'expires_at'
       }
     end
 
@@ -71,10 +67,9 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'variable_scope' => :'String',
-        :'variables' => :'Array<String>',
         :'name' => :'String',
-        :'custom_domain' => :'ProjectConfigCustomDomain'
+        :'scope' => :'ProjectAccessTokenScope',
+        :'expires_at' => :'Time'
       }
     end
 
@@ -88,27 +83,17 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigFrontend` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::CreateProjectAccessTokenRequest` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigFrontend`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::CreateProjectAccessTokenRequest`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
-
-      if attributes.key?(:'variable_scope')
-        self.variable_scope = attributes[:'variable_scope']
-      end
-
-      if attributes.key?(:'variables')
-        if (value = attributes[:'variables']).is_a?(Array)
-          self.variables = value
-        end
-      end
 
       if attributes.key?(:'name')
         self.name = attributes[:'name']
@@ -116,8 +101,14 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'custom_domain')
-        self.custom_domain = attributes[:'custom_domain']
+      if attributes.key?(:'scope')
+        self.scope = attributes[:'scope']
+      else
+        self.scope = nil
+      end
+
+      if attributes.key?(:'expires_at')
+        self.expires_at = attributes[:'expires_at']
       end
     end
 
@@ -130,8 +121,16 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
+      if @name.to_s.length > 100
+        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 100.')
+      end
+
       if @name.to_s.length < 1
         invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
+      end
+
+      if @scope.nil?
+        invalid_properties.push('invalid value for "scope", scope cannot be nil.')
       end
 
       invalid_properties
@@ -141,31 +140,11 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      return false unless variable_scope_validator.valid?(@variable_scope)
       return false if @name.nil?
+      return false if @name.to_s.length > 100
       return false if @name.to_s.length < 1
+      return false if @scope.nil?
       true
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] variable_scope Object to be assigned
-    def variable_scope=(variable_scope)
-      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      unless validator.valid?(variable_scope)
-        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
-      end
-      @variable_scope = variable_scope
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] variables Value to be assigned
-    def variables=(variables)
-      if variables.nil?
-        fail ArgumentError, 'variables cannot be nil'
-      end
-
-      @variables = variables
     end
 
     # Custom attribute writer method with validation
@@ -175,6 +154,10 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
+      if name.to_s.length > 100
+        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 100.'
+      end
+
       if name.to_s.length < 1
         fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
       end
@@ -182,15 +165,24 @@ module Volcano::Generated
       @name = name
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] scope Value to be assigned
+    def scope=(scope)
+      if scope.nil?
+        fail ArgumentError, 'scope cannot be nil'
+      end
+
+      @scope = scope
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          variable_scope == o.variable_scope &&
-          variables == o.variables &&
           name == o.name &&
-          custom_domain == o.custom_domain
+          scope == o.scope &&
+          expires_at == o.expires_at
     end
 
     # @see the `==` method
@@ -202,7 +194,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, variables, name, custom_domain].hash
+      [name, scope, expires_at].hash
     end
 
     # Builds the object from hash

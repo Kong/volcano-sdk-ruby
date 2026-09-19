@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'OAuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.create_o_auth_config",
@@ -147,7 +147,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.delete_o_auth_config",
@@ -222,7 +222,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'OAuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.get_o_auth_config",
@@ -285,7 +285,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListAvailableOAuthProviders200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.list_available_o_auth_providers",
@@ -348,7 +348,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListOAuthConfigs200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.list_o_auth_configs",
@@ -430,7 +430,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'OAuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"OAuthConfigurationApi.update_o_auth_config",

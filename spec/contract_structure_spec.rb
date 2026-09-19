@@ -24,7 +24,18 @@ RSpec.describe 'shared SDK contract bindings' do
       'durable.feature' => '416f7dfe1347086bf08af6f15c31467c58e21e14b278e3fd7482f7042dda06d7',
       'locks.feature' => '76fa31f9a7c203e33b367e5ca1467b2334e7c85c960de8d5cab8638920137411',
       'realtime.feature' => 'e65862e27656cdd0afa8e552cb5a628d9831568e3299711e572ccd4f6b750696',
-      'storage.feature' => '0772d46691d2a158e752d19cea995ff79db960fc3774c799ebdf081e19424d82'
+      'storage.feature' => '0772d46691d2a158e752d19cea995ff79db960fc3774c799ebdf081e19424d82',
+      'auth-profile-refresh.feature' => 'df46f1c374fcbdeb790cde0781ff14f580e56c44ac9aa6445d97469a385f6f51',
+      'auth-request-recovery.feature' => '9fa6f8d6cb3bca89501d32d950f06b8982ed34b888cce134465e0358b8261e8f',
+      'auth-token-bootstrap.feature' => '7f2cef1489ce2cb5a9f3ba230d7f411197415a0f4a3c14f38361c5ce0522e0ac',
+      'database-queries.feature' => '37d7f2e8fd4efb035cbc094c9c91a44a86f15fbcd689627e525e8d04f033a928',
+      'functions-refresh.feature' => '34ca84c8a4cf7f06addf7ff6f4c01c9546fac131e99b3d1509ae54f896d1bd9e',
+      'locks-recovery.feature' => '4f4b52caf587bdc61e72cbdcc39dcf5c9b06ea8573d8b99a183c2644e375ffab',
+      'logs.feature' => '5616e288fe1a68e13fa70416fe0323a5ce830c0edaa885a387efbf9e5bb2a269',
+      'realtime-postgres.feature' => '794c2ecbb94fd262a37840f4c3fe3bd9f9ee58c22fda9df2a46de60f93e52c91',
+      'realtime-presence.feature' => 'b4429f6e3df60a6a98be4daf1d8517e2cd7cee651f9eb6463a1090ab49a102b5',
+      'storage-refresh.feature' => '00257b455f9897791db7fd82c4166c7f34c7134b5b9f4ea92f509bba533751a1',
+      'storage-sessions.feature' => '037c60a8da27ec4cc5777596ba0c669b8309181a54b27aa61882535ed2f6beb1'
     }.freeze
   end
 
@@ -37,22 +48,22 @@ RSpec.describe 'shared SDK contract bindings' do
     expect(actual).to eq(expected_hashes)
   end
 
-  it 'stages the proposed storage scenario without activating it for older hosting' do
-    path = File.expand_path('../features/staged/storage-refresh.feature', __dir__)
+  it 'vendors the canonical storage scenario' do
+    path = File.expand_path('../features/contract/storage-refresh.feature', __dir__)
 
     expect(Digest::SHA256.file(path).hexdigest)
       .to eq('00257b455f9897791db7fd82c4166c7f34c7134b5b9f4ea92f509bba533751a1')
   end
 
-  it 'stages the proposed profile scenario without activating it for older hosting' do
-    path = File.expand_path('../features/staged/auth-profile-refresh.feature', __dir__)
+  it 'vendors the canonical profile scenario' do
+    path = File.expand_path('../features/contract/auth-profile-refresh.feature', __dir__)
 
     expect(Digest::SHA256.file(path).hexdigest)
       .to eq('df46f1c374fcbdeb790cde0781ff14f580e56c44ac9aa6445d97469a385f6f51')
   end
 
-  it 'stages the proposed token bootstrap scenario without activating it for older hosting' do
-    path = File.expand_path('../features/staged/auth-token-bootstrap.feature', __dir__)
+  it 'vendors the canonical token bootstrap scenario' do
+    path = File.expand_path('../features/contract/auth-token-bootstrap.feature', __dir__)
 
     expect(Digest::SHA256.file(path).hexdigest)
       .to eq('7f2cef1489ce2cb5a9f3ba230d7f411197415a0f4a3c14f38361c5ce0522e0ac')
@@ -105,43 +116,43 @@ RSpec.describe 'shared SDK contract bindings' do
     end
   end
 
-  it 'stages the canonical authenticated request recovery feature' do
-    path = File.expand_path('../features/staged/auth-request-recovery.feature', __dir__)
+  it 'vendors the canonical authenticated request recovery feature' do
+    path = File.expand_path('../features/contract/auth-request-recovery.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       '9fa6f8d6cb3bca89501d32d950f06b8982ed34b888cce134465e0358b8261e8f'
     )
   end
 
-  it 'stages the canonical database query feature' do
-    path = File.expand_path('../features/staged/database-queries.feature', __dir__)
+  it 'vendors the canonical database query feature' do
+    path = File.expand_path('../features/contract/database-queries.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       '37d7f2e8fd4efb035cbc094c9c91a44a86f15fbcd689627e525e8d04f033a928'
     )
   end
 
-  it 'stages the canonical storage session feature' do
-    path = File.expand_path('../features/staged/storage-sessions.feature', __dir__)
+  it 'vendors the canonical storage session feature' do
+    path = File.expand_path('../features/contract/storage-sessions.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       '037c60a8da27ec4cc5777596ba0c669b8309181a54b27aa61882535ed2f6beb1'
     )
   end
 
-  it 'stages the canonical logs feature' do
-    path = File.expand_path('../features/staged/logs.feature', __dir__)
+  it 'vendors the canonical logs feature' do
+    path = File.expand_path('../features/contract/logs.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       '5616e288fe1a68e13fa70416fe0323a5ce830c0edaa885a387efbf9e5bb2a269'
     )
   end
 
-  it 'stages the canonical presence membership feature' do
-    path = File.expand_path('../features/staged/realtime-presence.feature', __dir__)
+  it 'vendors the canonical presence membership feature' do
+    path = File.expand_path('../features/contract/realtime-presence.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       'b4429f6e3df60a6a98be4daf1d8517e2cd7cee651f9eb6463a1090ab49a102b5'
     )
   end
 
-  it 'stages the canonical Postgres change feature' do
-    path = File.expand_path('../features/staged/realtime-postgres.feature', __dir__)
+  it 'vendors the canonical Postgres change feature' do
+    path = File.expand_path('../features/contract/realtime-postgres.feature', __dir__)
     expect(Digest::SHA256.file(path).hexdigest).to eq(
       '794c2ecbb94fd262a37840f4c3fe3bd9f9ee58c22fda9df2a46de60f93e52c91'
     )

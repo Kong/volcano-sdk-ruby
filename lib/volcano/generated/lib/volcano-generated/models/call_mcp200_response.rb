@@ -14,17 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. A declared frontend entry without `custom_domain` deletes an existing custom domain. 
-  class ProjectConfigFrontend < ApiModelBase
-    # All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
-    attr_accessor :variable_scope
+  class CallMCP200Response < ApiModelBase
+    attr_accessor :jsonrpc
 
-    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
-    attr_accessor :variables
+    attr_accessor :id
 
-    attr_accessor :name
+    attr_accessor :result
 
-    attr_accessor :custom_domain
+    attr_accessor :error
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -51,10 +48,10 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'variable_scope' => :'variable_scope',
-        :'variables' => :'variables',
-        :'name' => :'name',
-        :'custom_domain' => :'custom_domain'
+        :'jsonrpc' => :'jsonrpc',
+        :'id' => :'id',
+        :'result' => :'result',
+        :'error' => :'error'
       }
     end
 
@@ -71,16 +68,17 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'variable_scope' => :'String',
-        :'variables' => :'Array<String>',
-        :'name' => :'String',
-        :'custom_domain' => :'ProjectConfigCustomDomain'
+        :'jsonrpc' => :'String',
+        :'id' => :'CallMCP200ResponseId',
+        :'result' => :'Hash<String, Object>',
+        :'error' => :'CallMCP200ResponseError'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'id',
       ])
     end
 
@@ -88,36 +86,38 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigFrontend` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::CallMCP200Response` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigFrontend`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::CallMCP200Response`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'variable_scope')
-        self.variable_scope = attributes[:'variable_scope']
+      if attributes.key?(:'jsonrpc')
+        self.jsonrpc = attributes[:'jsonrpc']
+      else
+        self.jsonrpc = nil
       end
 
-      if attributes.key?(:'variables')
-        if (value = attributes[:'variables']).is_a?(Array)
-          self.variables = value
+      if attributes.key?(:'id')
+        self.id = attributes[:'id']
+      else
+        self.id = nil
+      end
+
+      if attributes.key?(:'result')
+        if (value = attributes[:'result']).is_a?(Hash)
+          self.result = value
         end
       end
 
-      if attributes.key?(:'name')
-        self.name = attributes[:'name']
-      else
-        self.name = nil
-      end
-
-      if attributes.key?(:'custom_domain')
-        self.custom_domain = attributes[:'custom_domain']
+      if attributes.key?(:'error')
+        self.error = attributes[:'error']
       end
     end
 
@@ -126,12 +126,8 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @name.nil?
-        invalid_properties.push('invalid value for "name", name cannot be nil.')
-      end
-
-      if @name.to_s.length < 1
-        invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
+      if @jsonrpc.nil?
+        invalid_properties.push('invalid value for "jsonrpc", jsonrpc cannot be nil.')
       end
 
       invalid_properties
@@ -141,45 +137,20 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      return false unless variable_scope_validator.valid?(@variable_scope)
-      return false if @name.nil?
-      return false if @name.to_s.length < 1
+      return false if @jsonrpc.nil?
+      jsonrpc_validator = EnumAttributeValidator.new('String', ["2.0"])
+      return false unless jsonrpc_validator.valid?(@jsonrpc)
       true
     end
 
     # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] variable_scope Object to be assigned
-    def variable_scope=(variable_scope)
-      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      unless validator.valid?(variable_scope)
-        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+    # @param [Object] jsonrpc Object to be assigned
+    def jsonrpc=(jsonrpc)
+      validator = EnumAttributeValidator.new('String', ["2.0"])
+      unless validator.valid?(jsonrpc)
+        fail ArgumentError, "invalid value for \"jsonrpc\", must be one of #{validator.allowable_values}."
       end
-      @variable_scope = variable_scope
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] variables Value to be assigned
-    def variables=(variables)
-      if variables.nil?
-        fail ArgumentError, 'variables cannot be nil'
-      end
-
-      @variables = variables
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] name Value to be assigned
-    def name=(name)
-      if name.nil?
-        fail ArgumentError, 'name cannot be nil'
-      end
-
-      if name.to_s.length < 1
-        fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
-      end
-
-      @name = name
+      @jsonrpc = jsonrpc
     end
 
     # Checks equality by comparing each attribute.
@@ -187,10 +158,10 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          variable_scope == o.variable_scope &&
-          variables == o.variables &&
-          name == o.name &&
-          custom_domain == o.custom_domain
+          jsonrpc == o.jsonrpc &&
+          id == o.id &&
+          result == o.result &&
+          error == o.error
     end
 
     # @see the `==` method
@@ -202,7 +173,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, variables, name, custom_domain].hash
+      [jsonrpc, id, result, error].hash
     end
 
     # Builds the object from hash

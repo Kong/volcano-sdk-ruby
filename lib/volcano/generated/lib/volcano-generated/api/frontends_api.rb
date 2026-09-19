@@ -27,6 +27,8 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [String] :framework Next.js frontend. Supported Next.js majors are 15.x and 16.x. (default to 'nextjs')
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
+    # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
+    # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
     # @return [Frontend]
     def create_frontend(id, name, archive, opts = {})
       data, _status_code, _headers = create_frontend_with_http_info(id, name, archive, opts)
@@ -41,6 +43,8 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [String] :framework Next.js frontend. Supported Next.js majors are 15.x and 16.x. (default to 'nextjs')
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
+    # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
+    # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
     # @return [Array<(Frontend, Integer, Hash)>] Frontend data, response status code and response headers
     def create_frontend_with_http_info(id, name, archive, opts = {})
       if @api_client.config.debugging
@@ -75,6 +79,10 @@ module Volcano::Generated
         fail ArgumentError, 'invalid value for "opts[:"app_root"]" when calling FrontendsApi.create_frontend, the character length must be smaller than or equal to 1024.'
       end
 
+      allowable_values = ["all", "scoped"]
+      if @api_client.config.client_side_validation && opts[:'variable_scope'] && !allowable_values.include?(opts[:'variable_scope'])
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{allowable_values}"
+      end
       # resource path
       local_var_path = '/projects/{id}/frontends'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
 
@@ -97,6 +105,8 @@ module Volcano::Generated
       form_params['archive'] = archive
       form_params['framework'] = opts[:'framework'] if !opts[:'framework'].nil?
       form_params['app_root'] = opts[:'app_root'] if !opts[:'app_root'].nil?
+      form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
+      form_params['variables'] = @api_client.build_collection_param(opts[:'variables'], :csv) if !opts[:'variables'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -105,7 +115,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.create_frontend",
@@ -185,7 +195,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.create_frontend_custom_domain",
@@ -254,7 +264,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.delete_frontend",
@@ -321,7 +331,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.delete_frontend_custom_domain",
@@ -388,7 +398,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend",
@@ -455,7 +465,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend_custom_domain",
@@ -535,7 +545,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendUsageHistoryResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend_usage_history",
@@ -620,7 +630,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFrontendDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_frontend_deployments",
@@ -721,7 +731,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFrontends'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_frontends",
@@ -822,7 +832,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedProjectCustomDomains'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_project_custom_domains",
@@ -891,7 +901,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.redeploy_frontend",

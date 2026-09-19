@@ -89,7 +89,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranch'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.create_database_branch",
@@ -182,7 +182,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DeleteDatabaseBranch202Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.delete_database_branch",
@@ -275,7 +275,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranch'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.get_database_branch",
@@ -353,7 +353,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranchList'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.list_database_branches",
@@ -446,7 +446,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranch'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.reset_database_branch",
@@ -539,7 +539,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranch'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.reset_database_branch_password",
@@ -643,7 +643,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBranch'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBranchesApi.update_database_branch",

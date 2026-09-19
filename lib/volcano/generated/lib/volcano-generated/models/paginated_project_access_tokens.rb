@@ -14,47 +14,28 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. A declared frontend entry without `custom_domain` deletes an existing custom domain. 
-  class ProjectConfigFrontend < ApiModelBase
-    # All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
-    attr_accessor :variable_scope
+  class PaginatedProjectAccessTokens < ApiModelBase
+    attr_accessor :data
 
-    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
-    attr_accessor :variables
+    attr_accessor :page
 
-    attr_accessor :name
+    attr_accessor :limit
 
-    attr_accessor :custom_domain
+    attr_accessor :total
 
-    class EnumAttributeValidator
-      attr_reader :datatype
-      attr_reader :allowable_values
+    attr_accessor :has_more
 
-      def initialize(datatype, allowable_values)
-        @allowable_values = allowable_values.map do |value|
-          case datatype.to_s
-          when /Integer/i
-            value.to_i
-          when /Float/i
-            value.to_f
-          else
-            value
-          end
-        end
-      end
-
-      def valid?(value)
-        !value || allowable_values.include?(value)
-      end
-    end
+    attr_accessor :_next
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'variable_scope' => :'variable_scope',
-        :'variables' => :'variables',
-        :'name' => :'name',
-        :'custom_domain' => :'custom_domain'
+        :'data' => :'data',
+        :'page' => :'page',
+        :'limit' => :'limit',
+        :'total' => :'total',
+        :'has_more' => :'has_more',
+        :'_next' => :'next'
       }
     end
 
@@ -71,10 +52,12 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'variable_scope' => :'String',
-        :'variables' => :'Array<String>',
-        :'name' => :'String',
-        :'custom_domain' => :'ProjectConfigCustomDomain'
+        :'data' => :'Array<ProjectAccessToken>',
+        :'page' => :'Integer',
+        :'limit' => :'Integer',
+        :'total' => :'Integer',
+        :'has_more' => :'Boolean',
+        :'_next' => :'String'
       }
     end
 
@@ -88,36 +71,52 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigFrontend` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::PaginatedProjectAccessTokens` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigFrontend`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::PaginatedProjectAccessTokens`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'variable_scope')
-        self.variable_scope = attributes[:'variable_scope']
-      end
-
-      if attributes.key?(:'variables')
-        if (value = attributes[:'variables']).is_a?(Array)
-          self.variables = value
+      if attributes.key?(:'data')
+        if (value = attributes[:'data']).is_a?(Array)
+          self.data = value
         end
-      end
-
-      if attributes.key?(:'name')
-        self.name = attributes[:'name']
       else
-        self.name = nil
+        self.data = nil
       end
 
-      if attributes.key?(:'custom_domain')
-        self.custom_domain = attributes[:'custom_domain']
+      if attributes.key?(:'page')
+        self.page = attributes[:'page']
+      else
+        self.page = nil
+      end
+
+      if attributes.key?(:'limit')
+        self.limit = attributes[:'limit']
+      else
+        self.limit = nil
+      end
+
+      if attributes.key?(:'total')
+        self.total = attributes[:'total']
+      else
+        self.total = nil
+      end
+
+      if attributes.key?(:'has_more')
+        self.has_more = attributes[:'has_more']
+      else
+        self.has_more = nil
+      end
+
+      if attributes.key?(:'_next')
+        self._next = attributes[:'_next']
       end
     end
 
@@ -126,12 +125,24 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @name.nil?
-        invalid_properties.push('invalid value for "name", name cannot be nil.')
+      if @data.nil?
+        invalid_properties.push('invalid value for "data", data cannot be nil.')
       end
 
-      if @name.to_s.length < 1
-        invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
+      if @page.nil?
+        invalid_properties.push('invalid value for "page", page cannot be nil.')
+      end
+
+      if @limit.nil?
+        invalid_properties.push('invalid value for "limit", limit cannot be nil.')
+      end
+
+      if @total.nil?
+        invalid_properties.push('invalid value for "total", total cannot be nil.')
+      end
+
+      if @has_more.nil?
+        invalid_properties.push('invalid value for "has_more", has_more cannot be nil.')
       end
 
       invalid_properties
@@ -141,45 +152,62 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      return false unless variable_scope_validator.valid?(@variable_scope)
-      return false if @name.nil?
-      return false if @name.to_s.length < 1
+      return false if @data.nil?
+      return false if @page.nil?
+      return false if @limit.nil?
+      return false if @total.nil?
+      return false if @has_more.nil?
       true
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] variable_scope Object to be assigned
-    def variable_scope=(variable_scope)
-      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
-      unless validator.valid?(variable_scope)
-        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+    # Custom attribute writer method with validation
+    # @param [Object] data Value to be assigned
+    def data=(data)
+      if data.nil?
+        fail ArgumentError, 'data cannot be nil'
       end
-      @variable_scope = variable_scope
+
+      @data = data
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] variables Value to be assigned
-    def variables=(variables)
-      if variables.nil?
-        fail ArgumentError, 'variables cannot be nil'
+    # @param [Object] page Value to be assigned
+    def page=(page)
+      if page.nil?
+        fail ArgumentError, 'page cannot be nil'
       end
 
-      @variables = variables
+      @page = page
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] name Value to be assigned
-    def name=(name)
-      if name.nil?
-        fail ArgumentError, 'name cannot be nil'
+    # @param [Object] limit Value to be assigned
+    def limit=(limit)
+      if limit.nil?
+        fail ArgumentError, 'limit cannot be nil'
       end
 
-      if name.to_s.length < 1
-        fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
+      @limit = limit
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] total Value to be assigned
+    def total=(total)
+      if total.nil?
+        fail ArgumentError, 'total cannot be nil'
       end
 
-      @name = name
+      @total = total
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] has_more Value to be assigned
+    def has_more=(has_more)
+      if has_more.nil?
+        fail ArgumentError, 'has_more cannot be nil'
+      end
+
+      @has_more = has_more
     end
 
     # Checks equality by comparing each attribute.
@@ -187,10 +215,12 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          variable_scope == o.variable_scope &&
-          variables == o.variables &&
-          name == o.name &&
-          custom_domain == o.custom_domain
+          data == o.data &&
+          page == o.page &&
+          limit == o.limit &&
+          total == o.total &&
+          has_more == o.has_more &&
+          _next == o._next
     end
 
     # @see the `==` method
@@ -202,7 +232,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, variables, name, custom_domain].hash
+      [data, page, limit, total, has_more, _next].hash
     end
 
     # Builds the object from hash

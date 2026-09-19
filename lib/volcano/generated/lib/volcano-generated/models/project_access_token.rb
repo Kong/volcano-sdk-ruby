@@ -14,36 +14,36 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class Variable < ApiModelBase
-    # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
-    attr_accessor :shared
-
-    # Whether this name is in the project's shared frontend-variable list.
-    attr_accessor :frontend_shared
-
+  # A project access token: a control-plane credential bound to a single project. Unlike a platform token, which acts on every project its owner has, this one is limited to the project it was created in.  The secret itself is never returned here. Only its hash is stored, so the plaintext exists solely in the response to the create call. 
+  class ProjectAccessToken < ApiModelBase
     attr_accessor :id
 
     attr_accessor :project_id
 
+    # Unique per project.
     attr_accessor :name
 
-    attr_accessor :value
+    # First 12 characters of the secret, for recognising a token in a list.
+    attr_accessor :token_prefix
 
-    # Latest project variable propagation status, when a sync has run.
+    attr_accessor :scope
+
+    # `revoked` means the token was deliberately revoked, by you or by the deletion of its project. `expired` means it simply reached `expires_at`; nothing was taken away. Both are refused, and both keep their record so a token's name, prefix, last use, and request history remain available after a leak.  A token revoked before its expiry passed stays `revoked`, because that is the fact worth keeping. 
     attr_accessor :status
 
-    # Identifier of the latest variable propagation sync.
-    attr_accessor :current_sync_id
+    # What created the token.
+    attr_accessor :token_source
 
-    # Timestamp when the current variable propagation phase started.
-    attr_accessor :provisioning_started_at
+    # Absent for a token that does not expire.
+    attr_accessor :expires_at
 
-    # What initiated the latest variable propagation sync, when one has run.
-    attr_accessor :deploy_source
+    # Updated at most once every few minutes, so it may lag slightly.
+    attr_accessor :last_used_at
 
     attr_accessor :created_at
 
-    attr_accessor :updated_at
+    # Requests authenticated with this token since it was created.
+    attr_accessor :all_time_requests
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -70,18 +70,17 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'shared' => :'shared',
-        :'frontend_shared' => :'frontend_shared',
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'name' => :'name',
-        :'value' => :'value',
+        :'token_prefix' => :'token_prefix',
+        :'scope' => :'scope',
         :'status' => :'status',
-        :'current_sync_id' => :'current_sync_id',
-        :'provisioning_started_at' => :'provisioning_started_at',
-        :'deploy_source' => :'deploy_source',
+        :'token_source' => :'token_source',
+        :'expires_at' => :'expires_at',
+        :'last_used_at' => :'last_used_at',
         :'created_at' => :'created_at',
-        :'updated_at' => :'updated_at'
+        :'all_time_requests' => :'all_time_requests'
       }
     end
 
@@ -98,24 +97,25 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'shared' => :'Boolean',
-        :'frontend_shared' => :'Boolean',
         :'id' => :'String',
         :'project_id' => :'String',
         :'name' => :'String',
-        :'value' => :'String',
+        :'token_prefix' => :'String',
+        :'scope' => :'ProjectAccessTokenScope',
         :'status' => :'String',
-        :'current_sync_id' => :'String',
-        :'provisioning_started_at' => :'Time',
-        :'deploy_source' => :'String',
+        :'token_source' => :'String',
+        :'expires_at' => :'Time',
+        :'last_used_at' => :'Time',
         :'created_at' => :'Time',
-        :'updated_at' => :'Time'
+        :'all_time_requests' => :'Integer'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'expires_at',
+        :'last_used_at',
       ])
     end
 
@@ -123,25 +123,17 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::Variable` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectAccessToken` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::Variable`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectAccessToken`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
-
-      if attributes.key?(:'shared')
-        self.shared = attributes[:'shared']
-      end
-
-      if attributes.key?(:'frontend_shared')
-        self.frontend_shared = attributes[:'frontend_shared']
-      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -161,26 +153,36 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'value')
-        self.value = attributes[:'value']
+      if attributes.key?(:'token_prefix')
+        self.token_prefix = attributes[:'token_prefix']
       else
-        self.value = nil
+        self.token_prefix = nil
+      end
+
+      if attributes.key?(:'scope')
+        self.scope = attributes[:'scope']
+      else
+        self.scope = nil
       end
 
       if attributes.key?(:'status')
         self.status = attributes[:'status']
+      else
+        self.status = nil
       end
 
-      if attributes.key?(:'current_sync_id')
-        self.current_sync_id = attributes[:'current_sync_id']
+      if attributes.key?(:'token_source')
+        self.token_source = attributes[:'token_source']
+      else
+        self.token_source = nil
       end
 
-      if attributes.key?(:'provisioning_started_at')
-        self.provisioning_started_at = attributes[:'provisioning_started_at']
+      if attributes.key?(:'expires_at')
+        self.expires_at = attributes[:'expires_at']
       end
 
-      if attributes.key?(:'deploy_source')
-        self.deploy_source = attributes[:'deploy_source']
+      if attributes.key?(:'last_used_at')
+        self.last_used_at = attributes[:'last_used_at']
       end
 
       if attributes.key?(:'created_at')
@@ -189,10 +191,10 @@ module Volcano::Generated
         self.created_at = nil
       end
 
-      if attributes.key?(:'updated_at')
-        self.updated_at = attributes[:'updated_at']
+      if attributes.key?(:'all_time_requests')
+        self.all_time_requests = attributes[:'all_time_requests']
       else
-        self.updated_at = nil
+        self.all_time_requests = nil
       end
     end
 
@@ -213,20 +215,28 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @name.to_s.length > 256
-        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 256.')
+      if @token_prefix.nil?
+        invalid_properties.push('invalid value for "token_prefix", token_prefix cannot be nil.')
       end
 
-      if @value.nil?
-        invalid_properties.push('invalid value for "value", value cannot be nil.')
+      if @scope.nil?
+        invalid_properties.push('invalid value for "scope", scope cannot be nil.')
+      end
+
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
+      end
+
+      if @token_source.nil?
+        invalid_properties.push('invalid value for "token_source", token_source cannot be nil.')
       end
 
       if @created_at.nil?
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
 
-      if @updated_at.nil?
-        invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
+      if @all_time_requests.nil?
+        invalid_properties.push('invalid value for "all_time_requests", all_time_requests cannot be nil.')
       end
 
       invalid_properties
@@ -239,14 +249,16 @@ module Volcano::Generated
       return false if @id.nil?
       return false if @project_id.nil?
       return false if @name.nil?
-      return false if @name.to_s.length > 256
-      return false if @value.nil?
-      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
+      return false if @token_prefix.nil?
+      return false if @scope.nil?
+      return false if @status.nil?
+      status_validator = EnumAttributeValidator.new('String', ["active", "revoked", "expired"])
       return false unless status_validator.valid?(@status)
-      deploy_source_validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      return false unless deploy_source_validator.valid?(@deploy_source)
+      return false if @token_source.nil?
+      token_source_validator = EnumAttributeValidator.new('String', ["api", "cli", "dashboard"])
+      return false unless token_source_validator.valid?(@token_source)
       return false if @created_at.nil?
-      return false if @updated_at.nil?
+      return false if @all_time_requests.nil?
       true
     end
 
@@ -277,27 +289,33 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
-      if name.to_s.length > 256
-        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 256.'
-      end
-
       @name = name
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] value Value to be assigned
-    def value=(value)
-      if value.nil?
-        fail ArgumentError, 'value cannot be nil'
+    # @param [Object] token_prefix Value to be assigned
+    def token_prefix=(token_prefix)
+      if token_prefix.nil?
+        fail ArgumentError, 'token_prefix cannot be nil'
       end
 
-      @value = value
+      @token_prefix = token_prefix
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] scope Value to be assigned
+    def scope=(scope)
+      if scope.nil?
+        fail ArgumentError, 'scope cannot be nil'
+      end
+
+      @scope = scope
     end
 
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] status Object to be assigned
     def status=(status)
-      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
+      validator = EnumAttributeValidator.new('String', ["active", "revoked", "expired"])
       unless validator.valid?(status)
         fail ArgumentError, "invalid value for \"status\", must be one of #{validator.allowable_values}."
       end
@@ -305,13 +323,13 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] deploy_source Object to be assigned
-    def deploy_source=(deploy_source)
-      validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      unless validator.valid?(deploy_source)
-        fail ArgumentError, "invalid value for \"deploy_source\", must be one of #{validator.allowable_values}."
+    # @param [Object] token_source Object to be assigned
+    def token_source=(token_source)
+      validator = EnumAttributeValidator.new('String', ["api", "cli", "dashboard"])
+      unless validator.valid?(token_source)
+        fail ArgumentError, "invalid value for \"token_source\", must be one of #{validator.allowable_values}."
       end
-      @deploy_source = deploy_source
+      @token_source = token_source
     end
 
     # Custom attribute writer method with validation
@@ -325,13 +343,13 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] updated_at Value to be assigned
-    def updated_at=(updated_at)
-      if updated_at.nil?
-        fail ArgumentError, 'updated_at cannot be nil'
+    # @param [Object] all_time_requests Value to be assigned
+    def all_time_requests=(all_time_requests)
+      if all_time_requests.nil?
+        fail ArgumentError, 'all_time_requests cannot be nil'
       end
 
-      @updated_at = updated_at
+      @all_time_requests = all_time_requests
     end
 
     # Checks equality by comparing each attribute.
@@ -339,18 +357,17 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          shared == o.shared &&
-          frontend_shared == o.frontend_shared &&
           id == o.id &&
           project_id == o.project_id &&
           name == o.name &&
-          value == o.value &&
+          token_prefix == o.token_prefix &&
+          scope == o.scope &&
           status == o.status &&
-          current_sync_id == o.current_sync_id &&
-          provisioning_started_at == o.provisioning_started_at &&
-          deploy_source == o.deploy_source &&
+          token_source == o.token_source &&
+          expires_at == o.expires_at &&
+          last_used_at == o.last_used_at &&
           created_at == o.created_at &&
-          updated_at == o.updated_at
+          all_time_requests == o.all_time_requests
     end
 
     # @see the `==` method
@@ -362,7 +379,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [shared, frontend_shared, id, project_id, name, value, status, current_sync_id, provisioning_started_at, deploy_source, created_at, updated_at].hash
+      [id, project_id, name, token_prefix, scope, status, token_source, expires_at, last_used_at, created_at, all_time_requests].hash
     end
 
     # Builds the object from hash

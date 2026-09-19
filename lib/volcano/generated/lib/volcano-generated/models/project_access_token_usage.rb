@@ -14,26 +14,31 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class ResolveFunctionResponse < ApiModelBase
-    # DNS-safe function name
+  # Zero-filled daily request counts for a single token, oldest first. Every day in the window is present, so a gap reads as zero rather than missing.  Counts every request the token authenticated, including ones then refused — a read-only token attempting a write, or a token presented on another project's route. That is deliberate: after a leak, the probing is the part you want to see, and a counter that hid it would make a token look idle while it was being tried. 
+  class ProjectAccessTokenUsage < ApiModelBase
+    attr_accessor :token_id
+
     attr_accessor :name
 
-    # Canonical function ID used for invocation routing
-    attr_accessor :function_id
+    # The token's display prefix, which identifies the credential when its name does not. Revoking frees a name, so a project that rotated `ci-deploy` has two entries here both called `ci-deploy`. Not usable as a credential. 
+    attr_accessor :token_prefix
 
-    # Canonical HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development; invoke through POST /functions/{functionId}/invoke instead.
-    attr_accessor :invoke_url
+    # Number of daily entries returned, always equal to the requested window.
+    attr_accessor :days
 
-    # Suggested SDK cache TTL for this name-to-ID mapping
-    attr_accessor :cache_ttl_seconds
+    attr_accessor :daily
+
+    attr_accessor :total_requests
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'token_id' => :'token_id',
         :'name' => :'name',
-        :'function_id' => :'function_id',
-        :'invoke_url' => :'invoke_url',
-        :'cache_ttl_seconds' => :'cache_ttl_seconds'
+        :'token_prefix' => :'token_prefix',
+        :'days' => :'days',
+        :'daily' => :'daily',
+        :'total_requests' => :'total_requests'
       }
     end
 
@@ -50,10 +55,12 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'token_id' => :'String',
         :'name' => :'String',
-        :'function_id' => :'String',
-        :'invoke_url' => :'String',
-        :'cache_ttl_seconds' => :'Integer'
+        :'token_prefix' => :'String',
+        :'days' => :'Integer',
+        :'daily' => :'Array<ProjectAccessTokenUsageDailyEntry>',
+        :'total_requests' => :'Integer'
       }
     end
 
@@ -67,17 +74,23 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ResolveFunctionResponse` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectAccessTokenUsage` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ResolveFunctionResponse`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectAccessTokenUsage`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'token_id')
+        self.token_id = attributes[:'token_id']
+      else
+        self.token_id = nil
+      end
 
       if attributes.key?(:'name')
         self.name = attributes[:'name']
@@ -85,20 +98,30 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'function_id')
-        self.function_id = attributes[:'function_id']
+      if attributes.key?(:'token_prefix')
+        self.token_prefix = attributes[:'token_prefix']
       else
-        self.function_id = nil
+        self.token_prefix = nil
       end
 
-      if attributes.key?(:'invoke_url')
-        self.invoke_url = attributes[:'invoke_url']
+      if attributes.key?(:'days')
+        self.days = attributes[:'days']
+      else
+        self.days = nil
       end
 
-      if attributes.key?(:'cache_ttl_seconds')
-        self.cache_ttl_seconds = attributes[:'cache_ttl_seconds']
+      if attributes.key?(:'daily')
+        if (value = attributes[:'daily']).is_a?(Array)
+          self.daily = value
+        end
       else
-        self.cache_ttl_seconds = nil
+        self.daily = nil
+      end
+
+      if attributes.key?(:'total_requests')
+        self.total_requests = attributes[:'total_requests']
+      else
+        self.total_requests = nil
       end
     end
 
@@ -107,29 +130,28 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
+      if @token_id.nil?
+        invalid_properties.push('invalid value for "token_id", token_id cannot be nil.')
+      end
+
       if @name.nil?
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @name.to_s.length > 63
-        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 63.')
+      if @token_prefix.nil?
+        invalid_properties.push('invalid value for "token_prefix", token_prefix cannot be nil.')
       end
 
-      pattern = Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
-      if @name !~ pattern
-        invalid_properties.push("invalid value for \"name\", must conform to the pattern #{pattern}.")
+      if @days.nil?
+        invalid_properties.push('invalid value for "days", days cannot be nil.')
       end
 
-      if @function_id.nil?
-        invalid_properties.push('invalid value for "function_id", function_id cannot be nil.')
+      if @daily.nil?
+        invalid_properties.push('invalid value for "daily", daily cannot be nil.')
       end
 
-      if @cache_ttl_seconds.nil?
-        invalid_properties.push('invalid value for "cache_ttl_seconds", cache_ttl_seconds cannot be nil.')
-      end
-
-      if @cache_ttl_seconds < 1
-        invalid_properties.push('invalid value for "cache_ttl_seconds", must be greater than or equal to 1.')
+      if @total_requests.nil?
+        invalid_properties.push('invalid value for "total_requests", total_requests cannot be nil.')
       end
 
       invalid_properties
@@ -139,13 +161,23 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      return false if @token_id.nil?
       return false if @name.nil?
-      return false if @name.to_s.length > 63
-      return false if @name !~ Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
-      return false if @function_id.nil?
-      return false if @cache_ttl_seconds.nil?
-      return false if @cache_ttl_seconds < 1
+      return false if @token_prefix.nil?
+      return false if @days.nil?
+      return false if @daily.nil?
+      return false if @total_requests.nil?
       true
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] token_id Value to be assigned
+    def token_id=(token_id)
+      if token_id.nil?
+        fail ArgumentError, 'token_id cannot be nil'
+      end
+
+      @token_id = token_id
     end
 
     # Custom attribute writer method with validation
@@ -155,40 +187,47 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
-      if name.to_s.length > 63
-        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 63.'
-      end
-
-      pattern = Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
-      if name !~ pattern
-        fail ArgumentError, "invalid value for \"name\", must conform to the pattern #{pattern}."
-      end
-
       @name = name
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] function_id Value to be assigned
-    def function_id=(function_id)
-      if function_id.nil?
-        fail ArgumentError, 'function_id cannot be nil'
+    # @param [Object] token_prefix Value to be assigned
+    def token_prefix=(token_prefix)
+      if token_prefix.nil?
+        fail ArgumentError, 'token_prefix cannot be nil'
       end
 
-      @function_id = function_id
+      @token_prefix = token_prefix
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] cache_ttl_seconds Value to be assigned
-    def cache_ttl_seconds=(cache_ttl_seconds)
-      if cache_ttl_seconds.nil?
-        fail ArgumentError, 'cache_ttl_seconds cannot be nil'
+    # @param [Object] days Value to be assigned
+    def days=(days)
+      if days.nil?
+        fail ArgumentError, 'days cannot be nil'
       end
 
-      if cache_ttl_seconds < 1
-        fail ArgumentError, 'invalid value for "cache_ttl_seconds", must be greater than or equal to 1.'
+      @days = days
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] daily Value to be assigned
+    def daily=(daily)
+      if daily.nil?
+        fail ArgumentError, 'daily cannot be nil'
       end
 
-      @cache_ttl_seconds = cache_ttl_seconds
+      @daily = daily
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] total_requests Value to be assigned
+    def total_requests=(total_requests)
+      if total_requests.nil?
+        fail ArgumentError, 'total_requests cannot be nil'
+      end
+
+      @total_requests = total_requests
     end
 
     # Checks equality by comparing each attribute.
@@ -196,10 +235,12 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          token_id == o.token_id &&
           name == o.name &&
-          function_id == o.function_id &&
-          invoke_url == o.invoke_url &&
-          cache_ttl_seconds == o.cache_ttl_seconds
+          token_prefix == o.token_prefix &&
+          days == o.days &&
+          daily == o.daily &&
+          total_requests == o.total_requests
     end
 
     # @see the `==` method
@@ -211,7 +252,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, function_id, invoke_url, cache_ttl_seconds].hash
+      [token_id, name, token_prefix, days, daily, total_requests].hash
     end
 
     # Builds the object from hash

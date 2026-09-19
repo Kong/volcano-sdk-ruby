@@ -41,7 +41,7 @@ module Volcano::Generated
 
     attr_accessor :aws_function_arn
 
-    # Canonical GeoDNS endpoint URL for invoking this function (always HTTPS)
+    # Canonical geo-routed HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development, so a client testing for an empty string never matches.
     attr_accessor :invoke_url
 
     # Regions where this function is currently deployed

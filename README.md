@@ -907,3 +907,7 @@ Run `npm ci && bin/check-openapi` to verify generated provenance. Use
 `bundle exec rubocop -A` to apply safe formatting and lint fixes. Before
 changing the facade, run `bundle exec rubocop --parallel`, `bundle exec rspec`,
 and the shared Cucumber contract suite.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for cross-language coordination and the full verification workflow.

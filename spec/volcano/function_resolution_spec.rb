@@ -89,8 +89,10 @@ RSpec.describe Volcano::FunctionResolution do
     expect(calls.map(&:first)).to eq(%i[resolve_function_for_invocation invoke_function])
   end
 
-  # 'http://...' would downgrade a token the https API keeps encrypted; the
-  # rest are malformed, and must fall back rather than reach the transport.
+  # The last entry would downgrade a token the https API keeps encrypted.
+  # The last three are main's cases and must stay: a bracket-only authority, an
+  # unterminated one, a port outside the usable range, and a space in the host
+  # are all things URI will parse and a connection cannot use.
   ['', 'not-a-url', 'ftp://example.test/', '/relative', 'http://functions.test.run/',
    'https://[', 'https://[::1', 'https://example.test:99999/', 'https://exa mple.test/'].each do |unusable|
     context "when the invocation endpoint is #{unusable.inspect}" do

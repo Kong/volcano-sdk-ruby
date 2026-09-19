@@ -18,7 +18,7 @@ module Volcano::Generated
     # Region identifier for API usage
     attr_accessor :id
 
-    # Human-readable region name
+    # Human-readable region location
     attr_accessor :name
 
     # Attribute mapping from ruby-style variable name to JSON key.

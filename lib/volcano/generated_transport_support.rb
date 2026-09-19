@@ -202,6 +202,7 @@ module Volcano
           storage: StorageApi.new(api_client),
           locks: Generated::LocksApi.new(api_client),
           functions: Generated::FunctionsApi.new(api_client),
+          durable: Generated::DurableFunctionsApi.new(api_client),
           logs: Generated::LogsApi.new(api_client)
         )
       end

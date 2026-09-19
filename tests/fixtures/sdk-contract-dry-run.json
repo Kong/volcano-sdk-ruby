@@ -3,6 +3,7 @@
   "project_id": "dry-run-project",
   "anon_key": "dry-run-anon-key",
   "service_key": "dry-run-service-key",
+  "platform_token": "dry-run-platform-token",
   "user_id": "dry-run-user",
   "user_email": "dry-run@example.com",
   "user_password": "dry-run-password",
@@ -37,6 +38,7 @@
   "realtime_channel": "dry-run",
   "lock_key": "dry-run",
   "function_name": "dry-run",
+  "durable_function_name": "dry-run-durable",
   "logs_access_token": "dry-run-project-token",
   "function_id": "dry-run-function-id",
   "realtime_table_name": "sdk_contract_dryrun_rt"

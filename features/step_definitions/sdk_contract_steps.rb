@@ -596,6 +596,66 @@ Then('the released lease is no longer held') do
   raise 'released lock could not be acquired again' unless contract.last_outcome.value.fetch('released')
 end
 
+Given('a project-owner client') do
+  raise 'fixture platform token is missing' if contract.fixture.fetch('platform_token').to_s.empty?
+end
+
+When('the client starts the contract durable function') do
+  contract.record { contract.durable.start }
+end
+
+When('the client starts the contract durable function twice under one execution name') do
+  contract.record { [contract.durable.start, contract.durable.start] }
+end
+
+Then('the started execution carries its id, function, name, region, and creation time') do
+  execution = contract.last_outcome.value
+  raise 'started execution has no id' if execution.id.to_s.empty?
+  raise 'started execution names no durable function' if execution.function_id.to_s.empty?
+  raise 'started execution has the wrong name' unless execution.name == contract.durable.execution_name
+  raise 'started execution has no region' if execution.region.to_s.empty?
+  raise 'started execution has no creation time' if execution.created_at.nil?
+end
+
+Then('the started execution is not terminal and carries no result') do
+  execution = contract.last_outcome.value
+  raise 'start returned a finished execution' if execution.terminal?
+  raise 'start returned a result' unless execution.result.nil?
+end
+
+Then('both starts return the same execution') do
+  first, second = contract.last_outcome.value
+  raise 'the second start began another execution' unless second.id == first.id
+  raise 'the second start used another name' unless second.name == first.name
+end
+
+When('the owner reads the execution until it is terminal') do
+  # A failed start is reported by the shared success step, not swallowed here.
+  next unless contract.last_outcome.ok
+
+  execution_id = contract.durable.started.id
+  contract.record { contract.durable.follow(execution_id) }
+end
+
+Then("the execution succeeded carrying the function's result") do
+  execution = contract.last_outcome.value
+  raise "execution ended #{execution.status}: #{execution.error.inspect}" unless execution.status == 'succeeded'
+
+  expected = { 'echoed' => contract.durable.payload.fetch('value') }
+  raise 'execution carried the wrong result' unless execution.result == expected
+end
+
+When("the owner lists the durable function's executions") do
+  next unless contract.last_outcome.ok
+
+  contract.record { contract.durable.list }
+end
+
+Then('the listed executions include the started execution') do
+  listed = contract.last_outcome.value.executions.map(&:id)
+  raise 'the started execution was not listed' unless listed.include?(contract.durable.started.id)
+end
+
 When('the client recovers the contract lock with caller-owned tokens') do
   contract.record do
     locks = contract.service_client.locks

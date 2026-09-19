@@ -17,6 +17,7 @@ lib/volcano-generated/api/database_backups_api.rb
 lib/volcano-generated/api/database_branches_api.rb
 lib/volcano-generated/api/database_queries_api.rb
 lib/volcano-generated/api/databases_api.rb
+lib/volcano-generated/api/durable_functions_api.rb
 lib/volcano-generated/api/frontends_api.rb
 lib/volcano-generated/api/functions_api.rb
 lib/volcano-generated/api/git_connections_api.rb
@@ -151,6 +152,11 @@ lib/volcano-generated/models/deployment_phase.rb
 lib/volcano-generated/models/deployment_progress.rb
 lib/volcano-generated/models/deployment_reference.rb
 lib/volcano-generated/models/device_authorization_response.rb
+lib/volcano-generated/models/durable_execution.rb
+lib/volcano-generated/models/durable_execution_error.rb
+lib/volcano-generated/models/durable_execution_status.rb
+lib/volcano-generated/models/durable_function.rb
+lib/volcano-generated/models/durable_function_config.rb
 lib/volcano-generated/models/email_template.rb
 lib/volcano-generated/models/error.rb
 lib/volcano-generated/models/export_project_source_request.rb
@@ -168,6 +174,7 @@ lib/volcano-generated/models/function_deployment.rb
 lib/volcano-generated/models/function_http_auth_mode.rb
 lib/volcano-generated/models/function_invocation_mode.rb
 lib/volcano-generated/models/function_invocation_request.rb
+lib/volcano-generated/models/function_kind.rb
 lib/volcano-generated/models/function_region.rb
 lib/volcano-generated/models/function_runtime_deployment.rb
 lib/volcano-generated/models/function_runtime_option.rb
@@ -227,6 +234,8 @@ lib/volcano-generated/models/o_auth_config.rb
 lib/volcano-generated/models/o_auth_error_response.rb
 lib/volcano-generated/models/paginated_auth_users.rb
 lib/volcano-generated/models/paginated_databases.rb
+lib/volcano-generated/models/paginated_durable_executions.rb
+lib/volcano-generated/models/paginated_durable_functions.rb
 lib/volcano-generated/models/paginated_frontend_deployments.rb
 lib/volcano-generated/models/paginated_frontends.rb
 lib/volcano-generated/models/paginated_function_deployments.rb
@@ -340,6 +349,7 @@ lib/volcano-generated/models/realtime_config.rb
 lib/volcano-generated/models/realtime_plan_limits.rb
 lib/volcano-generated/models/realtime_stats.rb
 lib/volcano-generated/models/refresh_o_auth_provider_token200_response.rb
+lib/volcano-generated/models/replace_shared_variables_request.rb
 lib/volcano-generated/models/reset_database_password200_response.rb
 lib/volcano-generated/models/resolve_function_response.rb
 lib/volcano-generated/models/resource_reference.rb

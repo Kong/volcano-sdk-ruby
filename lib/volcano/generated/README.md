@@ -186,6 +186,21 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DatabasesApi* | [**list_postgres_versions**](docs/DatabasesApi.md#list_postgres_versions) | **GET** /databases/postgres-versions | List available PostgreSQL versions
 *Volcano::Generated::DatabasesApi* | [**reset_database_password**](docs/DatabasesApi.md#reset_database_password) | **POST** /projects/{id}/databases/{databaseName}/reset-password | Reset database password
 *Volcano::Generated::DatabasesApi* | [**update_database_type**](docs/DatabasesApi.md#update_database_type) | **PATCH** /projects/{id}/databases/{databaseName}/type | Update database size
+*Volcano::Generated::DurableFunctionsApi* | [**create_durable_function**](docs/DurableFunctionsApi.md#create_durable_function) | **POST** /projects/{id}/durable-functions | Create or update a durable function
+*Volcano::Generated::DurableFunctionsApi* | [**create_durable_function_scheduler**](docs/DurableFunctionsApi.md#create_durable_function_scheduler) | **POST** /projects/{id}/durable-functions/{functionId}/schedulers | Create a scheduler for a durable function
+*Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function**](docs/DurableFunctionsApi.md#delete_durable_function) | **DELETE** /projects/{id}/durable-functions/{functionId} | Delete a durable function
+*Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function_scheduler**](docs/DurableFunctionsApi.md#delete_durable_function_scheduler) | **DELETE** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Delete a durable function scheduler
+*Volcano::Generated::DurableFunctionsApi* | [**get_durable_execution**](docs/DurableFunctionsApi.md#get_durable_execution) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId} | Get a durable execution
+*Volcano::Generated::DurableFunctionsApi* | [**get_durable_function**](docs/DurableFunctionsApi.md#get_durable_function) | **GET** /projects/{id}/durable-functions/{functionId} | Get durable function by ID or name
+*Volcano::Generated::DurableFunctionsApi* | [**get_durable_function_scheduler**](docs/DurableFunctionsApi.md#get_durable_function_scheduler) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Get a durable function scheduler
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_executions**](docs/DurableFunctionsApi.md#list_durable_executions) | **GET** /projects/{id}/durable-functions/{functionId}/executions | List a durable function's executions
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_deployments**](docs/DurableFunctionsApi.md#list_durable_function_deployments) | **GET** /projects/{id}/durable-functions/{functionId}/deployments | List durable function deployments
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_schedulers**](docs/DurableFunctionsApi.md#list_durable_function_schedulers) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers | List schedulers for a durable function
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_functions**](docs/DurableFunctionsApi.md#list_durable_functions) | **GET** /projects/{id}/durable-functions | List all durable functions in a project
+*Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution**](docs/DurableFunctionsApi.md#start_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions | Start a durable execution
+*Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution_from_application**](docs/DurableFunctionsApi.md#start_durable_execution_from_application) | **POST** /durable-functions/{functionId}/executions | Start a durable execution from an application
+*Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
+*Volcano::Generated::DurableFunctionsApi* | [**update_durable_function_scheduler**](docs/DurableFunctionsApi.md#update_durable_function_scheduler) | **PATCH** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Update a durable function scheduler
 *Volcano::Generated::FrontendsApi* | [**create_frontend**](docs/FrontendsApi.md#create_frontend) | **POST** /projects/{id}/frontends | Create a new frontend deployment
 *Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain (PRO)
 *Volcano::Generated::FrontendsApi* | [**delete_frontend**](docs/FrontendsApi.md#delete_frontend) | **DELETE** /projects/{id}/frontends/{frontendId} | Delete a frontend
@@ -284,6 +299,7 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::ProjectsApi* | [**list_project_deployments**](docs/ProjectsApi.md#list_project_deployments) | **GET** /projects/{id}/deployments | List deployments in a project
 *Volcano::Generated::ProjectsApi* | [**list_projects**](docs/ProjectsApi.md#list_projects) | **GET** /projects | List all projects for authenticated user
 *Volcano::Generated::ProjectsApi* | [**query_project_metrics**](docs/ProjectsApi.md#query_project_metrics) | **POST** /projects/{id}/metrics/query | Query project runtime metrics
+*Volcano::Generated::ProjectsApi* | [**replace_shared_variables**](docs/ProjectsApi.md#replace_shared_variables) | **PUT** /projects/{id}/shared-variables | Replace shared variable names
 *Volcano::Generated::ProjectsApi* | [**set_project_git_production_branch**](docs/ProjectsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
 *Volcano::Generated::ProjectsApi* | [**summarize_project_deployments**](docs/ProjectsApi.md#summarize_project_deployments) | **GET** /projects/{id}/deployments/summary | Summarize deployments in a project
 *Volcano::Generated::ProjectsApi* | [**update_project**](docs/ProjectsApi.md#update_project) | **PATCH** /projects/{id} | Update project metadata and region policy
@@ -439,6 +455,11 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DeploymentProgress](docs/DeploymentProgress.md)
  - [Volcano::Generated::DeploymentReference](docs/DeploymentReference.md)
  - [Volcano::Generated::DeviceAuthorizationResponse](docs/DeviceAuthorizationResponse.md)
+ - [Volcano::Generated::DurableExecution](docs/DurableExecution.md)
+ - [Volcano::Generated::DurableExecutionError](docs/DurableExecutionError.md)
+ - [Volcano::Generated::DurableExecutionStatus](docs/DurableExecutionStatus.md)
+ - [Volcano::Generated::DurableFunction](docs/DurableFunction.md)
+ - [Volcano::Generated::DurableFunctionConfig](docs/DurableFunctionConfig.md)
  - [Volcano::Generated::EmailTemplate](docs/EmailTemplate.md)
  - [Volcano::Generated::Error](docs/Error.md)
  - [Volcano::Generated::ExportProjectSourceRequest](docs/ExportProjectSourceRequest.md)
@@ -456,6 +477,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::FunctionHTTPAuthMode](docs/FunctionHTTPAuthMode.md)
  - [Volcano::Generated::FunctionInvocationMode](docs/FunctionInvocationMode.md)
  - [Volcano::Generated::FunctionInvocationRequest](docs/FunctionInvocationRequest.md)
+ - [Volcano::Generated::FunctionKind](docs/FunctionKind.md)
  - [Volcano::Generated::FunctionRegion](docs/FunctionRegion.md)
  - [Volcano::Generated::FunctionRuntimeDeployment](docs/FunctionRuntimeDeployment.md)
  - [Volcano::Generated::FunctionRuntimeOption](docs/FunctionRuntimeOption.md)
@@ -515,6 +537,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::OAuthErrorResponse](docs/OAuthErrorResponse.md)
  - [Volcano::Generated::PaginatedAuthUsers](docs/PaginatedAuthUsers.md)
  - [Volcano::Generated::PaginatedDatabases](docs/PaginatedDatabases.md)
+ - [Volcano::Generated::PaginatedDurableExecutions](docs/PaginatedDurableExecutions.md)
+ - [Volcano::Generated::PaginatedDurableFunctions](docs/PaginatedDurableFunctions.md)
  - [Volcano::Generated::PaginatedFrontendDeployments](docs/PaginatedFrontendDeployments.md)
  - [Volcano::Generated::PaginatedFrontends](docs/PaginatedFrontends.md)
  - [Volcano::Generated::PaginatedFunctionDeployments](docs/PaginatedFunctionDeployments.md)
@@ -628,6 +652,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
  - [Volcano::Generated::ResourceReference](docs/ResourceReference.md)

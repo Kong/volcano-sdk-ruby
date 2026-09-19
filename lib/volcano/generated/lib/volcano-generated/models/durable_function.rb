@@ -14,29 +14,39 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class Variable < ApiModelBase
-    # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
-    attr_accessor :shared
-
+  # A durable function. Separate from `Function` because a durable function is invoked only through its own execution endpoints, so it has no invocation mode, HTTP auth mode, OpenAPI document or invoke URL, and it carries a `durable` configuration that a standard function has no field for. 
+  class DurableFunction < ApiModelBase
     attr_accessor :id
 
     attr_accessor :project_id
 
     attr_accessor :name
 
-    attr_accessor :value
-
-    # Latest project variable propagation status, when a sync has run.
     attr_accessor :status
 
-    # Identifier of the latest variable propagation sync.
-    attr_accessor :current_sync_id
-
-    # Timestamp when the current variable propagation phase started.
+    # Timestamp when the current provisioning phase started
     attr_accessor :provisioning_started_at
 
-    # What initiated the latest variable propagation sync, when one has run.
-    attr_accessor :deploy_source
+    # Whether anon keys may start executions of this function through `POST /durable-functions/{functionId}/executions`.  When `true`, an anon key holding `functions.invoke` can start an execution. When `false` (the default) only service keys and auth user tokens can. Reading and stopping an execution always require the project owner's token, whatever this is set to.  Set it when the function is created. Durable functions have no update endpoint, so changing visibility later means redeploying.  A public durable function is startable, never invocable: it is not reachable through `POST /functions/{functionId}/invoke` or a function URL, which answer `404` for either visibility. 
+    attr_accessor :is_public
+
+    attr_accessor :durable
+
+    # Regions where this function is currently deployed
+    attr_accessor :deployed_regions
+
+    attr_accessor :runtime
+
+    attr_accessor :handler
+
+    # Identifier of the latest deployment operation
+    attr_accessor :current_deployment_id
+
+    # Newest queued deployment that will run after the current operation
+    attr_accessor :pending_deployment_id
+
+    # Most recent successful invocation timestamp
+    attr_accessor :last_invoked_at
 
     attr_accessor :created_at
 
@@ -67,15 +77,19 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'shared' => :'shared',
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'name' => :'name',
-        :'value' => :'value',
         :'status' => :'status',
-        :'current_sync_id' => :'current_sync_id',
         :'provisioning_started_at' => :'provisioning_started_at',
-        :'deploy_source' => :'deploy_source',
+        :'is_public' => :'is_public',
+        :'durable' => :'durable',
+        :'deployed_regions' => :'deployed_regions',
+        :'runtime' => :'runtime',
+        :'handler' => :'handler',
+        :'current_deployment_id' => :'current_deployment_id',
+        :'pending_deployment_id' => :'pending_deployment_id',
+        :'last_invoked_at' => :'last_invoked_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -94,15 +108,19 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'shared' => :'Boolean',
         :'id' => :'String',
         :'project_id' => :'String',
         :'name' => :'String',
-        :'value' => :'String',
         :'status' => :'String',
-        :'current_sync_id' => :'String',
         :'provisioning_started_at' => :'Time',
-        :'deploy_source' => :'String',
+        :'is_public' => :'Boolean',
+        :'durable' => :'DurableFunctionConfig',
+        :'deployed_regions' => :'Array<String>',
+        :'runtime' => :'String',
+        :'handler' => :'String',
+        :'current_deployment_id' => :'String',
+        :'pending_deployment_id' => :'String',
+        :'last_invoked_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -118,21 +136,17 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::Variable` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableFunction` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::Variable`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableFunction`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
-
-      if attributes.key?(:'shared')
-        self.shared = attributes[:'shared']
-      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -152,26 +166,54 @@ module Volcano::Generated
         self.name = nil
       end
 
-      if attributes.key?(:'value')
-        self.value = attributes[:'value']
-      else
-        self.value = nil
-      end
-
       if attributes.key?(:'status')
         self.status = attributes[:'status']
-      end
-
-      if attributes.key?(:'current_sync_id')
-        self.current_sync_id = attributes[:'current_sync_id']
+      else
+        self.status = nil
       end
 
       if attributes.key?(:'provisioning_started_at')
         self.provisioning_started_at = attributes[:'provisioning_started_at']
       end
 
-      if attributes.key?(:'deploy_source')
-        self.deploy_source = attributes[:'deploy_source']
+      if attributes.key?(:'is_public')
+        self.is_public = attributes[:'is_public']
+      else
+        self.is_public = nil
+      end
+
+      if attributes.key?(:'durable')
+        self.durable = attributes[:'durable']
+      else
+        self.durable = nil
+      end
+
+      if attributes.key?(:'deployed_regions')
+        if (value = attributes[:'deployed_regions']).is_a?(Array)
+          self.deployed_regions = value
+        end
+      else
+        self.deployed_regions = nil
+      end
+
+      if attributes.key?(:'runtime')
+        self.runtime = attributes[:'runtime']
+      end
+
+      if attributes.key?(:'handler')
+        self.handler = attributes[:'handler']
+      end
+
+      if attributes.key?(:'current_deployment_id')
+        self.current_deployment_id = attributes[:'current_deployment_id']
+      end
+
+      if attributes.key?(:'pending_deployment_id')
+        self.pending_deployment_id = attributes[:'pending_deployment_id']
+      end
+
+      if attributes.key?(:'last_invoked_at')
+        self.last_invoked_at = attributes[:'last_invoked_at']
       end
 
       if attributes.key?(:'created_at')
@@ -204,12 +246,29 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @name.to_s.length > 256
-        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 256.')
+      if @name.to_s.length > 63
+        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 63.')
       end
 
-      if @value.nil?
-        invalid_properties.push('invalid value for "value", value cannot be nil.')
+      pattern = Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+      if @name !~ pattern
+        invalid_properties.push("invalid value for \"name\", must conform to the pattern #{pattern}.")
+      end
+
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
+      end
+
+      if @is_public.nil?
+        invalid_properties.push('invalid value for "is_public", is_public cannot be nil.')
+      end
+
+      if @durable.nil?
+        invalid_properties.push('invalid value for "durable", durable cannot be nil.')
+      end
+
+      if @deployed_regions.nil?
+        invalid_properties.push('invalid value for "deployed_regions", deployed_regions cannot be nil.')
       end
 
       if @created_at.nil?
@@ -230,12 +289,14 @@ module Volcano::Generated
       return false if @id.nil?
       return false if @project_id.nil?
       return false if @name.nil?
-      return false if @name.to_s.length > 256
-      return false if @value.nil?
-      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
+      return false if @name.to_s.length > 63
+      return false if @name !~ Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+      return false if @status.nil?
+      status_validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "deleting"])
       return false unless status_validator.valid?(@status)
-      deploy_source_validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      return false unless deploy_source_validator.valid?(@deploy_source)
+      return false if @is_public.nil?
+      return false if @durable.nil?
+      return false if @deployed_regions.nil?
       return false if @created_at.nil?
       return false if @updated_at.nil?
       true
@@ -268,41 +329,56 @@ module Volcano::Generated
         fail ArgumentError, 'name cannot be nil'
       end
 
-      if name.to_s.length > 256
-        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 256.'
+      if name.to_s.length > 63
+        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 63.'
+      end
+
+      pattern = Regexp.new(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
+      if name !~ pattern
+        fail ArgumentError, "invalid value for \"name\", must conform to the pattern #{pattern}."
       end
 
       @name = name
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] value Value to be assigned
-    def value=(value)
-      if value.nil?
-        fail ArgumentError, 'value cannot be nil'
-      end
-
-      @value = value
-    end
-
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] status Object to be assigned
     def status=(status)
-      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed"])
+      validator = EnumAttributeValidator.new('String', ["provisioning", "active", "failed", "deleting"])
       unless validator.valid?(status)
         fail ArgumentError, "invalid value for \"status\", must be one of #{validator.allowable_values}."
       end
       @status = status
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] deploy_source Object to be assigned
-    def deploy_source=(deploy_source)
-      validator = EnumAttributeValidator.new('String', ["git", "cli", "web", "api", "system", "unknown"])
-      unless validator.valid?(deploy_source)
-        fail ArgumentError, "invalid value for \"deploy_source\", must be one of #{validator.allowable_values}."
+    # Custom attribute writer method with validation
+    # @param [Object] is_public Value to be assigned
+    def is_public=(is_public)
+      if is_public.nil?
+        fail ArgumentError, 'is_public cannot be nil'
       end
-      @deploy_source = deploy_source
+
+      @is_public = is_public
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] durable Value to be assigned
+    def durable=(durable)
+      if durable.nil?
+        fail ArgumentError, 'durable cannot be nil'
+      end
+
+      @durable = durable
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] deployed_regions Value to be assigned
+    def deployed_regions=(deployed_regions)
+      if deployed_regions.nil?
+        fail ArgumentError, 'deployed_regions cannot be nil'
+      end
+
+      @deployed_regions = deployed_regions
     end
 
     # Custom attribute writer method with validation
@@ -330,15 +406,19 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          shared == o.shared &&
           id == o.id &&
           project_id == o.project_id &&
           name == o.name &&
-          value == o.value &&
           status == o.status &&
-          current_sync_id == o.current_sync_id &&
           provisioning_started_at == o.provisioning_started_at &&
-          deploy_source == o.deploy_source &&
+          is_public == o.is_public &&
+          durable == o.durable &&
+          deployed_regions == o.deployed_regions &&
+          runtime == o.runtime &&
+          handler == o.handler &&
+          current_deployment_id == o.current_deployment_id &&
+          pending_deployment_id == o.pending_deployment_id &&
+          last_invoked_at == o.last_invoked_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -352,7 +432,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [shared, id, project_id, name, value, status, current_sync_id, provisioning_started_at, deploy_source, created_at, updated_at].hash
+      [id, project_id, name, status, provisioning_started_at, is_public, durable, deployed_regions, runtime, handler, current_deployment_id, pending_deployment_id, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

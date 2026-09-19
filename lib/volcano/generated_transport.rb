@@ -28,6 +28,7 @@ module Volcano
   require_relative 'generated_transport_database'
   require_relative 'generated_transport_logs'
   require_relative 'generated_transport_functions'
+  require_relative 'generated_transport_durable'
   require_relative 'generated_transport_storage'
   require_relative 'generated_transport_upload_sessions'
 
@@ -38,7 +39,7 @@ module Volcano
     include ValueNormalization
 
     GeneratedApis = Data.define(
-      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+      :authentication, :oauth, :database, :storage, :locks, :functions, :durable, :logs
     )
 
     def initialize(api_url:, timeout: 60, api_factory: nil)

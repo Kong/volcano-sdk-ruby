@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.0...v0.10.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **realtime:** unwrap typed command replies in Ruby ([#159](https://github.com/Kong/volcano-sdk-ruby/issues/159)) ([15a880e](https://github.com/Kong/volcano-sdk-ruby/commit/15a880eff409368ddb01873d7c321ce2d5a03903))
+
 ## [0.10.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.4...v0.10.0) (2026-09-19)
 
 

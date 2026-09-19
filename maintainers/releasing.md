@@ -1,0 +1,29 @@
+# Release evidence and recovery
+
+The checked-in release and publish workflows own versioning and publication.
+This checklist does not authorize a release, a registry mutation or an environment approval.
+
+## Before publication
+
+1. Identify the release PR, exact source commit, version, tag and intended registry account. Inspect the generated changelog and package metadata.
+2. Require passing native checks: `bin/check-openapi`, `bundle exec rubocop`, `bundle exec rspec`, and the gem build and isolated install checks in CI. Verify the OpenAPI snapshot and generated output using the checked-in commands.
+3. Obtain clean code and security reviews. Record the approved shared-acceptance run and exact Hosting/SDK revisions for behavior changes; dry runs and synthetic HTTP tests are not live acceptance.
+4. Build the gem, install that artifact in a clean environment, and run the exact public quickstart. Retain the artifact digest and file inventory with the test evidence.
+5. Confirm explicit release authorization before any publication action. The existing automatic release path may publish after a release PR lands; a successful check or an unprotected environment is not itself release approval. Resolve authorization before merging a release PR rather than assuming `rubygems` has a human gate.
+
+Use the existing workflows and their tag, ancestry, identity and artifact checks.
+Do not rebuild a different package after approval, retag a release or overwrite a published version.
+After publication, verify the registry's package identity and version, digest/provenance where available, clean installation, and the documented quickstart against the approved platform revision.
+Record the workflow URL and registry URL. Source-main tests alone do not prove the published artifact contains that source.
+
+## Recover from a bad release
+
+For an application regression, first restore its previously tested application revision and dependency lock using [the public guide](../docs/versions.md).
+Confirm compatibility with current server configuration and data; an SDK downgrade does not roll either back.
+
+Record the affected versions, symptom, safe previous version, artifact digests and any required data/server remediation in the incident or release issue.
+Prepare a reviewed fix as a new version. Do not republish altered bytes under an existing version.
+If package deprecation, yanking, an npm tag move or another registry action is needed, preview the exact package/version/action and obtain explicit release-owner authorization first.
+Keep already published artifacts and audit evidence available unless the approved response specifically requires otherwise.
+
+Before calling recovery verified, run clean installs and the affected application/quickstart checks for both the safe version and the proposed fix. Record actual results and remaining limits; a written rollback plan is not a performed rollback.

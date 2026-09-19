@@ -49,3 +49,5 @@ Check those dependencies before rolling back an application that changed them.
 Open an [SDK issue](https://github.com/Kong/volcano-sdk-ruby/issues) with the installed SDK version, runtime version, affected method, expected result and a minimal reproduction.
 Include a sanitized error category and status when available.
 Remove keys, tokens, passwords and private response bodies.
+
+For suspected vulnerabilities, including authentication or authorization regressions, follow [Kong’s vulnerability reporting process](https://konghq.com/compliance/vuln-disclosure) and email vulnerability@konghq.com. Do not post security reproductions in public issues, pull requests or discussions.

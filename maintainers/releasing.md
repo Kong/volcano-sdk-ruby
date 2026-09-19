@@ -8,11 +8,13 @@ This checklist does not authorize a release, a registry mutation or an environme
 1. Identify the release PR, exact source commit, version, tag and intended registry account. Inspect the generated changelog and package metadata.
 2. Require passing native checks: `bin/check-openapi`, `bundle exec rubocop`, `bundle exec rspec`, and the gem build and isolated install checks in CI. Verify the OpenAPI snapshot and generated output using the checked-in commands.
 3. Obtain clean code and security reviews. Record the approved shared-acceptance run and exact Hosting/SDK revisions for behavior changes; dry runs and synthetic HTTP tests are not live acceptance.
-4. Build the gem, install that artifact in a clean environment, and run the exact public quickstart. Retain the artifact digest and file inventory with the test evidence.
+4. Build the gem locally, install it in a clean environment, and run the exact public quickstart. Retain its digest and inventory as candidate package-content evidence; this is not proof of the bytes the release workflow will later build.
 5. Confirm explicit release authorization before any publication action. The existing automatic release path may publish after a release PR lands; a successful check or an unprotected environment is not itself release approval. Resolve authorization before merging a release PR rather than assuming `rubygems` has a human gate.
 
 Use the existing workflows and their tag, ancestry, identity and artifact checks.
-Do not rebuild a different package after approval, retag a release or overwrite a published version.
+The release-triggered workflow builds after the GitHub release is published, then passes its preserved artifact to the registry job without rebuilding. A local candidate and the workflow artifact are separate builds. Authorize the source version and this workflow before triggering that path; do not claim exact-byte pre-publication approval from the local check. If approval of specific bytes is required, first add and review a build/test/approval boundary that holds that same artifact before publication. Do not retag a release or overwrite a published version.
+The existing manual recovery path can download a successful release run’s preserved gem and verify a reviewed SHA-256. It does not establish a general pre-publication hold: the automatic release path can already have published that run’s gem.
+
 After publication, verify the registry's package identity and version, digest/provenance where available, clean installation, and the documented quickstart against the approved platform revision.
 Record the workflow URL and registry URL. Source-main tests alone do not prove the published artifact contains that source.
 

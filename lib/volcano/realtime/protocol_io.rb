@@ -8,9 +8,9 @@ module Volcano
       module IO
         private
 
-        def request(on_reply: nil)
+        def request(reply_key, on_reply: nil)
           ensure_open!
-          id, reply_queue = register_request(on_reply)
+          id, reply_queue = register_request(reply_key, on_reply)
           write_frame(yield(id))
           reply = await_reply(reply_queue)
           raise reply.error if reply.is_a?(Failure)
@@ -22,14 +22,14 @@ module Volcano
           @pending.delete(id) if defined?(id)
         end
 
-        def register_request(on_reply)
+        def register_request(reply_key, on_reply)
           if @pending.length >= @max_pending
             raise PendingLimitError, "realtime pending command limit #{@max_pending} reached"
           end
 
           @next_id += 1
           queue = Async::Queue.new
-          @pending[@next_id] = Pending.new(queue: queue, on_reply: on_reply)
+          @pending[@next_id] = Pending.new(queue: queue, on_reply: on_reply, reply_key: reply_key)
           [@next_id, queue]
         end
 

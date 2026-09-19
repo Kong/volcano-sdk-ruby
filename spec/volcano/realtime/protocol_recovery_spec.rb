@@ -83,11 +83,11 @@ RSpec.describe ProtocolRecovery do
     )
   end
 
-  it 'installs a recovery baseline from a successful subscribe reply' do
+  it 'installs a recovery baseline from a typed subscribe reply' do
     socket.on_write = lambda do |command|
       socket.receive(
         'id' => command.fetch('id'),
-        'result' => { 'epoch' => 'e', 'offset' => 4, 'publications' => [] }
+        'subscribe' => { 'epoch' => 'e', 'offset' => 4, 'publications' => [] }
       )
     end
 

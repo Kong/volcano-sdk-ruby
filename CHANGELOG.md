@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.4...v0.10.0) (2026-09-19)
+
+
+### Features
+
+* **durable:** start and follow durable executions ([#118](https://github.com/Kong/volcano-sdk-ruby/issues/118)) ([a47c78d](https://github.com/Kong/volcano-sdk-ruby/commit/a47c78d5986a574e720d0d6f391d0dc1cfa0cdf0))
+
 ## [0.9.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.3...v0.9.4) (2026-09-18)
 
 

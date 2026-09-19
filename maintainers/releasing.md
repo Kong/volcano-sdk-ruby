@@ -18,6 +18,14 @@ The existing manual recovery path can download a successful release run’s pres
 After publication, verify the registry's package identity and version, digest/provenance where available, clean installation, and the documented quickstart against the approved platform revision.
 Record the workflow URL and registry URL. Source-main tests alone do not prove the published artifact contains that source.
 
+The existing `.github/scripts/smoke-gem.sh` check also executes the unchanged
+public quickstart from its isolated gem install, without publisher credentials.
+It checks sign-in, profile retrieval and logout against synthetic local HTTP
+responses and records the unchanged gem's SHA256. PR CI and the automatic
+release build run this check before the artifact is uploaded. The manual
+recovery path reuses the original artifact; it does not rerun the quickstart.
+This does not replace registry installation or approved live platform acceptance.
+
 ## Recover from a bad release
 
 For an application regression, first restore its previously tested application revision and dependency lock using [the public guide](../docs/versions.md).

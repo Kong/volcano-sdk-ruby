@@ -7,6 +7,8 @@ if [[ $# != 1 ]]; then
 fi
 
 gem_path="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+artifact_digest="$(shasum -a 256 "$gem_path")"
 version="$(ruby -rrubygems/package -e 'puts Gem::Package.new(ARGV.fetch(0)).spec.version' "$gem_path")"
 install_root="$(mktemp -d)"
 install_root="$(cd "$install_root" && pwd -P)"
@@ -31,3 +33,7 @@ ruby -rvolcano -e '
   abort "Token-only sign-out failed" unless client.current_session.nil?
   puts "Loaded volcano-sdk #{Volcano::VERSION} from the isolated gem install"
 ' "$version"
+env -i PATH="$PATH" HOME="$install_root" GEM_HOME="$GEM_HOME" GEM_PATH="$GEM_PATH" \
+  GEM_SPEC_CACHE="$GEM_SPEC_CACHE" ruby "$script_dir/quickstart.rb"
+test "$artifact_digest" = "$(shasum -a 256 "$gem_path")"
+printf 'Documented quickstart passed (synthetic HTTP): %s\n' "$artifact_digest"

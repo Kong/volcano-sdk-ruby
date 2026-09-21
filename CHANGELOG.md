@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.1...v0.10.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* **auth:** atomically record rejected refresh transitions ([#185](https://github.com/Kong/volcano-sdk-ruby/issues/185)) ([3a4144d](https://github.com/Kong/volcano-sdk-ruby/commit/3a4144dbabf5ca9eb6398a1da87931e4b3b1cdab))
+
 ## [0.10.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.0...v0.10.1) (2026-09-19)
 
 

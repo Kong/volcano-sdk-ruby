@@ -7,7 +7,7 @@ require 'spec_helper'
 require 'tmpdir'
 require 'rubygems/package'
 
-RSpec.describe 'shared SDK contract bindings' do
+RSpec.describe Volcano do
   let(:expected_hashes) do
     {
       'storage-lifecycle.feature' => '08d00ac825bc186929904dea75af28052df964e446e7aeb0e2266711536aa88f',

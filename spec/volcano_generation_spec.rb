@@ -5,9 +5,9 @@ require 'json'
 require 'open3'
 require 'tmpdir'
 
-RSpec.describe 'OpenAPI generation' do
-  ROOT = File.expand_path('../..', __dir__)
-  OPENAPI_SHA256 = 'b5a1dab08ba903ae65d590bcec3601e3b551318dd56637f0d1ed2bdb555e5457'
+RSpec.describe Volcano do
+  let(:root) { File.expand_path('..', __dir__) }
+  let(:openapi_sha256) { 'b5a1dab08ba903ae65d590bcec3601e3b551318dd56637f0d1ed2bdb555e5457' }
 
   it 'preserves explicit null without turning omitted object fields into null' do
     Dir.mktmpdir('volcano-ruby-nullable') do |directory|
@@ -16,7 +16,7 @@ RSpec.describe 'OpenAPI generation' do
         'npx', '--no-install', 'openapi-generator-cli', 'generate',
         '-i', 'tests/fixtures/nullable-object.yaml', '-g', 'ruby',
         '-c', 'openapi-generator.yaml', '-t', 'openapi/templates', '-o', output,
-        '--global-property', 'apiTests=false,modelTests=false,apiDocs=false,modelDocs=false', chdir: ROOT
+        '--global-property', 'apiTests=false,modelTests=false,apiDocs=false,modelDocs=false', chdir: root
       )
       expect(status).to be_success, "#{stdout}\n#{stderr}"
       stdout, stderr, status = Open3.capture3(
@@ -39,14 +39,14 @@ RSpec.describe 'OpenAPI generation' do
   end
 
   it 'uses the exact bundled contract and emits the required POC operations' do
-    expect(Digest::SHA256.file(File.join(ROOT, 'openapi/openapi.yaml')).hexdigest).to eq(OPENAPI_SHA256)
+    expect(Digest::SHA256.file(File.join(root, 'openapi/openapi.yaml')).hexdigest).to eq(openapi_sha256)
 
     Dir.mktmpdir('volcano-ruby-openapi') do |directory|
       output = File.join(directory, 'generated')
       stdout, stderr, status = Open3.capture3(
-        File.join(ROOT, 'bin/generate-openapi'),
+        File.join(root, 'bin/generate-openapi'),
         output,
-        chdir: ROOT
+        chdir: root
       )
       expect(status).to be_success, "#{stdout}\n#{stderr}"
 
@@ -81,9 +81,9 @@ RSpec.describe 'OpenAPI generation' do
       File.binwrite(sentinel, 'preserve')
 
       _stdout, stderr, status = Open3.capture3(
-        File.join(ROOT, 'bin/generate-openapi'),
+        File.join(root, 'bin/generate-openapi'),
         output,
-        chdir: ROOT
+        chdir: root
       )
 
       expect(status).not_to be_success
@@ -101,9 +101,9 @@ RSpec.describe 'OpenAPI generation' do
       aliased_output = File.join(directory, 'missing', '..', 'existing')
 
       _stdout, _stderr, status = Open3.capture3(
-        File.join(ROOT, 'bin/generate-openapi'),
+        File.join(root, 'bin/generate-openapi'),
         aliased_output,
-        chdir: ROOT
+        chdir: root
       )
 
       expect(File.binread(sentinel) == 'preserve lexical alias').to be(true)
@@ -122,9 +122,9 @@ RSpec.describe 'OpenAPI generation' do
       aliased_output = File.join(directory, 'missing', '..', 'existing-link')
 
       _stdout, _stderr, status = Open3.capture3(
-        File.join(ROOT, 'bin/generate-openapi'),
+        File.join(root, 'bin/generate-openapi'),
         aliased_output,
-        chdir: ROOT
+        chdir: root
       )
 
       expect(File.binread(sentinel) == 'preserve symlink alias').to be(true)
@@ -137,9 +137,9 @@ RSpec.describe 'OpenAPI generation' do
       output = File.join(directory, 'generated')
 
       stdout, stderr, status = Open3.capture3(
-        File.join(ROOT, 'bin/generate-openapi'),
+        File.join(root, 'bin/generate-openapi'),
         output,
-        chdir: ROOT
+        chdir: root
       )
 
       expect(status).to be_success, "#{stdout}\n#{stderr}"
@@ -153,7 +153,7 @@ RSpec.describe 'OpenAPI generation' do
       sentinel = File.join(directory, 'lib/volcano/generated/preserve.txt')
       FileUtils.mkdir_p(File.dirname(script))
       FileUtils.mkdir_p(File.dirname(sentinel))
-      FileUtils.cp(File.join(ROOT, 'bin/generate-openapi'), script)
+      FileUtils.cp(File.join(root, 'bin/generate-openapi'), script)
       File.binwrite(sentinel, 'preserve committed output')
 
       _stdout, _stderr, status = Open3.capture3(script, '', chdir: directory)

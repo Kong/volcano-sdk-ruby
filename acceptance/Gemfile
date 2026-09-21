@@ -1,0 +1,6 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+gem 'cucumber', '11.1.1'
+gem 'rspec', '~> 3.13'
+gem 'volcano-sdk', path: 'installed-sdk'

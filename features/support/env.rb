@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../../lib/volcano'
+require 'volcano'
 require_relative 'contract_world'
 require_relative 'fixture'
 

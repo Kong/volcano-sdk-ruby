@@ -60,7 +60,7 @@ module Quality
     def check_path(path)
       if File.symlink?(File.join(@root, path))
         @errors << "#{path}: repository symlinks are forbidden"
-      else
+      elsif !path.start_with?(GENERATED)
         check_configuration(path)
       end
     end

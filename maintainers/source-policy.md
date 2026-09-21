@@ -17,7 +17,7 @@ unless they match these test conventions:
 `Quality::CopScopePolicy` records these exact scopes. Adding or broadening one is
 a policy change. Existing violations are not an exception category.
 
-The generated client under `lib/volcano/generated/` is checked by regeneration
-comparison instead. Handwritten source belongs outside that directory. A tracked
+The generated client and its generated configurations under
+`lib/volcano/generated/` are checked by regeneration comparison instead. Handwritten source belongs outside that directory. A tracked
 Ruby file under `vendor/` is still maintained source unless a separate provenance
 policy explicitly establishes otherwise; the directory name is not an exemption.

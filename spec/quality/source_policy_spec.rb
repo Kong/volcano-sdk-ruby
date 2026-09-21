@@ -124,6 +124,13 @@ RSpec.describe Quality::SourcePolicy do
     expect(policy.check).to include('lib/alias.rb: repository symlinks are forbidden')
   end
 
+  it 'leaves generated configurations to the regeneration comparison' do
+    write('lib/volcano/generated/.rubocop.yml', "{}\n")
+    write('lib/volcano/generated/.rspec', "--format progress\n")
+
+    expect(policy.check).to be_empty
+  end
+
   it 'rejects symlinks inside the generated directory' do
     FileUtils.mkdir_p(File.join(directory, 'lib/volcano/generated'))
     File.symlink('../../example.rb', File.join(directory, 'lib/volcano/generated/alias.rb'))

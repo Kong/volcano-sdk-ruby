@@ -75,7 +75,7 @@ module Volcano
 
     def rejected_refresh?(binding, active)
       generation, lineage, = binding
-      @rejected_refresh == [generation, lineage] &&
+      @client.refresh_rejected?(generation, lineage) &&
         active.first == generation + 1 && active.last.nil?
     end
 
@@ -115,9 +115,7 @@ module Volcano
       Transport.body(refresh_response(binding.last.refresh_token), 200)
     rescue Error::AuthenticationError
       generation, owner, = binding
-      if !owner.closing? && @client.clear_session_if_current?(generation, notifications: notifications)
-        @rejected_refresh = [generation, owner]
-      end
+      @client.reject_refresh_if_current?(generation, notifications: notifications) unless owner.closing?
       raise
     end
   end

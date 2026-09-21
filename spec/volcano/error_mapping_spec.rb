@@ -3,20 +3,9 @@
 require 'spec_helper'
 require 'socket'
 
-RSpec.describe 'Volcano SDK errors' do
-  ErrorResponse = Data.define(:status, :body, :headers, :data) unless const_defined?(:ErrorResponse)
-
-  class ErrorTransport
-    def initialize(failure)
-      @failure = failure
-    end
-
-    def auth_signin(**)
-      raise @failure if @failure.is_a?(Exception)
-
-      @failure
-    end
-  end
+RSpec.describe Volcano::Error do
+  let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
+  let(:client) { Volcano::Client.new(anon_key: 'anon-key', _transport: transport) }
 
   {
     400 => 'Volcano::Error::ValidationError',
@@ -30,13 +19,13 @@ RSpec.describe 'Volcano SDK errors' do
     503 => 'Volcano::Error::ServerError'
   }.each do |status, error_name|
     it "maps HTTP #{status} to #{error_name}" do
-      response = ErrorResponse.new(
+      response = Volcano::Transport::Response.new(
         status: status,
         body: { 'error' => 'contract failure', 'code' => 'contract_code' },
         headers: { 'Retry-After' => '17' },
         data: nil
       )
-      client = Volcano::Client.new(anon_key: 'anon-key', _transport: ErrorTransport.new(response))
+      allow(transport).to receive(:auth_signin).and_return(response)
 
       expect do
         client.auth.sign_in(email: 'user@example.com', password: 'wrong')
@@ -51,7 +40,7 @@ RSpec.describe 'Volcano SDK errors' do
 
   it 'maps a no-status network failure to a transport error with its cause' do
     failure = SocketError.new('connection failed')
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: ErrorTransport.new(failure))
+    allow(transport).to receive(:auth_signin).and_raise(failure)
 
     expect do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')

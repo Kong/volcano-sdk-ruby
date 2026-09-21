@@ -2,14 +2,16 @@
 
 require 'open3'
 require 'ripper'
+require 'rubocop'
+require 'yaml'
 
 module Quality
   # Checks maintained sources against the linter's actual discovered targets.
   class SourcePolicy
     GENERATED = 'lib/volcano/generated/'
-    RUBY_NAMES = %w[Gemfile Rakefile].freeze
+    RUBY_PATTERNS = RuboCop::ConfigLoader.default_configuration.for_all_cops.fetch('Include').freeze
     SUPPRESSION = /rubocop\s*:\s*(?:disable|todo)|:nocov:/i
-    private_constant :GENERATED, :RUBY_NAMES, :SUPPRESSION
+    private_constant :GENERATED, :RUBY_PATTERNS, :SUPPRESSION
 
     def initialize(root)
       @root = File.expand_path(root)
@@ -18,6 +20,7 @@ module Quality
 
     def check
       @errors.clear
+      check_inheritance
       paths = repository_files.reject { |path| path.start_with?(GENERATED) }
       paths.each { |path| check_configuration(path) }
       sources = paths.select { |path| ruby_source?(path) }
@@ -41,6 +44,13 @@ module Quality
       end
     end
 
+    def check_inheritance
+      configuration = YAML.safe_load_file(File.join(@root, '.rubocop.yml'), aliases: true)
+      return unless configuration.key?('inherit_from') || configuration.key?('inherit_gem')
+
+      @errors << '.rubocop.yml: inherited configurations are forbidden; keep policy in the root configuration'
+    end
+
     def check_configuration(path)
       name = File.basename(path)
       return unless name.start_with?('.rubocop') || %w[.rspec .simplecov].include?(name)
@@ -50,7 +60,9 @@ module Quality
     end
 
     def ruby_source?(path)
-      return true if RUBY_NAMES.include?(File.basename(path)) || /\.(?:rb|rake|gemspec)\z/.match?(path)
+      if RUBY_PATTERNS.any? { |pattern| File.fnmatch?(pattern, path, File::FNM_PATHNAME | File::FNM_DOTMATCH) }
+        return true
+      end
       return false if File.symlink?(File.join(@root, path))
 
       File.open(File.join(@root, path), 'rb') { |file| /\A#!.*\bruby\b/.match?(file.gets.to_s) }

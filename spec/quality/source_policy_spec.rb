@@ -54,6 +54,34 @@ RSpec.describe Quality::SourcePolicy do
     expect(policy.check).to include('lib/example.rb: maintained Ruby source is excluded from RuboCop')
   end
 
+  %w[config.ru view.builder view.jbuilder Guardfile Steepfile].each do |path|
+    it "rejects suppressions in conventional Ruby source #{path}" do
+      write(path, "# :nocov:\nVALUE = 1\n")
+
+      expect(policy.check).to include(a_string_including("#{path}:1: inline lint and coverage suppressions"))
+    end
+
+    it "rejects excluding conventional Ruby source #{path}" do
+      write(path, "VALUE = 1\n")
+      write('.rubocop.yml', "AllCops:\n  NewCops: enable\n  Exclude:\n    - #{path}\n")
+
+      expect(policy.check).to include("#{path}: maintained Ruby source is excluded from RuboCop")
+    end
+  end
+
+  it 'rejects inherited debt baselines with arbitrary filenames' do
+    write('debt.yml', "Metrics/MethodLength:\n  Exclude:\n    - lib/example.rb\n")
+    write('.rubocop.yml', "inherit_from: debt.yml\nAllCops:\n  NewCops: enable\n")
+
+    expect(policy.check).to include(a_string_including('.rubocop.yml: inherited configurations are forbidden'))
+  end
+
+  it 'rejects inherited gem configuration' do
+    write('.rubocop.yml', "inherit_gem: {}\nAllCops:\n  NewCops: enable\n")
+
+    expect(policy.check).to include(a_string_including('.rubocop.yml: inherited configurations are forbidden'))
+  end
+
   it 'checks Ruby scripts without a filename extension' do
     write('bin/task', "#!/usr/bin/env ruby\n# :nocov:\nputs 'hello'\n")
 

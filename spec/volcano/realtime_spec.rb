@@ -1022,6 +1022,51 @@ RSpec.describe Volcano::Realtime do
     end.to raise_error(ArgumentError, 'unsupported postgres change event: UPSERT')
   end
 
+  it 'delivers only message publications on presence channels without changing presence state' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      received = Async::Queue.new
+      joins = []
+      channel.on('join') { |data| joins << data }
+      channel.on('message') { |data| received.enqueue(data) }
+      channel.subscribe
+      initial_state = channel.presence_state
+      socket.publication(channel: 'project:presence:lobby', data: { 'event' => 'join' })
+      message = { 'event' => 'message', 'value' => 'hello' }
+      socket.publication(channel: 'project:presence:lobby', data: message)
+
+      expect(task.with_timeout(1) { received.dequeue }).to eq(message)
+      expect(received).to be_empty
+      expect(joins).to be_empty
+      expect(channel.presence_state).to equal(initial_state)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'rejects non-hash presence tracking without replacing the tracked snapshot' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      channel.track('status' => 'online')
+      snapshot = channel.tracked_state
+
+      expect { channel.track(['offline']) }.to raise_error(ArgumentError, 'presence state must be a hash')
+      expect(channel.tracked_state).to equal(snapshot)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'preserves connection and user identities from typed presence replies' do
     socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)

@@ -4,9 +4,14 @@ plugins:
   - rubocop-rspec
 
 AllCops:
+  inherit_mode:
+    merge:
+      - Include
   NewCops: enable
   SuggestExtensions: false
   TargetRubyVersion: 3.2
+  Include:
+    - ".github/scripts/**/*.rb"
   Exclude:
     - "lib/volcano/generated/**/*"
     - "vendor/**/*"

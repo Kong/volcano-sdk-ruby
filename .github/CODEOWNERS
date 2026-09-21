@@ -18,15 +18,20 @@ GEMINI.md @Kong/team-volcano
 
 # Match nested tool configurations too; new overrides are policy changes.
 Gemfile* @Kong/team-volcano
+gems.rb @Kong/team-volcano
+gems.locked @Kong/team-volcano
 *.gemspec @Kong/team-volcano
 Rakefile @Kong/team-volcano
 *.rake @Kong/team-volcano
 .ruby-version @Kong/team-volcano
 .ruby-gemset @Kong/team-volcano
-.bundle/config @Kong/team-volcano
+**/.bundle/config @Kong/team-volcano
+.bundler-audit.yml @Kong/team-volcano
 .rubocop* @Kong/team-volcano
 rubocop*.yml @Kong/team-volcano
-.rspec @Kong/team-volcano
+.rspec* @Kong/team-volcano
+cucumber.yml @Kong/team-volcano
+cucumber.yaml @Kong/team-volcano
 .simplecov @Kong/team-volcano
 Steepfile @Kong/team-volcano
 .steep* @Kong/team-volcano

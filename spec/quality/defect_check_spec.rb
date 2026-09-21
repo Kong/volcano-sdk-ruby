@@ -46,6 +46,8 @@ RSpec.describe Quality::DefectCheck do
   it 'detects the injected assertion failure and leaves the original source intact' do
     expect(check).to eq('detected')
     expect(File.read(File.join(root, 'lib/target.rb'))).to include('def self.value = 1')
+    expect(JSON.parse(File.read(File.join(reports, 'fixture-baseline.json'))).fetch('seed')).to eq(12_345)
+    expect(JSON.parse(File.read(File.join(reports, 'fixture-mutant.json'))).fetch('seed')).to eq(12_345)
   end
 
   it 'fails when a valid mutation survives' do

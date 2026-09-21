@@ -75,14 +75,13 @@ module Quality
     def command(directory, report)
       [environment(directory), Gem.ruby, '-rbundler/setup', '-Ilib', Gem.bin_path('rspec-core', 'rspec'),
        @defect.fetch('spec'), '--example', @defect.fetch('example'),
-       '--format', 'json', '--out', report]
+       '--seed', '12345', '--format', 'json', '--out', report]
     end
 
     def environment(directory)
       path = Bundler.settings[:path]
       { 'BUNDLE_GEMFILE' => File.join(directory, 'Gemfile'),
-        'BUNDLE_PATH' => path && File.expand_path(path, @root), 'BUNDLE_PATH__SYSTEM' => path ? nil : 'true',
-        'VOLCANO_PROPERTY_SEED' => '12345' }
+        'BUNDLE_PATH' => path && File.expand_path(path, @root), 'BUNDLE_PATH__SYSTEM' => path ? nil : 'true' }
     end
 
     def report_path(phase, extension)

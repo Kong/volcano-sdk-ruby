@@ -86,6 +86,10 @@ module Volcano
       @auth_state.store_if_current?(nil, generation, event: event, notifications: notifications, lineage: lineage)
     end
 
+    def reject_refresh_if_current?(...) = @auth_state.reject_refresh_if_current?(...)
+
+    def refresh_rejected?(...) = @auth_state.refresh_rejected?(...)
+
     def subscribe_auth_state_change(...)
       @auth_state.subscribe(...)
     end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'auth_state_notifications'
+
 module Volcano
   # Idempotent handle for an authentication-state subscription.
   class AuthSubscription
@@ -21,14 +23,14 @@ module Volcano
 
   # Owns synchronized local session state and its subscribers.
   class AuthState
-    CALLBACK_FAILURES = [Exception].freeze
-    private_constant :CALLBACK_FAILURES
+    include AuthStateNotifications
 
     def initialize(session: nil)
       @mutex = Mutex.new
       @generation = 0
       @lineage = SessionOperations.new
       @session = session
+      @rejected_refresh = nil
       @callbacks = {}
       @next_callback_id = 0
       @notifications = []
@@ -59,6 +61,22 @@ module Volcano
 
       dispatch_notifications(notifications)
       true
+    end
+
+    def reject_refresh_if_current?(generation, notifications: nil)
+      dispatch = @mutex.synchronize do
+        return false unless generation == @generation && @session
+
+        # Publish rejection and credential removal as one synchronized transition.
+        @rejected_refresh = [generation, @lineage]
+        enqueue_notification(replace(nil, :signed_out), :signed_out, nil)
+      end
+      dispatch_notifications(notifications) if dispatch
+      true
+    end
+
+    def refresh_rejected?(generation, lineage)
+      @mutex.synchronize { @rejected_refresh == [generation, lineage] }
     end
 
     def update_user_if_current?(user, generation)
@@ -92,58 +110,6 @@ module Volcano
       @lineage.clear_local_credentials unless session
       @lineage = SessionOperations.new(verified_pair) if session && event != :token_refreshed
       @callbacks.keys
-    end
-
-    def register(callback)
-      @next_callback_id += 1
-      @callbacks[@next_callback_id] = callback
-      [@next_callback_id, @session]
-    end
-
-    def unsubscribe(callback_id) = @mutex.synchronize { @callbacks.delete(callback_id) }
-
-    def enqueue_notification(callbacks, event, session)
-      return false if event.nil? || callbacks.empty?
-
-      @notifications << [callbacks, event, session]
-      return false if @dispatching_notifications
-
-      @dispatching_notifications = true
-    end
-
-    def drain_notifications
-      failure = nil
-      loop do
-        notification = next_notification
-        break unless notification
-
-        current_failure = notify(*notification)
-        failure ||= current_failure
-      end
-      raise failure if failure
-    end
-
-    def next_notification
-      @mutex.synchronize do
-        if @notifications.empty?
-          @dispatching_notifications = false
-          return
-        end
-        @notifications.shift
-      end
-    end
-
-    def notify(callback_ids, event, session)
-      failure = nil
-      callback_ids.each do |callback_id|
-        @mutex.synchronize { @callbacks[callback_id] }&.call(event, session)
-      rescue StandardError => e
-        Warning.warn("Volcano auth-state callback failed (#{e.class})\n")
-      rescue *CALLBACK_FAILURES => e
-        unsubscribe(callback_id)
-        failure ||= e
-      end
-      failure
     end
   end
 end

@@ -413,6 +413,10 @@ Missing refresh credentials, failed session-continuity checks, server errors, an
 transport failures preserve it, and a late
 response never replaces a newer session. The SDK does not persist sessions.
 
+Concurrent reads share refresh work. If that refresh is rejected, each read
+keeps its original authentication error, including reads that finish while the
+SDK clears the rejected session.
+
 ## Observe auth-state changes
 
 ```ruby

@@ -57,7 +57,7 @@ module VolcanoContract
     end
 
     def run(task)
-      observers = @channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) }
+      observers = build_observers
       @channels.each(&:subscribe)
       %w[INSERT UPDATE].each_with_index { |kind, index| change_and_receive(task, observers, kind, index) }
       observers.each(&:verify_filters)
@@ -67,6 +67,10 @@ module VolcanoContract
     end
 
     private
+
+    def build_observers
+      @channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) }
+    end
 
     def initialize_row(world)
       @row = { 'id' => SecureRandom.uuid, 'value' => 'inserted', 'owner_id' => world.fixture.fetch('user_id') }
@@ -113,7 +117,7 @@ module VolcanoContract
         unless [event.record, event.id, event.mode] == [expected, nil, nil]
           raise 'automatic row lookup did not retain values or clear lightweight fields'
         end
-      elsif event.id != expected.fetch('id') || event.mode != 'lightweight' || !event.record.nil?
+      elsif [event.id, event.mode, event.record] != [expected.fetch('id'), 'lightweight', nil]
         raise 'lightweight notification changed'
       end
     end

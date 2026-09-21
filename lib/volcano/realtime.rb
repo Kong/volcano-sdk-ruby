@@ -34,13 +34,21 @@ module Volcano
     module Immutable
       module_function
 
+      def optional(value)
+        value && call(value)
+      end
+
       def call(value)
         case value
-        when Hash then value.to_h { |key, child| [call(key), call(child)] }.freeze
+        when Hash then call_hash(value)
         when Array then value.map { |child| call(child) }.freeze
         when String then value.dup.freeze
         else value.freeze
         end
+      end
+
+      def call_hash(value)
+        value.to_h { |key, item| [call(key), call(item)] }.freeze
       end
     end
     private_constant :Immutable

@@ -42,10 +42,15 @@ module VolcanoContract
     return category if category
     return 'transport error' unless error.is_a?(Volcano::Error::VolcanoError)
 
-    return 'server error' if (500..599).cover?(error.status)
-
-    STATUS_CATEGORIES.fetch(error.status, 'transport error')
+    classify_status(error.status)
   end
+
+  def self.classify_status(status)
+    return 'server error' if (500..599).cover?(status)
+
+    STATUS_CATEGORIES.fetch(status, 'transport error')
+  end
+  private_class_method :classify_status
 
   def self.redact_error(error, fixture)
     redaction = Volcano.const_get(:Redaction, false)

@@ -114,6 +114,10 @@ module Volcano
       uncertain = error.nil? || error.is_a?(Error::TransportError)
       return @client.clear_session_if_current?(binding.first, lineage: binding[1]) if deletes_current && uncertain
 
+      deletion_binding_current?(binding, error)
+    end
+
+    def deletion_binding_current?(binding, error)
       active = @client.capture_session_binding
       (active.last && active[1] == binding[1]) || (error && rejected_refresh?(binding, active))
     end

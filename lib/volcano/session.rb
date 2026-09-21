@@ -37,14 +37,19 @@ module Volcano
     def self.validate_refresh(current, refreshed)
       return unless current
 
-      expected = session_id(current.access_token)
-      if expected && expected != session_id(refreshed&.access_token)
-        raise Error::AuthenticationError, 'Refreshed credentials belong to a different server session'
-      end
+      validate_refresh_session_id(current, refreshed)
       return unless current.user_id && current.user_id != refreshed&.user_id
 
       raise Error::AuthenticationError, 'Refreshed session belongs to a different user'
     end
+
+    def self.validate_refresh_session_id(current, refreshed)
+      expected = session_id(current.access_token)
+      return unless expected && expected != session_id(refreshed&.access_token)
+
+      raise Error::AuthenticationError, 'Refreshed credentials belong to a different server session'
+    end
+    private_class_method :validate_refresh_session_id
 
     # Untrusted continuity constraint, never authenticated user identity.
     def self.session_id(access_token)

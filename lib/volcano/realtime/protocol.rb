@@ -48,15 +48,20 @@ module Volcano
       def self.subscribe(id:, channel:, recoverable: false, join_leave: false, recovery: nil)
         options = { 'channel' => channel }
         if recovery
-          options.merge!('recover' => true, 'positioned' => true, 'recoverable' => true)
-          options['epoch'] = recovery[:epoch] if recovery.key?(:epoch)
-          options['offset'] = recovery[:offset] if recovery.key?(:offset)
+          add_recovery_options(options, recovery)
         elsif recoverable
           options['recoverable'] = true
         end
         options['join_leave'] = true if join_leave
         { 'id' => id, 'subscribe' => options }
       end
+
+      def self.add_recovery_options(options, recovery)
+        options.merge!('recover' => true, 'positioned' => true, 'recoverable' => true)
+        options['epoch'] = recovery[:epoch] if recovery.key?(:epoch)
+        options['offset'] = recovery[:offset] if recovery.key?(:offset)
+      end
+      private_class_method :add_recovery_options
 
       def self.publish(id:, channel:, data:) = { 'id' => id, 'publish' => { 'channel' => channel, 'data' => data } }
 

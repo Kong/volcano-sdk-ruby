@@ -26,6 +26,11 @@ module Volcano
 
         completed = publication_position(publication, current)
         return unless completed
+
+        advance_publication_position(channel, completed, current)
+      end
+
+      def advance_publication_position(channel, completed, current)
         return mark_unknown_gap(channel) unless same_epoch?(completed, current)
         return if stale_position?(completed, current)
         return mark_unknown_gap(channel) unless next_position?(completed, current)
@@ -57,6 +62,10 @@ module Volcano
         return @position_gaps[channel] = true unless same_epoch?(gap, current)
         return if gap.fetch(:offset) <= current.fetch(:offset)
 
+        store_earliest_gap(channel, gap)
+      end
+
+      def store_earliest_gap(channel, gap)
         existing = @position_gaps[channel]
         return if existing == true
         return if existing && existing.fetch(:offset) <= gap.fetch(:offset)

@@ -51,11 +51,10 @@ module Volcano
       # when the API itself is plaintext, so a resolve response cannot
       # downgrade a credential that is otherwise protected in transit.
       def valid_invoke_url(value, api_url)
-        return nil unless value.is_a?(String) && !value.empty?
+        return nil unless nonempty_url?(value)
 
         uri = URI.parse(value)
-        # URI accepts a port outside the range a connection can use.
-        return nil if uri.host.to_s.empty? || !uri.port.to_i.between?(1, 65_535)
+        return nil unless usable_address?(uri)
 
         usable_scheme?(uri.scheme, api_url) ? value : nil
       rescue URI::InvalidURIError
@@ -107,6 +106,15 @@ module Volcano
 
       private
 
+      def nonempty_url?(value)
+        value.is_a?(String) && !value.empty?
+      end
+
+      def usable_address?(uri)
+        # URI accepts a port outside the range a connection can use.
+        !uri.host.to_s.empty? && uri.port.to_i.between?(1, 65_535)
+      end
+
       def usable_scheme?(scheme, api_url)
         case scheme&.downcase
         when 'https' then true
@@ -120,9 +128,13 @@ module Volcano
           @entries[key] = Entry.new(outcome: outcome, expires_at: now + ttl_seconds)
           next if @entries.size <= MAX_ENTRIES
 
-          @entries.delete_if { |_, entry| entry.expires_at <= now }
-          @entries.delete(@entries.min_by { |_, entry| entry.expires_at }&.first) while @entries.size > MAX_ENTRIES
+          evict_expired_entries
         end
+      end
+
+      def evict_expired_entries
+        @entries.delete_if { |_, entry| entry.expires_at <= now }
+        @entries.delete(@entries.min_by { |_, entry| entry.expires_at }&.first) while @entries.size > MAX_ENTRIES
       end
     end
   end

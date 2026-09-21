@@ -51,11 +51,15 @@ module Volcano
     # `result` is the function's own JSON, so it is frozen all the way down.
     def immutable_value(value)
       case value
-      when Hash then value.to_h { |key, item| [immutable_value(key), immutable_value(item)] }.freeze
+      when Hash then immutable_value_hash(value)
       when Array then value.map { |item| immutable_value(item) }.freeze
       when Time, String then value.dup.freeze
       else value
       end
+    end
+
+    def immutable_value_hash(value)
+      value.to_h { |key, item| [immutable_value(key), immutable_value(item)] }.freeze
     end
   end
 

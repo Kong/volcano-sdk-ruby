@@ -72,8 +72,12 @@ module Volcano
     def valid_user?(payload)
       return false unless payload.is_a?(Hash)
 
-      required_user_fields?(payload) && valid_email_confirmation?(payload) &&
-        valid_metadata?(payload) && valid_optional_strings?(payload) && valid_timestamps?(payload)
+      required_user_fields?(payload) && valid_optional_user_fields?(payload)
+    end
+
+    def valid_optional_user_fields?(payload)
+      valid_email_confirmation?(payload) && valid_metadata?(payload) &&
+        valid_optional_strings?(payload) && valid_timestamps?(payload)
     end
 
     def required_user_fields?(payload)

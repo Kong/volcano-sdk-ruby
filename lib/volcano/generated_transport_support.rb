@@ -10,7 +10,12 @@ module Volcano
       rescue NameError => e
         raise unless e.name == :Generated && e.message.include?('private constant Volcano::Generated')
 
-        klass = Generated.const_get(type)
+        deserialize_private_model(Generated.const_get(type), value)
+      end
+
+      private
+
+      def deserialize_private_model(klass, value)
         if klass.respond_to?(:openapi_any_of) || klass.respond_to?(:openapi_one_of)
           klass.build(value)
         else
@@ -139,10 +144,14 @@ module Volcano
       def plain_value(value)
         value = value.to_hash if value.respond_to?(:to_hash)
         case value
-        when Hash then value.to_h { |key, item| [key.to_s, plain_value(item)] }
+        when Hash then plain_hash(value)
         when Array then value.map { |item| plain_value(item) }
         else value
         end
+      end
+
+      def plain_hash(value)
+        value.to_h { |key, item| [key.to_s, plain_value(item)] }
       end
 
       def deep_symbolize(value)
@@ -163,9 +172,13 @@ module Volcano
       end
 
       def prepare_stream(value)
-        value.open if value.respond_to?(:closed?) && value.closed? && value.respond_to?(:open)
+        reopen_stream(value)
         value.binmode if value.respond_to?(:binmode)
         value.rewind if value.respond_to?(:rewind)
+      end
+
+      def reopen_stream(value)
+        value.open if value.respond_to?(:closed?) && value.closed? && value.respond_to?(:open)
       end
     end
 

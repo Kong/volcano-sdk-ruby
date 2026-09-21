@@ -46,23 +46,37 @@ module Volcano
       session_id = access_token_session_id(session.access_token)
       verified = owner.verified_pair?(session)
       return revoke_access_session(session, session_id, refresh_error, joined: joined) if session_id && !verified
-      return refresh_error if refresh_error && !verified
-      return unless session.refresh_token
 
-      Transport.body(logout_response(session.refresh_token), 204)
-      nil
+      refresh_revocation_error(session, refresh_error, verified: verified)
     rescue Error::VolcanoError => e
       e
     end
 
+    def refresh_revocation_error(session, refresh_error, verified:)
+      return refresh_error if refresh_error && !verified
+
+      revoke_refresh_session(session.refresh_token)
+    end
+
+    def revoke_refresh_session(refresh_token)
+      return unless refresh_token
+
+      Transport.body(logout_response(refresh_token), 204)
+      nil
+    end
+
     def revoke_access_session(session, session_id, refresh_error, joined:)
       error = delete_session_error(session.access_token, session_id)
-      return error unless error&.status == 401 && session.refresh_token
+      return error unless refreshable_revocation?(error, session)
       return refresh_error || error if joined
 
       refreshed = parse_refresh_session(Transport.body(refresh_response(session.refresh_token), 200))
       SessionCredentials.validate_refresh(session, refreshed)
       delete_session_error(refreshed.access_token, session_id)
+    end
+
+    def refreshable_revocation?(error, session)
+      error&.status == 401 && session.refresh_token
     end
   end
 end

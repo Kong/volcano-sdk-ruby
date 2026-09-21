@@ -134,7 +134,7 @@ module Volcano
 
       def evict_expired_entries
         @entries.delete_if { |_, entry| entry.expires_at <= now }
-        @entries.delete(@entries.min_by { |_, entry| entry.expires_at }&.first) while @entries.size > MAX_ENTRIES
+        @entries.delete(@entries.min_by { |_, entry| entry.expires_at }.first) while @entries.size > MAX_ENTRIES
       end
     end
   end

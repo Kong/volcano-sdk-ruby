@@ -9,9 +9,13 @@ module Volcano
       case value
       when String then value.dup.freeze
       when Array then value.map { |item| capture(item) }.freeze
-      when Hash then value.to_h { |key, item| [capture(key), capture(item)] }.freeze
+      when Hash then capture_hash(value)
       else value
       end
+    end
+
+    def capture_hash(value)
+      value.to_h { |key, item| [capture(key), capture(item)] }.freeze
     end
   end
   private_constant :ImmutableQueryValue
@@ -146,11 +150,17 @@ module Volcano
 
     def query_body
       { 'table' => @table }.tap do |body|
+        add_query_selection(body)
+        body['limit'] = @limit unless @limit.nil?
+        body['offset'] = @offset unless @offset.nil?
+      end
+    end
+
+    def add_query_selection(body)
+      body.tap do
         body['select'] = @columns unless @columns.empty? || @columns == ['*']
         body['filters'] = @filters unless @filters.empty?
         body['order'] = @order unless @order.empty?
-        body['limit'] = @limit unless @limit.nil?
-        body['offset'] = @offset unless @offset.nil?
       end
     end
   end

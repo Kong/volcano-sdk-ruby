@@ -30,6 +30,13 @@ RSpec.describe VolcanoContract::World do
 
   def serve_rate_limit_response(server, response_body)
     socket = server.accept
+    consume_request_body(socket)
+    socket.write(rate_limit_http_response(response_body))
+  ensure
+    socket&.close
+  end
+
+  def consume_request_body(socket)
     content_length = 0
     while (line = socket.gets)
       break if line == "\r\n"
@@ -37,9 +44,6 @@ RSpec.describe VolcanoContract::World do
       content_length = line.split(':', 2).last.to_i if line.match?(/\Acontent-length:/i)
     end
     socket.read(content_length) if content_length.positive?
-    socket.write(rate_limit_http_response(response_body))
-  ensure
-    socket&.close
   end
 
   def rate_limit_http_response(response_body)

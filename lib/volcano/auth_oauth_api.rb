@@ -32,15 +32,22 @@ module Volcano
 
     def freeze_oauth_api_data(value)
       case value
-      when Hash
-        value.to_h { |key, item| [freeze_oauth_api_data(key), freeze_oauth_api_data(item)] }.freeze
+      when Hash then freeze_oauth_api_data_hash(value)
       when Array
         value.map { |item| freeze_oauth_api_data(item) }.freeze
       when String
         value.dup.freeze
       else
-        value.frozen? ? value : value.dup.freeze
+        freeze_oauth_api_data_scalar(value)
       end
+    end
+
+    def freeze_oauth_api_data_scalar(value)
+      value.frozen? ? value : value.dup.freeze
+    end
+
+    def freeze_oauth_api_data_hash(value)
+      value.to_h { |key, item| [freeze_oauth_api_data(key), freeze_oauth_api_data(item)] }.freeze
     end
   end
 end

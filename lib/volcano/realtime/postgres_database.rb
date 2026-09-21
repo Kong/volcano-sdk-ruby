@@ -11,7 +11,7 @@ module Volcano
       attr_reader :database_name
 
       def database_name=(name)
-        unless name.nil? || (name.is_a?(String) && DATABASE_NAME.match?(name))
+        unless valid_database_name?(name)
           raise ArgumentError,
                 'database name must match ^[a-z0-9_]+$ and contain at most 64 characters'
         end
@@ -19,6 +19,10 @@ module Volcano
       end
 
       private
+
+      def valid_database_name?(name)
+        name.nil? || (name.is_a?(String) && DATABASE_NAME.match?(name))
+      end
 
       def initialize_postgres_database
         @database_name = nil

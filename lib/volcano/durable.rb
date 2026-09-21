@@ -124,6 +124,10 @@ module Volcano
     def validate_paging(page, limit)
       raise ArgumentError, 'page must be a positive Integer' unless page.nil? || positive_integer?(page)
 
+      validate_page_limit(limit)
+    end
+
+    def validate_page_limit(limit)
       return if limit.nil? || (positive_integer?(limit) && limit <= MAX_PAGE_SIZE)
 
       raise ArgumentError, "limit must be an Integer between 1 and #{MAX_PAGE_SIZE}"

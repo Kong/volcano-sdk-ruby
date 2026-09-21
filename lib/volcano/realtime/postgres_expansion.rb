@@ -7,13 +7,17 @@ module Volcano
       private
 
       def expanded_postgres_changes(requests)
-        return requests.map { |request| local_postgres_change(request.change) } unless requests.first.database_name
+        return local_postgres_changes(requests) unless requests.first.database_name
 
         records = fetch_postgres_records(requests)
         requests.map { |request| expanded_postgres_record(request, records) }
       rescue Error::VolcanoError, KeyError, TypeError => e
         report_postgres_fetch_error(requests.first, e)
         requests.map(&:change)
+      end
+
+      def local_postgres_changes(requests)
+        requests.map { |request| local_postgres_change(request.change) }
       end
 
       def lightweight_delete?(change)

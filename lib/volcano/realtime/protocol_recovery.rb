@@ -59,7 +59,10 @@ module Volcano
         result_position = recovery_position(result['epoch'], result['offset'])
         return [nil, nil] unless result_position
 
-        publications = result.fetch('publications', [])
+        validate_recovery_publications(result.fetch('publications', []), result_position)
+      end
+
+      def validate_recovery_publications(publications, result_position)
         return [nil, nil] unless publications.is_a?(Array)
 
         validated = publications.map { |publication| validated_recovery_publication(publication, result_position) }

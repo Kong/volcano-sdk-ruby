@@ -38,11 +38,15 @@ module Volcano
       payload = response.body.is_a?(Hash) ? response.body : {}
       retry_after = integer_header(response.headers, 'Retry-After') if response.status == 429
       error_type(response.status).new(
-        payload['error'] || payload['message'] || 'Volcano request failed',
+        error_message(payload),
         status: response.status,
         code: payload['code']&.to_s,
         retry_after: retry_after
       )
+    end
+
+    def error_message(payload)
+      payload['error'] || payload['message'] || 'Volcano request failed'
     end
 
     def error_type(status)

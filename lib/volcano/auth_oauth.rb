@@ -77,13 +77,16 @@ module Volcano
       provider = attributes.fetch('provider')
       linked_at = attributes.fetch('linked_at')
       updated_at = attributes.fetch('updated_at')
-      valid = provider.is_a?(String) && !provider.strip.empty? &&
-              linked_at.is_a?(Time) && updated_at.is_a?(Time)
+      valid = valid_linked_oauth_provider?(provider, linked_at, updated_at)
       raise TypeError, 'Expected complete linked OAuth providers' unless valid
 
       LinkedOAuthProvider.new(provider:, linked_at:, updated_at:)
     rescue KeyError
       raise TypeError, 'Expected complete linked OAuth providers'
+    end
+
+    def valid_linked_oauth_provider?(provider, linked_at, updated_at)
+      complete_string?(provider) && linked_at.is_a?(Time) && updated_at.is_a?(Time)
     end
   end
 end

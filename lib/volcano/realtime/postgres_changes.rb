@@ -11,10 +11,10 @@ module Volcano
       )
         super(
           type: Immutable.call(type.to_s), schema: Immutable.call(schema.to_s),
-          table: Immutable.call(table.to_s), record: record && Immutable.call(record),
-          old_record: old_record && Immutable.call(old_record),
-          columns: columns && Immutable.call(columns), timestamp: Immutable.call(timestamp.to_s),
-          id: id && Immutable.call(id), mode: mode && Immutable.call(mode.to_s)
+          table: Immutable.call(table.to_s), record: Immutable.optional(record),
+          old_record: Immutable.optional(old_record),
+          columns: Immutable.optional(columns), timestamp: Immutable.call(timestamp.to_s),
+          id: Immutable.optional(id), mode: mode && Immutable.call(mode.to_s)
         )
       end
     end

@@ -50,14 +50,12 @@ RSpec/DescribeClass:
 # their instance variables belong to the fakes, not to RSpec example state.
 RSpec/InstanceVariable:
   Exclude:
-    - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
 
 # These same fake classes intentionally keep their helper constants scoped to
 # the example group; the files are isolated processes under RSpec.
 RSpec/LeakyConstantDeclaration:
   Exclude:
-    - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
 
@@ -65,11 +63,9 @@ RSpec/LeakyConstantDeclaration:
 RSpec/SpecFilePathFormat:
   Exclude:
     - "spec/volcano/contract_world_spec.rb"
-    - "spec/volcano/facade_spec.rb"
 
 Lint/ConstantDefinitionInBlock:
   Exclude:
-    - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
 

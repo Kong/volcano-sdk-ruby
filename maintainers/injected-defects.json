@@ -4,7 +4,7 @@
     "path": "lib/volcano/client.rb",
     "before": "    def anon_token\n      @anon_key\n",
     "after": "    def anon_token\n      @service_key\n",
-    "spec": "spec/volcano/facade_spec.rb",
+    "spec": "spec/volcano/client_facade_spec.rb",
     "example": "requests delivery without changing the session"
   },
   {
@@ -12,7 +12,7 @@
     "path": "lib/volcano/auth_refresh.rb",
     "before": "        @client.store_session_if_current?(\n          session, binding.first, event: :token_refreshed, notifications: notifications\n        )",
     "after": "        @client.store_session(session)",
-    "spec": "spec/volcano/facade_spec.rb",
+    "spec": "spec/volcano/client_facade_spec.rb",
     "example": "does not replace a session established during refresh"
   },
   {

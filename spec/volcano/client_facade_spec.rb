@@ -1,52 +1,12 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'stringio'
 require 'time'
 
+require 'support/facade_transport'
+require 'support/facade_streams'
+
 RSpec.describe Volcano::Client do
-  CallbackAbort = Exception unless const_defined?(:CallbackAbort)
-  unless const_defined?(:BoundedReadIO)
-    BoundedReadIO = Class.new(StringIO) do
-      attr_reader :read_lengths
-
-      def initialize(value)
-        super
-        @read_lengths = []
-      end
-
-      def read(length = nil, output = nil)
-        raise 'unbounded read' if length.nil?
-
-        @read_lengths << length
-        super
-      end
-    end
-  end
-  unless const_defined?(:BoundedNonSeekableIO)
-    BoundedNonSeekableIO = Class.new do
-      attr_reader :read_lengths
-
-      def initialize(value)
-        @value = value.b
-        @offset = 0
-        @read_lengths = []
-      end
-
-      def read(length = nil)
-        raise 'unbounded read' if length.nil?
-
-        @read_lengths << length
-        return if @offset >= @value.bytesize
-
-        chunk = @value.byteslice(@offset, length)
-        @offset += chunk.bytesize
-        chunk
-      end
-    end
-  end
-  Response = Data.define(:status, :body, :headers, :data) unless const_defined?(:Response)
-
   def access_token_with_session_id(session_id)
     payload = [JSON.generate(session_id: session_id)].pack('m0').tr('+/', '-_').delete('=')
     "header.#{payload}.signature"
@@ -58,672 +18,7 @@ RSpec.describe Volcano::Client do
     "header.#{payload}.signature"
   end
 
-  module FakeUserTransport
-    attr_accessor :on_get_user, :on_update_user, :update_user_response, :user_response
-
-    def auth_get_user(**arguments)
-      @calls << [:auth_get_user, arguments]
-      @user_response.tap { @on_get_user&.call }
-    end
-
-    def auth_update_user(**arguments)
-      @calls << [:auth_update_user, arguments]
-      @update_user_response.tap { @on_update_user&.call }
-    end
-  end
-
-  module FakePasswordRecoveryTransport
-    attr_accessor :forgot_password_response, :reset_password_response
-
-    def initialize_password_recovery_response
-      @forgot_password_response = Response.new(
-        status: 200,
-        body: { 'message' => 'If the email exists, a password reset link has been sent.' },
-        headers: {},
-        data: nil
-      )
-      @reset_password_response = Response.new(
-        status: 200,
-        body: { 'message' => 'Password reset successful. Please sign in again.' },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def auth_forgot_password(**arguments)
-      @calls << [:auth_forgot_password, arguments]
-      @forgot_password_response
-    end
-
-    def auth_reset_password(**arguments)
-      @calls << [:auth_reset_password, arguments]
-      @reset_password_response
-    end
-  end
-
-  module FakeEmailConfirmationTransport
-    attr_accessor :confirm_email_response, :resend_confirmation_response
-
-    def initialize_email_confirmation_response
-      @confirm_email_response = Response.new(
-        status: 200, body: { 'message' => 'Email confirmed successfully' }, headers: {}, data: nil
-      )
-      @resend_confirmation_response = Response.new(
-        status: 200, body: { 'message' => 'If eligible, a confirmation email has been sent.' },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_confirm_email(**arguments)
-      @calls << [:auth_confirm_email, arguments]
-      @confirm_email_response
-    end
-
-    def auth_resend_confirmation(**arguments)
-      @calls << [:auth_resend_confirmation, arguments]
-      @resend_confirmation_response
-    end
-  end
-
-  module FakeCallLog
-    def calls_for(name)
-      calls.select { |call| call.first == name }
-    end
-  end
-
-  module FakeEmailChangeTransport
-    attr_accessor :cancel_email_change_response, :email_change_response,
-                  :confirm_email_change_response, :on_cancel_email_change,
-                  :on_confirm_email_change, :on_email_change
-
-    def initialize_email_change_response
-      @email_change_response = Response.new(
-        status: 200,
-        body: { 'message' => 'Confirmation email sent', 'new_email' => 'new@example.com' },
-        headers: {}, data: nil
-      )
-      @cancel_email_change_response = Response.new(status: 200, body: {}, headers: {}, data: nil)
-      @confirm_email_change_response = Response.new(
-        status: 200,
-        body: {
-          'user' => { 'id' => 'user-123', 'email' => 'new@example.com', 'status' => 'active' }
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_request_email_change(**arguments)
-      @calls << [:auth_request_email_change, arguments]
-      @on_email_change&.call
-      @email_change_response
-    end
-
-    def auth_cancel_email_change(**arguments)
-      @calls << [:auth_cancel_email_change, arguments]
-      @on_cancel_email_change&.call
-      @cancel_email_change_response
-    end
-
-    def auth_confirm_email_change(**arguments)
-      @calls << [:auth_confirm_email_change, arguments]
-      @on_confirm_email_change&.call
-      @confirm_email_change_response
-    end
-  end
-
-  module FakeSessionTransport
-    attr_accessor :delete_session_response, :list_sessions_response, :on_delete_other_sessions,
-                  :on_delete_session, :on_list_sessions
-
-    def auth_get_my_sessions(**arguments)
-      @calls << [:auth_get_my_sessions, arguments]
-      @on_list_sessions&.call
-      @list_sessions_response || Response.new(
-        status: 200,
-        body: {
-          'sessions' => [
-            {
-              'id' => '00000000-0000-4000-8000-000000000099',
-              'user_id' => '00000000-0000-4000-8000-000000000010',
-              'provider' => 'email',
-              'user_agent' => 'Volcano Test',
-              'ip_address' => '192.0.2.10',
-              'last_ip_address' => '192.0.2.11',
-              'expires_at' => Time.iso8601('2026-09-02T12:00:00Z'),
-              'last_activity_at' => Time.iso8601('2026-09-01T12:00:00Z'),
-              'session_started_at' => Time.iso8601('2026-08-31T12:00:00Z'),
-              'is_active' => true,
-              'is_current' => true,
-              'created_at' => Time.iso8601('2026-08-31T12:00:00Z'),
-              'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
-            }
-          ],
-          'total' => 21,
-          'page' => 2,
-          'limit' => 10,
-          'total_pages' => 3
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def auth_delete_all_my_sessions(**arguments)
-      @calls << [:auth_delete_all_my_sessions, arguments]
-      @on_delete_other_sessions&.call
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-
-    def auth_delete_my_session(**arguments)
-      @calls << [:auth_delete_my_session, arguments]
-      @on_delete_session&.call
-      @delete_session_response || Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-  end
-
-  FakeEmailChangeTransport.include(FakeSessionTransport)
-
-  module FakeOAuthTransport
-    attr_accessor :link_oauth_provider_response, :list_oauth_providers_response,
-                  :call_oauth_api_response,
-                  :on_link_oauth_provider, :on_list_oauth_providers,
-                  :on_call_oauth_api,
-                  :oauth_provider_token_status_response,
-                  :on_oauth_exchange, :on_oauth_provider_token_status,
-                  :on_refresh_oauth_provider_token,
-                  :on_unlink_oauth_provider, :refresh_oauth_provider_token_response
-
-    def auth_oauth_authorization_url(**arguments)
-      @calls << [:auth_oauth_authorization_url, arguments]
-      'https://api.test.volcano.dev/auth/oauth/github/authorize?anon_key=anon-key'
-    end
-
-    def auth_oauth_exchange(**arguments)
-      @calls << [:auth_oauth_exchange, arguments]
-      @on_oauth_exchange&.call
-      Response.new(
-        status: 200,
-        body: {
-          'access_token' => 'oauth-access', 'refresh_token' => 'oauth-refresh',
-          'user' => { 'id' => 'oauth-user' }
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_list_oauth_providers(**arguments)
-      @calls << [:auth_list_oauth_providers, arguments]
-      @on_list_oauth_providers&.call
-      @list_oauth_providers_response || Response.new(
-        status: 200,
-        body: {
-          'providers' => [
-            {
-              'provider' => 'google',
-              'linked_at' => Time.iso8601('2026-08-30T12:00:00Z'),
-              'updated_at' => Time.iso8601('2026-09-01T12:00:00Z')
-            }
-          ]
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_link_oauth_provider(**arguments)
-      @calls << [:auth_link_oauth_provider, arguments]
-      @on_link_oauth_provider&.call
-      @link_oauth_provider_response || Response.new(
-        status: 200,
-        body: { 'authorization_url' => 'https://accounts.example/link' },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_unlink_oauth_provider(**arguments)
-      @calls << [:auth_unlink_oauth_provider, arguments]
-      @on_unlink_oauth_provider&.call
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-
-    def auth_get_oauth_provider_token(**arguments)
-      @calls << [:auth_get_oauth_provider_token, arguments]
-      @on_oauth_provider_token_status&.call
-      @oauth_provider_token_status_response || Response.new(
-        status: 200,
-        body: {
-          'message' => 'Provider token is valid',
-          'provider' => 'google',
-          'expires_in' => 3600
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_refresh_oauth_provider_token(**arguments)
-      @calls << [:auth_refresh_oauth_provider_token, arguments]
-      @on_refresh_oauth_provider_token&.call
-      @refresh_oauth_provider_token_response || Response.new(
-        status: 200,
-        body: {
-          'message' => 'Provider token refreshed successfully',
-          'provider' => 'google',
-          'expires_in' => 3600
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_call_oauth_api(**arguments)
-      @calls << [:auth_call_oauth_api, arguments]
-      @on_call_oauth_api&.call
-      @call_oauth_api_response || Response.new(
-        status: 200,
-        body: {
-          'provider' => 'github',
-          'endpoint' => '/user/repos',
-          'status_code' => 200,
-          'data' => [{ 'name' => 'volcano' }]
-        },
-        headers: {}, data: nil
-      )
-    end
-  end
-
-  FakeEmailChangeTransport.include(FakeOAuthTransport)
-
-  module FakeAnonymousTransport
-    attr_accessor :anonymous_conversion_response, :anonymous_signin_response,
-                  :on_anonymous_conversion, :on_anonymous_signin
-
-    def initialize_anonymous_signin_response
-      @anonymous_signin_response = Response.new(
-        status: 201,
-        body: {
-          'access_token' => 'anonymous-access',
-          'refresh_token' => 'anonymous-refresh',
-          'user' => { 'id' => 'anonymous-user' }
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def initialize_auth_responses
-      initialize_password_recovery_response
-      initialize_email_confirmation_response
-      initialize_anonymous_signin_response
-      initialize_email_change_response
-      @anonymous_conversion_response = Response.new(
-        status: 200,
-        body: {
-          'user' => {
-            'id' => 'anonymous-user', 'email' => 'converted@example.com',
-            'status' => 'active', 'email_confirmed' => false
-          }
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def auth_signup_anonymous(**arguments)
-      @calls << [:auth_signup_anonymous, arguments]
-      @on_anonymous_signin&.call
-      @anonymous_signin_response
-    end
-
-    def auth_convert_anonymous(**arguments)
-      @calls << [:auth_convert_anonymous, arguments]
-      @on_anonymous_conversion&.call
-      @anonymous_conversion_response
-    end
-  end
-
-  # Implements the database operations used by the facade test transport.
-  module FakeDatabaseTransport
-    def query_database_select(**arguments)
-      @calls << [:query_database_select, arguments]
-      Response.new(status: 200, body: { 'data' => [{ 'slug' => 'a' }] }, headers: {}, data: nil)
-    end
-
-    def query_database_insert(**arguments)
-      @calls << [:query_database_insert, arguments]
-      values = arguments.fetch(:body).fetch('values')
-      Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
-    end
-
-    def query_database_update(**arguments)
-      @calls << [:query_database_update, arguments]
-      values = arguments.fetch(:body).fetch('values')
-      Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
-    end
-
-    def query_database_delete(**arguments)
-      @calls << [:query_database_delete, arguments]
-      Response.new(status: 200, body: { 'data' => [{ 'id' => 'item-1' }] }, headers: {}, data: nil)
-    end
-  end
-
-  # Implements the storage operations used by the facade test transport.
-  module FakeStorageTransport
-    def upload_storage_object(**arguments)
-      @calls << [:upload_storage_object, arguments]
-      Response.new(status: 201, body: { 'name' => 'a.txt', 'size' => 5 }, headers: {}, data: nil)
-    end
-
-    def download_storage_object(**arguments)
-      @calls << [:download_storage_object, arguments]
-      status = arguments[:byte_range] ? @range_download_status : 200
-      Response.new(status: status, body: nil, headers: {}, data: "hello\x00".b)
-    end
-
-    def list_storage_objects(**arguments)
-      @calls << [:list_storage_objects, arguments]
-      Response.new(status: 200, body: storage_page_body, headers: {}, data: nil)
-    end
-
-    def delete_storage_object(**arguments)
-      @calls << [:delete_storage_object, arguments]
-      Response.new(status: 200, body: nil, headers: {}, data: nil)
-    end
-
-    def move_storage_object(**arguments)
-      @calls << [:move_storage_object, arguments]
-      Response.new(
-        status: 200,
-        body: {
-          'id' => '00000000-0000-4000-8000-000000000020',
-          'bucket_id' => '00000000-0000-4000-8000-000000000030',
-          'name' => arguments.fetch(:to_path),
-          'size' => 5,
-          'mime_type' => 'text/plain',
-          'is_public' => false
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def copy_storage_object(**arguments)
-      @calls << [:copy_storage_object, arguments]
-      Response.new(
-        status: 201,
-        body: {
-          'id' => '00000000-0000-4000-8000-000000000021',
-          'bucket_id' => '00000000-0000-4000-8000-000000000030',
-          'name' => arguments.fetch(:to_path),
-          'size' => 5,
-          'mime_type' => 'text/plain',
-          'is_public' => false
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def update_storage_object_visibility(**arguments)
-      @calls << [:update_storage_object_visibility, arguments]
-      Response.new(
-        status: 200,
-        body: {
-          'id' => '00000000-0000-4000-8000-000000000020',
-          'bucket_id' => '00000000-0000-4000-8000-000000000030',
-          'name' => arguments.fetch(:path),
-          'size' => 5,
-          'mime_type' => 'image/png',
-          'is_public' => arguments.fetch(:is_public),
-          'public_url' => if arguments.fetch(:is_public)
-                            'https://api.test.volcano.dev/public/project/assets/avatars/a.png'
-                          end
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    private
-
-    def storage_page_body
-      {
-        'objects' => [
-          {
-            'id' => '00000000-0000-4000-8000-000000000020',
-            'bucket_id' => '00000000-0000-4000-8000-000000000030',
-            'name' => 'avatars/a.png',
-            'size' => 5,
-            'mime_type' => 'image/png',
-            'is_public' => false,
-            'owner_id' => '00000000-0000-4000-8000-000000000010',
-            'etag' => 'etag-1',
-            'metadata' => { 'width' => 32, 'labels' => ['profile'] },
-            'created_at' => '2026-08-26T12:00:00Z',
-            'updated_at' => '2026-08-26T12:01:00Z'
-          }
-        ],
-        'next_cursor' => 'cursor-2'
-      }
-    end
-  end
-
-  # Implements resumable storage session creation for the facade test transport.
-  module FakeUploadSessionTransport
-    attr_accessor :fail_abort_upload, :fail_upload_part_number,
-                  :upload_session_part_size, :upload_session_total_parts
-
-    def create_upload_session(**arguments)
-      @calls << [:create_upload_session, arguments]
-      body = {
-        'session_id' => 'session-123',
-        'part_size' => upload_session_part_size || 8_388_608,
-        'total_parts' => upload_session_total_parts || 3,
-        'expires_at' => '2026-09-09T12:00:00Z'
-      }
-      Response.new(status: 201, body: body, headers: {}, data: nil)
-    end
-
-    def upload_part(**arguments)
-      @calls << [:upload_part, arguments]
-      request = arguments.fetch(:request)
-      if request.part_number == fail_upload_part_number
-        return Response.new(
-          status: 500, body: { 'error' => 'part upload failed' }, headers: {}, data: nil
-        )
-      end
-      body = {
-        'part_number' => request.part_number,
-        'etag' => 'etag-part-1',
-        'size' => request.data.bytesize
-      }
-      Response.new(status: 200, body: body, headers: {}, data: nil)
-    end
-
-    def complete_upload_session(**arguments)
-      @calls << [:complete_upload_session, arguments]
-      request = arguments.fetch(:request)
-      object = {
-        'id' => '00000000-0000-4000-8000-000000000020',
-        'bucket_id' => '00000000-0000-4000-8000-000000000030',
-        'name' => request.path,
-        'size' => 20_000_000,
-        'mime_type' => 'video/mp4',
-        'is_public' => false,
-        'etag' => 'etag-complete'
-      }
-      Response.new(status: 200, body: { 'object' => object }, headers: {}, data: nil)
-    end
-
-    def get_upload_session(**arguments)
-      @calls << [:get_upload_session, arguments]
-      request = arguments.fetch(:request)
-      body = {
-        'session_id' => request.session_id,
-        'status' => 'uploading',
-        'path' => request.path,
-        'content_type' => 'video/mp4',
-        'total_size' => 20_000_000,
-        'part_size' => 8_388_608,
-        'total_parts' => 3,
-        'parts_uploaded' => 1,
-        'bytes_uploaded' => 8_388_608,
-        'parts' => [{ 'part_number' => 1, 'etag' => 'etag-part-1', 'size' => 8_388_608 }],
-        'expires_at' => '2026-09-09T12:00:00Z',
-        'created_at' => '2026-09-02T12:00:00Z'
-      }
-      Response.new(status: 200, body: body, headers: {}, data: nil)
-    end
-
-    def abort_upload_session(**arguments)
-      @calls << [:abort_upload_session, arguments]
-      return failed_abort_response if fail_abort_upload
-
-      Response.new(
-        status: 200, body: { 'message' => 'upload session aborted' }, headers: {}, data: nil
-      )
-    end
-
-    private
-
-    def failed_abort_response
-      Response.new(status: 500, body: { 'error' => 'abort failed' }, headers: {}, data: nil)
-    end
-  end
-
-  module FakeLockTransport
-    def acquire_project_lock(**arguments)
-      @calls << [:acquire_project_lock, arguments]
-      Response.new(
-        status: 201,
-        body: { 'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7 },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def release_project_lock(**arguments)
-      @calls << [:release_project_lock, arguments]
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-
-    def get_project_lock(**arguments)
-      @calls << [:get_project_lock, arguments]
-      Response.new(
-        status: 200,
-        body: {
-          'held' => true,
-          'expires_at' => '2026-08-26T12:00:30Z',
-          'fencing_token' => 7
-        },
-        headers: {}, data: nil
-      )
-    end
-
-    def renew_project_lock(**arguments)
-      @calls << [:renew_project_lock, arguments]
-      Response.new(
-        status: 200,
-        body: { 'expires_at' => '2026-08-26T12:01:00Z', 'fencing_token' => 7 },
-        headers: {}, data: nil
-      )
-    end
-
-    def force_release_project_lock(**arguments)
-      @calls << [:force_release_project_lock, arguments]
-      Response.new(status: 204, body: nil, headers: {}, data: nil)
-    end
-  end
-
-  class FakeContractTransport
-    include FakeDatabaseTransport
-    include FakeLockTransport
-    include FakeStorageTransport
-    include FakeUploadSessionTransport
-
-    include FakeCallLog
-    include FakeEmailChangeTransport
-    include FakeAnonymousTransport
-    include FakeEmailConfirmationTransport
-    include FakePasswordRecoveryTransport
-    include FakeUserTransport
-
-    attr_reader :calls
-    attr_accessor :access_token, :logout_response, :on_logout, :on_refresh, :on_signin, :range_download_status,
-                  :refresh_response, :signup_response, :on_signup
-
-    def initialize
-      @access_token = 'access-token'
-      @range_download_status = 206
-      @signup_response = Response.new(
-        status: 201,
-        body: {
-          'confirmation_required' => true,
-          'message' => 'Check your email to confirm your account'
-        },
-        headers: {},
-        data: nil
-      )
-      initialize_auth_responses
-      @user_response = Response.new(
-        status: 200,
-        body: {
-          'user' => {
-            'id' => 'user-123',
-            'email' => 'user@example.com',
-            'status' => 'active',
-            'email_confirmed' => true,
-            'user_metadata' => { 'display_name' => 'Ada', 'roles' => ['admin'] }
-          }
-        },
-        headers: {},
-        data: nil
-      )
-      @update_user_response = @user_response
-      @refresh_response = Response.new(
-        status: 200,
-        body: {
-          'access_token' => 'access-2',
-          'refresh_token' => 'refresh-2',
-          'user' => { 'id' => 'user-123' }
-        },
-        headers: {},
-        data: nil
-      )
-      @logout_response = Response.new(status: 204, body: nil, headers: {}, data: nil)
-      @calls = []
-    end
-
-    def auth_logout(**arguments)
-      @calls << [:auth_logout, arguments]
-      @logout_response.tap { @on_logout&.call }
-    end
-
-    def auth_refresh(**arguments)
-      @calls << [:auth_refresh, arguments]
-      @on_refresh&.call
-      @refresh_response
-    end
-
-    def auth_signin(**arguments)
-      @calls << [:auth_signin, arguments]
-      @on_signin&.call
-      Response.new(
-        status: 200,
-        body: {
-          'access_token' => access_token,
-          'refresh_token' => 'refresh-token',
-          'user' => { 'id' => 'user-123' }
-        },
-        headers: {},
-        data: nil
-      )
-    end
-
-    def auth_signup(**arguments)
-      @calls << [:auth_signup, arguments]
-      @on_signup&.call
-      @signup_response
-    end
-  end
-
-  let(:transport) { FakeContractTransport.new }
+  let(:transport) { SpecSupport::Facade::FakeContractTransport.new }
   let(:client) do
     described_class.new(
       api_url: 'https://api.test.volcano.dev',
@@ -924,9 +219,9 @@ RSpec.describe Volcano::Client do
     expect do
       client.auth.on_auth_state_change do |event, _session|
         received << event
-        raise CallbackAbort
+        raise SpecSupport::Facade::CallbackAbort
       end
-    end.to raise_error(CallbackAbort)
+    end.to raise_error(SpecSupport::Facade::CallbackAbort)
 
     client.auth.on_auth_state_change { |event, _session| observed << event }
     expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.not_to raise_error
@@ -943,13 +238,13 @@ RSpec.describe Volcano::Client do
 
       entered << true
       release.pop
-      raise CallbackAbort
+      raise SpecSupport::Facade::CallbackAbort
     end
     client.auth.on_auth_state_change { |event, _session| received << event }
     received.clear
     sign_out = Thread.new { entered.pop.then { client.auth.sign_out }.then { release << true } }
 
-    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(CallbackAbort)
+    expect { client.auth.sign_in(email: 'user@example.com', password: 'secret') }.to raise_error(SpecSupport::Facade::CallbackAbort)
     sign_out.value
     expect(received).to eq(%i[signed_in signed_out])
   end
@@ -957,7 +252,7 @@ RSpec.describe Volcano::Client do
   describe '#sign_up' do
     [true, false].product([true, false]).each do |confirmation_required, sign_in_when_allowed|
       it "applies sign-in opt-in #{sign_in_when_allowed} with confirmation requirement #{confirmation_required}" do
-        transport.signup_response = Response.new(
+        transport.signup_response = Volcano::Transport::Response.new(
           status: 201, body: { 'confirmation_required' => confirmation_required, 'message' => 'Accepted' },
           headers: {}, data: nil
         )
@@ -975,7 +270,7 @@ RSpec.describe Volcano::Client do
     %i[on_signup on_signin].each do |stage|
       it "preserves a session replaced during #{stage}" do
         replacement = Volcano::Session.new(access_token: 'replacement', refresh_token: 'refresh', user_id: 'other')
-        transport.signup_response = Response.new(
+        transport.signup_response = Volcano::Transport::Response.new(
           status: 201, body: { 'confirmation_required' => false, 'message' => 'Accepted' }, headers: {}, data: nil
         )
         transport.public_send(:"#{stage}=", -> { client.auth.current_session = replacement })
@@ -989,7 +284,7 @@ RSpec.describe Volcano::Client do
 
     it 'surfaces follow-up sign-in failures without replacing the session' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.signup_response = Response.new(
+      transport.signup_response = Volcano::Transport::Response.new(
         status: 201, body: { 'confirmation_required' => false, 'message' => 'Accepted' }, headers: {}, data: nil
       )
       transport.on_signin = -> { raise Volcano::Error::AuthenticationError, 'Sign-in rejected' }
@@ -1034,7 +329,7 @@ RSpec.describe Volcano::Client do
 
     it 'raises a typed error without changing the session' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.signup_response = Response.new(
+      transport.signup_response = Volcano::Transport::Response.new(
         status: 403, body: { 'error' => 'Signups are disabled' }, headers: {}, data: nil
       )
 
@@ -1046,7 +341,7 @@ RSpec.describe Volcano::Client do
     end
 
     it 'rejects a malformed acknowledgement' do
-      transport.signup_response = Response.new(
+      transport.signup_response = Volcano::Transport::Response.new(
         status: 201,
         body: { 'confirmation_required' => 'yes', 'message' => 'Created' },
         headers: {},
@@ -1091,7 +386,7 @@ RSpec.describe Volcano::Client do
 
     it 'preserves the current session when anonymous sign-ins are disabled' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.anonymous_signin_response = Response.new(
+      transport.anonymous_signin_response = Volcano::Transport::Response.new(
         status: 403, body: { 'error' => 'Anonymous sign-ins are disabled' }, headers: {}, data: nil
       )
 
@@ -1169,7 +464,7 @@ RSpec.describe Volcano::Client do
 
     it 'accepts an acknowledgement without optional fields' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.email_change_response = Response.new(status: 200, body: {}, headers: {}, data: nil)
+      transport.email_change_response = Volcano::Transport::Response.new(status: 200, body: {}, headers: {}, data: nil)
 
       result = client.auth.request_email_change(new_email: 'new@example.com')
 
@@ -1178,7 +473,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects a non-object acknowledgement' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.email_change_response = Response.new(status: 200, body: [], headers: {}, data: nil)
+      transport.email_change_response = Volcano::Transport::Response.new(status: 200, body: [], headers: {}, data: nil)
 
       expect do
         client.auth.request_email_change(new_email: 'new@example.com')
@@ -1263,7 +558,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects a missing user' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.confirm_email_change_response = Response.new(
+      transport.confirm_email_change_response = Volcano::Transport::Response.new(
         status: 200, body: {}, headers: {}, data: nil
       )
 
@@ -1385,7 +680,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects an incomplete provider' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.list_oauth_providers_response = Response.new(
+      transport.list_oauth_providers_response = Volcano::Transport::Response.new(
         status: 200, body: { 'providers' => [{ 'provider' => 'google' }] },
         headers: {}, data: nil
       )
@@ -1601,7 +896,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects an incomplete response' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.link_oauth_provider_response = Response.new(
+      transport.link_oauth_provider_response = Volcano::Transport::Response.new(
         status: 200, body: {}, headers: {}, data: nil
       )
 
@@ -1696,7 +991,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects incomplete token metadata' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.oauth_provider_token_status_response = Response.new(
+      transport.oauth_provider_token_status_response = Volcano::Transport::Response.new(
         status: 200, body: { 'provider' => 'google', 'expires_in' => 3600 },
         headers: {}, data: nil
       )
@@ -1707,7 +1002,7 @@ RSpec.describe Volcano::Client do
 
     it 'accepts a future provider name returned by the server' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.oauth_provider_token_status_response = Response.new(
+      transport.oauth_provider_token_status_response = Volcano::Transport::Response.new(
         status: 200,
         body: {
           'message' => 'Provider token is valid',
@@ -1927,7 +1222,7 @@ RSpec.describe Volcano::Client do
       )
       client.auth.current_session = current
       stored = client.auth.current_session
-      transport.delete_session_response = Response.new(
+      transport.delete_session_response = Volcano::Transport::Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
       )
 
@@ -1952,7 +1247,7 @@ RSpec.describe Volcano::Client do
 
     it 'raises a typed error without changing the session' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.forgot_password_response = Response.new(
+      transport.forgot_password_response = Volcano::Transport::Response.new(
         status: 403, body: { 'error' => 'Password reset disabled' }, headers: {}, data: nil
       )
 
@@ -1963,7 +1258,7 @@ RSpec.describe Volcano::Client do
     end
 
     it 'accepts an acknowledgement without the optional message' do
-      transport.forgot_password_response = Response.new(
+      transport.forgot_password_response = Volcano::Transport::Response.new(
         status: 200, body: {}, headers: {}, data: nil
       )
 
@@ -1986,7 +1281,7 @@ RSpec.describe Volcano::Client do
 
     it 'raises a typed error without changing the session' do
       established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
-      transport.reset_password_response = Response.new(
+      transport.reset_password_response = Volcano::Transport::Response.new(
         status: 401, body: nil, headers: {}, data: nil
       )
 
@@ -2012,7 +1307,7 @@ RSpec.describe Volcano::Client do
 
     it 'raises a typed error without changing the session' do
       established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
-      transport.confirm_email_response = Response.new(
+      transport.confirm_email_response = Volcano::Transport::Response.new(
         status: 401, body: nil, headers: {}, data: nil
       )
 
@@ -2038,7 +1333,7 @@ RSpec.describe Volcano::Client do
 
     it 'preserves rate-limit metadata without changing the session' do
       established = client.auth.sign_in(email: 'other@example.com', password: 'secret')
-      transport.resend_confirmation_response = Response.new(
+      transport.resend_confirmation_response = Volcano::Transport::Response.new(
         status: 429, body: { 'error' => 'Too many requests' },
         headers: { 'Retry-After' => '17' }, data: nil
       )
@@ -2127,7 +1422,7 @@ RSpec.describe Volcano::Client do
 
     it 'preserves the refreshed session after an authentication failure' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.user_response = Response.new(
+      transport.user_response = Volcano::Transport::Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
       )
 
@@ -2139,7 +1434,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects a malformed successful profile' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.user_response = Response.new(
+      transport.user_response = Volcano::Transport::Response.new(
         status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => nil } }, headers: {}, data: nil
       )
 
@@ -2183,7 +1478,7 @@ RSpec.describe Volcano::Client do
 
     it 'rejects a malformed successful envelope with a typed error' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.user_response = Response.new(status: 200, body: nil, headers: {}, data: nil)
+      transport.user_response = Volcano::Transport::Response.new(status: 200, body: nil, headers: {}, data: nil)
 
       expect { client.auth.user }.to raise_error(
         Volcano::Error::AuthenticationError,
@@ -2235,7 +1530,7 @@ RSpec.describe Volcano::Client do
 
     it 'preserves the refreshed session after an authentication failure' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.update_user_response = Response.new(
+      transport.update_user_response = Volcano::Transport::Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
       )
 
@@ -2371,7 +1666,7 @@ RSpec.describe Volcano::Client do
 
     it 'clears the captured session after a 401' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.refresh_response = Response.new(
+      transport.refresh_response = Volcano::Transport::Response.new(
         status: 401, body: { 'error' => 'expired' }, headers: {}, data: nil
       )
 
@@ -2384,7 +1679,7 @@ RSpec.describe Volcano::Client do
 
     it 'preserves the captured session after a 503' do
       established = client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.refresh_response = Response.new(
+      transport.refresh_response = Volcano::Transport::Response.new(
         status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
       )
 
@@ -2420,7 +1715,7 @@ RSpec.describe Volcano::Client do
 
     it 'clears locally and raises after a 503' do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
-      transport.logout_response = Response.new(
+      transport.logout_response = Volcano::Transport::Response.new(
         status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
       )
 
@@ -2441,7 +1736,7 @@ RSpec.describe Volcano::Client do
       client.auth.sign_in(email: 'user@example.com', password: 'secret')
       revocation_error = nil
       transport.on_logout = -> { client.auth.current_session = supplied_session }
-      transport.logout_response = Response.new(
+      transport.logout_response = Volcano::Transport::Response.new(
         status: 503, body: { 'error' => 'unavailable' }, headers: {}, data: nil
       )
 
@@ -2746,7 +2041,7 @@ RSpec.describe Volcano::Client do
     transport.upload_session_part_size = 4
     transport.upload_session_total_parts = 3
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
-    source = BoundedReadIO.new('abcdefghij')
+    source = SpecSupport::Facade::BoundedReadIO.new('abcdefghij')
 
     client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
 
@@ -2759,7 +2054,7 @@ RSpec.describe Volcano::Client do
     transport.upload_session_part_size = 4
     transport.upload_session_total_parts = 3
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
-    source = BoundedNonSeekableIO.new('abcdefghij')
+    source = SpecSupport::Facade::BoundedNonSeekableIO.new('abcdefghij')
 
     client.storage.from('assets').upload_resumable('videos/demo.mp4', source)
 
@@ -2854,7 +2149,7 @@ RSpec.describe Volcano::Client do
   it 'normalizes an empty terminal storage cursor to nil' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     transport.define_singleton_method(:list_storage_objects) do |**_arguments|
-      Response.new(
+      Volcano::Transport::Response.new(
         status: 200,
         body: { 'objects' => [], 'next_cursor' => '' },
         headers: {},

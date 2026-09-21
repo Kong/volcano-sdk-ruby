@@ -1,4 +1,7 @@
-# Installed-package acceptance tests
+---
+title: Installed-package acceptance tests
+description: Build and publish the locked consumer project used by Hosting.
+---
 
 Run `bash scripts/build-acceptance.sh <package-file> <output-directory>` after
 building the SDK. The command creates a standalone consumer, installs the exact

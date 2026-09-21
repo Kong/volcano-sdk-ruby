@@ -141,12 +141,13 @@ jobs:
             mkdir previous
             gh release download "$RELEASE_TAG" --pattern sdk-acceptance.tar.gz --dir previous
             gh attestation verify previous/sdk-acceptance.tar.gz --repo "$GH_REPO" --signer-workflow "$GH_REPO/.github/workflows/publish.yml" --source-ref "refs/tags/$RELEASE_TAG" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
-            # A retry may regenerate dependency locks, but must test identical SDK bytes.
+            # Keep the authenticated original when a retry rebuilds the same SDK.
             tar -xOf previous/sdk-acceptance.tar.gz ./acceptance.json | jq -S . > previous.json
             tar -xOf release/sdk-acceptance.tar.gz ./acceptance.json | jq -S . > current.json
             cmp previous.json current.json
+            exit 0
           fi
-          gh release upload "$RELEASE_TAG" release/sdk-acceptance.tar.gz --clobber
+          gh release upload "$RELEASE_TAG" release/sdk-acceptance.tar.gz
 
   prepare:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'

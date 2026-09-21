@@ -42,9 +42,7 @@ RSpec/MultipleExpectations:
 # constants are resolved dynamically and cannot be recognized by this cop.
 RSpec/DescribeClass:
   Exclude:
-    - "spec/contract_structure_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
 
 # These files define stateful transport/socket fakes inside their example groups;
 # their instance variables belong to the fakes, not to RSpec example state.
@@ -57,17 +55,14 @@ RSpec/InstanceVariable:
 RSpec/LeakyConstantDeclaration:
   Exclude:
     - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
 
 # Cross-cutting contract/facade specs intentionally cover more than one class.
 RSpec/SpecFilePathFormat:
   Exclude:
-    - "spec/volcano/contract_world_spec.rb"
 
 Lint/ConstantDefinitionInBlock:
   Exclude:
     - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
 
 Style/Documentation:
   Enabled: true

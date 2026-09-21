@@ -2,532 +2,27 @@
 
 require 'spec_helper'
 require 'tempfile'
+require_relative '../support/generated_api'
 
-RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
-  unless const_defined?(:GeneratedApis)
-    GeneratedApis = Data.define(
-      :authentication, :oauth, :database, :storage, :locks, :functions, :logs, :durable
-    )
-  end
-  InternalGenerated = Volcano.const_get(:Generated, false) unless const_defined?(:InternalGenerated)
-
-  class FakeGeneratedModel
-    def initialize(value)
-      @value = value
-    end
-
-    def to_hash
-      @value
-    end
+RSpec.describe Volcano::Client do
+  def transport_class
+    Volcano.const_get(:GeneratedTransport, false)
   end
 
-  # Records what the transport passes the generated durable client, which is the
-  # only place the header, the UUID arguments and the list options are assembled.
-  class FakeDurableApi
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def start_durable_execution_from_application_with_http_info(function_id, options = {})
-      @calls << [:start, function_id, options]
-      [FakeGeneratedModel.new(execution), 202, { 'X-Volcano-Version' => 'staging-v1' }]
-    end
-
-    def get_durable_execution_with_http_info(project_id, function_id, execution_id)
-      @calls << [:get, project_id, function_id, execution_id]
-      [FakeGeneratedModel.new(execution), 200, {}]
-    end
-
-    def list_durable_executions_with_http_info(project_id, function_id, options = {})
-      @calls << [:list, project_id, function_id, options]
-      page = { data: [execution], page: 2, limit: 5, total: 6, has_more: false }
-      [FakeGeneratedModel.new(page), 200, {}]
-    end
-
-    def stop_durable_execution_with_http_info(project_id, function_id, execution_id)
-      @calls << [:stop, project_id, function_id, execution_id]
-      [FakeGeneratedModel.new(execution.merge(status: 'stopped')), 200, {}]
-    end
-
-    private
-
-    def execution
-      {
-        id: '00000000-0000-4000-8000-000000000041',
-        function_id: '00000000-0000-4000-8000-000000000042',
-        name: 'charge-order-1',
-        status: 'running',
-        region: 'aws-us-east-1',
-        created_at: '2026-01-01T00:00:00Z'
-      }
-    end
-  end
-
-  module FakeEmailChangeApi
-    attr_accessor :confirmed_email_change_body
-
-    def auth_cancel_email_change_with_http_info(options = {})
-      (@cancel_email_change_calls ||= []) << options
-      [FakeGeneratedModel.new({}), 200, {}]
-    end
-
-    def cancel_email_change_calls
-      @cancel_email_change_calls || []
-    end
-
-    def auth_confirm_email_change_with_http_info(body, options = {})
-      (@confirm_email_change_calls ||= []) << [body, options]
-      profile = { user: { id: 'user-123', email: 'new@example.com', status: 'active' } }
-      [@confirmed_email_change_body || JSON.generate(profile), 200, {}]
-    end
-
-    def confirm_email_change_calls
-      @confirm_email_change_calls || []
-    end
-
-    def auth_delete_all_my_sessions_with_http_info
-      @delete_other_sessions_calls = true
-      [nil, 204, {}]
-    end
-
-    def auth_delete_my_session_with_http_info(session_id)
-      @deleted_session_id = session_id
-      [nil, 204, {}]
-    end
-
-    def auth_get_my_sessions_with_http_info(options = {})
-      @list_sessions_options = options
-      page = {
-        sessions: [], total: 21, page: 2, limit: 10, total_pages: 3
-      }
-      [FakeGeneratedModel.new(page), 200, {}]
-    end
-
-    def delete_other_sessions_called?
-      @delete_other_sessions_calls || false
-    end
-
-    attr_reader :deleted_session_id, :list_sessions_options
-  end
-
-  class FakeAuthenticationApi
-    include FakeEmailChangeApi
-
-    attr_accessor :email_change_body
-    attr_reader :anonymous_conversion_calls, :anonymous_signup_calls, :calls, :confirm_email_calls,
-                :email_change_calls,
-                :forgot_password_calls, :get_user_calls,
-                :logout_calls, :refresh_calls,
-                :resend_confirmation_calls,
-                :reset_password_calls, :signup_calls, :update_user_calls
-
-    def initialize
-      @calls = []
-      @confirm_email_calls = []
-      @forgot_password_calls = []
-      @get_user_calls = []
-      @logout_calls = []
-      @refresh_calls = []
-      @resend_confirmation_calls = []
-      @reset_password_calls = []
-      @signup_calls = []
-      @update_user_calls = []
-    end
-
-    def auth_signin_with_http_info(body)
-      @calls << body
-      [FakeGeneratedModel.new(access_token: 'token'), 200, { 'request-id' => 'auth' }]
-    end
-
-    def auth_signup_anonymous_with_http_info(options = {})
-      (@anonymous_signup_calls ||= []) << options
-      session = {
-        access_token: 'anonymous-access',
-        refresh_token: 'anonymous-refresh',
-        user: { id: 'anonymous-user' }
-      }
-      [FakeGeneratedModel.new(session), 201, {}]
-    end
-
-    def auth_convert_anonymous_with_http_info(body, options = {})
-      (@anonymous_conversion_calls ||= []) << [body, options]
-      profile = {
-        user: {
-          id: 'anonymous-user', email: 'converted@example.com', status: 'active',
-          created_at: '2026-09-01T12:00:00Z'
-        }
-      }
-      [JSON.generate(profile), 200, {}]
-    end
-
-    def auth_request_email_change_with_http_info(body, options = {})
-      (@email_change_calls ||= []) << [body, options]
-      [@email_change_body || JSON.generate({}), 200, {}]
-    end
-
-    def auth_confirm_email_with_http_info(body, options = {})
-      @confirm_email_calls << [body, options]
-      [FakeGeneratedModel.new(message: 'Email confirmed successfully'), 200, {}]
-    end
-
-    def auth_resend_confirmation_with_http_info(body, options = {})
-      @resend_confirmation_calls << [body, options]
-      [FakeGeneratedModel.new(message: 'Confirmation sent'), 200, {}]
-    end
-
-    def auth_get_user_with_http_info(options = {})
-      @get_user_calls << options
-      profile = {
-        user: {
-          id: 'user-123', email: 'user@example.com', status: 'active',
-          user_metadata: { display_name: 'Ada' }
-        }
-      }
-      [JSON.generate(profile), 200, { 'request-id' => 'user' }]
-    end
-
-    def auth_signup_with_http_info(body)
-      @signup_calls << body
-      acknowledgement = {
-        confirmation_required: true,
-        message: 'Check your email to confirm your account'
-      }
-      [FakeGeneratedModel.new(acknowledgement), 201, { 'request-id' => 'signup' }]
-    end
-
-    def auth_forgot_password_with_http_info(body, options = {})
-      @forgot_password_calls << [body, options]
-      acknowledgement = { message: 'If the email exists, a password reset link has been sent.' }
-      [FakeGeneratedModel.new(acknowledgement), 200, { 'request-id' => 'forgot-password' }]
-    end
-
-    def auth_reset_password_with_http_info(body, options = {})
-      @reset_password_calls << [body, options]
-      [FakeGeneratedModel.new(message: 'Password reset successful'), 200, {}]
-    end
-
-    def auth_update_user_with_http_info(options)
-      @update_user_calls << options
-      profile = {
-        user: {
-          id: 'user-123', email: 'user@example.com', status: 'active',
-          user_metadata: { display_name: 'Grace' }, created_at: '2026-08-31T12:00:00Z'
-        }
-      }
-      [JSON.generate(profile), 200, { 'request-id' => 'update-user' }]
-    end
-
-    def auth_refresh_with_http_info(options)
-      @refresh_calls << options
-      [FakeGeneratedModel.new(access_token: 'refreshed-token'), 200, { 'request-id' => 'refresh' }]
-    end
-
-    def auth_logout_with_http_info(options)
-      @logout_calls << options
-      [nil, 204, { 'request-id' => 'logout' }]
-    end
-  end
-
-  class FakeDatabaseApi
-    attr_reader :calls, :delete_calls, :insert_calls, :update_calls
-
-    def initialize
-      @calls = []
-      @insert_calls = []
-      @update_calls = []
-      @delete_calls = []
-    end
-
-    def query_database_select_with_http_info(name, body)
-      @calls << [name, body]
-      [FakeGeneratedModel.new(data: [{ slug: 'a' }]), 200, {}]
-    end
-
-    def query_database_insert_with_http_info(name, body)
-      @insert_calls << [name, body]
-      [FakeGeneratedModel.new(data: [{ slug: 'new' }]), 200, {}]
-    end
-
-    def query_database_update_with_http_info(name, body)
-      @update_calls << [name, body]
-      [FakeGeneratedModel.new(data: [{ slug: 'updated' }]), 200, {}]
-    end
-
-    def query_database_delete_with_http_info(name, body)
-      @delete_calls << [name, body]
-      [FakeGeneratedModel.new(data: [{ slug: 'deleted' }]), 200, {}]
-    end
-  end
-
-  class FakeOAuthApi
-    attr_reader :api_calls, :exchange_calls, :link_calls, :list_calls, :refresh_calls,
-                :token_status_calls, :unlink_calls
-
-    def initialize
-      @api_calls = []
-      @exchange_calls = []
-      @link_calls = []
-      @list_calls = []
-      @refresh_calls = []
-      @token_status_calls = []
-      @unlink_calls = []
-    end
-
-    def auth_o_auth_exchange_with_http_info(body)
-      @exchange_calls << body
-      result = {
-        access_token: 'oauth-access', token_type: 'bearer', expires_in: 3600,
-        refresh_token: 'oauth-refresh',
-        user: { id: '00000000-0000-4000-8000-000000000010' }
-      }
-      [FakeGeneratedModel.new(result), 200, {}]
-    end
-
-    def auth_link_o_auth_provider_with_http_info(provider, options = {})
-      @link_calls << [provider, options]
-      result = { authorization_url: 'https://accounts.example/link' }
-      [FakeGeneratedModel.new(result), 200, {}]
-    end
-
-    def auth_list_o_auth_providers_with_http_info(options = {})
-      @list_calls << options
-      providers = {
-        providers: [
-          {
-            provider: 'google',
-            linked_at: Time.iso8601('2026-08-30T12:00:00Z'),
-            updated_at: Time.iso8601('2026-09-01T12:00:00Z')
-          }
-        ]
-      }
-      [FakeGeneratedModel.new(providers), 200, {}]
-    end
-
-    def auth_unlink_o_auth_provider_with_http_info(provider)
-      @unlink_calls << provider
-      [nil, 204, {}]
-    end
-
-    def get_o_auth_provider_token_with_http_info(provider)
-      @token_status_calls << provider
-      result = {
-        message: 'Provider token is valid', provider: provider, expires_in: 3600
-      }
-      [FakeGeneratedModel.new(result), 200, {}]
-    end
-
-    def refresh_o_auth_provider_token_with_http_info(provider)
-      @refresh_calls << provider
-      result = {
-        message: 'Provider token refreshed successfully', provider: provider, expires_in: 3600
-      }
-      [FakeGeneratedModel.new(result), 200, {}]
-    end
-
-    def call_o_auth_provider_api_with_http_info(provider, request)
-      @api_calls << [provider, request]
-      result = {
-        provider: provider, endpoint: request.endpoint, status_code: 200,
-        data: [{ name: 'volcano' }, nil]
-      }
-      [FakeGeneratedModel.new(result), 200, {}]
-    end
-  end
-
-  class FakeStorageApi
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def upload_storage_object_with_http_info(bucket, path, file, options = {})
-      file.rewind
-      @calls << [:upload, bucket, path, file.read, options]
-      [FakeGeneratedModel.new(name: path), 201, {}]
-    end
-
-    def download_storage_object_with_http_info(bucket, path, options = {})
-      @calls << [:download, bucket, path, options]
-      ["hello\x00".b, 200, { 'content-type' => 'application/octet-stream' }]
-    end
-
-    def create_upload_session_with_http_info(bucket, path, request)
-      @calls << [:create_session, bucket, path, request]
-      session = FakeGeneratedModel.new(
-        session_id: 'session-123', part_size: 8_388_608, total_parts: 3,
-        expires_at: Time.iso8601('2026-09-09T12:00:00Z')
-      )
-      [session, 201, {}]
-    end
-
-    def upload_part_with_http_info(bucket, path, session_id, part_number, data)
-      @calls << [:upload_part, bucket, path, session_id, part_number, data]
-      [FakeGeneratedModel.new(part_number: part_number, etag: 'etag-part', size: data.bytesize), 200, {}]
-    end
-
-    def complete_upload_session_with_http_info(bucket, path, session_id)
-      @calls << [:complete_upload_session, bucket, path, session_id]
-      object = FakeGeneratedModel.new(
-        id: 'object-123', bucket_id: 'bucket-123', name: path, size: 20_000_000,
-        mime_type: 'video/mp4', is_public: false
-      )
-      [FakeGeneratedModel.new(object: object), 200, {}]
-    end
-
-    def get_upload_session_with_http_info(bucket, path, session_id)
-      @calls << [:get_upload_session, bucket, path, session_id]
-      status = FakeGeneratedModel.new(
-        session_id: session_id, status: 'uploading', path: path, content_type: 'video/mp4',
-        total_size: 20_000_000, part_size: 8_388_608, total_parts: 3,
-        parts_uploaded: 1, bytes_uploaded: 8_388_608, parts: [],
-        expires_at: Time.iso8601('2026-09-09T12:00:00Z'),
-        created_at: Time.iso8601('2026-09-02T12:00:00Z')
-      )
-      [status, 200, {}]
-    end
-
-    def abort_upload_session_with_http_info(bucket, path, session_id)
-      @calls << [:abort_upload_session, bucket, path, session_id]
-      [nil, 200, {}]
-    end
-
-    def list_storage_objects_with_http_info(bucket, options)
-      @calls << [:list, bucket, options]
-      page = FakeGeneratedModel.new(objects: [], next_cursor: 'cursor-2')
-      [page, 200, {}]
-    end
-
-    def delete_storage_object_with_http_info(bucket, path)
-      @calls << [:delete, bucket, path]
-      [nil, 200, {}]
-    end
-
-    def move_storage_object_with_http_info(bucket, request)
-      @calls << [:move, bucket, request]
-      [FakeGeneratedModel.new(name: request.to), 200, {}]
-    end
-
-    def copy_storage_object_with_http_info(bucket, request)
-      @calls << [:copy, bucket, request]
-      [FakeGeneratedModel.new(name: request.to), 201, {}]
-    end
-
-    def update_storage_object_visibility_with_http_info(bucket, path, request)
-      @calls << [:visibility, bucket, path, request]
-      [FakeGeneratedModel.new(name: path, is_public: request.is_public), 200, {}]
-    end
-  end
-
-  class FakeLocksApi
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def acquire_project_lock_with_http_info(key, token, request_id, body)
-      @calls << [:acquire, key, token, request_id, body]
-      [FakeGeneratedModel.new(fencing_token: 7), 201, {}]
-    end
-
-    def release_project_lock_with_http_info(key, token, request_id)
-      @calls << [:release, key, token, request_id]
-      [nil, 204, {}]
-    end
-
-    def get_project_lock_with_http_info(key, request_id)
-      @calls << [:get, key, request_id]
-      state = FakeGeneratedModel.new(
-        held: true,
-        expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
-        fencing_token: 7
-      )
-      [state, 200, {}]
-    end
-
-    def renew_project_lock_with_http_info(key, token, request_id, body)
-      @calls << [:renew, key, token, request_id, body]
-      lease = FakeGeneratedModel.new(
-        expires_at: Time.iso8601('2026-08-26T12:01:00Z'),
-        fencing_token: 7
-      )
-      [lease, 200, {}]
-    end
-
-    def force_release_project_lock_with_http_info(key, request_id)
-      @calls << [:force_release, key, request_id]
-      [nil, 204, {}]
-    end
-  end
-
-  class FakeFunctionsApi
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def resolve_function_for_invocation_with_http_info(name, options = {})
-      @calls << [:resolve, name, options]
-      body = JSON.generate(
-        name: name,
-        function_id: '00000000-0000-4000-8000-000000000040',
-        cache_ttl_seconds: 60
-      )
-      [body, 200, {}]
-    end
-
-    def invoke_function_with_http_info(function_id, request, options = {})
-      @calls << [:invoke, function_id, request, options]
-      [
-        JSON.generate(error: 'invalid order'),
-        422,
-        { 'X-Volcano-Version' => 'staging-v1' }
-      ]
-    end
-  end
-
-  class FakeLogsApi
-    attr_reader :calls
-
-    def initialize
-      @calls = []
-    end
-
-    def search_project_logs_with_http_info(project_id, request, options = {})
-      @calls << [:search, project_id, request, options]
-      result = {
-        data: [
-          {
-            id: 'event-1', timestamp: '2026-09-02T12:00:00Z',
-            body: { message: 'ready', values: [1, 2], count: 2 },
-            resource: { type: 'function', id: 'function-1' }
-          }
-        ],
-        limit: 25, has_more: false
-      }
-      [JSON.generate(result), 200, {}]
-    end
-
-    def get_project_log_activity_with_http_info(project_id, request, options = {})
-      @calls << [:activity, project_id, request, options]
-      [JSON.generate(data: [], total: 0), 200, {}]
-    end
+  def generated_namespace
+    Volcano.const_get(:Generated, false)
   end
 
   let(:apis) do
-    GeneratedApis.new(
-      authentication: FakeAuthenticationApi.new,
-      oauth: FakeOAuthApi.new,
-      database: FakeDatabaseApi.new,
-      storage: FakeStorageApi.new,
-      locks: FakeLocksApi.new,
-      functions: FakeFunctionsApi.new,
-      logs: FakeLogsApi.new,
-      durable: FakeDurableApi.new
+    transport_class::GeneratedApis.new(
+      authentication: SpecSupport::GeneratedAPI::FakeAuthenticationApi.new,
+      oauth: SpecSupport::GeneratedAPI::FakeOAuthApi.new,
+      database: SpecSupport::GeneratedAPI::FakeDatabaseApi.new,
+      storage: SpecSupport::GeneratedAPI::FakeStorageApi.new,
+      locks: SpecSupport::GeneratedAPI::FakeLocksApi.new,
+      functions: SpecSupport::GeneratedAPI::FakeFunctionsApi.new,
+      logs: SpecSupport::GeneratedAPI::FakeLogsApi.new,
+      durable: SpecSupport::GeneratedAPI::FakeDurableApi.new
     )
   end
   let(:authorizations) { [] }
@@ -538,7 +33,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
   end
   let(:transport) do
-    described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    transport_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
   let(:responses) do
@@ -620,7 +115,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     end
     empty = Object.new
     factory = lambda do |_authorization|
-      GeneratedApis.new(
+      transport_class::GeneratedApis.new(
         authentication: empty,
         oauth: empty,
         database: empty,
@@ -631,7 +126,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
         durable: empty
       )
     end
-    described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    transport_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
   end
 
   it 'resolves and invokes a function through generated operations' do
@@ -749,13 +244,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     responses
     expected_authorizations = Array.new(4, 'anon-key') + Array.new(6, 'access-token') + Array.new(2, 'service-key')
     expect(authorizations).to eq(expected_authorizations)
-    expect(apis.authentication.calls.fetch(0)).to be_a(InternalGenerated::AuthSigninRequest)
+    expect(apis.authentication.calls.fetch(0)).to be_a(generated_namespace::AuthSigninRequest)
     expect(apis.authentication.calls.fetch(0).to_hash).to eq(
       email: 'user@example.com',
       password: 'secret'
     )
     refresh_request = apis.authentication.refresh_calls.fetch(0).fetch(:auth_refresh_request)
-    expect(refresh_request).to be_a(InternalGenerated::AuthRefreshRequest)
+    expect(refresh_request).to be_a(generated_namespace::AuthRefreshRequest)
       .and have_attributes(refresh_token: 'refresh-1')
     expect(apis.storage.calls).to eq(
       [
@@ -783,7 +278,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     database_name, request = apis.database.calls.fetch(0)
 
     expect(database_name).to eq('main')
-    expect(request).to be_a(InternalGenerated::DatabaseSelectRequest)
+    expect(request).to be_a(generated_namespace::DatabaseSelectRequest)
     expect(request.to_hash).to eq(
       table: 'items',
       filters: [{ column: 'slug', operator: 'eq', value: 'a' }]
@@ -795,7 +290,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     database_name, request = apis.database.insert_calls.fetch(0)
 
     expect(database_name).to eq('main')
-    expect(request).to be_a(InternalGenerated::DatabaseInsertRequest)
+    expect(request).to be_a(generated_namespace::DatabaseInsertRequest)
     expect(request.to_hash).to eq(table: 'items', values: { slug: 'new' })
   end
 
@@ -809,7 +304,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     _, bucket, request = apis.storage.calls.last
     expect(bucket).to eq('assets')
-    expect(request).to be_a(InternalGenerated::StorageMoveRequest)
+    expect(request).to be_a(generated_namespace::StorageMoveRequest)
     expect(request.to_hash).to eq(from: 'drafts/a.txt', to: 'published/a.txt')
     expect(response.body).to eq('name' => 'published/a.txt')
   end
@@ -824,7 +319,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     _, bucket, request = apis.storage.calls.last
     expect(bucket).to eq('assets')
-    expect(request).to be_a(InternalGenerated::StorageCopyRequest)
+    expect(request).to be_a(generated_namespace::StorageCopyRequest)
     expect(request.to_hash).to eq(from: 'templates/a.txt', to: 'drafts/a.txt')
     expect(response.body).to eq('name' => 'drafts/a.txt')
   end
@@ -840,7 +335,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     _, bucket, path, request = apis.storage.calls.last
     expect(bucket).to eq('assets')
     expect(path).to eq('avatars/a.png')
-    expect(request).to be_a(InternalGenerated::StorageVisibilityRequest)
+    expect(request).to be_a(generated_namespace::StorageVisibilityRequest)
     expect(request.to_hash).to eq(is_public: true)
     expect(response.body).to eq('name' => 'avatars/a.png', 'is_public' => true)
   end
@@ -857,7 +352,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     expect(response.body).to eq('data' => [{ 'slug' => 'updated' }])
     expect(database_name).to eq('main')
-    expect(request).to be_a(InternalGenerated::DatabaseUpdateRequest)
+    expect(request).to be_a(generated_namespace::DatabaseUpdateRequest)
     expect(request.to_hash).to eq(
       table: 'items', values: { slug: 'updated' },
       filters: [{ column: 'slug', operator: 'eq', value: 'new' }]
@@ -876,7 +371,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     expect(response.body).to eq('data' => [{ 'slug' => 'deleted' }])
     expect(database_name).to eq('main')
-    expect(request).to be_a(InternalGenerated::DatabaseDeleteRequest)
+    expect(request).to be_a(generated_namespace::DatabaseDeleteRequest)
     expect(request.to_hash).to eq(
       table: 'items', filters: [{ column: 'slug', operator: 'eq', value: 'old' }]
     )
@@ -886,7 +381,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     responses
 
     request = apis.authentication.signup_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthSignupRequest)
+    expect(request).to be_a(generated_namespace::AuthSignupRequest)
     expect(request.to_hash).to eq(
       email: 'new@example.com',
       password: 'secret',
@@ -901,7 +396,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     options = apis.authentication.anonymous_signup_calls.fetch(0)
     request = options.fetch(:auth_signup_anonymous_request)
-    expect(request).to be_a(InternalGenerated::AuthSignupAnonymousRequest)
+    expect(request).to be_a(generated_namespace::AuthSignupAnonymousRequest)
       .and have_attributes(user_metadata: { device: 'mobile' })
     expect(response.status).to eq(201)
     expect(authorizations).to eq(['anon-key'])
@@ -916,7 +411,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.anonymous_conversion_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthSignupRequest)
+    expect(request).to be_a(generated_namespace::AuthSignupRequest)
       .and have_attributes(
         email: 'converted@example.com',
         password: 'secret',
@@ -940,7 +435,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.email_change_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthRequestEmailChangeRequest)
+    expect(request).to be_a(generated_namespace::AuthRequestEmailChangeRequest)
       .and have_attributes(new_email: 'new@example.com')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
@@ -961,7 +456,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.confirm_email_change_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthConfirmEmailChangeRequest)
+    expect(request).to be_a(generated_namespace::AuthConfirmEmailChangeRequest)
       .and have_attributes(email_change_token: 'change-token')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.body.dig('user', 'email')).to eq('new@example.com')
@@ -1007,7 +502,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'builds an OAuth sign-in URL through the generated operation' do
-    url = described_class.new(api_url: 'https://api.test.volcano.dev')
+    url = transport_class.new(api_url: 'https://api.test.volcano.dev')
                          .auth_oauth_authorization_url(
                            anon_key: 'anon key', provider: 'github',
                            redirect_url: 'https://app.example.test/callback?next=/projects',
@@ -1134,7 +629,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.forgot_password_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthForgotPasswordRequest)
+    expect(request).to be_a(generated_namespace::AuthForgotPasswordRequest)
       .and have_attributes(email: 'user@example.com')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
@@ -1150,7 +645,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.reset_password_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthResetPasswordRequest)
+    expect(request).to be_a(generated_namespace::AuthResetPasswordRequest)
       .and have_attributes(token: 'recovery-token', new_password: 'new-secret')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
@@ -1163,7 +658,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.confirm_email_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthConfirmEmailRequest)
+    expect(request).to be_a(generated_namespace::AuthConfirmEmailRequest)
       .and have_attributes(token: 'confirmation-token')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
@@ -1176,7 +671,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     )
 
     request, options = apis.authentication.resend_confirmation_calls.fetch(0)
-    expect(request).to be_a(InternalGenerated::AuthForgotPasswordRequest)
+    expect(request).to be_a(generated_namespace::AuthForgotPasswordRequest)
       .and have_attributes(email: 'user@example.com')
     expect(options).to eq(debug_return_type: 'String')
     expect(response.status).to eq(200)
@@ -1187,7 +682,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     transport.auth_logout(authorization: 'anon-key', refresh_token: 'refresh-1')
 
     request = apis.authentication.logout_calls.fetch(0).fetch(:auth_refresh_request)
-    expect(request).to be_a(InternalGenerated::AuthRefreshRequest)
+    expect(request).to be_a(generated_namespace::AuthRefreshRequest)
       .and have_attributes(refresh_token: 'refresh-1')
   end
 
@@ -1211,7 +706,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     options = apis.authentication.update_user_calls.fetch(0)
     request = options.fetch(:auth_update_user_request)
-    expect(request).to be_a(InternalGenerated::AuthUpdateUserRequest)
+    expect(request).to be_a(generated_namespace::AuthUpdateUserRequest)
     expect(options.fetch(:debug_body)).to eq(
       password: 'new-secret',
       user_metadata: { display_name: 'Grace', answers: [1, nil, 3] }
@@ -1229,7 +724,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     options = apis.authentication.update_user_calls.fetch(0)
     expect(options.fetch(:auth_update_user_request)).to be_a(
-      InternalGenerated::AuthUpdateUserRequest
+      generated_namespace::AuthUpdateUserRequest
     )
     expect(options.fetch(:debug_body)).to be_empty
   end
@@ -1289,8 +784,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'selects the multipart representation for the generated dual-mode upload operation' do
-    configuration = InternalGenerated::Configuration.new
-    api_client = described_class::ApiClient.new(configuration)
+    configuration = generated_namespace::Configuration.new
+    api_client = transport_class::ApiClient.new(configuration)
 
     expect(
       api_client.select_header_content_type(['multipart/form-data', 'application/json'])
@@ -1375,9 +870,9 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'converts the public timeout in seconds to Typhoeus milliseconds' do
-    transport = described_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
+    transport = transport_class.new(api_url: 'https://api.test.volcano.dev', timeout: 1.5)
     configuration = transport.send(:generated_configuration, 'access-token')
-    request = described_class::ApiClient.new(configuration).build_request(
+    request = transport_class::ApiClient.new(configuration).build_request(
       :get,
       '/health',
       auth_names: []
@@ -1387,7 +882,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'honors disabled redirect following for passthrough responses' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
 
     request = api_client.build_request(
       :post, '/functions/function-id/invoke', auth_names: [], follow_location: false
@@ -1397,7 +892,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'keeps a multipart encoding override local to one request' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     original = api_client.config.params_encoding
 
     upload = api_client.build_request(:post, '/storage/assets/payload', auth_names: [], params_encoding: :none)
@@ -1409,13 +904,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'preserves object path segments and percent-encodes spaces' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, method == :POST ? 201 : 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
     file = Tempfile.new('volcano-storage-path')
 
     storage.upload_storage_object_with_http_info('assets', 'folder/payload with space.txt', file)
@@ -1429,9 +924,9 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'maps the generated download range option to the request header' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 206, {}] }
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
 
     options, = storage.download_storage_object_with_http_info('assets', 'payload.txt', range: 'bytes=0-4')
 
@@ -1439,10 +934,10 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'serializes upload session creation as JSON through the path adapter' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     api_client.define_singleton_method(:call_api) { |_method, _path, options| [options, 201, {}] }
-    storage = described_class::StorageApi.new(api_client)
-    request = InternalGenerated::CreateUploadSessionRequest.new(
+    storage = transport_class::StorageApi.new(api_client)
+    request = generated_namespace::CreateUploadSessionRequest.new(
       object_path: 'videos/demo.mp4', content_type: 'video/mp4', total_size: 20_000_000
     )
 
@@ -1458,13 +953,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'sends upload parts as binary through the path adapter' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
 
     storage.upload_part_with_http_info(
       'assets', 'videos/demo clip.mp4', 'session-123', 2, "chunk\x00".b
@@ -1482,13 +977,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'completes upload sessions through the path adapter' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
 
     storage.complete_upload_session_with_http_info(
       'assets', 'videos/demo clip.mp4', 'session-123'
@@ -1506,13 +1001,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'gets upload session status through the path adapter' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
 
     storage.get_upload_session_with_http_info(
       'assets', 'videos/demo clip.mp4', 'session-123'
@@ -1527,13 +1022,13 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'aborts upload sessions through the path adapter' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
+    storage = transport_class::StorageApi.new(api_client)
 
     storage.abort_upload_session_with_http_info(
       'assets', 'videos/demo clip.mp4', 'session-123'
@@ -1547,14 +1042,14 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'preserves nested object paths when updating visibility' do
-    api_client = described_class::ApiClient.new(InternalGenerated::Configuration.new)
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
       calls << [method, path, options]
       [nil, 200, {}]
     end
-    storage = described_class::StorageApi.new(api_client)
-    request = InternalGenerated::StorageVisibilityRequest.new(is_public: true)
+    storage = transport_class::StorageApi.new(api_client)
+    request = generated_namespace::StorageVisibilityRequest.new(is_public: true)
 
     storage.update_storage_object_visibility_with_http_info(
       'assets', 'folder/payload with space.txt', request
@@ -1566,8 +1061,8 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'deserializes internal models while the generated namespace is private' do
-    configuration = InternalGenerated::Configuration.new
-    api_client = described_class::ApiClient.new(configuration)
+    configuration = generated_namespace::Configuration.new
+    api_client = transport_class::ApiClient.new(configuration)
     response = Typhoeus::Response.new(
       code: 200,
       body: JSON.generate(email: 'user@example.com', password: 'secret'),
@@ -1576,17 +1071,17 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
 
     model = api_client.deserialize(response, 'AuthSigninRequest')
 
-    expect(model).to be_a(InternalGenerated::AuthSigninRequest)
+    expect(model).to be_a(generated_namespace::AuthSigninRequest)
     expect(model.to_hash).to eq(email: 'user@example.com', password: 'secret')
   end
 
   it 'deserializes nested internal models while the generated namespace is private' do
-    model = InternalGenerated::ApiModelBase._deserialize(
+    model = generated_namespace::ApiModelBase._deserialize(
       'AuthUser',
       id: 'user-id', email: 'user@example.com', status: 'active'
     )
 
-    expect(model).to be_a(InternalGenerated::AuthUser)
+    expect(model).to be_a(generated_namespace::AuthUser)
     expect(model.email).to eq('user@example.com')
   end
 
@@ -1611,7 +1106,7 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
   end
 
   it 'returns generated HTTP failures for stable facade error mapping' do
-    error = InternalGenerated::ApiError.new(
+    error = generated_namespace::ApiError.new(
       code: 409,
       response_headers: { 'Retry-After' => '3' },
       response_body: '{"error":"already held","code":"lock_conflict"}'
@@ -1620,12 +1115,12 @@ RSpec.describe Volcano.const_get(:GeneratedTransport, false) do
     authentication.define_singleton_method(:auth_signin_with_http_info) { |_| raise error }
     empty = Object.new
     factory = lambda do |_authorization|
-      GeneratedApis.new(
+      transport_class::GeneratedApis.new(
         authentication: authentication, oauth: empty, database: empty,
         storage: empty, locks: empty, functions: empty, logs: empty, durable: empty
       )
     end
-    transport = described_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
+    transport = transport_class.new(api_url: 'https://api.test.volcano.dev', api_factory: factory)
 
     response = transport.auth_signin(
       authorization: 'anon-key',

@@ -27,7 +27,7 @@ ruby -rjson -rdigest -e '
   artifact = ARGV.fetch(0)
   File.write("acceptance.json", JSON.pretty_generate({schema: 1, language: "ruby", package: "volcano-sdk", version: ENV.fetch("VOLCANO_ACCEPTANCE_VERSION"), filename: "volcano-sdk-#{ENV.fetch("VOLCANO_ACCEPTANCE_VERSION")}.gem", sha256: Digest::SHA256.file(artifact).hexdigest}))
 ' "$artifact"
-bundle exec ruby -rvolcano -e 'abort "SDK source shadowing" unless Gem.loaded_specs.fetch("volcano-sdk").full_gem_path == File.join(Dir.pwd, "installed-sdk")'
+bundle exec ruby -rvolcano -e 'abort "SDK source shadowing" unless File.realpath(Gem.loaded_specs.fetch("volcano-sdk").full_gem_path) == File.realpath("installed-sdk")'
 bash .github/scripts/smoke-gem.sh "$artifact"
 rm -rf vendor .bundle installed-sdk
 tar -czf "$output/sdk-acceptance.tar.gz" .

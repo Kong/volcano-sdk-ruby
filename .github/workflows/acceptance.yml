@@ -20,7 +20,8 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-      - run: gem build volcano-sdk.gemspec && mkdir candidate && mv volcano-sdk-*.gem candidate/
+      # Exercise the builder with a valid package whose filename omits its version.
+      - run: mkdir candidate && gem build volcano-sdk.gemspec --output candidate/volcano-sdk.gem
       - run: bash scripts/build-acceptance.sh candidate/*.gem candidate
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

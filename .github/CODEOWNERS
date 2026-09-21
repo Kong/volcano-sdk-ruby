@@ -3,6 +3,7 @@
 CODEOWNERS @Kong/team-volcano
 AGENTS.md @Kong/team-volcano
 CONTRIBUTING.md @Kong/team-volcano
+PUBLISHING.md @Kong/team-volcano
 SECURITY.md @Kong/team-volcano
 CLAUDE.md @Kong/team-volcano
 GEMINI.md @Kong/team-volcano

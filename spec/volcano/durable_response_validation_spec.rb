@@ -42,10 +42,11 @@ RSpec.describe Volcano::Durable do
     end
   end
 
-  it 'defaults missing pagination counts and an empty result to zero' do
-    allow(transport).to receive(:list_durable_executions).and_return(response({}))
+  it 'preserves a complete empty page' do
+    payload = { 'data' => [], 'page' => 1, 'limit' => 20, 'total' => 0, 'has_more' => false }
+    allow(transport).to receive(:list_durable_executions).and_return(response(payload))
 
     expect(client.durable.list('project', 'function'))
-      .to have_attributes(executions: [], page: 0, limit: 0, total: 0, has_more: false)
+      .to have_attributes(executions: [], page: 1, limit: 20, total: 0, has_more: false)
   end
 end

@@ -95,7 +95,7 @@ RSpec.describe Quality::SourcePolicy do
   end
 
   it 'permits only the declared test conventions' do
-    write('.rubocop.yml', "Metrics/BlockLength:\n  Exclude:\n    - spec/**/*\n")
+    write('.rubocop.yml', "AllCops:\n  NewCops: enable\nMetrics/BlockLength:\n  Exclude:\n    - spec/**/*\n")
 
     expect(policy.check).to be_empty
   end
@@ -104,6 +104,41 @@ RSpec.describe Quality::SourcePolicy do
     write('.rubocop.yml', "Metrics/BlockLength:\n  Exclude:\n    - lib/**/*\n")
 
     expect(policy.check).to include(a_string_including('Metrics/BlockLength exclusion'))
+  end
+
+  it 'rejects ERB before RuboCop can render a hidden inheritance key' do
+    write('debt.yml', "Metrics/MethodLength:\n  Exclude:\n    - lib/example.rb\n")
+    write('.rubocop.yml', "<%= 'inherit_from' %>: debt.yml\n")
+
+    expect(policy.check).to include('.rubocop.yml: ERB configuration is forbidden')
+  end
+
+  it 'does not execute ERB even when it appears in a YAML comment' do
+    write('.rubocop.yml', "# <%= File.write('executed', 'yes') %>\nAllCops:\n  NewCops: enable\n")
+
+    expect(policy.check).to include('.rubocop.yml: ERB configuration is forbidden')
+    expect(File).not_to exist(File.join(directory, 'executed'))
+  end
+
+  [
+    ['Metrics/MethodLength', 'Enabled: false'],
+    ['Metrics', 'Enabled: false'],
+    ['AllCops', 'DisabledByDefault: true'],
+    ['AllCops', 'EnabledByDefault: false']
+  ].each do |cop, setting|
+    it "rejects disabling rules with #{cop} #{setting}" do
+      write('.rubocop.yml', "#{cop}:\n  #{setting}\n")
+
+      expect(policy.check).to include(".rubocop.yml: #{cop} disabling settings are forbidden")
+    end
+  end
+
+  ["AllCops: {}\n", "AllCops:\n  NewCops: pending\n", "AllCops:\n  NewCops: disable\n"].each do |configuration|
+    it "requires new cops to remain enabled: #{configuration.inspect}" do
+      write('.rubocop.yml', configuration)
+
+      expect(policy.check).to include('.rubocop.yml: AllCops NewCops must be enable')
+    end
   end
 
   it 'checks Ruby scripts without a filename extension' do

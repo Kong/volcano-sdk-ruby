@@ -4,9 +4,8 @@
 against RuboCop's discovered targets. This includes conventional Ruby filenames
 and executable Ruby scripts without extensions. A missing target fails the gate.
 
-Keep configuration in the root `.rubocop.yml`. Inherited configurations, nested
-overrides, debt baselines, repository symlinks, and inline lint or coverage
-suppressions fail the gate. Cop-level and department-level file exclusions fail
+Keep configuration in the root `.rubocop.yml`. Inherited or ERB configurations, nested overrides, debt baselines, disabled
+rules (including pending or disabled new cops), repository symlinks, and inline lint or coverage suppressions fail the gate. Cop-level and department-level file exclusions fail
 unless they match these test conventions:
 
 | Rule | Scope | Reason |

@@ -46,11 +46,22 @@ module Quality
       end
     end
 
-    def check_inheritance
+    def root_configuration
       path = File.join(@root, '.rubocop.yml')
       return if File.symlink?(path)
 
-      configuration = YAML.safe_load_file(path, aliases: true)
+      source = File.read(path)
+      if source.include?('<%')
+        @errors << '.rubocop.yml: ERB configuration is forbidden'
+        return
+      end
+      YAML.safe_load(source, aliases: true)
+    end
+
+    def check_inheritance
+      configuration = root_configuration
+      return unless configuration
+
       @errors.concat(CopScopePolicy.check(configuration))
       return unless configuration.key?('inherit_from') || configuration.key?('inherit_gem')
 

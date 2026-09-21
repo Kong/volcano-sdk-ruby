@@ -124,6 +124,13 @@ RSpec.describe Quality::SourcePolicy do
     expect(policy.check).to include('lib/alias.rb: repository symlinks are forbidden')
   end
 
+  it 'rejects symlinks inside the generated directory' do
+    FileUtils.mkdir_p(File.join(directory, 'lib/volcano/generated'))
+    File.symlink('../../example.rb', File.join(directory, 'lib/volcano/generated/alias.rb'))
+
+    expect(policy.check).to include('lib/volcano/generated/alias.rb: repository symlinks are forbidden')
+  end
+
   it 'rejects extensionless symlinks before inspecting the target shebang' do
     write('bin/original', "#!/usr/bin/env ruby\nputs 'hello'\n")
     File.symlink('original', File.join(directory, 'bin/task'))

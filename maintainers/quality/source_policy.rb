@@ -22,9 +22,10 @@ module Quality
     def check
       @errors.clear
       check_inheritance
-      paths = repository_files.reject { |path| path.start_with?(GENERATED) }
+      paths = repository_files
       paths.each { |path| check_path(path) }
-      sources = paths.select { |path| ruby_source?(path) }
+      maintained = paths.reject { |path| path.start_with?(GENERATED) }
+      sources = maintained.select { |path| ruby_source?(path) }
       sources.each { |path| check_comments(path) }
       check_targets(sources)
       @errors

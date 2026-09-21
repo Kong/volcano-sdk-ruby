@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   build:
+    outputs:
+      package-artifact-id: ${{ steps.upload-package.outputs.artifact-id }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -24,14 +26,21 @@ jobs:
       - run: mkdir candidate && gem build volcano-sdk.gemspec --output candidate/volcano-sdk.gem
       - run: bash scripts/build-acceptance.sh candidate/*.gem candidate
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: upload-package
         with:
           name: client-acceptance
           path: candidate/*
           if-no-files-found: error
 
+  acceptance-check:
+    needs: build
+    uses: ./.github/workflows/verify-acceptance.yml
+    with:
+      package-artifact-id: ${{ needs.build.outputs.package-artifact-id }}
+
   attest:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: [build, acceptance-check]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -41,7 +50,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: client-acceptance
+          artifact-ids: ${{ needs.build.outputs.package-artifact-id }}
+          merge-multiple: true
           path: candidate
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:

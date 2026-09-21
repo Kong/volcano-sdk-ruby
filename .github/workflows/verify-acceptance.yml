@@ -1,0 +1,43 @@
+name: Verify immutable acceptance artifacts
+
+on:
+  workflow_call:
+    inputs:
+      package-artifact-id:
+        required: true
+        type: string
+      bundle-artifact-id:
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ inputs.package-artifact-id }}
+          merge-multiple: true
+          path: package
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        if: inputs.bundle-artifact-id != ''
+        with:
+          artifact-ids: ${{ inputs.bundle-artifact-id }}
+          merge-multiple: true
+          path: acceptance
+      # Fresh dependencies can modify these copies, never the uploaded artifacts.
+      - name: Verify the installed package and fresh consumer
+        env:
+          ACCEPTANCE_BUNDLE: ${{ inputs.bundle-artifact-id != '' && 'acceptance/sdk-acceptance.tar.gz' || 'package/sdk-acceptance.tar.gz' }}
+        run: bash scripts/test-acceptance.sh package/*.gem "$ACCEPTANCE_BUNDLE"

@@ -62,4 +62,27 @@ RSpec.describe Volcano::Auth do
         .to raise_error(TypeError, 'Expected a valid email-change acknowledgement')
     end
   end
+
+  [nil, {}, 'invalid'].each do |payload|
+    it "rejects missing OAuth API response data #{payload.inspect}" do
+      allow(transport).to receive(:auth_call_oauth_api).and_return(response(payload))
+
+      expect { client.auth.call_oauth_api('github', endpoint: '/user') }
+        .to raise_error(TypeError, 'Expected OAuth provider API response data')
+    end
+  end
+
+  %w[banned_until last_sign_in_at created_at updated_at].each do |field|
+    it "rejects an impossible RFC3339 timestamp in #{field}" do
+      profile = { 'id' => 'user', 'email' => 'user@example.com', 'status' => 'active',
+                  field => '2026-99-01T00:00:00Z' }
+      allow(transport).to receive(:auth_get_user).and_return(response({ 'user' => profile }))
+      original = client.current_session
+
+      expect do
+        client.auth.user
+      end.to raise_error(Volcano::Error::AuthenticationError, 'Expected a complete user profile')
+      expect(client.current_session).to be(original)
+    end
+  end
 end

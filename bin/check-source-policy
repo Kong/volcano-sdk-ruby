@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require_relative '../maintainers/quality/source_policy'
+
+errors = Quality::SourcePolicy.new(File.expand_path('..', __dir__)).check
+abort errors.join("\n") unless errors.empty?
+
+puts 'Maintained Ruby sources are linted without inline suppressions or nested overrides'

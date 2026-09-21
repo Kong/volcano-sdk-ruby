@@ -1,9 +1,15 @@
+inherit_mode:
+  merge:
+    - Include
+
 plugins:
   - rubocop-performance
   - rubocop-rake
   - rubocop-rspec
 
 AllCops:
+  Include:
+    - ".github/scripts/**/*.rb"
   NewCops: enable
   SuggestExtensions: false
   TargetRubyVersion: 3.2

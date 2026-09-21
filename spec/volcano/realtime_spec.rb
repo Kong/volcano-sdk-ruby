@@ -1023,7 +1023,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'delivers only message publications on presence channels without changing presence state' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     alice = presence_info('alice-client', 'alice', 'Alice')
     socket.on_write = presence_reply(socket, 'alice-client' => alice)
@@ -1031,6 +1031,8 @@ RSpec.describe Volcano::Realtime do
     Async do |task|
       channel = client.realtime.channel('lobby', type: :presence)
       received = Async::Queue.new
+      joins = []
+      channel.on('join') { |data| joins << data }
       channel.on('message') { |data| received.enqueue(data) }
       channel.subscribe
       initial_state = channel.presence_state
@@ -1040,6 +1042,7 @@ RSpec.describe Volcano::Realtime do
 
       expect(task.with_timeout(1) { received.dequeue }).to eq(message)
       expect(received).to be_empty
+      expect(joins).to be_empty
       expect(channel.presence_state).to equal(initial_state)
     ensure
       client.realtime.disconnect
@@ -1047,7 +1050,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'rejects non-hash presence tracking without replacing the tracked snapshot' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 

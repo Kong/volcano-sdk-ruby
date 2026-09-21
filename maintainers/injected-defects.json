@@ -1,0 +1,42 @@
+[
+  {
+    "name": "credential-leakage",
+    "path": "lib/volcano/client.rb",
+    "before": "    def anon_token\n      @anon_key\n",
+    "after": "    def anon_token\n      @service_key\n",
+    "spec": "spec/volcano/facade_spec.rb",
+    "example": "requests delivery without changing the session"
+  },
+  {
+    "name": "stale-session-overwrite",
+    "path": "lib/volcano/auth_refresh.rb",
+    "before": "        @client.store_session_if_current?(\n          session, binding.first, event: :token_refreshed, notifications: notifications\n        )",
+    "after": "        @client.store_session(session)",
+    "spec": "spec/volcano/facade_spec.rb",
+    "example": "does not replace a session established during refresh"
+  },
+  {
+    "name": "incorrect-lock-ownership",
+    "path": "lib/volcano/locks.rb",
+    "before": "lock_request(:release_project_lock, 204, key: key, token: lease.token, request_id: request_id)",
+    "after": "lock_request(:release_project_lock, 204, key: key, token: 'wrong-owner', request_id: request_id)",
+    "spec": "spec/volcano/locks_spec.rb",
+    "example": "forwards acquisition IDs while release gets a separate request ID"
+  },
+  {
+    "name": "binary-corruption",
+    "path": "lib/volcano/storage.rb",
+    "before": "      response.data.b\n",
+    "after": "      response.data.b.reverse\n",
+    "spec": "spec/volcano/storage_bucket_binary_properties_spec.rb",
+    "example": "downloads every byte as binary even when the transport encoding is UTF-8"
+  },
+  {
+    "name": "premature-realtime-cursor",
+    "path": "lib/volcano/realtime/protocol_recovery_position.rb",
+    "before": "        return unless completion_before_gap?(channel, completed)\n",
+    "after": "",
+    "spec": "spec/volcano/realtime/protocol_recovery_position_spec.rb",
+    "example": "does not advance at a recorded gap"
+  }
+]

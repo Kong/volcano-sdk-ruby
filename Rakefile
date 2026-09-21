@@ -4,7 +4,8 @@ require 'bundler/gem_tasks'
 require 'tmpdir'
 
 desc 'Run the same SDK checks locally and in CI'
-task quality: %w[quality:audit quality:generated quality:lint quality:spec quality:contract quality:package]
+task quality: %w[quality:audit quality:generated quality:lint quality:spec quality:defects quality:contract
+                 quality:package]
 
 desc 'Audit locked dependencies with current security advisories'
 task 'quality:audit' do
@@ -44,4 +45,9 @@ task 'quality:package' do
       sh 'bash', '.github/scripts/smoke-gem.sh', artifact
     end
   end
+end
+
+desc 'Require tests to detect the five injected SDK defects'
+task 'quality:defects' do
+  ruby 'bin/check-defects'
 end

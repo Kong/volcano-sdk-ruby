@@ -46,12 +46,14 @@ jobs:
       - run: npm ci
       - name: Run SDK quality checks
         run: bundle exec rake quality
-      - name: Preserve failing property counterexamples
+      - name: Preserve failing quality reports
         if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: property-failures-ruby-${{ matrix.ruby-version }}
-          path: reports/property-failures/*.json
+          name: quality-failures-ruby-${{ matrix.ruby-version }}
+          path: |
+            reports/property-failures/*.json
+            reports/defects/
           if-no-files-found: ignore
 
   quality:

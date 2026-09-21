@@ -1,0 +1,51 @@
+# Guardrail configuration, enforcement, and agent authority.
+/.github/ @Kong/team-volcano
+CODEOWNERS @Kong/team-volcano
+AGENTS.md @Kong/team-volcano
+CLAUDE.md @Kong/team-volcano
+GEMINI.md @Kong/team-volcano
+.agents/ @Kong/team-volcano
+.codex/ @Kong/team-volcano
+.claude/ @Kong/team-volcano
+.cursor/ @Kong/team-volcano
+.cursorrules @Kong/team-volcano
+/bin/ @Kong/team-volcano
+/scripts/ @Kong/team-volcano
+/maintainers/ @Kong/team-volcano
+
+# Match nested tool configurations too; new overrides are policy changes.
+Gemfile* @Kong/team-volcano
+*.gemspec @Kong/team-volcano
+Rakefile @Kong/team-volcano
+*.rake @Kong/team-volcano
+.ruby-version @Kong/team-volcano
+.ruby-gemset @Kong/team-volcano
+.bundle/config @Kong/team-volcano
+.rubocop* @Kong/team-volcano
+rubocop*.yml @Kong/team-volcano
+.rspec @Kong/team-volcano
+.simplecov @Kong/team-volcano
+Steepfile @Kong/team-volcano
+.steep* @Kong/team-volcano
+rbs_collection.* @Kong/team-volcano
+package.json @Kong/team-volcano
+package-lock.json @Kong/team-volcano
+npm-shrinkwrap.json @Kong/team-volcano
+.npmrc @Kong/team-volcano
+openapitools.json @Kong/team-volcano
+openapi-generator.yaml @Kong/team-volcano
+/openapi/templates/ @Kong/team-volcano
+Makefile @Kong/team-volcano
+.gitignore @Kong/team-volcano
+.gitattributes @Kong/team-volcano
+.pre-commit-config.yaml @Kong/team-volcano
+release-please-config.json @Kong/team-volcano
+.release-please-manifest.json @Kong/team-volcano
+
+# Test integrity and the tests that prove the gate cannot be weakened.
+/spec/spec_helper.rb @Kong/team-volcano
+/spec/support/test_integrity.rb @Kong/team-volcano
+/spec/support/coverage.rb @Kong/team-volcano
+/spec/support/property_checks.rb @Kong/team-volcano
+/spec/test_integrity_spec.rb @Kong/team-volcano
+/spec/quality/ @Kong/team-volcano

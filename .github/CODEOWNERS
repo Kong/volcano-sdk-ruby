@@ -2,6 +2,8 @@
 /.github/ @Kong/team-volcano
 CODEOWNERS @Kong/team-volcano
 AGENTS.md @Kong/team-volcano
+CONTRIBUTING.md @Kong/team-volcano
+SECURITY.md @Kong/team-volcano
 CLAUDE.md @Kong/team-volcano
 GEMINI.md @Kong/team-volcano
 .agents/ @Kong/team-volcano
@@ -48,4 +50,8 @@ release-please-config.json @Kong/team-volcano
 /spec/support/coverage.rb @Kong/team-volcano
 /spec/support/property_checks.rb @Kong/team-volcano
 /spec/test_integrity_spec.rb @Kong/team-volcano
+/spec/property_checks_spec.rb @Kong/team-volcano
+/spec/volcano_generation_spec.rb @Kong/team-volcano
+/spec/bundler/audit/ @Kong/team-volcano
+/spec/rubocop/ @Kong/team-volcano
 /spec/quality/ @Kong/team-volcano

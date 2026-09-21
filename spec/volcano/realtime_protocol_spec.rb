@@ -5,65 +5,22 @@ require 'async/condition'
 require 'async/queue'
 require 'json'
 require 'spec_helper'
+require 'support/protocol_socket'
 
-RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
-  class FakeSocket
-    attr_accessor :on_write
-    attr_reader :writes
-
-    def initialize
-      @incoming = Async::Queue.new
-      @writes = []
-      @closed = false
-    end
-
-    def write(message)
-      value = message.to_str
-      @writes << value
-      on_write&.call(JSON.parse(value))
-    end
-
-    def flush; end
-
-    def read
-      @incoming.dequeue
-    end
-
-    def receive(*frames)
-      @incoming.enqueue(frames.join("\n"))
-    end
-
-    def receive_raw(frame)
-      @incoming.enqueue(frame)
-    end
-
-    def finish
-      @incoming.enqueue(nil)
-    end
-
-    def close
-      return if @closed
-
-      @closed = true
-      finish
-    end
-
-    def closed?
-      @closed
-    end
-  end
+RSpec.describe Volcano::Realtime do
+  let(:protocol_class) { described_class.const_get(:Protocol, false) }
 
   it 'builds the bounded JSON commands' do
-    expect(described_class.connect(id: 1, token: 'access')).to eq(
+    expect(protocol_class.connect(id: 1, token: 'access')).to eq(
       'id' => 1,
       'connect' => { 'token' => 'access' }
     )
-    expect(described_class.subscribe(id: 2, channel: 'broadcast:contract')).to eq(
+    expect(protocol_class.subscribe(id: 2, channel: 'broadcast:contract')).to eq(
       'id' => 2,
       'subscribe' => { 'channel' => 'broadcast:contract' }
     )
     expect(
-      described_class.publish(
+      protocol_class.publish(
         id: 3,
         channel: 'broadcast:contract',
         data: { 'event' => 'message', 'value' => 'contract' }
@@ -75,11 +32,11 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         'data' => { 'event' => 'message', 'value' => 'contract' }
       }
     )
-    expect(described_class.unsubscribe(id: 4, channel: 'broadcast:contract')).to eq(
+    expect(protocol_class.unsubscribe(id: 4, channel: 'broadcast:contract')).to eq(
       'id' => 4,
       'unsubscribe' => { 'channel' => 'broadcast:contract' }
     )
-    expect(described_class.presence(id: 5, channel: 'presence:lobby')).to eq(
+    expect(protocol_class.presence(id: 5, channel: 'presence:lobby')).to eq(
       'id' => 5,
       'presence' => { 'channel' => 'presence:lobby' }
     )
@@ -87,7 +44,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'builds a recoverable presence subscription command' do
     expect(
-      described_class.subscribe(
+      protocol_class.subscribe(
         id: 1,
         channel: 'presence:lobby',
         recoverable: true,
@@ -105,13 +62,13 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'returns typed presence command results' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.on_write = lambda do |command|
         socket.receive(JSON.generate('id' => command.fetch('id'), 'presence' => {
                                        'presence' => { 'client-1' => { 'client' => 'client-1' } }
                                      }))
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
 
       expect(protocol.presence(channel: 'presence:lobby')).to eq(
         'presence' => { 'client-1' => { 'client' => 'client-1' } }
@@ -122,8 +79,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'dispatches project-prefixed join and leave pushes' do
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task)
       events = Async::Queue.new
       protocol.on_presence('presence:lobby') { |event, info| events.enqueue([event, info]) }
       info = { 'client' => 'client-1', 'user' => 'user-1', 'conn_info' => { 'status' => 'online' } }
@@ -144,8 +101,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'requests a presence resync when join and leave pushes overflow the callback queue' do
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task, max_callback_queue: 1)
       entered = Async::Queue.new
       release = Async::Queue.new
       events = Async::Queue.new
@@ -174,10 +131,10 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'correlates distinct concurrent replies that arrive in reverse ID order' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       written = Async::Queue.new
       socket.on_write = ->(command) { written.enqueue(command) }
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
 
       first = task.async { protocol.connect(token: 'access') }
       second = task.async do
@@ -202,7 +159,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'serializes concurrent subscription state changes for one channel' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       entered = Async::Queue.new
       release = Async::Queue.new
       blocked = false
@@ -214,7 +171,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         end
         socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
       first = task.async { protocol.subscribe(channel: 'broadcast:contract') }
       entered.dequeue
       second = task.async do
@@ -236,7 +193,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'waits for an in-flight protocol subscription before unsubscribing' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       entered = Async::Queue.new
       release = Async::Queue.new
       socket.on_write = lambda do |command|
@@ -246,7 +203,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
         end
         socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
       subscribing = task.async { protocol.subscribe(channel: 'broadcast:contract') }
       entered.dequeue
       unsubscribe_finished = false
@@ -270,11 +227,11 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'dispatches project-prefixed raw publications by data event' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.on_write = lambda do |command|
         socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
       publication = Async::Condition.new
       protocol.on_publication('broadcast:contract') do |event, data|
         publication.signal([event, data])
@@ -300,12 +257,12 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'retains replies that arrive while the socket write yields' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.on_write = lambda do |command|
         socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => { 'accepted' => true }))
         Async::Task.current.yield
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
 
       result = task.with_timeout(0.1) { protocol.connect(token: 'access') }
 
@@ -316,7 +273,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'propagates server errors to the matching request' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.on_write = lambda do |command|
         socket.receive(
           JSON.generate(
@@ -325,7 +282,7 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
           )
         )
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
 
       expect { protocol.connect(token: 'bad') }.to raise_error(
         Volcano::Realtime::ServerError,
@@ -337,10 +294,10 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'rejects pending and future operations when the socket closes' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       written = Async::Queue.new
       socket.on_write = ->(_command) { written.enqueue(true) }
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
       pending = task.async { protocol.connect(token: 'access') }
       written.dequeue
       socket.finish
@@ -354,8 +311,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'answers Centrifuge application pings' do
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task)
 
       socket.receive('{}')
       task.with_timeout(0.2) { task.yield until socket.writes.any? }
@@ -367,11 +324,11 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'lets publication callbacks issue commands without blocking the reader' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.on_write = lambda do |command|
         socket.receive(JSON.generate('id' => command.fetch('id'), 'result' => {}))
       end
-      protocol = described_class.new(socket: socket, task: task)
+      protocol = protocol_class.new(socket: socket, task: task)
       completed = Async::Condition.new
       protocol.on_publication('broadcast:contract') do
         protocol.publish(channel: 'broadcast:contract', data: { 'event' => 'reply' })
@@ -394,8 +351,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'bounds callback work and survives callback failures' do
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task, max_callback_queue: 1)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task, max_callback_queue: 1)
       started = Async::Queue.new
       release = Async::Queue.new
       received = Async::Queue.new
@@ -447,8 +404,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'closes the reader and socket when a callback closes the protocol' do
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task)
       completed = Async::Condition.new
       protocol.on_publication('broadcast:contract') do
         protocol.close
@@ -471,10 +428,10 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'bounds pending commands and times out missing replies' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       written = Async::Queue.new
       socket.on_write = ->(_command) { written.enqueue(true) }
-      protocol = described_class.new(
+      protocol = protocol_class.new(
         socket: socket,
         task: task,
         request_timeout: 0.02,
@@ -493,9 +450,9 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
 
   it 'closes the socket and redacts failures while flushing a command' do
     Async do |task|
-      socket = FakeSocket.new
+      socket = SpecSupport::ProtocolSocket.new
       socket.define_singleton_method(:flush) { raise IOError, 'flush failed for access-token' }
-      protocol = described_class.new(socket: socket, task: task, secrets: ['access-token'])
+      protocol = protocol_class.new(socket: socket, task: task, secrets: ['access-token'])
 
       expect { protocol.connect(token: 'access-token') }.to raise_error(
         Volcano::Realtime::ClosedError, 'flush failed for [REDACTED]'
@@ -509,8 +466,8 @@ RSpec.describe Volcano::Realtime.const_get(:Protocol, false) do
     broken_frame.define_singleton_method(:to_str) { raise IOError, 'read failed' }
 
     Async do |task|
-      socket = FakeSocket.new
-      protocol = described_class.new(socket: socket, task: task)
+      socket = SpecSupport::ProtocolSocket.new
+      protocol = protocol_class.new(socket: socket, task: task)
       socket.receive_raw(broken_frame)
       task.with_timeout(0.2) { task.yield until socket.closed? }
 

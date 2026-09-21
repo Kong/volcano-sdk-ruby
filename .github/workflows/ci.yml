@@ -3,47 +3,58 @@ name: CI
 on:
   workflow_call:
   pull_request:
+  merge_group:
+    branches:
+      - main
   push:
     branches:
       - main
 
-permissions:
-  contents: read
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
+      fail-fast: false
       matrix:
         ruby-version: ["3.2", "3.4"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - run: bash .github/scripts/actionlint.sh
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: "22"
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "21"
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
       - run: npm ci
-      - run: bin/check-openapi
-      - run: bundle exec rubocop --parallel
-      - run: bundle exec rspec
-      - name: Validate Cucumber phrases
+      - name: Run SDK quality checks
+        run: bundle exec rake quality
+
+  quality:
+    name: Quality Gate
+    if: ${{ always() }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every mandatory job to succeed
         env:
-          CUCUMBER_PUBLISH_QUIET: "true"
-          VOLCANO_SDK_CONTRACT_FIXTURE: ${{ github.workspace }}/tests/fixtures/sdk-contract-dry-run.json
-        run: |
-          chmod 600 "$VOLCANO_SDK_CONTRACT_FIXTURE"
-          bundle exec cucumber features/contract --dry-run --strict --format progress
-      - run: gem build volcano-sdk.gemspec
-      - name: Smoke test the gem
-        run: bash .github/scripts/smoke-gem.sh volcano-sdk-*.gem
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: jq -e 'length == 1 and all(. == "success")' <<< "$RESULTS"

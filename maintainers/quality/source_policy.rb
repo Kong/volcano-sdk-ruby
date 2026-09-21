@@ -4,6 +4,7 @@ require 'open3'
 require 'ripper'
 require 'rubocop'
 require 'yaml'
+require_relative 'cop_scope_policy'
 
 module Quality
   # Checks maintained sources against the linter's actual discovered targets.
@@ -22,7 +23,7 @@ module Quality
       @errors.clear
       check_inheritance
       paths = repository_files.reject { |path| path.start_with?(GENERATED) }
-      paths.each { |path| check_configuration(path) }
+      paths.each { |path| check_path(path) }
       sources = paths.select { |path| ruby_source?(path) }
       sources.each { |path| check_comments(path) }
       check_targets(sources)
@@ -45,10 +46,22 @@ module Quality
     end
 
     def check_inheritance
-      configuration = YAML.safe_load_file(File.join(@root, '.rubocop.yml'), aliases: true)
+      path = File.join(@root, '.rubocop.yml')
+      return if File.symlink?(path)
+
+      configuration = YAML.safe_load_file(path, aliases: true)
+      @errors.concat(CopScopePolicy.check(configuration))
       return unless configuration.key?('inherit_from') || configuration.key?('inherit_gem')
 
       @errors << '.rubocop.yml: inherited configurations are forbidden; keep policy in the root configuration'
+    end
+
+    def check_path(path)
+      if File.symlink?(File.join(@root, path))
+        @errors << "#{path}: repository symlinks are forbidden"
+      else
+        check_configuration(path)
+      end
     end
 
     def check_configuration(path)
@@ -70,10 +83,8 @@ module Quality
 
     def check_comments(path)
       full_path = File.join(@root, path)
-      if File.symlink?(full_path)
-        @errors << "#{path}: maintained Ruby sources must not be symlinks"
-        return
-      end
+      return if File.symlink?(full_path)
+
       Ripper.lex(File.read(full_path)).each do |position, event, content, _state|
         next unless event == :on_comment && SUPPRESSION.match?(content)
 
@@ -82,6 +93,8 @@ module Quality
     end
 
     def check_targets(sources)
+      return unless @errors.empty?
+
       targets = command(Gem.ruby, Gem.bin_path('rubocop', 'rubocop'), '--list-target-files').lines.to_set do |line|
         File.expand_path(line.strip, @root)
       end

@@ -4,7 +4,12 @@ require 'bundler/gem_tasks'
 require 'tmpdir'
 
 desc 'Run the same SDK checks locally and in CI'
-task quality: %w[quality:generated quality:lint quality:spec quality:contract quality:package]
+task quality: %w[quality:audit quality:generated quality:lint quality:spec quality:contract quality:package]
+
+desc 'Audit locked dependencies with current security advisories'
+task 'quality:audit' do
+  ruby Gem.bin_path('bundler-audit', 'bundle-audit'), 'check', '--update'
+end
 
 desc 'Verify the generated OpenAPI client'
 task 'quality:generated' do

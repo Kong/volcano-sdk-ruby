@@ -21,7 +21,10 @@ Gemfile* @Kong/team-volcano
 gems.rb @Kong/team-volcano
 gems.locked @Kong/team-volcano
 *.gemspec @Kong/team-volcano
+rakefile @Kong/team-volcano
 Rakefile @Kong/team-volcano
+rakefile.rb @Kong/team-volcano
+Rakefile.rb @Kong/team-volcano
 *.rake @Kong/team-volcano
 .ruby-version @Kong/team-volcano
 .ruby-gemset @Kong/team-volcano

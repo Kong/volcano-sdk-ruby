@@ -43,7 +43,6 @@ RSpec/MultipleExpectations:
 RSpec/DescribeClass:
   Exclude:
     - "spec/contract_structure_spec.rb"
-    - "spec/volcano/errors_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
     - "spec/volcano/realtime/protocol_spec.rb"
@@ -52,7 +51,6 @@ RSpec/DescribeClass:
 # their instance variables belong to the fakes, not to RSpec example state.
 RSpec/InstanceVariable:
   Exclude:
-    - "spec/volcano/errors_spec.rb"
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/realtime/protocol_spec.rb"
@@ -61,7 +59,6 @@ RSpec/InstanceVariable:
 # the example group; the files are isolated processes under RSpec.
 RSpec/LeakyConstantDeclaration:
   Exclude:
-    - "spec/volcano/errors_spec.rb"
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
@@ -75,7 +72,6 @@ RSpec/SpecFilePathFormat:
 
 Lint/ConstantDefinitionInBlock:
   Exclude:
-    - "spec/volcano/errors_spec.rb"
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"

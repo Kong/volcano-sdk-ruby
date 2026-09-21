@@ -859,7 +859,7 @@ RSpec.describe Volcano::Realtime do
       session_a = '00000000-0000-4000-8000-000000000001'
       session_b = '00000000-0000-4000-8000-000000000002'
       socket = FacadeSocket.new
-      transport = RealtimeDatabaseTransport.new
+      transport = instance_double(Volcano.const_get(:GeneratedTransport, false))
       allow(transport).to receive(:auth_refresh).and_return(
         RealtimeResponse.new(status: 200, headers: {}, data: nil,
                              body: { 'access_token' => token.call(same_session ? session_a : session_b),
@@ -886,10 +886,15 @@ RSpec.describe Volcano::Realtime do
 
   it 'keeps a token-only connection usable after its profile establishes the user identity' do
     socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
-    allow(transport).to receive(:auth_get_user).and_return(
-      RealtimeResponse.new(status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => 'u@example.com',
-                                                            'status' => 'active' } }, headers: {}, data: nil)
+    transport = instance_double(Volcano.const_get(:GeneratedTransport, false))
+    allow(transport).to receive_messages(
+      auth_get_user: RealtimeResponse.new(
+        status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => 'u@example.com', 'status' => 'active' } },
+        headers: {}, data: nil
+      ),
+      query_database_select: RealtimeResponse.new(
+        status: 200, body: { 'data' => [{ 'id' => 42, 'body' => 'fetched' }] }, headers: {}, data: nil
+      )
     )
     client = Volcano::Client.new(anon_key: 'anon', access_token: 'access-token', _transport: transport,
                                  _realtime_socket_factory: ->(_address) { socket })
@@ -912,7 +917,7 @@ RSpec.describe Volcano::Realtime do
         }
       )
       expect(task.with_timeout(0.2) { received.dequeue }.record).to eq('id' => 42, 'body' => 'fetched')
-      expect(transport.queries.dig(0, :authorization)).to eq('access-token')
+      expect(transport).to have_received(:query_database_select).with(hash_including(authorization: 'access-token'))
       client.realtime.disconnect
     end.wait
   end

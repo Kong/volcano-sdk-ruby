@@ -136,7 +136,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" release/sdk-acceptance.tar.gz
+        run: |
+          if gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | grep -Fxq sdk-acceptance.tar.gz; then
+            mkdir previous
+            gh release download "$RELEASE_TAG" --pattern sdk-acceptance.tar.gz --dir previous
+            gh attestation verify previous/sdk-acceptance.tar.gz --repo "$GH_REPO" --signer-workflow "$GH_REPO/.github/workflows/publish.yml" --source-ref "refs/tags/$RELEASE_TAG" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+            # A retry may regenerate dependency locks, but must test identical SDK bytes.
+            tar -xOf previous/sdk-acceptance.tar.gz ./acceptance.json | jq -S . > previous.json
+            tar -xOf release/sdk-acceptance.tar.gz ./acceptance.json | jq -S . > current.json
+            cmp previous.json current.json
+          fi
+          gh release upload "$RELEASE_TAG" release/sdk-acceptance.tar.gz --clobber
 
   prepare:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'

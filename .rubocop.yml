@@ -46,7 +46,6 @@ RSpec/DescribeClass:
     - "spec/volcano/errors_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
 
 # These files define stateful transport/socket fakes inside their example groups;
 # their instance variables belong to the fakes, not to RSpec example state.
@@ -55,7 +54,6 @@ RSpec/InstanceVariable:
     - "spec/volcano/errors_spec.rb"
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
 
 # These same fake classes intentionally keep their helper constants scoped to
 # the example group; the files are isolated processes under RSpec.
@@ -65,7 +63,6 @@ RSpec/LeakyConstantDeclaration:
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
 
 # Cross-cutting contract/facade specs intentionally cover more than one class.
 RSpec/SpecFilePathFormat:
@@ -79,7 +76,6 @@ Lint/ConstantDefinitionInBlock:
     - "spec/volcano/facade_spec.rb"
     - "spec/volcano/generated_transport_spec.rb"
     - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
 
 Style/Documentation:
   Enabled: true

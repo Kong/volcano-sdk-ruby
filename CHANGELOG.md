@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.2...v0.10.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* **openapi:** preserve nested unions in the private generated namespace ([#188](https://github.com/Kong/volcano-sdk-ruby/issues/188)) ([bd9d8ef](https://github.com/Kong/volcano-sdk-ruby/commit/bd9d8ef65b7ff325080a6cc5651a3f2deceb1417))
+
 ## [0.10.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.1...v0.10.2) (2026-09-21)
 
 

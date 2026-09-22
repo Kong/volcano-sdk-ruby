@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/gem_tasks'
+require 'securerandom'
 require 'tmpdir'
 
 desc 'Run the same SDK checks locally and in CI'
@@ -24,8 +25,12 @@ end
 
 desc 'Run the unit tests'
 task 'quality:spec' do
-  sh({ 'VOLCANO_REQUIRE_FULL_SUITE' => '1' }, Gem.ruby, Gem.bin_path('rspec-core', 'rspec'),
-     '--failure-exit-code', '1', '--error-exit-code', '1')
+  rspec = Gem.bin_path('rspec-core', 'rspec')
+  environment = { 'VOLCANO_REQUIRE_FULL_SUITE' => '1', 'SIMPLECOV_RUN_ID' => SecureRandom.uuid }
+  Bundler.with_unbundled_env do
+    sh(environment, Gem.ruby, '-r./spec/support/coverage_start', rspec,
+       '--failure-exit-code', '1', '--error-exit-code', '1')
+  end
 end
 
 desc 'Validate contract feature bindings without provisioning resources'

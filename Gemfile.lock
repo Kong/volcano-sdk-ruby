@@ -158,6 +158,7 @@ GEM
       regexp_parser (>= 2.0)
       rubocop (~> 1.86, >= 1.86.2)
     ruby-progressbar (1.13.0)
+    simplecov (1.2.0)
     sys-uname (1.5.1)
       ffi (~> 1.1)
       memoist3 (~> 1.0.0)
@@ -184,6 +185,7 @@ DEPENDENCIES
   rubocop-performance (~> 1.26)
   rubocop-rake (~> 0.7)
   rubocop-rspec (~> 3.7)
+  simplecov (= 1.2.0)
   volcano-sdk!
 
 BUNDLED WITH

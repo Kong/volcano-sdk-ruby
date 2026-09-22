@@ -8,16 +8,12 @@ and Java 21. Node and Java support generation and are not gem runtime dependenci
 ```shell
 bundle install
 npm ci
-bin/check-openapi
-bundle exec rubocop --parallel
-bundle exec rspec
-chmod 600 tests/fixtures/sdk-contract-dry-run.json
-CUCUMBER_PUBLISH_QUIET=true \
-VOLCANO_SDK_CONTRACT_FIXTURE="$PWD/tests/fixtures/sdk-contract-dry-run.json" \
-  bundle exec cucumber features --dry-run --strict --format progress
-gem build volcano-sdk.gemspec
-bash .github/scripts/smoke-gem.sh volcano-sdk-*.gem
+bundle exec rake quality
 ```
+
+CI runs the same command. It checks dependencies, regeneration, lint, tests,
+coverage, injected defects, contract bindings, and the installed gem.
+See [runtime coverage](maintainers/coverage.md) for coverage reports and focused tests.
 
 After updating `openapi/openapi.yaml` from Hosting's public bundle, regenerate
 the internal client with `bin/generate-openapi`. The dry run checks active and

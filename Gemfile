@@ -14,4 +14,5 @@ group :development do
   gem 'rubocop-performance', '~> 1.26'
   gem 'rubocop-rake', '~> 0.7'
   gem 'rubocop-rspec', '~> 3.7'
+  gem 'simplecov', '1.2.0', require: false
 end

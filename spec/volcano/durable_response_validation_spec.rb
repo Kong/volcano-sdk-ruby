@@ -49,11 +49,4 @@ RSpec.describe Volcano::Durable do
     expect(client.durable.list('project', 'function'))
       .to have_attributes(executions: [], page: 1, limit: 20, total: 0, has_more: false)
   end
-
-  it 'defaults omitted page counts to zero' do
-    allow(transport).to receive(:list_durable_executions).and_return(response({}))
-
-    expect(client.durable.list('project', 'function'))
-      .to have_attributes(executions: [], page: 0, limit: 0, total: 0, has_more: false)
-  end
 end

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.20.0...v0.21.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe storage records in RBS ([#248](https://github.com/Kong/volcano-sdk-ruby/issues/248)) ([d2b9c38](https://github.com/Kong/volcano-sdk-ruby/commit/d2b9c38f6d8d581b34dd53a4d19ff8b41f2caf82))
+
 ## [0.20.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.19.0...v0.20.0) (2026-09-22)
 
 

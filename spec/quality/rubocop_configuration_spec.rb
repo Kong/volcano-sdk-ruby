@@ -16,6 +16,7 @@ RSpec.describe RuboCop do
   end
 
   directives = %w[disable todo].freeze
+  coverage_directives = ['# simplecov:disable', '# simplecov : disable branch -- reason', '# :nocov:'].freeze
   %w[lib/volcano/quality_probe.rb spec/quality/quality_probe_spec.rb].each do |path|
     context "with #{path}" do
       it 'accepts valid Ruby through the project configuration' do
@@ -32,6 +33,33 @@ RSpec.describe RuboCop do
           expect(status).to eq(1)
           expect(offenses).to include(a_hash_including('cop_name' => 'Layout/SpaceAroundOperators'))
         end
+      end
+
+      coverage_directives.each do |directive|
+        it "rejects the coverage directive #{directive}" do
+          offenses, status = inspect_source("#{directive}\nvalue = 1\nString(value)", path)
+
+          expect(status).to eq(1)
+          expect(offenses).to include(a_hash_including('cop_name' => 'Volcano/CoverageSuppression'))
+        end
+      end
+
+      it 'rejects inline coverage suppression despite a RuboCop disable directive' do
+        offenses, status = inspect_source(
+          "# rubocop:disable Volcano/CoverageSuppression\nString(1) # simplecov:disable", path
+        )
+
+        expect(status).to eq(1)
+        expect(offenses).to include(a_hash_including('cop_name' => 'Volcano/CoverageSuppression'))
+      end
+
+      it 'allows directive text inside strings and heredocs' do
+        offenses, status = inspect_source(
+          "String('# simplecov:disable')\nString(<<~TEXT)\n  # simplecov:disable\nTEXT", path
+        )
+
+        expect(status).to eq(0)
+        expect(offenses).to be_empty
       end
 
       it 'rejects redundant disable comments' do

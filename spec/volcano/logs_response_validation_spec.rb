@@ -16,4 +16,15 @@ RSpec.describe Volcano::Logs do
       expect { client.logs.search('project', {}) }.to raise_error(TypeError, 'Expected a complete log response')
     end
   end
+
+  [nil, '0', 0.5, false].each do |total|
+    it "rejects an invalid activity total #{total.inspect}" do
+      response = Volcano::Transport::Response.new(
+        status: 200, body: { 'data' => [], 'total' => total }, headers: {}, data: nil
+      )
+      allow(transport).to receive(:get_project_log_activity).and_return(response)
+
+      expect { client.logs.activity('project', {}) }.to raise_error(TypeError, 'Expected a complete log response')
+    end
+  end
 end

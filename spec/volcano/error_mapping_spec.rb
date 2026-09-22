@@ -15,6 +15,7 @@ RSpec.describe Volcano::Error do
     404 => 'Volcano::Error::NotFoundError',
     409 => 'Volcano::Error::ConflictError',
     429 => 'Volcano::Error::RateLimitedError',
+    418 => 'Volcano::Error::VolcanoError',
     500 => 'Volcano::Error::ServerError',
     503 => 'Volcano::Error::ServerError'
   }.each do |status, error_name|
@@ -35,6 +36,19 @@ RSpec.describe Volcano::Error do
         expect(error.code).to eq('contract_code')
         expect(error.retry_after).to eq(status == 429 ? 17 : nil)
       }
+    end
+  end
+
+  [nil, {}, { 'Retry-After' => 'tomorrow' }].each do |headers|
+    it "preserves rate limiting without a numeric retry delay: #{headers.inspect}" do
+      response = Volcano::Transport::Response.new(status: 429, body: nil, headers: headers, data: nil)
+      allow(transport).to receive(:auth_signin).and_return(response)
+
+      expect do
+        client.auth.sign_in(email: 'user@example.com', password: 'secret')
+      end.to(raise_error(Volcano::Error::RateLimitedError) do |error|
+        expect(error).to have_attributes(status: 429, code: nil, retry_after: nil, message: 'Volcano request failed')
+      end)
     end
   end
 

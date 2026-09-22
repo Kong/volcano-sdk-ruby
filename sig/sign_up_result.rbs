@@ -1,0 +1,20 @@
+module Volcano
+  class SignUpResult < Data
+    attr_reader confirmation_required: bool
+    attr_reader message: String
+    attr_reader session: Session?
+
+    def self.new: (bool confirmation_required, String message, ?Session? session) -> SignUpResult
+                | (confirmation_required: bool, message: String, ?session: Session?) -> SignUpResult
+    def self.[]: (bool confirmation_required, String message, ?Session? session) -> SignUpResult
+               | (confirmation_required: bool, message: String, ?session: Session?) -> SignUpResult
+    def self.members: () -> [:confirmation_required, :message, :session]
+
+    def initialize: (confirmation_required: bool, message: String, ?session: Session?) -> void
+    def members: () -> [:confirmation_required, :message, :session]
+    def with: (?confirmation_required: bool, ?message: String, ?session: Session?) -> SignUpResult
+    def to_h: () -> { confirmation_required: bool, message: String, session: Session? }
+    def deconstruct: () -> [bool, String, Session?]
+    def deconstruct_keys: (?Array[Symbol]?) -> Hash[Symbol, bool | String | Session?]
+  end
+end

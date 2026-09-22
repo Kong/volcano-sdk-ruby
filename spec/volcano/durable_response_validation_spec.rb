@@ -3,6 +3,7 @@
 RSpec.describe Volcano::Durable do
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon', access_token: 'access', _transport: transport) }
+  let(:empty_page) { { 'data' => [], 'page' => 1, 'limit' => 20, 'total' => 0, 'has_more' => false } }
 
   def execution
     {
@@ -33,7 +34,7 @@ RSpec.describe Volcano::Durable do
     end
   end
 
-  [nil, [], { 'data' => {} }, { 'has_more' => 'false' }, { 'page' => '1' }].each do |payload|
+  [nil, [], 'invalid', {}].each do |payload|
     it "rejects a malformed execution page #{payload.inspect}" do
       allow(transport).to receive(:list_durable_executions).and_return(response(payload))
 
@@ -42,9 +43,27 @@ RSpec.describe Volcano::Durable do
     end
   end
 
+  invalid_page_values = [nil, 'invalid', {}]
+  %w[data page limit total has_more].each do |field|
+    it "rejects a page without #{field}" do
+      allow(transport).to receive(:list_durable_executions).and_return(response(empty_page.except(field)))
+
+      expect { client.durable.list('project', 'function') }
+        .to raise_error(TypeError, 'Expected a complete durable execution page')
+    end
+
+    invalid_page_values.each do |value|
+      it "rejects a page with #{field} set to #{value.inspect}" do
+        allow(transport).to receive(:list_durable_executions).and_return(response(empty_page.merge(field => value)))
+
+        expect { client.durable.list('project', 'function') }
+          .to raise_error(TypeError, 'Expected a complete durable execution page')
+      end
+    end
+  end
+
   it 'preserves a complete empty page' do
-    payload = { 'data' => [], 'page' => 1, 'limit' => 20, 'total' => 0, 'has_more' => false }
-    allow(transport).to receive(:list_durable_executions).and_return(response(payload))
+    allow(transport).to receive(:list_durable_executions).and_return(response(empty_page))
 
     expect(client.durable.list('project', 'function'))
       .to have_attributes(executions: [], page: 1, limit: 20, total: 0, has_more: false)

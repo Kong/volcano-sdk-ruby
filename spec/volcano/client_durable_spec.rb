@@ -184,9 +184,9 @@ RSpec.describe Volcano::Client do
     )
   end
 
-  it 'tolerates a page with no executions', :aggregate_failures do
+  it 'preserves an empty page', :aggregate_failures do
     responses[:list_durable_executions] = transport_response(
-      200, 'page' => 2, 'limit' => 10, 'total' => 1, 'has_more' => false
+      200, 'data' => [], 'page' => 2, 'limit' => 10, 'total' => 1, 'has_more' => false
     )
 
     page = owner.durable.list('project-1', 'charge-order', page: 2, limit: 10)

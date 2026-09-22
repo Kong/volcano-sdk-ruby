@@ -1,0 +1,30 @@
+module Volcano
+  class LockLeaseClock
+    MAX_LEASE_LIFETIME_SECONDS: Integer
+    SUSPEND_AWARE: bool
+    CLOCK_ID: Integer
+
+    class Timestamp < Data
+      attr_reader monotonic: Float
+      attr_reader wall: Time
+
+      def self.new: (monotonic: Float, wall: Time) -> Timestamp
+      def initialize: (monotonic: Float, wall: Time) -> void
+    end
+
+    @ttl: Numeric
+    @absolute_deadline: Float
+    @absolute_wall_deadline: Time
+    @deadline: Float
+    @wall_deadline: Time
+
+    def self.now: () -> Float
+    def self.capture: () -> Timestamp
+    def self.suspend_aware?: () -> bool
+
+    def initialize: (ttl: Numeric, started_at: Timestamp) -> void
+    def reset: (Timestamp started_at) -> Time
+    def remaining: () -> Float
+    def monotonic_now: () -> Float
+  end
+end

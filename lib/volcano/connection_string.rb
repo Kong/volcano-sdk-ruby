@@ -36,7 +36,7 @@ module Volcano
 
   def database_connection_prefix_end(value)
     prefix = CONNECTION_URI_PREFIX.match(value)
-    return prefix.end(0) if prefix && !INVALID_PERCENT_ENCODING.match?(value)
+    return prefix.to_s.length if prefix && !INVALID_PERCENT_ENCODING.match?(value)
 
     raise ArgumentError,
           'database_connection_string: base_connection_string is not a valid connection URL',

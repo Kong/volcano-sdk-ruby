@@ -2,6 +2,7 @@
 
 require 'volcano'
 require_relative 'support/property_checks'
+require_relative 'support/steep_consumer'
 require_relative 'support/test_integrity'
 
 RSpec.configure do |config|

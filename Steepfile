@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 target :sdk do
-  signature 'sig'
+  signature 'sig', 'sig_dev'
   check 'lib/volcano/errors.rb'
+  check 'lib/volcano/connection_string.rb'
+  library 'uri'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 

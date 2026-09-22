@@ -1,6 +1,6 @@
 module Volcano
   type json_value = nil | bool | Integer | Float | String | Array[json_value] | Hash[String, json_value]
-  type session_user_input = json_value | Time | Array[session_user_input] | Hash[String | Symbol, session_user_input]
+  type session_user_input = json_value | Symbol | Time | Array[session_user_input] | Hash[String | Symbol, session_user_input]
   type session_user = Hash[String, session_user_input] | Hash[Symbol, session_user_input] | Hash[String | Symbol, session_user_input]
 
   class Session < Data

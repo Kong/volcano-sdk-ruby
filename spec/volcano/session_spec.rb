@@ -96,6 +96,12 @@ RSpec.describe Volcano::Session do
     end.to raise_error(TypeError, /JSON values or timestamps/)
   end
 
+  it 'normalizes symbol metadata values to strings' do
+    session = described_class.new(access_token: 'access', user: { role: :admin })
+
+    expect(session.user).to eq('role' => 'admin')
+  end
+
   it 'stores timestamps as immutable UTC ISO8601 strings' do
     timestamp = Time.at(123, 456, :nanosecond).getlocal('+02:00')
     session = described_class.new('access', 'refresh', 'user', { 'id' => 'user', 'created_at' => timestamp })

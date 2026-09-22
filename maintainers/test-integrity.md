@@ -18,6 +18,6 @@ examples; they continue to reject pending, skipped, focused, and repeated tests.
 Native CLI options fix both assertion and suite-error exit codes at one; RSpec
 gives these options precedence over settings declared in spec files.
 
-CODEOWNERS protects this listener and its regression fixtures. Ordinary specs
-remain unowned. This detects suite filtering; it is not a sandbox for malicious
-Ruby that deliberately replaces the test framework itself.
+CODEOWNERS assigns the entire repository to `@Kong/team-volcano`. The listener
+detects suite filtering; it is not a sandbox for Ruby that deliberately replaces
+the test framework itself.

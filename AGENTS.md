@@ -1,17 +1,12 @@
 # SDK quality
 
-- Before pushing, run `bundle exec rake quality`. CI runs the same command on
-  Ruby 3.2 and 3.4. OpenAPI generation also requires Node 22 and Java 21.
 - Research upstream tools before adding enforcement. Keep rules in native tool
   configuration and orchestration in standard tasks. Add custom checks only
   for requirements established tools cannot express; document that gap.
 - Fix failures rather than weakening rules, excluding code, or suppressing
   findings. Never approve quality-policy changes on a human reviewer's behalf.
 - Keep reviewer and repository-administration credentials outside ordinary
-  automation. Quality policy and enforcement are owned by `@Kong/team-volcano`
-  through `.github/CODEOWNERS`.
-- Keep generated clients private. Regenerate them from the checked-in OpenAPI
-  snapshot; never edit generated output by hand.
+  automation.
 - Preserve shared behavioral scenarios and coordinate contract changes with
   `Kong/volcano-hosting` and the other SDKs.
 - Keep maintainer guidance under `maintainers/`; `docs/` is published.

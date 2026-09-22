@@ -18,6 +18,20 @@ module Volcano
       end
     end
 
+    it 'finishes an expiry watcher whose lease expired before it could run' do
+      instance = guard
+      allow(LockLeaseClock).to receive(:now).and_return(131.0)
+      watcher = instance.start_expiry_watch
+
+      expect(watcher.join(1)).to equal(watcher)
+      expect(instance).to be_lost
+      expect(instance.failure).to be_a(Timeout::Error)
+      expect(instance.failure.message).to eq(described_class::EXPIRY_MESSAGE)
+    ensure
+      watcher&.kill&.join
+      instance&.stop_expiry_watch
+    end
+
     def observe_waits(waiting)
       condition = ConditionVariable.new
       allow(ConditionVariable).to receive(:new).and_return(condition)

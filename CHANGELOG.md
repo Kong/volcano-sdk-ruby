@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.3...v0.10.4) (2026-09-22)
+
+
+### Bug Fixes
+
+* reject incomplete durable execution pages ([#218](https://github.com/Kong/volcano-sdk-ruby/issues/218)) ([3cf8515](https://github.com/Kong/volcano-sdk-ruby/commit/3cf85157d5d1ff32e05e5eba756665618d519071))
+
 ## [0.10.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.2...v0.10.3) (2026-09-21)
 
 

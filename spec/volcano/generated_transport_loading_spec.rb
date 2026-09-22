@@ -24,7 +24,7 @@ module Volcano
         puts JSON.generate(copies: $LOAD_PATH.count(generated_path), version: Volcano::VERSION)
       RUBY
 
-      output, errors, status = Open3.capture3(Gem.ruby, '-Ilib', '-e', source)
+      output, errors, status = Open3.capture3(Gem.ruby, '-Ilib', '-r./spec/support/subprocess_coverage', '-e', source)
 
       expect(status).to be_success, errors
       expect(JSON.parse(output)).to eq('copies' => 1, 'version' => VERSION)

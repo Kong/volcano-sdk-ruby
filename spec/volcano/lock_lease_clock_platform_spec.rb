@@ -14,7 +14,9 @@ module Volcano
         clock = Volcano::LockLeaseClock
         puts JSON.generate(suspend_aware: clock.suspend_aware?, now: clock.now)
       RUBY
-      output, errors, status = Open3.capture3(Gem.ruby, '-Ilib', '-e', source)
+      output, errors, status = Open3.capture3(
+        Gem.ruby, '-Ilib', '-r./spec/support/subprocess_coverage', '-e', source
+      )
       expect(status).to be_success, errors
       JSON.parse(output)
     end

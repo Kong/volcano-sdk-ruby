@@ -13,6 +13,7 @@ raise 'Wrong updated token' unless updated_session.access_token == 'updated'
 raise 'Wrong snapshot' unless updated_session.to_h[:user] == updated_session.user
 raise 'Wrong deconstruction' unless updated_session.deconstruct[0] == 'updated'
 raise 'Wrong key deconstruction' unless updated_session.deconstruct_keys([:access_token])[:access_token] == 'updated'
+raise 'Wrong full deconstruction' unless updated_session.deconstruct_keys(nil)[:access_token] == 'updated'
 
 result = Volcano::SignUpResult.new(false, 'Accepted', updated_session)
 raise 'Wrong result members' unless Volcano::SignUpResult.members == %i[confirmation_required message session]
@@ -24,3 +25,4 @@ updated_result = bracket_result.with(confirmation_required: false, message: 'Don
 raise 'Wrong result update' unless updated_result.to_h[:message] == 'Done'
 raise 'Wrong result deconstruction' unless updated_result.deconstruct[0] == false
 raise 'Wrong result keys' unless updated_result.deconstruct_keys([:message])[:message] == 'Done'
+raise 'Wrong full result keys' unless updated_result.deconstruct_keys(nil)[:message] == 'Done'

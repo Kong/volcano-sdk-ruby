@@ -15,6 +15,6 @@ module Volcano
     def with: (?confirmation_required: bool, ?message: String, ?session: Session?) -> SignUpResult
     def to_h: () -> { confirmation_required: bool, message: String, session: Session? }
     def deconstruct: () -> [bool, String, Session?]
-    def deconstruct_keys: (?Array[Symbol]?) -> Hash[Symbol, bool | String | Session?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, bool | String | Session?]
   end
 end

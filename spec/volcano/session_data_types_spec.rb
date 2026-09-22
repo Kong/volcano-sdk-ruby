@@ -11,8 +11,8 @@ RSpec.describe Volcano::Session do
   end
 
   {
-    'session.rb' => ['Ruby::UnresolvedOverloading', 'Ruby::ArgumentTypeMismatch'],
-    'sign_up_result.rb' => ['Ruby::ArgumentTypeMismatch']
+    'session.rb' => ['Ruby::UnresolvedOverloading', 'Ruby::ArgumentTypeMismatch', 'Ruby::InsufficientPositionalArguments'],
+    'sign_up_result.rb' => ['Ruby::ArgumentTypeMismatch', 'Ruby::InsufficientPositionalArguments']
   }.each do |fixture, diagnostics|
     it "rejects invalid #{fixture} consumer values" do
       source = File.read(File.expand_path("../../tests/types_invalid/#{fixture}", __dir__))

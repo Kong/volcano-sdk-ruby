@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.13.0...v0.14.0) (2026-09-22)
+
+
+### Features
+
+* **ruby:** type complete Data record surface ([#233](https://github.com/Kong/volcano-sdk-ruby/issues/233)) ([41b0ae0](https://github.com/Kong/volcano-sdk-ruby/commit/41b0ae0d9a8503f1779d5eecab4fd80b2fbaf980))
+
 ## [0.13.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.12.0...v0.13.0) (2026-09-22)
 
 

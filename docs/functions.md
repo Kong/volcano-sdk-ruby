@@ -61,3 +61,10 @@ A function's own HTTP 404 does not trigger another invocation.
 Network failures do not establish whether a function ran; do not blindly retry operations with side effects.
 
 Invalid invocation arguments and malformed successful resolution responses can raise `ArgumentError` or `TypeError`.
+
+## Read durable execution pages
+
+`client.durable.list(project_id, function_id)` returns executions and pagination
+metadata. A successful response must include `data`, `page`, `limit`, `total`,
+and `has_more` with the API's declared types. Missing or malformed fields raise
+`TypeError`; a complete response with `data: []` returns an empty execution list.

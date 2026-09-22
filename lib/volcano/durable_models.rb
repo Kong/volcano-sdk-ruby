@@ -117,19 +117,17 @@ module Volcano
       )
     end
 
-    # An empty page carries no executions at all rather than an empty array.
     def page_payload(payload)
       raise TypeError, INCOMPLETE_PAGE unless payload.is_a?(Hash)
 
-      data = payload['data'] || []
-      has_more = payload.fetch('has_more', false)
+      data = payload['data']
+      has_more = payload['has_more']
       raise TypeError, INCOMPLETE_PAGE unless data.is_a?(Array) && [true, false].include?(has_more)
 
       [data, has_more]
     end
 
     def count(value)
-      return 0 if value.nil?
       raise TypeError, INCOMPLETE_PAGE unless value.is_a?(Integer)
 
       value

@@ -31,7 +31,7 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.durable.list_durable_executions_with_http_info(
-          project_id, function_id, options
+          project_id, function_id, options.merge(debug_return_type: 'Object')
         )
         response(data, status, headers)
       end

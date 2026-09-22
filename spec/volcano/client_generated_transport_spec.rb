@@ -1194,7 +1194,7 @@ RSpec.describe Volcano::Client do
     expect([project_id, function_id]).to eq(
       %w[00000000-0000-4000-8000-000000000001 charge-order]
     )
-    expect(options).to eq(status: 'running', page: 2, limit: 5)
+    expect(options).to eq(status: 'running', page: 2, limit: 5, debug_return_type: 'Object')
   end
 
   it 'stops a durable execution through the execution route' do

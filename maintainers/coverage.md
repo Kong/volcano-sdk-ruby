@@ -5,8 +5,9 @@ The root `.simplecov` requires 100% line and branch coverage with zero missed
 lines or branches. It includes every Ruby file under `lib/`, even files no test
 loads. Only the generated client is excluded.
 
-Coverage starts before Bundler loads the SDK. Each run writes HTML and JSON
-reports under `reports/coverage/<run-id>/`; CI retains them and fails if the
+Ruby's Coverage library starts before Bundler evaluates the SDK gemspec;
+SimpleCov then uses that measurement with the locked dependencies. Each run
+writes HTML and JSON reports under `reports/coverage/<run-id>/`; CI retains them and fails if the
 reports are missing. Separate directories prevent previous runs from supplying
 coverage to a later run.
 

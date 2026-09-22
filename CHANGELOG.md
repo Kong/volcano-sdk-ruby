@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.11.0...v0.12.0) (2026-09-22)
+
+
+### Features
+
+* check Ruby error signatures with Steep ([#227](https://github.com/Kong/volcano-sdk-ruby/issues/227)) ([8a3664d](https://github.com/Kong/volcano-sdk-ruby/commit/8a3664dee144fc4a630daeecd669fa76e2d12fb2))
+
 ## [0.11.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.4...v0.11.0) (2026-09-22)
 
 

@@ -1,0 +1,19 @@
+module Volcano
+  class EmailChangeResult < Data
+    attr_reader message: String?
+    attr_reader new_email: String?
+
+    def self.new: (String? message, String? new_email) -> EmailChangeResult
+                | (message: String?, new_email: String?) -> EmailChangeResult
+    def self.[]: (String? message, String? new_email) -> EmailChangeResult
+               | (message: String?, new_email: String?) -> EmailChangeResult
+    def self.members: () -> [:message, :new_email]
+
+    def members: () -> [:message, :new_email]
+    def with: (?message: String?, ?new_email: String?) -> EmailChangeResult
+    def to_h: () -> { message: String?, new_email: String? }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String?, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+end

@@ -67,9 +67,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'keeps an inline change separate from a pending lightweight fetch' do
-    client.realtime.database_name = 'app'
-    batched = client.realtime.channel('public:messages', type: :postgres, fetch_batch_window_ms: 10_000)
-    batched.on('*') { |change| delivered.enqueue(change) }
+    batched = fetching_channel
     batched.subscribe
 
     publish(change(1).merge('mode' => 'lightweight'))
@@ -93,7 +91,63 @@ RSpec.describe Volcano::Realtime do
     expect(transport.queries.length).to eq(1)
   end
 
+  it 'does not enqueue publications received after unsubscribe' do
+    channel.on('*') { |change| delivered.enqueue(change.id) }
+    channel.subscribe
+    channel.unsubscribe
+    sentinel = client.realtime.channel('sentinel').on('message') { delivered.enqueue(:finished) }
+    sentinel.subscribe
+
+    publish(change(1))
+    socket.publication(channel: sentinel.name, data: { 'event' => 'message' })
+
+    expect(wait_for(delivered)).to eq(:finished)
+    expect(delivered).to be_empty
+    expect(transport.queries).to be_empty
+  end
+
+  it 'discards a batch when the user changes before the fetch starts' do
+    completed = pending_batch
+    client.auth.current_session = Volcano::Session.new(
+      access_token: 'other-access', refresh_token: 'other-refresh', user_id: 'other-user'
+    )
+
+    publish(change(2))
+    2.times { expect(wait_for(completed)).to be(true) }
+
+    expect(delivered).to be_empty
+    expect(transport.queries).to be_empty
+  end
+
   private
+
+  def fetching_channel
+    client.realtime.database_name = 'app'
+    client.realtime.channel('public:messages', type: :postgres, fetch_batch_window_ms: 10_000)
+          .on('*') { |change| delivered.enqueue(change) }
+  end
+
+  def pending_batch
+    batched = fetching_channel
+    started = Async::Queue.new
+    completed = Async::Queue.new
+    observe_batches(batched, started, completed)
+    batched.subscribe
+    publish(change(1).merge('mode' => 'lightweight'))
+    wait_for(started)
+    completed
+  end
+
+  def observe_batches(batched, started, completed)
+    allow(batched).to receive(:collect_postgres_batch).and_wrap_original do |original, first|
+      started.enqueue(true)
+      original.call(first)
+    end
+    allow(batched).to receive(:deliver_postgres_batch).and_wrap_original do |original, requests|
+      original.call(requests)
+      completed.enqueue(true)
+    end
+  end
 
   def change(id)
     { 'type' => 'UPDATE', 'schema' => 'public', 'table' => 'messages', 'id' => id,

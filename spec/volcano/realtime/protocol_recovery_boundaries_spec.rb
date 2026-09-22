@@ -43,6 +43,15 @@ RSpec.describe ProtocolRecoveryBoundaries do
     expect(protocol.__send__(:position, 'room')).to be_nil
   end
 
+  [nil, false, [], 'invalid'].each do |recovery|
+    it "blocks malformed recovery without an object cursor: #{recovery.inspect}" do
+      expect(protocol.__send__(:parse_recovery_result, channel: 'room', recovery: recovery, result: nil)).to eq([])
+      protocol.__send__(:complete_publication, 'room', { 'epoch' => 'e', 'offset' => 1 })
+
+      expect(protocol.__send__(:position, 'room')).to be_nil
+    end
+  end
+
   private
 
   def recover(result)

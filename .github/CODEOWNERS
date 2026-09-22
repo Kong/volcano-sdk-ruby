@@ -15,6 +15,7 @@ GEMINI.md @Kong/team-volcano
 /bin/ @Kong/team-volcano
 /scripts/ @Kong/team-volcano
 /maintainers/ @Kong/team-volcano
+/features/ @Kong/team-volcano
 
 # Match nested tool configurations too; new overrides are policy changes.
 Gemfile* @Kong/team-volcano
@@ -58,9 +59,11 @@ release-please-config.json @Kong/team-volcano
 /spec/support/test_integrity.rb @Kong/team-volcano
 /spec/support/coverage.rb @Kong/team-volcano
 /spec/support/property_checks.rb @Kong/team-volcano
+/spec/support/recording_server.rb @Kong/team-volcano
 /spec/test_integrity_spec.rb @Kong/team-volcano
 /spec/property_checks_spec.rb @Kong/team-volcano
 /spec/volcano_generation_spec.rb @Kong/team-volcano
+/tests/fixtures/nullable-object.yaml @Kong/team-volcano
 /spec/bundler/audit/ @Kong/team-volcano
 /spec/rubocop/ @Kong/team-volcano
 /spec/quality/ @Kong/team-volcano

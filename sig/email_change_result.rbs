@@ -9,6 +9,8 @@ module Volcano
                | (message: String?, new_email: String?) -> EmailChangeResult
     def self.members: () -> [:message, :new_email]
 
+    def initialize: (String? message, String? new_email) -> void
+                  | (message: String?, new_email: String?) -> void
     def members: () -> [:message, :new_email]
     def with: (?message: String?, ?new_email: String?) -> EmailChangeResult
     def to_h: () -> { message: String?, new_email: String? }

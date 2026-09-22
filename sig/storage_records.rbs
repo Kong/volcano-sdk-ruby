@@ -1,0 +1,49 @@
+module Volcano
+  class StorageObject < Data
+    attr_reader id: String
+    attr_reader bucket_id: String
+    attr_reader name: String
+    attr_reader size: Integer
+    attr_reader mime_type: String
+    attr_reader is_public: bool
+    attr_reader owner_id: String?
+    attr_reader etag: String?
+    attr_reader metadata: Hash[String, json_value]?
+    attr_reader created_at: Time?
+    attr_reader updated_at: Time?
+    attr_reader public_url: String?
+
+    def self.new: (String id, String bucket_id, String name, Integer size, String mime_type, bool is_public, ?String? owner_id, ?String? etag, ?Hash[String, json_value]? metadata, ?Time? created_at, ?Time? updated_at, ?String? public_url) -> StorageObject
+                | (id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> StorageObject
+    def self.[]: (String id, String bucket_id, String name, Integer size, String mime_type, bool is_public, ?String? owner_id, ?String? etag, ?Hash[String, json_value]? metadata, ?Time? created_at, ?Time? updated_at, ?String? public_url) -> StorageObject
+               | (id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> StorageObject
+    def self.members: () -> [:id, :bucket_id, :name, :size, :mime_type, :is_public, :owner_id, :etag, :metadata, :created_at, :updated_at, :public_url]
+
+    def initialize: (id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> void
+    def members: () -> [:id, :bucket_id, :name, :size, :mime_type, :is_public, :owner_id, :etag, :metadata, :created_at, :updated_at, :public_url]
+    def with: (?id: String, ?bucket_id: String, ?name: String, ?size: Integer, ?mime_type: String, ?is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> StorageObject
+    def to_h: () -> { id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, owner_id: String?, etag: String?, metadata: Hash[String, json_value]?, created_at: Time?, updated_at: Time?, public_url: String? }
+            | [K, V] () { (Symbol, String | Integer | bool | Hash[String, json_value] | Time | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, String, Integer, String, bool, String?, String?, Hash[String, json_value]?, Time?, Time?, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Integer | bool | Hash[String, json_value] | Time | nil]
+  end
+
+  class StoragePage < Data
+    attr_reader objects: Array[StorageObject]
+    attr_reader next_cursor: String?
+
+    def self.new: (Array[StorageObject] objects, ?String? next_cursor) -> StoragePage
+                | (objects: Array[StorageObject], ?next_cursor: String?) -> StoragePage
+    def self.[]: (Array[StorageObject] objects, ?String? next_cursor) -> StoragePage
+               | (objects: Array[StorageObject], ?next_cursor: String?) -> StoragePage
+    def self.members: () -> [:objects, :next_cursor]
+
+    def initialize: (objects: Array[StorageObject], ?next_cursor: String?) -> void
+    def members: () -> [:objects, :next_cursor]
+    def with: (?objects: Array[StorageObject], ?next_cursor: String?) -> StoragePage
+    def to_h: () -> { objects: Array[StorageObject], next_cursor: String? }
+            | [K, V] () { (Symbol, Array[StorageObject] | String | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[StorageObject], String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[StorageObject] | String | nil]
+  end
+end

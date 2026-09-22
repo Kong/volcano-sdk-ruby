@@ -19,7 +19,7 @@ module Volcano
         rescue StandardError => e
           raise Redaction.exception(e, secrets: @secrets), cause: nil
         ensure
-          @pending.delete(id) if defined?(id)
+          @pending.delete(id)
         end
 
         def register_request(reply_key, on_reply)

@@ -120,7 +120,7 @@ module Volcano
     end
 
     def cache_ttl(payload)
-      ttl = payload['cache_ttl_seconds'] if payload.is_a?(Hash)
+      ttl = payload['cache_ttl_seconds']
       raise TypeError, 'Expected a complete function response' unless ttl.is_a?(Integer) && ttl.positive?
 
       ttl

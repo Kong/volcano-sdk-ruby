@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.18.0...v0.19.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe OAuth response records in RBS ([#243](https://github.com/Kong/volcano-sdk-ruby/issues/243)) ([5514fe3](https://github.com/Kong/volcano-sdk-ruby/commit/5514fe301ab2d08a1da620b914287ab3a08d5bab))
+* **types:** describe upload session records in RBS ([#245](https://github.com/Kong/volcano-sdk-ruby/issues/245)) ([7bfdbec](https://github.com/Kong/volcano-sdk-ruby/commit/7bfdbec62587254c9263e26ce72d9bde27c1d55f))
+
 ## [0.18.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.17.0...v0.18.0) (2026-09-22)
 
 

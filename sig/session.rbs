@@ -1,0 +1,26 @@
+module Volcano
+  type json_value = nil | bool | Integer | Float | String | Array[json_value] | Hash[String, json_value]
+  type session_input = nil | bool | Integer | Float | String | Symbol | Time | Array[session_input] | Hash[String | Symbol, session_input]
+  type session_user_input = Hash[String, session_input] | Hash[Symbol, session_input] | Hash[String | Symbol, session_input]
+
+  class Session < Data
+    attr_reader access_token: String
+    attr_reader refresh_token: String?
+    attr_reader user_id: String?
+    attr_reader user: Hash[String, json_value]?
+
+    def self.new: (String access_token, ?String? refresh_token, ?String? user_id, ?session_user_input? user) -> Session
+                | (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user_input?) -> Session
+    def self.[]: (String access_token, ?String? refresh_token, ?String? user_id, ?session_user_input? user) -> Session
+               | (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user_input?) -> Session
+    def self.members: () -> [:access_token, :refresh_token, :user_id, :user]
+
+    def initialize: (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user_input?) -> void
+    def members: () -> [:access_token, :refresh_token, :user_id, :user]
+    def with: (?access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user_input?) -> Session
+    def to_h: () -> { access_token: String, refresh_token: String?, user_id: String?, user: Hash[String, json_value]? }
+            | [K, V] () { (Symbol, String | Hash[String, json_value] | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String?, String?, Hash[String, json_value]?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Hash[String, json_value] | nil]
+  end
+end

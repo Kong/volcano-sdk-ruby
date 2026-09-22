@@ -2,7 +2,12 @@
 
 require 'volcano'
 
-rows = [{ 'message' => 'started', 'metadata' => { 'attempt' => 1 } }]
+event_time = Time.utc(2026, 9, 2, 12)
+rows = [{
+  'message' => 'started',
+  'timestamp' => event_time,
+  'metadata' => { 'attempt' => 1, 'updated_at' => event_time }
+}]
 search = Volcano::LogSearchResponse.new(data: rows, limit: 10, has_more: true, next_cursor: 'cursor')
 raise 'Wrong members' unless Volcano::LogSearchResponse.members == %i[data limit has_more next_cursor]
 raise 'Wrong search rows' unless search.data == rows && search.data.frozen?

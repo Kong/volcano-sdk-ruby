@@ -1,5 +1,6 @@
 module Volcano
-  type log_row = Hash[String, json_value]
+  type log_value = nil | bool | Integer | Float | String | Time | Array[log_value] | Hash[String, log_value]
+  type log_row = Hash[String, log_value]
 
   class LogSearchResponse < Data
     attr_reader data: Array[log_row]

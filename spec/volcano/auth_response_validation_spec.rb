@@ -72,6 +72,19 @@ RSpec.describe Volcano::Auth do
     end
   end
 
+  it 'copies and freezes mutable scalar OAuth response data' do
+    timestamp = Time.utc(2026, 1, 1)
+    allow(transport).to receive(:auth_call_oauth_api).and_return(response({ 'data' => timestamp }))
+
+    result = client.auth.call_oauth_api('github', endpoint: '/user')
+    timestamp.localtime('+03:00')
+
+    expect(result).to eq(Time.utc(2026, 1, 1)).and be_frozen
+    expect(result).not_to equal(timestamp)
+    expect(result.utc_offset).to eq(0)
+    expect(timestamp).not_to be_frozen
+  end
+
   %w[banned_until last_sign_in_at created_at updated_at].each do |field|
     it "rejects an impossible RFC3339 timestamp in #{field}" do
       profile = { 'id' => 'user', 'email' => 'user@example.com', 'status' => 'active',

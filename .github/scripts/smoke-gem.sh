@@ -23,6 +23,7 @@ cd "$install_root"
 gem install "$gem_path" --no-document --clear-sources --source https://rubygems.org --install-dir "$GEM_HOME"
 ruby -rvolcano -e '
   spec = Gem.loaded_specs.fetch("volcano-sdk")
+  abort "Development type tools loaded at runtime" if %w[rbs steep].any? { |name| Gem.loaded_specs.key?(name) }
   abort "Wrong gem version" unless spec.version.to_s == ARGV.fetch(0) && Volcano::VERSION == ARGV.fetch(0)
   abort "Loaded outside isolated install" unless spec.full_gem_path.start_with?(ENV.fetch("GEM_HOME") + "/")
   abort "Client missing" unless Volcano::Client

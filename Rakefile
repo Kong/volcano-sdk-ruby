@@ -5,8 +5,8 @@ require 'securerandom'
 require 'tmpdir'
 
 desc 'Run the same SDK checks locally and in CI'
-task quality: %w[quality:audit quality:generated quality:lint quality:spec quality:defects quality:contract
-                 quality:package]
+task quality: %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
+                 quality:contract quality:package]
 
 desc 'Audit locked dependencies with current security advisories'
 task 'quality:audit' do
@@ -21,6 +21,11 @@ end
 desc 'Lint all maintained Ruby code'
 task 'quality:lint' do
   ruby Gem.bin_path('rubocop', 'rubocop'), '--parallel'
+end
+
+desc 'Validate public Ruby signatures'
+task 'quality:types' do
+  ruby Gem.bin_path('rbs', 'rbs'), '-I', 'sig', 'validate'
 end
 
 desc 'Run the unit tests'

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.12.0...v0.13.0) (2026-09-22)
+
+
+### Features
+
+* type Ruby database connection strings ([#229](https://github.com/Kong/volcano-sdk-ruby/issues/229)) ([f0103dc](https://github.com/Kong/volcano-sdk-ruby/commit/f0103dcd4b118c1c02aa59278f6238c34bcf8108))
+
 ## [0.12.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.11.0...v0.12.0) (2026-09-22)
 
 

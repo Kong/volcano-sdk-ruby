@@ -1,3 +1,6 @@
+require:
+  - "./maintainers/rubocop/coverage_suppression.rb"
+
 plugins:
   - rubocop-performance
   - rubocop-rake
@@ -48,3 +51,6 @@ Style/Documentation:
   Exclude:
     - "features/**/*"
     - "spec/**/*"
+
+Volcano/CoverageSuppression:
+  Enabled: true

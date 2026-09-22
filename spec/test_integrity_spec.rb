@@ -12,6 +12,7 @@ RSpec.describe TestIntegrity do
         { 'VOLCANO_REQUIRE_FULL_SUITE' => '1' },
         Gem.ruby, Gem.bin_path('rspec-core', 'rspec'), '--options', File::NULL,
         '--require', File.expand_path('support/test_integrity.rb', __dir__),
+        '--failure-exit-code', '1', '--error-exit-code', '1',
         '--seed', '12345', path, chdir: directory
       )
     end
@@ -81,5 +82,25 @@ RSpec.describe TestIntegrity do
 
     expect(status.success?).to be(false)
     expect(output).to include('1 example, 1 failure')
+  end
+
+  {
+    'assertion failures' => "it('fails') { expect(true).to be(false) }",
+    'suite errors' => <<~RUBY
+      RSpec.configure { |config| config.before(:suite) { raise 'setup failed' } }
+      it('works') { expect(true).to be(true) }
+    RUBY
+  }.each do |behavior, body|
+    it "keeps #{behavior} nonzero when a spec configures successful exit codes" do
+      output, _errors, status = run_spec(<<~RUBY)
+        RSpec.configure do |config|
+          config.failure_exit_code = 0
+          config.error_exit_code = 0
+        end
+        RSpec.describe(String) { #{body} }
+      RUBY
+
+      expect(status.exitstatus).to eq(1), output
+    end
   end
 end

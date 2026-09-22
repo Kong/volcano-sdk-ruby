@@ -15,6 +15,8 @@ and repeated examples. Native RSpec reporting and exit failures remain intact.
 `quality:spec` sets `VOLCANO_REQUIRE_FULL_SUITE=1` only for its RSpec subprocess.
 Direct RSpec invocations and isolated defect probes can still select individual
 examples; they continue to reject pending, skipped, focused, and repeated tests.
+Native CLI options fix both assertion and suite-error exit codes at one; RSpec
+gives these options precedence over settings declared in spec files.
 
 CODEOWNERS protects this listener and its regression fixtures. Ordinary specs
 remain unowned. This detects suite filtering; it is not a sandbox for malicious

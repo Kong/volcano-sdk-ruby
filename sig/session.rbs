@@ -19,6 +19,7 @@ module Volcano
     def members: () -> [:access_token, :refresh_token, :user_id, :user]
     def with: (?access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user_input?) -> Session
     def to_h: () -> { access_token: String, refresh_token: String?, user_id: String?, user: Hash[String, json_value]? }
+            | [K, V] () { (Symbol, String | Hash[String, json_value] | nil) -> [K, V] } -> Hash[K, V]
     def deconstruct: () -> [String, String?, String?, Hash[String, json_value]?]
     def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Hash[String, json_value] | nil]
   end

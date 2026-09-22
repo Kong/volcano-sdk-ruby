@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.17.0...v0.18.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe log response records in RBS ([#241](https://github.com/Kong/volcano-sdk-ruby/issues/241)) ([697cd73](https://github.com/Kong/volcano-sdk-ruby/commit/697cd73b7843efb3d11230b4283bdfe07e1f4d93))
+
 ## [0.17.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.16.0...v0.17.0) (2026-09-22)
 
 

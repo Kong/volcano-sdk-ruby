@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.14.0...v0.15.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe email change result record ([#235](https://github.com/Kong/volcano-sdk-ruby/issues/235)) ([22e6b98](https://github.com/Kong/volcano-sdk-ruby/commit/22e6b98224180dc1a7d8597dc8374e69cfcdfe2d))
+
 ## [0.14.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.13.0...v0.14.0) (2026-09-22)
 
 

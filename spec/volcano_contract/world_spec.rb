@@ -154,8 +154,9 @@ RSpec.describe VolcanoContract::World do
         '--format', 'junit', '--out', report_directory,
         chdir: root
       )
-      report = Dir.glob(File.join(report_directory, '**/*')).select { |path| File.file?(path) }
-                  .map { |path| File.binread(path) }.join
+      report = Dir.glob(File.join(report_directory, '**/*')).filter_map do |path|
+        File.binread(path) if File.file?(path)
+      end.join
       matches = credentials.values.count { |secret| report.include?(secret) }
 
       expect(status).not_to be_success
@@ -247,8 +248,9 @@ RSpec.describe VolcanoContract::World do
           '--format', 'junit', '--out', report_directory,
           chdir: File.expand_path('../..', __dir__)
         )
-        report = Dir.glob(File.join(report_directory, '**/*')).select { |path| File.file?(path) }
-                    .map { |path| File.binread(path) }.join
+        report = Dir.glob(File.join(report_directory, '**/*')).filter_map do |path|
+          File.binread(path) if File.file?(path)
+        end.join
 
         expect(status).not_to be_success
         expect(report).to include('rate limit while signing in', 'Volcano::Error::RateLimitedError')

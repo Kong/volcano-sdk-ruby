@@ -28,7 +28,7 @@ module Quality
     def catalog
       defects = JSON.parse(File.read(File.join(@root, 'maintainers/injected-defects.json')))
       raise 'Injected-defect catalog must contain each required defect exactly once' unless
-        defects.map { |defect| defect.fetch('name') }.sort == REQUIRED.sort
+        defects.map { |defect| defect.fetch('name') }.sort! == REQUIRED.sort
 
       defects.each { |defect| validate_paths(defect) }
     end

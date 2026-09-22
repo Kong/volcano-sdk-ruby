@@ -6,7 +6,7 @@ module VolcanoContract
       verify_event_set(events)
 
       timestamps = events.map { |event| verify_event(event) }
-      raise 'events are not newest first' unless timestamps == timestamps.sort.reverse
+      raise 'events are not newest first' unless timestamps == timestamps.sort.reverse!
     end
 
     def verify_activity(response)
@@ -39,7 +39,7 @@ module VolcanoContract
     end
 
     def event_ids(events)
-      events.map { |event| event.fetch('id') }.sort
+      events.map { |event| event.fetch('id') }.sort!
     end
 
     def verify_event(event)

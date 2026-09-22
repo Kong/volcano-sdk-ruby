@@ -2034,7 +2034,7 @@ RSpec.describe Volcano::Client do
         'file.bin', 'abcdefgh', on_progress: progress
       )
     end.to raise_error(RuntimeError, 'progress failed')
-    expect(transport.calls.last(2).map(&:first)).to eq(%i[upload_part abort_upload_session])
+    expect(transport.calls.last(2).map!(&:first)).to eq(%i[upload_part abort_upload_session])
   end
 
   it 'streams seekable IO with bounded server-selected reads' do
@@ -2074,7 +2074,7 @@ RSpec.describe Volcano::Client do
     expect do
       client.storage.from('assets').upload_resumable('file.bin', 'abcdefgh')
     end.to raise_error(Volcano::Error::ServerError, 'part upload failed')
-    expect(transport.calls.drop(1).map(&:first)).to eq(
+    expect(transport.calls.drop(1).map!(&:first)).to eq(
       %i[create_upload_session upload_part upload_part abort_upload_session]
     )
   end

@@ -1,0 +1,3 @@
+module Volcano
+  def self?.database_connection_string: (String base_connection_string, ?user_id: String?) -> String
+end

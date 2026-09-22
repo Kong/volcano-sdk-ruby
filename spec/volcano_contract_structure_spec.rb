@@ -111,9 +111,11 @@ RSpec.describe Volcano do
         'lib/volcano/generated/lib/volcano-generated.rb',
         'lib/volcano/generated/lib/volcano-generated/api_client.rb',
         'lib/volcano/realtime/protocol_io.rb',
-        'sig/errors.rbs'
+        'sig/errors.rbs',
+        'sig/connection_string.rbs'
       )
       expect(files.grep(%r{\Alib/volcano/generated/(?!lib/)})).to be_empty
+      expect(files.grep(%r{\Asig_dev/})).to be_empty
     end
   end
 

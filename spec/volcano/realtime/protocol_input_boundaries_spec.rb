@@ -75,6 +75,11 @@ RSpec.describe ProtocolInputBoundaries do
     expect(Async::Task.current.children).to be_nil
   end
 
+  it 'does not send an unsubscribe for a channel without a subscription' do
+    expect(protocol.unsubscribe(channel: 'broadcast:missing')).to eq({})
+    expect(socket.writes).to be_empty
+  end
+
   private
 
   def presence_push

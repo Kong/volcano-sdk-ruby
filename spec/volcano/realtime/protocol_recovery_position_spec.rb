@@ -63,6 +63,28 @@ RSpec.describe ProtocolRecoveryPosition do
     expect(position).to eq(epoch: 'epoch', offset: 6)
   end
 
+  [6, 9].each do |offset|
+    it "keeps an existing earlier gap when another drop arrives at #{offset}" do
+      protocol_set_position('epoch', 5)
+      drop_publication('epoch', 6)
+      drop_publication('epoch', offset)
+      complete_publication('epoch', 6)
+
+      expect(position).to eq(epoch: 'epoch', offset: 5)
+    end
+  end
+
+  [nil, false, [], 'invalid'].each do |publication|
+    it "ignores non-object completion metadata: #{publication.inspect}" do
+      protocol_set_position('epoch', 5)
+      protocol.__send__(:complete_publication, 'channel', publication)
+
+      expect(position).to eq(epoch: 'epoch', offset: 5)
+      complete_publication('epoch', 6)
+      expect(position).to eq(epoch: 'epoch', offset: 6)
+    end
+  end
+
   it 'does not advance after an epoch-mismatched drop' do
     protocol_set_position('epoch', 5)
     drop_publication('other-epoch', 6)

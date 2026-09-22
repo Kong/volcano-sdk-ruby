@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.15.0...v0.16.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe lock lease and state records ([#237](https://github.com/Kong/volcano-sdk-ruby/issues/237)) ([7a27a64](https://github.com/Kong/volcano-sdk-ruby/commit/7a27a646484f49d2c29e2e4eb9d65a94e1cd1044))
+
 ## [0.15.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.14.0...v0.15.0) (2026-09-22)
 
 

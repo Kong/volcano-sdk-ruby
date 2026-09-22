@@ -1,0 +1,11 @@
+module Volcano
+  class SignUpResult < Data
+    attr_reader confirmation_required: bool
+    attr_reader message: String
+    attr_reader session: Session?
+
+    def self.new: (bool confirmation_required, String message, ?Session? session) -> SignUpResult
+                | (confirmation_required: bool, message: String, ?session: Session?) -> SignUpResult
+    def initialize: (confirmation_required: bool, message: String, ?session: Session?) -> void
+  end
+end

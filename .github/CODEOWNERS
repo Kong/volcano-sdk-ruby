@@ -16,7 +16,7 @@ GEMINI.md @Kong/team-volcano
 /scripts/ @Kong/team-volcano
 /maintainers/ @Kong/team-volcano
 /features/ @Kong/team-volcano
-/vendor/cache/ @Kong/team-volcano
+/vendor/ @Kong/team-volcano
 
 # Match nested tool configurations too; new overrides are policy changes.
 Gemfile* @Kong/team-volcano

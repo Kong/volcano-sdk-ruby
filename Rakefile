@@ -24,7 +24,7 @@ end
 
 desc 'Run the unit tests'
 task 'quality:spec' do
-  ruby Gem.bin_path('rspec-core', 'rspec')
+  sh({ 'VOLCANO_REQUIRE_FULL_SUITE' => '1' }, Gem.ruby, Gem.bin_path('rspec-core', 'rspec'))
 end
 
 desc 'Validate contract feature bindings without provisioning resources'

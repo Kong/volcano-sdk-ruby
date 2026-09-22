@@ -9,6 +9,7 @@ RSpec.describe TestIntegrity do
       path = File.join(directory, 'fixture_spec.rb')
       File.write(path, source)
       Open3.capture3(
+        { 'VOLCANO_REQUIRE_FULL_SUITE' => '1' },
         Gem.ruby, Gem.bin_path('rspec-core', 'rspec'), '--options', File::NULL,
         '--require', File.expand_path('support/test_integrity.rb', __dir__),
         '--seed', '12345', path, chdir: directory
@@ -45,6 +46,25 @@ RSpec.describe TestIntegrity do
 
     expect(status.success?).to be(false)
     expect(output).to include('No examples found.')
+  end
+
+  {
+    'inclusion filters' => 'config.filter_run_including(gate_probe: true)',
+    'exclusion filters' => 'config.filter_run_excluding(gate_probe: false)',
+    'matching filters' => 'config.filter_run_when_matching(gate_probe: true)'
+  }.each do |behavior, configuration|
+    it "rejects #{behavior} that leave a passing subset" do
+      output, _errors, status = run_spec(<<~RUBY)
+        RSpec.configure { |config| #{configuration} }
+        RSpec.describe String do
+          it('passes', gate_probe: true) { expect(true).to be(true) }
+          it('must run', gate_probe: false) { expect(true).to be(false) }
+        end
+      RUBY
+
+      expect(status.success?).to be(false)
+      expect(output).to include('filtered or unexecuted examples:')
+    end
   end
 
   it 'rejects partial doubles of methods that do not exist' do

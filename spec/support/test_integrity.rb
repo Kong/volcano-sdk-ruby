@@ -4,7 +4,14 @@
 class TestIntegrity
   def initialize
     @started = Set.new
+    @expected = Set.new
     @violations = []
+  end
+
+  def start(_notification)
+    return unless ENV['VOLCANO_REQUIRE_FULL_SUITE'] == '1'
+
+    @expected = RSpec.world.all_examples.to_set(&:id)
   end
 
   def example_started(notification)
@@ -20,6 +27,8 @@ class TestIntegrity
   end
 
   def verify!
+    missing = @expected - @started
+    @violations << "filtered or unexecuted examples: #{missing.to_a.join(', ')}" unless missing.empty?
     return if @violations.empty?
 
     raise "Incomplete test run: #{@violations.uniq.join(', ')}"
@@ -28,7 +37,7 @@ end
 
 RSpec.configure do |config|
   integrity = TestIntegrity.new
-  config.reporter.register_listener(integrity, :example_started, :example_pending)
+  config.reporter.register_listener(integrity, :start, :example_started, :example_pending)
   config.after(:suite) { integrity.verify! }
   config.fail_if_no_examples = true
   config.order = :random

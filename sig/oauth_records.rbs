@@ -1,0 +1,43 @@
+module Volcano
+  class LinkedOAuthProvider < Data
+    attr_reader provider: String
+    attr_reader linked_at: Time
+    attr_reader updated_at: Time
+
+    def self.new: (String provider, Time linked_at, Time updated_at) -> LinkedOAuthProvider
+                | (provider: String, linked_at: Time, updated_at: Time) -> LinkedOAuthProvider
+    def self.[]: (String provider, Time linked_at, Time updated_at) -> LinkedOAuthProvider
+               | (provider: String, linked_at: Time, updated_at: Time) -> LinkedOAuthProvider
+    def self.members: () -> [:provider, :linked_at, :updated_at]
+
+    def initialize: (provider: String, linked_at: Time, updated_at: Time) -> void
+                  | (provider: String, linked_at: Time, updated_at: Time) -> void
+    def members: () -> [:provider, :linked_at, :updated_at]
+    def with: (?provider: String, ?linked_at: Time, ?updated_at: Time) -> LinkedOAuthProvider
+    def to_h: () -> { provider: String, linked_at: Time, updated_at: Time }
+            | [K, V] () { (Symbol, String | Time) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, Time, Time]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time]
+  end
+
+  class OAuthProviderTokenStatus < Data
+    attr_reader message: String
+    attr_reader provider: String
+    attr_reader expires_in: Integer
+
+    def self.new: (String message, String provider, Integer expires_in) -> OAuthProviderTokenStatus
+                | (message: String, provider: String, expires_in: Integer) -> OAuthProviderTokenStatus
+    def self.[]: (String message, String provider, Integer expires_in) -> OAuthProviderTokenStatus
+               | (message: String, provider: String, expires_in: Integer) -> OAuthProviderTokenStatus
+    def self.members: () -> [:message, :provider, :expires_in]
+
+    def initialize: (message: String, provider: String, expires_in: Integer) -> void
+                  | (message: String, provider: String, expires_in: Integer) -> void
+    def members: () -> [:message, :provider, :expires_in]
+    def with: (?message: String, ?provider: String, ?expires_in: Integer) -> OAuthProviderTokenStatus
+    def to_h: () -> { message: String, provider: String, expires_in: Integer }
+            | [K, V] () { (Symbol, String | Integer) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Integer]
+  end
+end

@@ -1,0 +1,43 @@
+module Volcano
+  type log_row = Hash[String, json_value]
+
+  class LogSearchResponse < Data
+    attr_reader data: Array[log_row]
+    attr_reader limit: Integer
+    attr_reader has_more: bool
+    attr_reader next_cursor: String?
+
+    def self.new: (Array[log_row] data, Integer limit, bool has_more, ?String? next_cursor) -> LogSearchResponse
+                | (data: Array[log_row], limit: Integer, has_more: bool, ?next_cursor: String?) -> LogSearchResponse
+    def self.[]: (Array[log_row] data, Integer limit, bool has_more, ?String? next_cursor) -> LogSearchResponse
+               | (data: Array[log_row], limit: Integer, has_more: bool, ?next_cursor: String?) -> LogSearchResponse
+    def self.members: () -> [:data, :limit, :has_more, :next_cursor]
+
+    def initialize: (data: Array[log_row], limit: Integer, has_more: bool, ?next_cursor: String?) -> void
+    def members: () -> [:data, :limit, :has_more, :next_cursor]
+    def with: (?data: Array[log_row], ?limit: Integer, ?has_more: bool, ?next_cursor: String?) -> LogSearchResponse
+    def to_h: () -> { data: Array[log_row], limit: Integer, has_more: bool, next_cursor: String? }
+            | [K, V] () { (Symbol, Array[log_row] | Integer | bool | String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[log_row], Integer, bool, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[log_row] | Integer | bool | String?]
+  end
+
+  class LogActivityResponse < Data
+    attr_reader data: Array[log_row]
+    attr_reader total: Integer
+
+    def self.new: (Array[log_row] data, Integer total) -> LogActivityResponse
+                | (data: Array[log_row], total: Integer) -> LogActivityResponse
+    def self.[]: (Array[log_row] data, Integer total) -> LogActivityResponse
+               | (data: Array[log_row], total: Integer) -> LogActivityResponse
+    def self.members: () -> [:data, :total]
+
+    def initialize: (data: Array[log_row], total: Integer) -> void
+    def members: () -> [:data, :total]
+    def with: (?data: Array[log_row], ?total: Integer) -> LogActivityResponse
+    def to_h: () -> { data: Array[log_row], total: Integer }
+            | [K, V] () { (Symbol, Array[log_row] | Integer) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[log_row], Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[log_row] | Integer]
+  end
+end

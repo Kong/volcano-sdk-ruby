@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.4...v0.11.0) (2026-09-22)
+
+
+### Features
+
+* ship validated RBS signatures for SDK errors ([#225](https://github.com/Kong/volcano-sdk-ruby/issues/225)) ([fe8a4ff](https://github.com/Kong/volcano-sdk-ruby/commit/fe8a4ff729af6e2b0373d3635a39316bc782ced6))
+
 ## [0.10.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.3...v0.10.4) (2026-09-22)
 
 

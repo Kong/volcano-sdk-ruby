@@ -1,6 +1,7 @@
 module Volcano
   type json_value = nil | bool | Integer | Float | String | Array[json_value] | Hash[String, json_value]
-  type session_user_input = json_value | Time | Array[session_user_input] | Hash[String, session_user_input]
+  type session_user_input = json_value | Time | Array[session_user_input] | Hash[String | Symbol, session_user_input]
+  type session_user = Hash[String, session_user_input] | Hash[Symbol, session_user_input] | Hash[String | Symbol, session_user_input]
 
   class Session < Data
     attr_reader access_token: String
@@ -8,8 +9,11 @@ module Volcano
     attr_reader user_id: String?
     attr_reader user: Hash[String, json_value]?
 
-    def self.new: (String access_token, ?String? refresh_token, ?String? user_id, ?Hash[String, session_user_input]? user) -> Session
-                | (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: Hash[String, session_user_input]?) -> Session
-    def initialize: (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: Hash[String, session_user_input]?) -> void
+    def self.new: (String access_token, ?String? refresh_token, ?String? user_id, ?session_user? user) -> Session
+                | (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user?) -> Session
+    def self.[]: (String access_token, ?String? refresh_token, ?String? user_id, ?session_user? user) -> Session
+               | (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user?) -> Session
+    def initialize: (access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user?) -> void
+    def with: (?access_token: String, ?refresh_token: String?, ?user_id: String?, ?user: session_user?) -> Session
   end
 end

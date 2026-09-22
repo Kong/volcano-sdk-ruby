@@ -6,6 +6,9 @@ module Volcano
 
     def self.new: (bool confirmation_required, String message, ?Session? session) -> SignUpResult
                 | (confirmation_required: bool, message: String, ?session: Session?) -> SignUpResult
+    def self.[]: (bool confirmation_required, String message, ?Session? session) -> SignUpResult
+               | (confirmation_required: bool, message: String, ?session: Session?) -> SignUpResult
     def initialize: (confirmation_required: bool, message: String, ?session: Session?) -> void
+    def with: (?confirmation_required: bool, ?message: String, ?session: Session?) -> SignUpResult
   end
 end

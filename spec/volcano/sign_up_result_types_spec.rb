@@ -23,4 +23,24 @@ RSpec.describe Volcano::SignUpResult do
     expect(status.exitstatus).to eq(1), output + errors
     expect(output).to include('Ruby::ArgumentTypeMismatch')
   end
+
+  it 'rejects invalid bracket constructor arguments' do
+    output, errors, status = SteepConsumer.check('Volcano::Session[access_token: 7]')
+
+    expect(status.exitstatus).to eq(1), output + errors
+    expect(output).to include('Ruby::UnresolvedOverloading')
+  end
+
+  it 'rejects invalid values passed to Data updates' do
+    source = <<~RUBY
+      session = Volcano::Session.new(access_token: 'access')
+      session.with(access_token: 7)
+      result = Volcano::SignUpResult.new(confirmation_required: false, message: 'Accepted')
+      result.with(confirmation_required: 'yes')
+    RUBY
+    output, errors, status = SteepConsumer.check(source)
+
+    expect(status.exitstatus).to eq(1), output + errors
+    expect(output.scan('Ruby::ArgumentTypeMismatch').length).to eq(2)
+  end
 end

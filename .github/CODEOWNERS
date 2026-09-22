@@ -16,6 +16,7 @@ GEMINI.md @Kong/team-volcano
 /scripts/ @Kong/team-volcano
 /maintainers/ @Kong/team-volcano
 /features/ @Kong/team-volcano
+/vendor/cache/ @Kong/team-volcano
 
 # Match nested tool configurations too; new overrides are policy changes.
 Gemfile* @Kong/team-volcano
@@ -32,6 +33,7 @@ Rakefile.rb @Kong/team-volcano
 **/.bundle/config @Kong/team-volcano
 .bundler-audit.yml @Kong/team-volcano
 .rubocop* @Kong/team-volcano
+.shellcheckrc @Kong/team-volcano
 rubocop*.yml @Kong/team-volcano
 .rspec* @Kong/team-volcano
 cucumber.yml @Kong/team-volcano

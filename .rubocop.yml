@@ -36,6 +36,12 @@ Metrics/MethodLength:
 Metrics/CyclomaticComplexity:
   Max: 5
 
+Performance/ChainArrayAllocation:
+  Enabled: true
+
+Performance/SelectMap:
+  Enabled: true
+
 RSpec/ExampleLength:
   Max: 15
   CountAsOne:

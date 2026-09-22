@@ -416,9 +416,9 @@ When('the client copies, moves, and removes a copy of the contract object') do
     copied_bytes = bucket.download(copied)
     bucket.move(copied, moved)
     moved_bytes = bucket.download(moved)
-    after_move = bucket.list(source).objects.map(&:name).sort
+    after_move = bucket.list(source).objects.map(&:name).sort!
     bucket.remove(moved)
-    after_remove = bucket.list(source).objects.map(&:name).sort
+    after_remove = bucket.list(source).objects.map(&:name).sort!
     remaining_bytes = bucket.download(source)
     {
       'bytes' => [original_bytes, copied_bytes, moved_bytes, remaining_bytes],

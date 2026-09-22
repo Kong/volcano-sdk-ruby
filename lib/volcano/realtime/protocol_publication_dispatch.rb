@@ -43,8 +43,6 @@ module Volcano
       end
 
       def reject_invalid_publication(channel, publication)
-        return unless channel
-
         if publication.is_a?(Hash)
           drop_publication(channel, publication)
         else
@@ -54,7 +52,7 @@ module Volcano
       end
 
       def drop_handlerless_publication(channel, publication)
-        drop_publication(channel, publication) if channel
+        drop_publication(channel, publication)
         nil
       end
 

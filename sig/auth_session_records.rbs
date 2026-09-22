@@ -1,0 +1,53 @@
+module Volcano
+  class AuthSession < Data
+    attr_reader id: String
+    attr_reader user_id: String
+    attr_reader provider: String
+    attr_reader expires_at: Time
+    attr_reader is_active: bool
+    attr_reader is_current: bool
+    attr_reader user_agent: String?
+    attr_reader ip_address: String?
+    attr_reader last_ip_address: String?
+    attr_reader last_activity_at: Time?
+    attr_reader session_started_at: Time?
+    attr_reader created_at: Time?
+    attr_reader updated_at: Time?
+
+    def self.new: (String id, String user_id, String provider, Time expires_at, bool is_active, bool is_current, ?String? user_agent, ?String? ip_address, ?String? last_ip_address, ?Time? last_activity_at, ?Time? session_started_at, ?Time? created_at, ?Time? updated_at) -> AuthSession
+                | (id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> AuthSession
+    def self.[]: (String id, String user_id, String provider, Time expires_at, bool is_active, bool is_current, ?String? user_agent, ?String? ip_address, ?String? last_ip_address, ?Time? last_activity_at, ?Time? session_started_at, ?Time? created_at, ?Time? updated_at) -> AuthSession
+               | (id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> AuthSession
+    def self.members: () -> [:id, :user_id, :provider, :expires_at, :is_active, :is_current, :user_agent, :ip_address, :last_ip_address, :last_activity_at, :session_started_at, :created_at, :updated_at]
+
+    def initialize: (id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> void
+    def members: () -> [:id, :user_id, :provider, :expires_at, :is_active, :is_current, :user_agent, :ip_address, :last_ip_address, :last_activity_at, :session_started_at, :created_at, :updated_at]
+    def with: (?id: String, ?user_id: String, ?provider: String, ?expires_at: Time, ?is_active: bool, ?is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> AuthSession
+    def to_h: () -> { id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, user_agent: String?, ip_address: String?, last_ip_address: String?, last_activity_at: Time?, session_started_at: Time?, created_at: Time?, updated_at: Time? }
+            | [K, V] () { (Symbol, String | Time | bool | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, String, Time, bool, bool, String?, String?, String?, Time?, Time?, Time?, Time?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time | bool | nil]
+  end
+
+  class SessionPage < Data
+    attr_reader sessions: Array[AuthSession]
+    attr_reader total: Integer
+    attr_reader page: Integer
+    attr_reader limit: Integer
+    attr_reader total_pages: Integer
+
+    def self.new: (Enumerable[AuthSession] sessions, Integer total, Integer page, Integer limit, Integer total_pages) -> SessionPage
+                | (sessions: Enumerable[AuthSession], total: Integer, page: Integer, limit: Integer, total_pages: Integer) -> SessionPage
+    def self.[]: (Enumerable[AuthSession] sessions, Integer total, Integer page, Integer limit, Integer total_pages) -> SessionPage
+               | (sessions: Enumerable[AuthSession], total: Integer, page: Integer, limit: Integer, total_pages: Integer) -> SessionPage
+    def self.members: () -> [:sessions, :total, :page, :limit, :total_pages]
+
+    def initialize: (sessions: Enumerable[AuthSession], total: Integer, page: Integer, limit: Integer, total_pages: Integer) -> void
+    def members: () -> [:sessions, :total, :page, :limit, :total_pages]
+    def with: (?sessions: Enumerable[AuthSession], ?total: Integer, ?page: Integer, ?limit: Integer, ?total_pages: Integer) -> SessionPage
+    def to_h: () -> { sessions: Array[AuthSession], total: Integer, page: Integer, limit: Integer, total_pages: Integer }
+            | [K, V] () { (Symbol, Array[AuthSession] | Integer) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[AuthSession], Integer, Integer, Integer, Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[AuthSession] | Integer]
+  end
+end

@@ -6,7 +6,7 @@ RSpec.describe Volcano::Functions do
   let(:client) { Volcano::Client.new(anon_key: 'anon', api_url: 'https://api.test.volcano.dev') }
   let(:resolved) do
     Typhoeus::Response.new(
-      code: 200,
+      code: 200, return_code: :ok,
       headers: { 'Content-Type' => 'application/json' },
       body: JSON.generate(
         name: 'send-welcome', function_id: '00000000-0000-4000-8000-000000000040', cache_ttl_seconds: 60
@@ -46,7 +46,7 @@ RSpec.describe Volcano::Functions do
       context "with #{status} #{content_type} body #{body.inspect}" do
         let(:invoked) do
           Typhoeus::Response.new(
-            code: status, body: body,
+            code: status, return_code: :ok, body: body,
             # The function ran and chose this status, the 422 included. Without
             # the dispatch marker the platform would own the failure.
             headers: {
@@ -64,6 +64,8 @@ RSpec.describe Volcano::Functions do
         end
 
         it 'preserves the function body through the generated transport' do
+          expect(resolved).to be_success
+          expect(invoked.success?).to eq(status == 200)
           result = client.functions.invoke('send-welcome')
 
           expect(result).to have_attributes(data: expected, status: status, version: 'v2')
@@ -76,7 +78,7 @@ RSpec.describe Volcano::Functions do
 
   it 'preserves owned error metadata across negative cache hits' do
     response = Typhoeus::Response.new(
-      code: 404, body: JSON.generate(error: 'Unknown function', code: 'function_missing'),
+      code: 404, return_code: :ok, body: JSON.generate(error: 'Unknown function', code: 'function_missing'),
       headers: { 'Content-Type' => 'application/json' }
     )
     allow(Typhoeus::Request).to receive(:new).and_return(

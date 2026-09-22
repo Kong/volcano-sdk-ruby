@@ -48,6 +48,27 @@ module Volcano
       end
     end
 
+    %i[Conversion Generated].each do |name|
+      context "with an unrelated #{name} error from scalar conversion" do
+        let(:value) { +'value' }
+        let(:failure) { NameError.new('unrelated conversion failure', name) }
+
+        before { allow(value).to receive(:to_s).and_raise(failure) }
+
+        it 'preserves the error from nested deserialization' do
+          expect { generated::ApiModelBase._deserialize('String', value) }.to raise_error do |error|
+            expect(error).to equal(failure)
+          end
+        end
+
+        it 'preserves the error from response conversion' do
+          expect { api_client.convert_to_type(value, 'String') }.to raise_error do |error|
+            expect(error).to equal(failure)
+          end
+        end
+      end
+    end
+
     it 'rejects a missing storage bucket before a generated API call' do
       allow(api_client).to receive(:call_api)
 

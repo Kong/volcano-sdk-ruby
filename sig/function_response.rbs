@@ -1,0 +1,22 @@
+module Volcano
+  class FunctionResponse < Data
+    attr_reader data: json_value
+    attr_reader status: Integer
+    attr_reader headers: Hash[String, String]
+    attr_reader version: String?
+
+    def self.new: (json_value data, Integer status, Hash[String, String] headers, String? version) -> FunctionResponse
+                | (data: json_value, status: Integer, headers: Hash[String, String], version: String?) -> FunctionResponse
+    def self.[]: (json_value data, Integer status, Hash[String, String] headers, String? version) -> FunctionResponse
+               | (data: json_value, status: Integer, headers: Hash[String, String], version: String?) -> FunctionResponse
+    def self.members: () -> [:data, :status, :headers, :version]
+
+    def initialize: (data: json_value, status: Integer, headers: Hash[String, String], version: String?) -> void
+    def members: () -> [:data, :status, :headers, :version]
+    def with: (?data: json_value, ?status: Integer, ?headers: Hash[String, String], ?version: String?) -> FunctionResponse
+    def to_h: () -> { data: json_value, status: Integer, headers: Hash[String, String], version: String? }
+            | [K, V] () { (Symbol, json_value | Integer | Hash[String, String] | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [json_value, Integer, Hash[String, String], String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, json_value | Integer | Hash[String, String] | nil]
+  end
+end

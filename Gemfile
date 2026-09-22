@@ -9,6 +9,7 @@ group :development do
   gem 'cucumber', '11.1.1'
   gem 'prop_check', '1.0.2'
   gem 'rake', '~> 13.2'
+  gem 'rbs', '3.10.4'
   gem 'rspec', '~> 3.13'
   gem 'rubocop', '~> 1.70'
   gem 'rubocop-performance', '~> 1.26'

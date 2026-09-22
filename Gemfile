@@ -16,4 +16,5 @@ group :development do
   gem 'rubocop-rake', '~> 0.7'
   gem 'rubocop-rspec', '~> 3.7'
   gem 'simplecov', '1.2.0', require: false
+  gem 'steep', '1.10.0'
 end

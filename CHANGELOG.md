@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.19.0...v0.20.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe upload session status in RBS ([#246](https://github.com/Kong/volcano-sdk-ruby/issues/246)) ([51ef7fb](https://github.com/Kong/volcano-sdk-ruby/commit/51ef7fbc2c3836986e08da67d9ccc689e619c614))
+
 ## [0.19.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.18.0...v0.19.0) (2026-09-22)
 
 

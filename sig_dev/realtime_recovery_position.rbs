@@ -1,0 +1,28 @@
+module Volcano
+  class Realtime
+    module ProtocolRecoveryPosition
+      type position = { epoch: String, offset: Integer }
+
+      @stream_positions: Hash[String, position]
+      @position_gaps: Hash[String, true | position]
+
+      private def initialize_recovery_positions: () -> void
+      private def position: (String channel) -> position?
+      private def set_recovery_position: (String channel, Object epoch, Object offset) -> void
+      private def complete_publication: (String channel, Object publication) -> void
+      private def advance_publication_position: (String channel, position completed, position current) -> void
+      private def drop_publication: (String channel, Object publication) -> void
+      private def delete_recovery_state: (String channel) -> void
+      private def mark_publication_gap: (String channel, Object publication) -> void
+      private def store_publication_gap: (String channel, position gap, position current) -> void
+      private def store_earliest_gap: (String channel, position gap) -> void
+      private def publication_position: (Object publication, position fallback) -> position?
+      private def recovery_position: (Object epoch, Object offset) -> position?
+      private def same_epoch?: (position first, position second) -> bool
+      private def stale_position?: (position position, position current) -> bool
+      private def next_position?: (position position, position current) -> bool
+      private def completion_before_gap?: (String channel, position completed) -> bool
+      private def mark_unknown_gap: (String channel) -> void
+    end
+  end
+end

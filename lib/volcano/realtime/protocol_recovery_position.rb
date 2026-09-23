@@ -21,7 +21,7 @@ module Volcano
       end
 
       def complete_publication(channel, publication)
-        current = @stream_positions[channel]
+        current = @stream_positions.fetch(channel, nil)
         return unless current
 
         completed = publication_position(publication, current)
@@ -49,7 +49,7 @@ module Volcano
       end
 
       def mark_publication_gap(channel, publication)
-        current = @stream_positions[channel]
+        current = @stream_positions.fetch(channel, nil)
         return unless current
 
         gap = publication_position(publication, current)
@@ -68,7 +68,7 @@ module Volcano
       def store_earliest_gap(channel, gap)
         existing = @position_gaps[channel]
         return if existing == true
-        return if existing && existing.fetch(:offset) <= gap.fetch(:offset)
+        return if existing.is_a?(Hash) && existing.fetch(:offset) <= gap.fetch(:offset)
 
         @position_gaps[channel] = gap
       end
@@ -84,7 +84,9 @@ module Volcano
         return unless epoch.is_a?(String) && !epoch.empty?
         return unless offset.is_a?(Integer) && offset >= 0
 
-        { epoch: epoch.dup.freeze, offset: offset.freeze }.freeze
+        # @type var position: position
+        position = { epoch: epoch.dup.freeze, offset: offset.freeze }
+        position.freeze
       end
 
       def same_epoch?(first, second) = first.fetch(:epoch) == second.fetch(:epoch)
@@ -95,7 +97,10 @@ module Volcano
 
       def completion_before_gap?(channel, completed)
         gap = @position_gaps[channel]
-        gap != true && (!gap || completed.fetch(:offset) < gap.fetch(:offset))
+        return false if gap == true
+        return true unless gap.is_a?(Hash)
+
+        completed.fetch(:offset) < gap.fetch(:offset)
       end
 
       def mark_unknown_gap(channel) = @position_gaps[channel] = true

@@ -76,6 +76,16 @@ RSpec.describe Volcano::Client do
     expect(client.current_session).to be_nil
   end
 
+  it 'rejects an invalid refresh result before sending revocation credentials' do
+    owner = client.capture_session_binding[1]
+    allow(owner).to receive(:result).and_return(:invalid)
+    allow(transport).to receive_messages(auth_logout: response(204), auth_delete_my_session: response(204))
+
+    expect { client.auth.sign_out }.to raise_error(TypeError, 'Expected a session from refresh')
+    expect(transport).not_to have_received(:auth_logout)
+    expect(transport).not_to have_received(:auth_delete_my_session)
+  end
+
   it 'does not revoke an unrelated session while recovering expired access' do
     allow(transport).to receive_messages(auth_delete_my_session: response(401, 'error' => 'expired'),
                                          auth_refresh: refresh_response(session_b))

@@ -1,0 +1,79 @@
+module Volcano
+  type session_binding = [Integer, SessionOperations, Session?]
+  type active_session_binding = [Integer, SessionOperations, Session]
+
+  interface _AuthLifecycleClient
+    def capture_session_binding: () -> session_binding
+    def anon_token: () -> String
+    def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
+    def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
+    def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
+    def reject_refresh_if_current?: (Integer generation, ?notifications: Array[Method]?) -> bool
+  end
+
+  interface _AuthLifecycleTransport
+    def auth_refresh: (authorization: String, refresh_token: String) -> Transport::Response
+    def auth_logout: (authorization: String, refresh_token: String) -> Transport::Response
+  end
+
+  interface _AuthLifecycleHost
+    def refresh_response: (String refresh_token) -> Transport::Response
+    def parse_refresh_session: (Object? payload) -> Session
+    def access_token_session_id: (String access_token) -> String?
+    def delete_session_error: (String access_token, String session_id) -> Error::VolcanoError?
+  end
+
+  module AuthNotificationDispatch
+    private def run_auth_notifications: (Array[Method] notifications) -> void
+  end
+
+  module AuthSessionBinding
+    @client: _AuthLifecycleClient
+
+    private def owned_session_binding: (session_binding binding) -> active_session_binding
+    private def rejected_refresh?: (session_binding binding, session_binding active) -> bool
+  end
+
+  module AuthRefresh : Object, _AuthLifecycleHost
+    include AuthNotificationDispatch
+    include AuthSessionBinding
+    @client: _AuthLifecycleClient
+
+    def refresh_session: () -> Session
+    def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    def session_read: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+
+    private def retry_session: (active_session_binding binding) -> Session?
+    private def validate_read_failure: (active_session_binding binding) -> void
+    private def refresh_captured_session: (active_session_binding binding) -> Session
+    private def refresh_with_notifications: (active_session_binding binding) -> void
+    private def perform_refresh: (active_session_binding binding, Array[Method] notifications) -> Session
+    private def refreshed_session: (active_session_binding binding, String refresh_token, Array[Method] notifications) -> Session
+    private def parse_and_verify_refresh: (SessionOperations owner, Session current, active_session_binding binding, String refresh_token, Array[Method] notifications) -> Session
+    private def verify_refreshed_session: (SessionOperations owner, Session current, Session session) -> void
+    private def refresh_payload: (active_session_binding binding, String refresh_token, Array[Method] notifications) -> Object?
+  end
+
+  module AuthSignOut : Object, _AuthLifecycleHost
+    include AuthNotificationDispatch
+    @client: _AuthLifecycleClient
+    @transport: _AuthLifecycleTransport
+
+    def sign_out: () -> Object?
+
+    private def sign_out_captured: (session_binding binding, Session session, SessionOperations::Outcome? preceding, bool? pending, Array[Method] notifications) -> nil
+    private def revocation_credentials: (SessionOperations owner, Session session, SessionOperations::Outcome? preceding) -> [Session, Error::VolcanoError?]
+    private def logout_response: (String refresh_token) -> Transport::Response
+    private def revocation_error: (Session session, SessionOperations owner, Error::VolcanoError? refresh_error, joined: bool?) -> Error::VolcanoError?
+    private def refresh_revocation_error: (Session session, Error::VolcanoError? refresh_error, verified: bool?) -> Error::VolcanoError?
+    private def revoke_refresh_session: (String? refresh_token) -> nil
+    private def revoke_access_session: (Session session, String session_id, Error::VolcanoError? refresh_error, joined: bool?) -> Error::VolcanoError?
+    private def refreshable_revocation_token: (Error::VolcanoError? error, Session session) -> String?
+  end
+
+  class Auth
+    include _AuthLifecycleHost
+    include AuthRefresh
+    include AuthSignOut
+  end
+end

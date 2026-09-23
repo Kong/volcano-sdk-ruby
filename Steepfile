@@ -91,6 +91,10 @@ end
 
 target :storage do
   signature 'sig', 'sig_dev'
+  check 'lib/volcano/storage_session_adapter.rb'
+  check 'lib/volcano/storage_transport_adapter.rb'
+  check 'lib/volcano/storage_object_response.rb'
+  check 'lib/volcano/storage.rb'
   check 'lib/volcano/storage_models.rb'
   check 'lib/volcano/storage_upload_models.rb'
   check 'lib/volcano/storage_mutations.rb'

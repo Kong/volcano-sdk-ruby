@@ -3,8 +3,6 @@
 module Volcano
   # Resumable upload operations for one storage bucket.
   class StorageBucket
-    include StorageResponse
-
     def create_upload_session(
       path,
       total_size:,

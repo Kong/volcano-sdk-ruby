@@ -1,11 +1,19 @@
 module Volcano
-  interface _StorageClient
+  class StorageSessionAdapter
+    @client: Object
+    def initialize: (Object client) -> void
     def capture_session_binding: () -> session_binding
     def session_token: () -> String
-    def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    def session_request: (binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    private def storage_binding_array: (Object? value) -> Array[Object?]
+    private def storage_generation: (Object? value) -> Integer
+    private def storage_owner: (Object? value) -> SessionOperations
+    private def storage_session: (Object? value) -> Session?
   end
 
-  interface _StorageTransport
+  class StorageTransportAdapter
+    @transport: Object
+    def initialize: (Object transport) -> void
     def upload_storage_object: (authorization: String, bucket_name: String, path: String, data: String, content_type: String?) -> Transport::Response
     def download_storage_object: (authorization: String, bucket_name: String, path: String, byte_range: String?) -> Transport::Response
     def list_storage_objects: (authorization: String, bucket_name: String, prefix: String, limit: Integer?, cursor: String?) -> Transport::Response
@@ -18,6 +26,7 @@ module Volcano
     def complete_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
     def get_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
     def abort_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+    private def invoke: (Symbol name, **Object? arguments) -> Transport::Response
   end
 
   module StorageResponse
@@ -34,27 +43,41 @@ module Volcano
     private def storage_time: (Object? value) -> Time
   end
 
+  module StorageObjectResponse
+    include StorageResponse
+
+    private def storage_object: (Object? payload) -> StorageObject
+    private def storage_object_required: (Hash[String, Object?] payload) -> [String, String, String, Integer, String, bool]
+    private def storage_object_optional: (Hash[String, Object?] payload) -> [String?, String?, Hash[String, json_value]?, Time?, Time?, String?]
+    private def storage_object_list: (Object? value) -> Array[StorageObject]
+    private def storage_cursor: (Object? value) -> String?
+    private def storage_boolean: (Object? value) -> bool
+    private def storage_optional_string: (Object? value) -> String?
+    private def storage_optional_time: (Object? value) -> Time?
+    private def storage_optional_metadata: (Object? value) -> Hash[String, json_value]?
+    private def storage_json_hash: (Object? value) -> Hash[String, json_value]
+    private def storage_json_value: (Object? value) -> json_value
+  end
+
   class Storage
-    @client: _StorageClient
-    @transport: _StorageTransport
+    @client: StorageSessionAdapter
+    @transport: StorageTransportAdapter
     @api_url: String
     @anon_key: String
 
-    def initialize: (_StorageClient client, _StorageTransport transport, api_url: String, anon_key: String) -> void
+    def initialize: (Object client, Object transport, api_url: String, anon_key: String) -> void
   end
 
   class StorageBucket
-    include StorageResponse
-    @client: _StorageClient
-    @transport: _StorageTransport
+    include StorageObjectResponse
+    @client: StorageSessionAdapter
+    @transport: StorageTransportAdapter
 
     SPOOL_READ_SIZE: Integer
 
     private def storage_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
     private def upload_content_type: (Object? value) -> String?
     private def upload_bytes: (String | IO | StringIO value) -> String
-    private def storage_object: (Object? payload) -> StorageObject
-    private def parse_time: (Object? value) -> Time?
     private def storage_paths: (String | Array[String] paths) -> Array[String]
     private def valid_storage_paths?: (Array[Object?] paths) -> bool
     private def delete_path: (String path, session_binding binding) -> Object?

@@ -4,7 +4,7 @@ module Volcano
   end
 
   class StorageBucket
-    def upload: (String path, String | IO | StringIO value, ?content_type: String?) -> Hash[String, json_value]
+    def upload: (String path, String | IO | StringIO value, ?content_type: String?) -> Object?
     def download: (String path, ?range: String?) -> String
     def list: (?String prefix, ?limit: Integer?, ?cursor: String?) -> StoragePage
     def remove: (String | Array[String] paths) -> Array[String]

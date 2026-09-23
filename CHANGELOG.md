@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.31.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.30.0...v0.31.0) (2026-09-23)
+
+
+### Features
+
+* **auth:** type credential and recovery flows ([#284](https://github.com/Kong/volcano-sdk-ruby/issues/284)) ([ad71460](https://github.com/Kong/volcano-sdk-ruby/commit/ad71460ea245c8e6acc2c0931ba182c956755cb3))
+* **storage:** type and validate storage subsystem ([#286](https://github.com/Kong/volcano-sdk-ruby/issues/286)) ([6efd1d3](https://github.com/Kong/volcano-sdk-ruby/commit/6efd1d313b0c7dec7bf7747809fd5f87d9d99360))
+
 ## [0.30.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.29.0...v0.30.0) (2026-09-23)
 
 

@@ -49,4 +49,36 @@ RSpec.describe Volcano::Auth do
       )
     end.to raise_error(ArgumentError, 'OAuth state mismatch')
   end
+
+  it 'rejects a non-object provider token response' do
+    client.auth.current_session = Volcano::Session.new(
+      access_token: 'access', refresh_token: 'refresh', user_id: 'user'
+    )
+    response = Volcano::Transport::Response.new(status: 200, body: [], headers: {}, data: nil)
+    allow(transport).to receive(:auth_get_oauth_provider_token).and_return(response)
+
+    expect { client.auth.get_oauth_provider_token('github') }
+      .to raise_error(TypeError, 'Expected complete OAuth provider token status')
+  end
+
+  {
+    'numeric access token' => { 'access_token' => 123 },
+    'numeric refresh token' => { 'refresh_token' => 123 },
+    'numeric user ID' => { 'user' => { 'id' => 123 } }
+  }.each do |label, invalid|
+    it "keeps the current session when OAuth exchange returns a #{label}" do
+      current = Volcano::Session.new(access_token: 'existing', refresh_token: 'refresh', user_id: 'user')
+      client.auth.current_session = current
+      body = { 'access_token' => 'new', 'refresh_token' => 'new-refresh', 'user' => { 'id' => 'new-user' } }
+      response = Volcano::Transport::Response.new(status: 200, body: body.merge(invalid), headers: {}, data: nil)
+      allow(transport).to receive(:auth_oauth_exchange).and_return(response)
+
+      expect do
+        client.auth.exchange_oauth_code(
+          code: 'code', redirect_to: 'https://app.test/callback', state: 'state', expected_state: 'state'
+        )
+      end.to raise_error(ArgumentError, 'Expected a complete Volcano::Session')
+      expect(client.auth.current_session).to eq(current)
+    end
+  end
 end

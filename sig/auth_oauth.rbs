@@ -1,0 +1,16 @@
+module Volcano
+  type oauth_api_input = session_input
+
+  class Auth
+    def list_linked_oauth_providers: () -> Array[LinkedOAuthProvider]
+    def link_oauth_provider: (String provider) -> String
+    def unlink_oauth_provider: (String provider) -> nil
+    def get_oauth_provider_token: (String provider) -> OAuthProviderTokenStatus
+    def refresh_oauth_provider_token: (String provider) -> OAuthProviderTokenStatus
+    def call_oauth_api: (String provider, endpoint: String, ?method: String, ?body: oauth_api_input) -> Object?
+    def sign_in_with_oauth: (String provider, redirect_to: String, state: String) -> String
+    def exchange_oauth_code: (code: String, redirect_to: String, state: String, expected_state: String) -> Session
+    def get_hosted_auth_url: (project_id: String, state: String, ?action: String) -> String
+    def adopt_hosted_auth_session: (Session session, state: String, expected_state: String) -> Session
+  end
+end

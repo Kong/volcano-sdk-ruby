@@ -32,6 +32,8 @@ module Volcano
     end
 
     def oauth_provider_token_status(body)
+      raise TypeError, 'Expected complete OAuth provider token status' unless body.is_a?(Hash)
+
       message, provider, expires_in = body.fetch_values('message', 'provider', 'expires_in')
       OAuthProviderTokenStatus.new(message:, provider:, expires_in:)
     rescue KeyError, NoMethodError

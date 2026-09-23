@@ -3,8 +3,10 @@ module Volcano
   type active_session_binding = [Integer, SessionOperations, Session]
 
   interface _AuthLifecycleClient
+    def capture_session: () -> [Integer, Session?]
     def capture_session_binding: () -> session_binding
     def anon_token: () -> String
+    def store_session: (Session session, ?event: Symbol?) -> void
     def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
     def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
     def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
@@ -23,6 +25,14 @@ module Volcano
     def auth_get_my_sessions: (authorization: String, page: Integer, limit: Integer) -> Transport::Response
     def auth_delete_all_my_sessions: (authorization: String) -> Transport::Response
     def auth_delete_my_session: (authorization: String, session_id: String) -> Transport::Response
+    def auth_oauth_authorization_url: (anon_key: String, provider: String, redirect_url: String, client_state: String) -> String
+    def auth_oauth_exchange: (authorization: String, code: String, redirect_url: String) -> Transport::Response
+    def auth_list_oauth_providers: (authorization: String) -> Transport::Response
+    def auth_link_oauth_provider: (authorization: String, provider: String) -> Transport::Response
+    def auth_unlink_oauth_provider: (authorization: String, provider: String) -> Transport::Response
+    def auth_get_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
+    def auth_refresh_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
+    def auth_call_oauth_api: (authorization: String, provider: String, endpoint: String, method: String, body: json_value) -> Transport::Response
   end
 
   interface _AuthLifecycleHost

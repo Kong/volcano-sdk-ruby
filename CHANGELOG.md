@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.25.0...v0.26.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish realtime Postgres change signature ([#258](https://github.com/Kong/volcano-sdk-ruby/issues/258)) ([0c2fe39](https://github.com/Kong/volcano-sdk-ruby/commit/0c2fe393c64dfb5329dbac7deb8bd58874f0f236))
+
 ## [0.25.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.24.0...v0.25.0) (2026-09-23)
 
 

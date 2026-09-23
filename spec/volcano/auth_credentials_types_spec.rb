@@ -16,6 +16,7 @@ RSpec.describe Volcano::Auth do
     expect(status.exitstatus).to eq(1), output + errors
     expect(output).to include('Ruby::ArgumentTypeMismatch')
     expect(output).to include('Ruby::InsufficientKeywordArguments')
+    expect(output).to include('Ruby::RequiredBlockMissing')
   end
 
   it 'ships the credential facade signatures in the gem manifest' do

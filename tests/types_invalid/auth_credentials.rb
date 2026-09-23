@@ -9,4 +9,5 @@ def invalid_credentials(auth)
   auth.confirm_email(token: 12)
   auth.reset_password(token: 'recovery')
   auth.current_session = 'not a session'
+  auth.on_auth_state_change
 end

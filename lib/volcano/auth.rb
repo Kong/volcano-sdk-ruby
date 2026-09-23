@@ -25,10 +25,10 @@ module Volcano
       @client.store_session(owned_complete_session(session), event: nil)
     end
 
-    def on_auth_state_change(&callback)
-      raise ArgumentError, 'callback block required' unless callback
+    def on_auth_state_change(&)
+      raise ArgumentError, 'callback block required' unless block_given?
 
-      @client.subscribe_auth_state_change(&callback)
+      @client.subscribe_auth_state_change(&)
     end
 
     def sign_in(email:, password:)

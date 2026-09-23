@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.31.0...v0.32.0) (2026-09-23)
+
+
+### Features
+
+* **realtime:** type and validate the realtime subsystem ([#287](https://github.com/Kong/volcano-sdk-ruby/issues/287)) ([05737e2](https://github.com/Kong/volcano-sdk-ruby/commit/05737e2b2827d1c50ea247adf74d42603043c07d))
+
 ## [0.31.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.30.0...v0.31.0) (2026-09-23)
 
 

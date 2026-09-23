@@ -5,6 +5,7 @@ target :sdk do
   check 'lib/volcano/errors.rb'
   check 'lib/volcano/connection_string.rb'
   check 'lib/volcano/lock_lease_clock.rb'
+  check 'lib/volcano/redaction.rb'
   library 'uri'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end

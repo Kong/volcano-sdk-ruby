@@ -1,0 +1,19 @@
+module Volcano
+  class Realtime
+    class ServerError < StandardError
+      attr_reader code: Object?
+
+      def initialize: (String message, ?code: Object?) -> void
+    end
+  end
+
+  module Redaction
+    MARKER: String
+
+    def self.message: (Object value, secrets: Array[String?]) -> String
+    def self.exception: (Exception error, secrets: Array[String?]) -> Exception
+    private def self.copy_exception: (Exception error, String redacted_message) -> Exception
+    private def self.copy_volcano_error: (Error::VolcanoError error, String redacted_message) -> Error::VolcanoError
+    private def self.variants: (Array[String?] secrets) -> Array[String]
+  end
+end

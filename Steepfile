@@ -11,7 +11,6 @@ target :sdk do
   check 'lib/volcano/realtime/blocking_call.rb'
   check 'lib/volcano/connection_string.rb'
   check 'lib/volcano/redaction.rb'
-  check 'lib/volcano/storage_public_url.rb'
   library 'base64'
   library 'cgi'
   library 'json'
@@ -90,6 +89,29 @@ target :auth_oauth do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :storage do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/storage_session_adapter.rb'
+  check 'lib/volcano/storage_transport_adapter.rb'
+  check 'lib/volcano/storage_object_response.rb'
+  check 'lib/volcano/storage.rb'
+  check 'lib/volcano/storage_models.rb'
+  check 'lib/volcano/storage_upload_models.rb'
+  check 'lib/volcano/storage_mutations.rb'
+  check 'lib/volcano/storage_resumable_upload.rb'
+  check 'lib/volcano/storage_upload_sessions.rb'
+  check 'lib/volcano/storage_response.rb'
+  check 'lib/volcano/storage_public_url.rb'
+  library 'base64'
+  library 'cgi'
+  library 'json'
+  library 'stringio'
+  library 'tempfile'
+  library 'time'
+  library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :auth_flows do
   signature 'sig', 'sig_dev'
   check 'lib/volcano/auth_session_construction.rb'
@@ -107,5 +129,7 @@ end
 target :consumers do
   signature 'sig'
   check 'tests/types'
+  library 'stringio'
+  library 'tempfile'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end

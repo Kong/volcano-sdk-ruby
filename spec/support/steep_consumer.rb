@@ -10,6 +10,7 @@ module SteepConsumer
     target :consumer do
       signature 'sig'
       check 'consumer.rb'
+      library 'tempfile'
       configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
     end
   RUBY

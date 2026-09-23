@@ -1,4 +1,6 @@
 module Volcano
+  type storage_object_attribute = String | Integer | bool | Hash[String, json_value] | Time | nil
+
   class StorageObject < Data
     attr_reader id: String
     attr_reader bucket_id: String
@@ -19,7 +21,7 @@ module Volcano
                | (id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> StorageObject
     def self.members: () -> [:id, :bucket_id, :name, :size, :mime_type, :is_public, :owner_id, :etag, :metadata, :created_at, :updated_at, :public_url]
 
-    def initialize: (id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> void
+    def initialize: (**storage_object_attribute attributes) -> void
     def members: () -> [:id, :bucket_id, :name, :size, :mime_type, :is_public, :owner_id, :etag, :metadata, :created_at, :updated_at, :public_url]
     def with: (?id: String, ?bucket_id: String, ?name: String, ?size: Integer, ?mime_type: String, ?is_public: bool, ?owner_id: String?, ?etag: String?, ?metadata: Hash[String, json_value]?, ?created_at: Time?, ?updated_at: Time?, ?public_url: String?) -> StorageObject
     def to_h: () -> { id: String, bucket_id: String, name: String, size: Integer, mime_type: String, is_public: bool, owner_id: String?, etag: String?, metadata: Hash[String, json_value]?, created_at: Time?, updated_at: Time?, public_url: String? }

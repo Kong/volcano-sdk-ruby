@@ -1,51 +1,68 @@
 # frozen_string_literal: true
 
 module Volcano
-  UploadSessionRequest = Data.define(:path, :content_type, :total_size, :part_size) do
+  UploadSessionRequest = Data.define(:path, :content_type, :total_size, :part_size)
+
+  # Freezes the arguments sent to create a resumable upload.
+  class UploadSessionRequest
+    # @dynamic path, content_type, total_size, part_size
     def initialize(path:, content_type:, total_size:, part_size: nil)
-      super(
-        path: path.dup.freeze,
-        content_type: content_type.dup.freeze,
-        total_size: total_size,
-        part_size: part_size
-      )
+      path = path.dup.freeze
+      content_type = content_type.dup.freeze
+      super
     end
   end
   private_constant :UploadSessionRequest
 
-  UploadPartRequest = Data.define(:path, :session_id, :part_number, :data) do
+  UploadPartRequest = Data.define(:path, :session_id, :part_number, :data)
+
+  # Freezes one resumable upload part before transport dispatch.
+  class UploadPartRequest
+    # @dynamic path, session_id, part_number, data
     def initialize(path:, session_id:, part_number:, data:)
-      super(
-        path: path.dup.freeze,
-        session_id: session_id.dup.freeze,
-        part_number: part_number,
-        data: data.dup.freeze
-      )
+      path = path.dup.freeze
+      session_id = session_id.dup.freeze
+      data = data.dup.freeze
+      super
     end
   end
   private_constant :UploadPartRequest
 
-  UploadSessionReference = Data.define(:path, :session_id) do
+  UploadSessionReference = Data.define(:path, :session_id)
+
+  # Freezes the path and identifier used for upload session operations.
+  class UploadSessionReference
+    # @dynamic path, session_id
     def initialize(path:, session_id:)
-      super(path: path.dup.freeze, session_id: session_id.dup.freeze)
+      path = path.dup.freeze
+      session_id = session_id.dup.freeze
+      super
     end
   end
   private_constant :UploadSessionReference
 
-  UploadSession = Data.define(:session_id, :part_size, :total_parts, :expires_at) do
+  UploadSession = Data.define(:session_id, :part_size, :total_parts, :expires_at)
+
+  # Describes a newly created upload session.
+  class UploadSession
+    # @dynamic session_id, part_size, total_parts, expires_at, members, with, to_h, deconstruct, deconstruct_keys
+    # @dynamic self.[], self.members
     def initialize(session_id:, part_size:, total_parts:, expires_at:)
-      super(
-        session_id: session_id.dup.freeze,
-        part_size: part_size,
-        total_parts: total_parts,
-        expires_at: expires_at.dup.freeze
-      )
+      session_id = session_id.dup.freeze
+      expires_at = expires_at.dup.freeze
+      super
     end
   end
 
-  UploadPart = Data.define(:part_number, :etag, :size) do
+  UploadPart = Data.define(:part_number, :etag, :size)
+
+  # Describes an accepted upload part.
+  class UploadPart
+    # @dynamic part_number, etag, size, members, with, to_h, deconstruct, deconstruct_keys
+    # @dynamic self.[], self.members
     def initialize(part_number:, etag:, size:)
-      super(part_number: part_number, etag: etag.dup.freeze, size: size)
+      etag = etag.dup.freeze
+      super
     end
   end
 
@@ -55,7 +72,13 @@ module Volcano
   ].freeze
   private_constant :UPLOAD_SESSION_STATUS_ATTRIBUTES
 
-  UploadSessionStatus = Data.define(*UPLOAD_SESSION_STATUS_ATTRIBUTES) do
+  UploadSessionStatus = Data.define(*UPLOAD_SESSION_STATUS_ATTRIBUTES)
+
+  # Freezes upload progress returned by storage.
+  class UploadSessionStatus
+    # @dynamic session_id, status, path, content_type, total_size, part_size
+    # @dynamic total_parts, parts_uploaded, bytes_uploaded, parts, expires_at, created_at
+    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - UPLOAD_SESSION_STATUS_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -66,7 +89,8 @@ module Volcano
       values = UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
         [name, immutable_value(attributes.fetch(name))]
       end
-      super(**values)
+      attributes = values
+      super
     end
 
     private

@@ -1,0 +1,132 @@
+module Volcano
+  class StorageSessionAdapter
+    @client: Object
+    def initialize: (Object client) -> void
+    def capture_session_binding: () -> session_binding
+    def session_token: () -> String
+    def session_request: (binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    private def storage_binding_array: (Object? value) -> Array[Object?]
+    private def storage_generation: (Object? value) -> Integer
+    private def storage_owner: (Object? value) -> SessionOperations
+    private def storage_session: (Object? value) -> Session?
+  end
+
+  class StorageTransportAdapter
+    @transport: Object
+    def initialize: (Object transport) -> void
+    def upload_storage_object: (authorization: String, bucket_name: String, path: String, data: String, content_type: String?) -> Transport::Response
+    def download_storage_object: (authorization: String, bucket_name: String, path: String, byte_range: String?) -> Transport::Response
+    def list_storage_objects: (authorization: String, bucket_name: String, prefix: String, limit: Integer?, cursor: String?) -> Transport::Response
+    def delete_storage_object: (authorization: String, bucket_name: String, path: String) -> Transport::Response
+    def move_storage_object: (authorization: String, bucket_name: String, from_path: String, to_path: String) -> Transport::Response
+    def copy_storage_object: (authorization: String, bucket_name: String, from_path: String, to_path: String) -> Transport::Response
+    def update_storage_object_visibility: (authorization: String, bucket_name: String, path: String, is_public: bool) -> Transport::Response
+    def create_upload_session: (authorization: String, bucket_name: String, request: UploadSessionRequest) -> Transport::Response
+    def upload_part: (authorization: String, bucket_name: String, request: UploadPartRequest) -> Transport::Response
+    def complete_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+    def get_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+    def abort_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+    private def invoke: (Symbol name, **Object? arguments) -> Transport::Response
+  end
+
+  module StorageResponse
+    private def upload_session: (Object? payload) -> UploadSession
+    private def upload_part_metadata: (Object? payload) -> UploadPart
+    private def upload_session_status: (Object? payload) -> UploadSessionStatus
+    private def storage_status_record: (Hash[String, Object?] payload, [String, String, String, String] text, [Integer, Integer, Integer, Integer, Integer] counts) -> UploadSessionStatus
+    private def storage_status_text: (Hash[String, Object?] payload) -> [String, String, String, String]
+    private def storage_status_counts: (Hash[String, Object?] payload) -> [Integer, Integer, Integer, Integer, Integer]
+    private def storage_parts: (Object? value) -> Array[UploadPart]
+    private def storage_payload: (Object? value) -> Hash[String, Object?]
+    private def storage_string: (Object? value) -> String
+    private def storage_integer: (Object? value) -> Integer
+    private def storage_time: (Object? value) -> Time
+  end
+
+  module StorageObjectResponse
+    include StorageResponse
+
+    private def storage_object: (Object? payload) -> StorageObject
+    private def storage_object_required: (Hash[String, Object?] payload) -> [String, String, String, Integer, String, bool]
+    private def storage_object_optional: (Hash[String, Object?] payload) -> [String?, String?, Hash[String, json_value]?, Time?, Time?, String?]
+    private def storage_object_list: (Object? value) -> Array[StorageObject]
+    private def storage_cursor: (Object? value) -> String?
+    private def storage_boolean: (Object? value) -> bool
+    private def storage_optional_string: (Object? value) -> String?
+    private def storage_optional_time: (Object? value) -> Time?
+    private def storage_optional_metadata: (Object? value) -> Hash[String, json_value]?
+    private def storage_json_hash: (Object? value) -> Hash[String, json_value]
+    private def storage_json_value: (Object? value) -> json_value
+  end
+
+  class Storage
+    @client: StorageSessionAdapter
+    @transport: StorageTransportAdapter
+    @api_url: String
+    @anon_key: String
+
+    def initialize: (Object client, Object transport, api_url: String, anon_key: String) -> void
+  end
+
+  class StorageBucket
+    include StorageObjectResponse
+    @client: StorageSessionAdapter
+    @transport: StorageTransportAdapter
+
+    SPOOL_READ_SIZE: Integer
+
+    private def storage_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    private def upload_content_type: (Object? value) -> String?
+    private def upload_bytes: (String | _StorageReadable value) -> String
+    private def storage_paths: (String | Array[String] paths) -> Array[String]
+    private def valid_storage_paths?: (Array[Object?] paths) -> bool
+    private def delete_path: (String path, session_binding binding) -> Object?
+    private def visibility_value: (Object? value) -> bool
+
+    private def upload_session_parts: (String path, _StorageReadable source, UploadSession session, Integer total_size, (^(Integer, Integer) -> void)? on_progress) -> void
+    private def abort_failed_upload: (String path, String session_id) -> nil
+    private def with_resumable_upload_source: [T] (String | _StorageReadable value) { (_StorageReadable, Integer) -> T } -> T
+    private def remaining_upload_bytes: (_StorageReadable source) -> Integer?
+    private def upload_source_dimensions: (_StorageReadable source) -> [Integer, Integer]?
+    private def with_spooled_upload_source: [T] (_StorageReadable source) { (_StorageReadable, Integer) -> T } -> T
+    private def spool_upload_source: (_StorageReadable source, File file) -> void
+  end
+
+  STORAGE_OBJECT_ATTRIBUTES: Array[Symbol]
+  UPLOAD_SESSION_STATUS_ATTRIBUTES: Array[Symbol]
+
+  class StorageObject
+    private def immutable_value: (Object? value) -> Object?
+    private def immutable_value_scalar: (Object? value) -> Object?
+    private def immutable_value_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
+  end
+
+  class UploadSessionStatus
+    private def immutable_value: (Object? value) -> Object?
+  end
+
+  class UploadSessionRequest < Data
+    attr_reader path: String
+    attr_reader content_type: String
+    attr_reader total_size: Integer
+    attr_reader part_size: Integer?
+    def self.new: (path: String, content_type: String, total_size: Integer, ?part_size: Integer?) -> UploadSessionRequest
+    def initialize: (path: String, content_type: String, total_size: Integer, ?part_size: Integer?) -> void
+  end
+
+  class UploadPartRequest < Data
+    attr_reader path: String
+    attr_reader session_id: String
+    attr_reader part_number: Integer
+    attr_reader data: String
+    def self.new: (path: String, session_id: String, part_number: Integer, data: String) -> UploadPartRequest
+    def initialize: (path: String, session_id: String, part_number: Integer, data: String) -> void
+  end
+
+  class UploadSessionReference < Data
+    attr_reader path: String
+    attr_reader session_id: String
+    def self.new: (path: String, session_id: String) -> UploadSessionReference
+    def initialize: (path: String, session_id: String) -> void
+  end
+end

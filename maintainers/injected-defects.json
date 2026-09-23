@@ -26,8 +26,8 @@
   {
     "name": "binary-corruption",
     "path": "lib/volcano/storage.rb",
-    "before": "      response.data.b\n",
-    "after": "      response.data.b.reverse\n",
+    "before": "      storage_string(response.data).b\n",
+    "after": "      storage_string(response.data).b.reverse\n",
     "spec": "spec/volcano/storage_bucket_binary_properties_spec.rb",
     "example": "downloads every byte as binary even when the transport encoding is UTF-8"
   },

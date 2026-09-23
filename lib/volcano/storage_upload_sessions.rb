@@ -51,7 +51,7 @@ module Volcano
           request: request
         )
       end
-      storage_object(Transport.body(response, 200).fetch('object'))
+      storage_object(storage_payload(Transport.body(response, 200)).fetch('object'))
     end
 
     def get_upload_session(path, session_id:)
@@ -77,40 +77,6 @@ module Volcano
       end
       Transport.body(response, 200)
       nil
-    end
-
-    private
-
-    def upload_session(payload)
-      UploadSession.new(
-        session_id: payload.fetch('session_id'),
-        part_size: payload.fetch('part_size'),
-        total_parts: payload.fetch('total_parts'),
-        expires_at: parse_time(payload.fetch('expires_at'))
-      )
-    end
-
-    def upload_part_metadata(payload)
-      UploadPart.new(
-        part_number: payload.fetch('part_number'),
-        etag: payload.fetch('etag'),
-        size: payload.fetch('size')
-      )
-    end
-
-    def upload_session_status(payload)
-      attributes = upload_session_status_attributes(payload)
-      attributes[:parts] = attributes.fetch(:parts).map { |part| upload_part_metadata(part) }
-      attributes[:expires_at] = parse_time(attributes.fetch(:expires_at))
-      attributes[:created_at] = parse_time(attributes.fetch(:created_at))
-      UploadSessionStatus.new(**attributes)
-    end
-
-    def upload_session_status_attributes(payload)
-      UPLOAD_SESSION_STATUS_ATTRIBUTES.to_h do |name|
-        value = name == :parts ? payload.fetch(name.to_s, []) : payload.fetch(name.to_s)
-        [name, value]
-      end
     end
   end
 end

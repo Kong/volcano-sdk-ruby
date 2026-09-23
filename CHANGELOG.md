@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.28.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.27.0...v0.28.0) (2026-09-23)
+
+
+### Features
+
+* **functions:** type credential-scoped resolution cache ([#273](https://github.com/Kong/volcano-sdk-ruby/issues/273)) ([fab932c](https://github.com/Kong/volcano-sdk-ruby/commit/fab932c8eaa1c436e5f23f4f269130369028b22f))
+* **locks:** type guarded lease lifecycle ([#272](https://github.com/Kong/volcano-sdk-ruby/issues/272)) ([d82d464](https://github.com/Kong/volcano-sdk-ruby/commit/d82d464c432d50793403a2baa8c089cad9deebe8))
+
 ## [0.27.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.26.0...v0.27.0) (2026-09-23)
 
 

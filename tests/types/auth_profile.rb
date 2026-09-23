@@ -9,7 +9,8 @@ end
 
 # @type method change_profile: (Volcano::Auth) -> Volcano::User
 def change_profile(auth)
-  auth.update_user(password: 'new-password', metadata: { 'theme' => 'dark' })
+  auth.update_user(password: 'new-password', metadata: { display_name: 'Grace', avatar: nil,
+                                                         'preferences' => { alerts: [true, false] } })
 end
 
 # @type method change_email: (Volcano::Auth) -> Volcano::EmailChangeResult

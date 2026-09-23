@@ -49,7 +49,7 @@ module Volcano
   module AuthUpdateUser : Object, AuthProfile
     @transport: _AuthLifecycleTransport
 
-    def update_user: (?password: String?, ?metadata: Hash[String, json_value]?) -> User
+    def update_user: (?password: String?, ?metadata: session_user_input?) -> User
     private def update_user_response: (String access_token, password: String?, metadata: Hash[String, json_value]?) -> Transport::Response
   end
 

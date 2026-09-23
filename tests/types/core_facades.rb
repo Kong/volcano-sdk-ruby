@@ -3,6 +3,7 @@
 require 'volcano'
 
 client = Volcano::Client.new(anon_key: 'anon-key')
+Volcano::Client.new(anon_key: 'anon-key', timeout: 1.5)
 client.database('app')
 client.functions
 client.durable
@@ -16,4 +17,9 @@ def typed_core_calls(client)
   client.durable.list('project', 'worker', page: 1)
   client.logs.search('project', 'limit' => 1)
   client.locks.acquire('job', ttl: 30)
+end
+
+# @type method typed_timestamp_calls: (Volcano::Client) -> void
+def typed_timestamp_calls(client)
+  client.logs.search('project', resource: { id: 'worker' }, start_time: Time.utc(2026), end_time: Time.utc(2026, 2))
 end

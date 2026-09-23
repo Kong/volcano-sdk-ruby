@@ -8,7 +8,7 @@ module Volcano
     attr_reader locks: Locks
     attr_reader realtime: Realtime
 
-    def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: Integer, ?access_token: String?, ?refresh_token: String?) -> void
+    def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: (Integer | Float), ?access_token: String?, ?refresh_token: String?) -> void
     def database: (String name) -> Database
   end
 end

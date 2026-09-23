@@ -1,5 +1,5 @@
 module Volcano
-  type sdk_json = nil | bool | Integer | Float | String | Array[sdk_json] | Hash[String | Symbol, sdk_json]
+  type sdk_json = nil | bool | Integer | Float | String | Time | Array[sdk_json] | Hash[String | Symbol, sdk_json]
   type sdk_payload = Hash[String | Symbol, sdk_json]
   type database_rows = Array[Hash[String, json_value]]
 

@@ -1,0 +1,7 @@
+module Volcano
+  class FunctionResponse
+    private def immutable_json: (String value) -> String
+                              | (json_value value) -> json_value
+    private def immutable_json_hash: (Hash[String, json_value] value) -> Hash[String, json_value]
+  end
+end

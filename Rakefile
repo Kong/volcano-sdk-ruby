@@ -27,8 +27,9 @@ end
 
 desc 'Validate public Ruby signatures and check the typed Ruby surface'
 task 'quality:types' do
-  ruby Gem.bin_path('rbs', 'rbs'), '-I', 'sig', '-I', 'sig_dev', 'validate'
+  ruby Gem.bin_path('rbs', 'rbs'), '-r', 'uri', '-I', 'sig', '-I', 'sig_dev', 'validate'
   ruby Gem.bin_path('steep', 'steep'), 'check', '--jobs', '1'
+  ruby Gem.bin_path('steep', 'steep'), 'check', '--steepfile', 'Steepfile.transport', '--jobs', '1'
 end
 
 desc 'Run the unit tests'

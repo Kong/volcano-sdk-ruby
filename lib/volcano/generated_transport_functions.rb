@@ -76,13 +76,19 @@ module Volcano
     end
 
     def function_body(body, headers)
-      return nil if body.nil? || body.empty?
-
-      text = body.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
-      return nil if text.empty?
+      text = normalized_function_text(body)
+      return nil if text.nil? || text.empty?
       return text unless function_json?(text, headers)
 
       parse_function_json(text)
+    end
+
+    def normalized_function_text(body)
+      raise TypeError, 'Expected a string function response' unless body.nil? || body.is_a?(String)
+
+      return nil if body.nil? || body.empty?
+
+      body.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
     end
 
     def parse_function_json(text)

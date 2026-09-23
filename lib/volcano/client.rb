@@ -3,7 +3,11 @@
 module Volcano
   # Entry point for Volcano API, storage, lock, and realtime operations.
   class Client
-    SessionToken = Data.define(:value) do
+    SessionToken = Data.define(:value)
+
+    # Restricts database queries to the captured access token.
+    class SessionToken
+      # @dynamic value
       def session_token = value
 
       def session_request
@@ -14,21 +18,27 @@ module Volcano
 
     attr_reader :auth, :functions, :durable, :logs, :storage, :locks, :realtime
 
+    # @dynamic auth, functions, durable, logs, storage, locks, realtime
+
     def initialize(
       anon_key:,
       api_url: 'https://api.volcano.dev',
       service_key: nil,
       timeout: 60,
+      _transport: nil,
+      _realtime_socket_factory: nil,
+      _realtime_reconnect_delay: nil,
       **options
     )
       session = SessionCredentials.build(options.delete(:access_token), options.delete(:refresh_token))
-      transport, socket_factory, reconnect_delay = extract_adapters(options)
+      raise ArgumentError, "unknown keyword: #{options.keys.first}" unless options.empty?
+
       @api_url = api_url.delete_suffix('/')
       @anon_key = anon_key
       @service_key = service_key
       @auth_state = AuthState.new(session: session)
-      @transport = transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
-      initialize_facades(socket_factory, reconnect_delay)
+      @transport = _transport || GeneratedTransport.new(api_url: @api_url, timeout: timeout)
+      initialize_facades(_realtime_socket_factory, _realtime_reconnect_delay)
     end
 
     def database(name)
@@ -57,9 +67,10 @@ module Volcano
     alias session_read session_request
 
     def service_token
-      raise Error::AuthenticationError, 'No service key configured' unless @service_key
+      service_key = @service_key
+      raise Error::AuthenticationError, 'No service key configured' unless service_key
 
-      @service_key
+      service_key
     end
 
     def function_token
@@ -102,15 +113,6 @@ module Volcano
 
     def database_with_token(name, token)
       Database.new(SessionToken.new(value: token), @transport, name)
-    end
-
-    def extract_adapters(adapters)
-      transport = adapters.delete(:_transport)
-      socket_factory = adapters.delete(:_realtime_socket_factory)
-      reconnect_delay = adapters.delete(:_realtime_reconnect_delay)
-      raise ArgumentError, "unknown keyword: #{adapters.keys.first}" unless adapters.empty?
-
-      [transport, socket_factory, reconnect_delay]
     end
 
     def initialize_facades(socket_factory, reconnect_delay)

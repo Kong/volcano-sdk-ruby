@@ -1,0 +1,53 @@
+module Volcano
+  class Client
+    attr_reader auth: Auth
+    attr_reader functions: Functions
+    attr_reader durable: Durable
+    attr_reader logs: Logs
+    attr_reader storage: Storage
+    attr_reader locks: Locks
+    attr_reader realtime: Realtime
+
+    @api_url: String
+    @anon_key: String
+    @service_key: String?
+    @auth_state: AuthState
+    @transport: GeneratedTransport
+    @auth: Auth
+    @functions: Functions
+    @durable: Durable
+    @logs: Logs
+    @storage: Storage
+    @locks: Locks
+    @realtime: Realtime
+
+    class SessionToken < Data
+      attr_reader value: String
+      def self.new: (value: String) -> SessionToken
+      def session_token: () -> String
+      def session_request: () { (String) -> Transport::Response } -> Transport::Response
+    end
+
+    def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: (Integer | Float), ?_transport: GeneratedTransport?, ?_realtime_socket_factory: (^(String) -> _RealtimeSocket)?, ?_realtime_reconnect_delay: (^(Integer) -> Numeric)?, **Object? options) -> void
+    def database: (String name) -> Database
+    def current_session: () -> Session?
+    def anon_token: () -> String
+    def session_token: () -> String
+    def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    def service_token: () -> String
+    def function_token: () -> String
+    def store_session: (Session session, ?event: Symbol?) -> void
+    def capture_session: () -> [Integer, Session?]
+    def capture_session_binding: () -> session_binding
+    def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
+    def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
+    def reject_refresh_if_current?: (Integer generation, ?notifications: Array[Method]?) -> bool
+    def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
+    def subscribe_auth_state_change: () { (Symbol, Session?) -> void } -> AuthSubscription
+    def update_session_user_if_current?: (Hash[String, json_value] user, Integer generation) -> bool
+
+    private
+    def database_with_token: (String name, String token) -> Database
+    def initialize_facades: ((^(String) -> _RealtimeSocket)? socket_factory, (^(Integer) -> Numeric)? reconnect_delay) -> void
+  end
+end

@@ -14,7 +14,6 @@ module Volcano
     def current_session: () -> Session?
     def capture_session: () -> [Integer, Session?]
     def capture_session_binding: () -> session_binding
-    def database_with_token: (String database_name, String access_token) -> _RealtimeDatabase
     def __send__: (:database_with_token, String database_name, String access_token) -> _RealtimeDatabase
   end
 

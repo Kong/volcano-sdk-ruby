@@ -1,0 +1,217 @@
+module Volcano
+  module Generated
+    type api_result = [Object?, Integer, Hash[String, String]?]
+    type api_options = Hash[Symbol, Object?]
+
+    class ApiError < StandardError
+      attr_reader code: (Integer | String)?
+      attr_reader response_body: String?
+      attr_reader response_headers: Hash[String, String]?
+    end
+
+    class ApiModelBase
+      def self._deserialize: (String type, Object? value) -> Object?
+    end
+
+    class Configuration
+      attr_accessor scheme: String?
+      attr_accessor host: String?
+      attr_accessor base_path: String
+      attr_accessor ignore_operation_servers: bool
+      attr_accessor access_token: String?
+      attr_accessor timeout: Integer
+      def initialize: () -> void
+    end
+
+    class ApiClient
+      def initialize: (?Configuration config) -> void
+      def self.default: () -> ApiClient
+      def call_api: (Symbol http_method, String path, ?api_options opts) -> api_result
+      def build_request: (Symbol http_method, String path, ?api_options opts) -> Typhoeus::Request
+      def select_header_content_type: (Array[String] content_types) -> String
+      def convert_to_type: (Object? data, String return_type) -> Object?
+      def object_to_http_body: (Object? model) -> Object?
+    end
+
+    class AuthConfirmEmailChangeRequest < ApiModelBase
+      def initialize: ({ email_change_token: String } attributes) -> void
+    end
+
+    class AuthConfirmEmailRequest < ApiModelBase
+      def initialize: ({ token: String } attributes) -> void
+    end
+
+    class AuthForgotPasswordRequest < ApiModelBase
+      def initialize: ({ email: String } attributes) -> void
+    end
+
+    class AuthOAuthExchangeRequest < ApiModelBase
+      def initialize: ({ code: String, redirect_url: String } attributes) -> void
+    end
+
+    class AuthRefreshRequest < ApiModelBase
+      def initialize: ({ refresh_token: String } attributes) -> void
+    end
+
+    class AuthRequestEmailChangeRequest < ApiModelBase
+      def initialize: ({ new_email: String } attributes) -> void
+    end
+
+    class AuthResetPasswordRequest < ApiModelBase
+      def initialize: ({ token: String, new_password: String } attributes) -> void
+    end
+
+    class AuthSigninRequest < ApiModelBase
+      def initialize: ({ email: String, password: String } attributes) -> void
+    end
+
+    class AuthSignupAnonymousRequest < ApiModelBase
+      def initialize: ({ user_metadata: session_user_input } attributes) -> void
+    end
+
+    class AuthSignupRequest < ApiModelBase
+      def initialize: ({ email: String, password: String, user_metadata: session_user_input } attributes) -> void
+    end
+
+    class AuthUpdateUserRequest < ApiModelBase
+      def initialize: (?Hash[Symbol, Object?] attributes) -> void
+    end
+
+    class CallOAuthProviderAPIRequest < ApiModelBase
+      def initialize: ({ endpoint: String, method: String, body: json_value } attributes) -> void
+    end
+
+    class CreateUploadSessionRequest < ApiModelBase
+      def initialize: (?Hash[Symbol, Object?] attributes) -> void
+    end
+
+    class DatabaseDeleteRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class DatabaseInsertRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class DatabaseSelectRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class DatabaseUpdateRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class FunctionInvocationRequest < ApiModelBase
+      def initialize: ({ payload: sdk_payload } attributes) -> void
+    end
+
+    class LogActivityRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class LogSearchRequest < ApiModelBase
+      def initialize: (Hash[Symbol, sdk_json] attributes) -> void
+    end
+
+    class ProjectLockLeaseRequest < ApiModelBase
+      def initialize: ({ ttl_seconds: Integer } attributes) -> void
+    end
+
+    class StorageCopyRequest < ApiModelBase
+      def initialize: ({ from: String, to: String } attributes) -> void
+    end
+
+    class StorageMoveRequest < ApiModelBase
+      def initialize: ({ from: String, to: String } attributes) -> void
+    end
+
+    class StorageVisibilityRequest < ApiModelBase
+      def initialize: ({ is_public: bool } attributes) -> void
+    end
+
+    class AuthenticationApi
+      def initialize: (?ApiClient api_client) -> void
+      def auth_cancel_email_change_with_http_info: (?api_options opts) -> api_result
+      def auth_confirm_email_with_http_info: (AuthConfirmEmailRequest auth_confirm_email_request, ?api_options opts) -> api_result
+      def auth_confirm_email_change_with_http_info: (AuthConfirmEmailChangeRequest auth_confirm_email_change_request, ?api_options opts) -> api_result
+      def auth_convert_anonymous_with_http_info: (AuthSignupRequest auth_signup_request, ?api_options opts) -> api_result
+      def auth_delete_all_my_sessions_with_http_info: (?api_options opts) -> api_result
+      def auth_delete_my_session_with_http_info: (String session_id, ?api_options opts) -> api_result
+      def auth_forgot_password_with_http_info: (AuthForgotPasswordRequest auth_forgot_password_request, ?api_options opts) -> api_result
+      def auth_get_my_sessions_with_http_info: (?api_options opts) -> api_result
+      def auth_get_user_with_http_info: (?api_options opts) -> api_result
+      def auth_logout_with_http_info: (?api_options opts) -> api_result
+      def auth_refresh_with_http_info: (?api_options opts) -> api_result
+      def auth_request_email_change_with_http_info: (AuthRequestEmailChangeRequest auth_request_email_change_request, ?api_options opts) -> api_result
+      def auth_resend_confirmation_with_http_info: (AuthForgotPasswordRequest auth_forgot_password_request, ?api_options opts) -> api_result
+      def auth_reset_password_with_http_info: (AuthResetPasswordRequest auth_reset_password_request, ?api_options opts) -> api_result
+      def auth_signin_with_http_info: (AuthSigninRequest auth_signin_request, ?api_options opts) -> api_result
+      def auth_signup_with_http_info: (AuthSignupRequest auth_signup_request, ?api_options opts) -> api_result
+      def auth_signup_anonymous_with_http_info: (?api_options opts) -> api_result
+      def auth_update_user_with_http_info: (?api_options opts) -> api_result
+    end
+
+    class OAuthAuthenticationApi
+      def initialize: (?ApiClient api_client) -> void
+      def auth_link_o_auth_provider_with_http_info: (String provider, ?api_options opts) -> api_result
+      def auth_list_o_auth_providers_with_http_info: (?api_options opts) -> api_result
+      def auth_o_auth_authorize_with_http_info: (String provider, String anon_key, ?api_options opts) -> api_result
+      def auth_o_auth_exchange_with_http_info: (AuthOAuthExchangeRequest auth_o_auth_exchange_request, ?api_options opts) -> api_result
+      def auth_unlink_o_auth_provider_with_http_info: (String provider, ?api_options opts) -> api_result
+      def call_o_auth_provider_api_with_http_info: (String provider, CallOAuthProviderAPIRequest call_o_auth_provider_api_request, ?api_options opts) -> api_result
+      def get_o_auth_provider_token_with_http_info: (String provider, ?api_options opts) -> api_result
+      def refresh_o_auth_provider_token_with_http_info: (String provider, ?api_options opts) -> api_result
+    end
+
+    class DatabaseQueriesApi
+      def initialize: (?ApiClient api_client) -> void
+      def query_database_delete_with_http_info: (String database_name, DatabaseDeleteRequest database_delete_request, ?api_options opts) -> api_result
+      def query_database_insert_with_http_info: (String database_name, DatabaseInsertRequest database_insert_request, ?api_options opts) -> api_result
+      def query_database_select_with_http_info: (String database_name, DatabaseSelectRequest database_select_request, ?api_options opts) -> api_result
+      def query_database_update_with_http_info: (String database_name, DatabaseUpdateRequest database_update_request, ?api_options opts) -> api_result
+    end
+
+    class LocksApi
+      def initialize: (?ApiClient api_client) -> void
+      def acquire_project_lock_with_http_info: (String key, String x_volcano_lock_token, String x_volcano_request_id, ProjectLockLeaseRequest project_lock_lease_request, ?api_options opts) -> api_result
+      def force_release_project_lock_with_http_info: (String key, String x_volcano_request_id, ?api_options opts) -> api_result
+      def get_project_lock_with_http_info: (String key, String x_volcano_request_id, ?api_options opts) -> api_result
+      def release_project_lock_with_http_info: (String key, String x_volcano_lock_token, String x_volcano_request_id, ?api_options opts) -> api_result
+      def renew_project_lock_with_http_info: (String key, String x_volcano_lock_token, String x_volcano_request_id, ProjectLockLeaseRequest project_lock_lease_request, ?api_options opts) -> api_result
+    end
+
+    class FunctionsApi
+      def initialize: (?ApiClient api_client) -> void
+      def invoke_function_with_http_info: (String function_id, FunctionInvocationRequest function_invocation_request, ?api_options opts) -> api_result
+      def resolve_function_for_invocation_with_http_info: (String name, ?api_options opts) -> api_result
+    end
+
+    class DurableFunctionsApi
+      def initialize: (?ApiClient api_client) -> void
+      def get_durable_execution_with_http_info: (String id, String function_id, String execution_id, ?api_options opts) -> api_result
+      def list_durable_executions_with_http_info: (String id, String function_id, ?api_options opts) -> api_result
+      def start_durable_execution_from_application_with_http_info: (String function_id, ?api_options opts) -> api_result
+      def stop_durable_execution_with_http_info: (String id, String function_id, String execution_id, ?api_options opts) -> api_result
+    end
+
+    class LogsApi
+      def initialize: (?ApiClient api_client) -> void
+      def get_project_log_activity_with_http_info: (String id, LogActivityRequest log_activity_request, ?api_options opts) -> api_result
+      def search_project_logs_with_http_info: (String id, LogSearchRequest log_search_request, ?api_options opts) -> api_result
+    end
+
+    class StorageObjectsApi
+      attr_reader api_client: ApiClient
+      def initialize: (?ApiClient api_client) -> void
+      def copy_storage_object_with_http_info: (String bucket_name, StorageCopyRequest storage_copy_request, ?api_options opts) -> api_result
+      def delete_storage_object_with_http_info: (String bucket_name, String path, ?api_options opts) -> api_result
+      def download_storage_object_with_http_info: (String bucket_name, String path, ?api_options opts) -> api_result
+      def list_storage_objects_with_http_info: (String bucket_name, ?api_options opts) -> api_result
+      def move_storage_object_with_http_info: (String bucket_name, StorageMoveRequest storage_move_request, ?api_options opts) -> api_result
+      def update_storage_object_visibility_with_http_info: (String bucket_name, String path, StorageVisibilityRequest storage_visibility_request, ?api_options opts) -> api_result
+      def upload_part_with_http_info: (String bucket_name, String path, String x_upload_session, Integer x_part_number, Object body, ?api_options opts) -> api_result
+      def upload_storage_object_with_http_info: (String bucket_name, String path, Object file, ?api_options opts) -> api_result
+    end
+
+  end
+end

@@ -5,7 +5,7 @@ require 'securerandom'
 require 'tempfile'
 require 'uri'
 
-generated_load_path = File.expand_path('generated/lib', __dir__)
+generated_load_path = File.expand_path('generated/lib', __dir__.to_s)
 $LOAD_PATH.unshift(generated_load_path) unless $LOAD_PATH.include?(generated_load_path)
 require 'volcano-generated'
 
@@ -17,8 +17,8 @@ end
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :Generated
-  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_support'
+  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_auth'
   require_relative 'generated_transport_anonymous'
   require_relative 'generated_transport_confirmation'
@@ -35,7 +35,6 @@ module Volcano
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
     include ApiFactory
-    include LogTransport
     include ValueNormalization
 
     GeneratedApis = Data.define(
@@ -45,7 +44,7 @@ module Volcano
     def initialize(api_url:, timeout: 60, api_factory: nil)
       @api_url = api_url
       @timeout = timeout
-      @api_factory = api_factory || method(:build_apis)
+      @api_factory = api_factory || ->(authorization) { build_apis(authorization) }
     end
 
     def acquire_project_lock(authorization:, key:, ttl:, token:, request_id: SecureRandom.uuid)

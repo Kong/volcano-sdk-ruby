@@ -1,0 +1,87 @@
+$ERROR_INFO: Exception?
+
+module Volcano
+  interface _RenewalDelay
+    def call: (Integer ttl, remaining: Float) -> Float
+  end
+
+  interface _LockLeaseProvider
+    def renew: (String key, LockLease lease, ttl: Integer) -> LockLease
+    def release: (String key, LockLease lease) -> void
+  end
+
+  class LockGuard
+    @lease: LockLease
+    @ttl: Integer
+    @lease_clock: LockLeaseClock
+    @mutex: Mutex
+    @changed: ConditionVariable
+    @failure: StandardError?
+    @expiry_stopped: bool
+    @expiry_thread: Thread?
+
+    def initialize: (LockLease lease, ttl: Integer, started_at: LockLeaseClock::Timestamp) -> void
+    def replace_lease: (LockLease lease, started_at: LockLeaseClock::Timestamp) -> bool
+    def mark_lost: (StandardError failure) -> void
+    def renewal_delay: (_RenewalDelay delay) -> Float
+    def start_expiry_watch: () -> Thread
+    def stop_expiry_watch: () -> Thread?
+
+    private def wait_for_failure?: (Float? deadline) -> bool
+    private def wait_duration: (Float? deadline) -> Float?
+    private def expiry_loop: () -> void
+    private def expiry_step: () -> (:finished | :waiting)
+    private def expiry_delay: () -> Float
+    private def record_expiry: () -> :finished
+    private def record_expiry_if_needed: () -> void
+    private def remaining_time: () -> Float
+    private def wait_deadline: (Numeric? timeout) -> Float?
+  end
+
+  class LockRenewer
+    class Config < Data
+      attr_reader ttl: Integer
+      attr_reader delay: _RenewalDelay
+      attr_reader shutdown_timeout: Float
+
+      def self.new: (ttl: Integer, delay: _RenewalDelay, shutdown_timeout: Float) -> Config
+    end
+
+    @locks: _LockLeaseProvider
+    @key: String
+    @guard: LockGuard
+    @config: Config
+    @mutex: Mutex
+    @stopped: ConditionVariable
+    @stop: bool
+    @thread: Thread?
+
+    def initialize: (_LockLeaseProvider locks, String key, LockGuard guard, Config config) -> void
+    def start: () -> Thread
+    def stop: () -> void
+
+    private def renewal_loop: () -> void
+    private def wait_to_renew: () -> bool
+    private def renew: () -> void
+    private def renewal_safe?: () -> bool
+    private def request_stop: () -> void
+  end
+
+  class LockSession
+    @locks: _LockLeaseProvider
+    @key: String
+    @guard: LockGuard
+    @renewer: LockRenewer
+    @delay: _RenewalDelay
+    @renewer_started: bool
+
+    def initialize: (_LockLeaseProvider locks, String key, LockGuard guard, LockRenewer renewer, _RenewalDelay delay) -> void
+    def run: [T] () { (LockGuard) -> T } -> T
+
+    private def prepare: () -> void
+    private def start: () -> void
+    private def cleanup: (bool completed) -> void
+    private def finish: (bool completed, StandardError? failure) -> void
+    private def release_safely: () -> StandardError?
+  end
+end

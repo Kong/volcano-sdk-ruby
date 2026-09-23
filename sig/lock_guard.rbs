@@ -1,0 +1,14 @@
+module Volcano
+  class LockGuard
+    EXPIRY_MESSAGE: String
+    MAX_EXPIRY_POLL_SECONDS: Float
+    UNSAFE_RENEWAL_MESSAGE: String
+
+    attr_reader ttl: Integer
+
+    def lease: () -> LockLease
+    def lost?: () -> bool
+    def wait_lost: (?timeout: Numeric?) -> bool
+    def failure: () -> StandardError?
+  end
+end

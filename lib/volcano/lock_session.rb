@@ -44,6 +44,7 @@ module Volcano
     end
 
     def cleanup(completed)
+      # @type var failure: StandardError?
       failure = nil
       @guard.stop_expiry_watch
       failure = @guard.failure

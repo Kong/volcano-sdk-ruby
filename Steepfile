@@ -5,6 +5,7 @@ target :sdk do
   check 'lib/volcano/errors.rb'
   check 'lib/volcano/sign_up_result.rb'
   check 'lib/volcano/function_response.rb'
+  check 'lib/volcano/log_responses.rb'
   check 'lib/volcano/connection_string.rb'
   check 'lib/volcano/lock_lease_clock.rb'
   check 'lib/volcano/redaction.rb'

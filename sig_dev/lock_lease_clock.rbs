@@ -22,8 +22,8 @@ module Volcano
     def self.capture: () -> Timestamp
     def self.suspend_aware?: () -> bool
 
-    def initialize: (ttl: Numeric, started_at: Timestamp) -> void
-    def reset: (Timestamp started_at) -> Time
+    def initialize: (ttl: Numeric, started_at: _LeaseStartedAt) -> void
+    def reset: (_LeaseStartedAt started_at) -> Time
     def remaining: () -> Float
     def monotonic_now: () -> Float
   end

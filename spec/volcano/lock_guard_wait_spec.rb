@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'bigdecimal'
+
 module Volcano
   RSpec.describe LockGuard do
     subject(:guard) { described_class.new(lease, ttl: 30, started_at: LockLeaseClock.capture) }
@@ -15,6 +17,18 @@ module Volcano
         expect(guard.wait_lost(timeout: timeout)).to be(false)
         expect(guard).not_to be_lost
         expect(guard.lease).to equal(lease)
+      end
+    end
+
+    it 'accepts a finite BigDecimal timeout' do
+      allow(LockLeaseClock).to receive(:now).and_call_original
+      expect(guard.wait_lost(timeout: BigDecimal('0.01'))).to be(false)
+      expect(guard).not_to be_lost
+    end
+
+    ['later', Complex(1, 1), Float::NAN, Float::INFINITY].each do |timeout|
+      it "rejects an invalid timeout #{timeout.inspect}" do
+        expect { guard.wait_lost(timeout: timeout) }.to raise_error(ArgumentError, 'invalid timeout')
       end
     end
 

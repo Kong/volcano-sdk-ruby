@@ -9,6 +9,7 @@ module Volcano
     MAX_EXPIRY_POLL_SECONDS = 1.0
     UNSAFE_RENEWAL_MESSAGE = 'lock renewal returned no safe lease window'
 
+    # @dynamic ttl
     attr_reader :ttl
 
     def initialize(lease, ttl:, started_at:)

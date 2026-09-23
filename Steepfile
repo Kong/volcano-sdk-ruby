@@ -8,6 +8,7 @@ target :sdk do
   check 'lib/volcano/log_responses.rb'
   check 'lib/volcano/realtime/protocol_recovery_position.rb'
   check 'lib/volcano/realtime/blocking_call.rb'
+  check 'lib/volcano/lock_guard.rb'
   check 'lib/volcano/connection_string.rb'
   check 'lib/volcano/lock_lease_clock.rb'
   check 'lib/volcano/redaction.rb'
@@ -16,6 +17,7 @@ target :sdk do
   library 'cgi'
   library 'json'
   library 'uri'
+  library 'timeout'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 

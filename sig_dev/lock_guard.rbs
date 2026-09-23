@@ -1,0 +1,40 @@
+module Volcano
+  class LockGuard
+    EXPIRY_MESSAGE: String
+    MAX_EXPIRY_POLL_SECONDS: Float
+    UNSAFE_RENEWAL_MESSAGE: String
+
+    @lease: LockLease
+    @ttl: Integer
+    @lease_clock: LockLeaseClock
+    @mutex: Mutex
+    @changed: ConditionVariable
+    @failure: StandardError?
+    @expiry_stopped: bool
+    @expiry_thread: Thread?
+
+    def initialize: (LockLease lease, ttl: Integer, started_at: LockLeaseClock::Timestamp) -> void
+    attr_reader ttl: Integer
+    def lease: () -> LockLease
+    def lost?: () -> bool
+    def wait_lost: (?timeout: Float?) -> bool
+    def replace_lease: (LockLease lease, started_at: LockLeaseClock::Timestamp) -> bool
+    def mark_lost: (StandardError failure) -> void
+    def failure: () -> StandardError?
+    def renewal_delay: (^(Integer, remaining: Float) -> Float delay) -> Float
+    def start_expiry_watch: () -> Thread
+    def stop_expiry_watch: () -> Thread?
+
+    private
+
+    def wait_for_failure?: (Float? deadline) -> bool
+    def wait_duration: (Float? deadline) -> Float?
+    def expiry_loop: () -> void
+    def expiry_step: () -> (:finished | :waiting)
+    def expiry_delay: () -> Float
+    def record_expiry: () -> :finished
+    def record_expiry_if_needed: () -> void
+    def remaining_time: () -> Float
+    def wait_deadline: (Float? timeout) -> Float?
+  end
+end

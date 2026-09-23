@@ -1,0 +1,57 @@
+module Volcano
+  DURABLE_EXECUTION_ATTRIBUTES: Array[Symbol]
+  DURABLE_TERMINAL_STATUSES: Array[String]
+
+  interface _DurableClient
+    def function_token: () -> String
+    def session_token: () -> String
+  end
+
+  interface _DurableTransport
+    def start_durable_execution_from_application: (authorization: String, function_id: String, payload: sdk_payload, execution_name: String?) -> Transport::Response
+    def get_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
+    def list_durable_executions: (authorization: String, project_id: String, function_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
+    def stop_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
+  end
+
+  module DurableResponses : Object
+    INCOMPLETE_EXECUTION: String
+    INCOMPLETE_PAGE: String
+
+    private def durable_execution: (Object? payload) -> DurableExecution
+    private def execution_payload: (Object? payload) -> Hash[String, Object?]
+    private def execution_text: (Hash[String, Object?] values, String field) -> String
+    private def execution_time: (Hash[String, Object?] values) -> Time
+    private def execution_expired: (Object? value) -> bool?
+    private def execution_result: (Object? value) -> json_value
+    private def execution_error: (Object? payload) -> DurableExecutionError?
+    private def durable_execution_page: (Object? payload) -> DurableExecutionPage
+    private def page_payload: (Object? payload) -> [Hash[String, Object?], Array[Object?], bool]
+    private def count: (Object? value) -> Integer
+    private def present_string?: (Object? value) -> bool
+    private def parse_time: (Object? value) -> Time?
+  end
+
+  class Durable
+    include DurableResponses
+    @client: _DurableClient
+    @transport: _DurableTransport
+
+    EXECUTION_NAME: Regexp
+    MAX_PAGE_SIZE: Integer
+
+    def initialize: (_DurableClient client, _DurableTransport transport) -> void
+
+    private def execution_path: (String project_id, String function_name, String execution_id) -> [String, String, String]
+    private def identifier: (Object? value, String field) -> String
+    private def execution_name_argument: (Object? value) -> String
+    private def validate_paging: (Object? page, Object? limit) -> void
+    private def validate_page_limit: (Object? limit) -> void
+    private def positive_integer?: (Object? value) -> bool
+  end
+
+  class DurableExecution
+    private def immutable_value: (Object? value) -> Object?
+    private def immutable_value_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
+  end
+end

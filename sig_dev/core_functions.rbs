@@ -1,0 +1,32 @@
+module Volcano
+  INVALID_FUNCTION_NAME: String
+
+  interface _FunctionsTransport
+    def invoke_function: (authorization: String, function_id: String, payload: sdk_payload) -> Transport::Response
+    def invoke_function_url: (authorization: String, invoke_url: String, payload: sdk_payload) -> Transport::Response
+    def resolve_function_for_invocation: (authorization: String, name: String) -> Transport::Response
+  end
+
+  class Functions
+    @client: _FunctionClient
+    @transport: _FunctionsTransport
+    @api_url: String
+    FUNCTION_NAME: Regexp
+    FUNCTION_INVOKED_HEADER: String
+
+    def initialize: (_FunctionClient client, _FunctionsTransport transport, api_url: String) -> void
+
+    private def invoke_owned: (FunctionAuth auth, String name, sdk_payload payload) -> FunctionResponse
+    private def authenticated_invoke: (FunctionAuth auth, FunctionResolution::Resolution resolution, sdk_payload payload) -> Transport::Response
+    private def stale_mapping?: (Transport::Response response) -> bool
+    private def invoke_resolved: (String authorization, FunctionResolution::Resolution resolution, sdk_payload payload) -> Transport::Response
+    private def resolve: (String authorization, String name) -> FunctionResolution::Resolution
+    private def resolve_uncached: (String authorization, String name) -> FunctionResolution::Resolution
+    private def cached_resolution: (FunctionResolution::Outcome cached) -> FunctionResolution::Resolution
+    private def validate_invocation: (Object? name, Object? payload) -> void
+    private def resolved_resolution: (Object? payload) -> FunctionResolution::Resolution
+    private def cache_ttl: (Hash[String, Object?] payload) -> Integer
+    private def function_response: (Transport::Response response) -> FunctionResponse
+    private def header: (Hash[String, String]? headers, String name) -> String?
+  end
+end

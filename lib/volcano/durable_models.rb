@@ -15,9 +15,16 @@ module Volcano
   private_constant :DURABLE_TERMINAL_STATUSES
 
   # Why a failed or timed-out execution ended.
-  DurableExecutionError = Data.define(:type, :message) do
+  DurableExecutionError = Data.define(:type, :message)
+
+  # Reopens the generated record for checked initialization.
+  class DurableExecutionError
+    # @dynamic type, message, members, with, to_h, deconstruct, deconstruct_keys
+    # @dynamic self.[], self.members
     def initialize(type: nil, message: nil)
-      super(type: type&.dup&.freeze, message: message&.dup&.freeze)
+      type = type&.dup&.freeze
+      message = message&.dup&.freeze
+      super
     end
   end
 
@@ -27,7 +34,13 @@ module Volcano
   # once its retention lapses. That is not the same as a function that returned
   # nothing, so read `result_expired` before concluding anything from a missing
   # result.
-  DurableExecution = Data.define(*DURABLE_EXECUTION_ATTRIBUTES) do
+  DurableExecution = Data.define(*DURABLE_EXECUTION_ATTRIBUTES)
+
+  # Reopens the generated record for checked initialization.
+  class DurableExecution
+    # @dynamic id, function_id, name, status, region, created_at, result, result_expired
+    # @dynamic error, completed_at, members, with, to_h, deconstruct, deconstruct_keys
+    # @dynamic self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - DURABLE_EXECUTION_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -38,7 +51,8 @@ module Volcano
       values = DURABLE_EXECUTION_ATTRIBUTES.to_h do |name|
         [name, immutable_value(attributes[name])]
       end
-      super(**values)
+      attributes = values
+      super
     end
 
     # Reports whether the execution has stopped changing.
@@ -64,12 +78,15 @@ module Volcano
   end
 
   # One page of a durable function's executions, most recent first.
-  DurableExecutionPage = Data.define(:executions, :page, :limit, :total, :has_more) do
+  DurableExecutionPage = Data.define(:executions, :page, :limit, :total, :has_more)
+
+  # Reopens the generated record for checked initialization.
+  class DurableExecutionPage
+    # @dynamic executions, page, limit, total, has_more, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(executions:, page:, limit:, total:, has_more:)
-      super(
-        executions: executions.to_a.dup.freeze,
-        page: page, limit: limit, total: total, has_more: has_more
-      )
+      executions = executions.to_a.dup.freeze
+      super
     end
   end
 
@@ -77,18 +94,17 @@ module Volcano
   module DurableResponses
     INCOMPLETE_EXECUTION = 'Expected a complete durable execution'
     INCOMPLETE_PAGE = 'Expected a complete durable execution page'
-    EXECUTION_FIELDS = %w[id function_id name status region].freeze
-    private_constant :INCOMPLETE_EXECUTION, :INCOMPLETE_PAGE, :EXECUTION_FIELDS
+    private_constant :INCOMPLETE_EXECUTION, :INCOMPLETE_PAGE
 
     private
 
     def durable_execution(payload)
       values = execution_payload(payload)
       DurableExecution.new(
-        id: values.fetch('id'), function_id: values.fetch('function_id'),
-        name: values.fetch('name'), status: values.fetch('status'),
-        region: values.fetch('region'), created_at: parse_time(values.fetch('created_at')),
-        result: values['result'], result_expired: values['result_expired'],
+        id: execution_text(values, 'id'), function_id: execution_text(values, 'function_id'),
+        name: execution_text(values, 'name'), status: execution_text(values, 'status'),
+        region: execution_text(values, 'region'), created_at: execution_time(values),
+        result: execution_result(values['result']), result_expired: execution_expired(values['result_expired']),
         error: execution_error(values['error']), completed_at: parse_time(values['completed_at'])
       )
     end
@@ -96,10 +112,34 @@ module Volcano
     def execution_payload(payload)
       raise TypeError, INCOMPLETE_EXECUTION unless payload.is_a?(Hash)
 
-      complete = EXECUTION_FIELDS.all? { |field| present_string?(payload[field]) }
-      raise TypeError, INCOMPLETE_EXECUTION unless complete && payload['created_at']
-
       payload
+    end
+
+    def execution_text(values, field)
+      value = values[field]
+      raise TypeError, INCOMPLETE_EXECUTION unless value.is_a?(String) && !value.strip.empty?
+
+      value
+    end
+
+    def execution_time(values)
+      case (value = values['created_at'])
+      when String then Time.iso8601(value)
+      when Time then value
+      else raise TypeError, INCOMPLETE_EXECUTION
+      end
+    end
+
+    def execution_expired(value)
+      return value if value.nil? || value.is_a?(TrueClass) || value.is_a?(FalseClass)
+
+      raise TypeError, INCOMPLETE_EXECUTION
+    end
+
+    def execution_result(value)
+      Transport.json_value(value)
+    rescue TypeError
+      raise TypeError, INCOMPLETE_EXECUTION, cause: nil
     end
 
     def execution_error(payload)
@@ -110,10 +150,10 @@ module Volcano
     end
 
     def durable_execution_page(payload)
-      data, has_more = page_payload(payload)
+      values, data, has_more = page_payload(payload)
       DurableExecutionPage.new(
         executions: data.map { |entry| durable_execution(entry) }, has_more: has_more,
-        page: count(payload['page']), limit: count(payload['limit']), total: count(payload['total'])
+        page: count(values['page']), limit: count(values['limit']), total: count(values['total'])
       )
     end
 
@@ -124,7 +164,7 @@ module Volcano
       has_more = payload['has_more']
       raise TypeError, INCOMPLETE_PAGE unless data.is_a?(Array) && [true, false].include?(has_more)
 
-      [data, has_more]
+      [payload, data, has_more]
     end
 
     def count(value)
@@ -138,7 +178,10 @@ module Volcano
     end
 
     def parse_time(value)
-      value.is_a?(String) ? Time.iso8601(value) : value
+      return Time.iso8601(value) if value.is_a?(String)
+      return value if value.nil? || value.is_a?(Time)
+
+      raise TypeError, INCOMPLETE_EXECUTION
     end
   end
   private_constant :DurableResponses

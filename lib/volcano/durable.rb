@@ -100,7 +100,7 @@ module Volcano
     # An empty path segment would address the collection instead of the
     # execution, which is a different request rather than a failed one.
     def identifier(value, field)
-      raise ArgumentError, "#{field} must be a non-empty String" unless present_string?(value)
+      raise ArgumentError, "#{field} must be a non-empty String" unless value.is_a?(String) && present_string?(value)
 
       value.strip.freeze
     end
@@ -128,7 +128,7 @@ module Volcano
     end
 
     def validate_page_limit(limit)
-      return if limit.nil? || (positive_integer?(limit) && limit <= MAX_PAGE_SIZE)
+      return if limit.nil? || (limit.is_a?(Integer) && positive_integer?(limit) && limit <= MAX_PAGE_SIZE)
 
       raise ArgumentError, "limit must be an Integer between 1 and #{MAX_PAGE_SIZE}"
     end

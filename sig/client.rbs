@@ -1,0 +1,15 @@
+module Volcano
+  class Client
+    attr_reader auth: Auth
+    attr_reader functions: Functions
+    attr_reader durable: Durable
+    attr_reader logs: Logs
+    attr_reader storage: Storage
+    attr_reader locks: Locks
+    attr_reader realtime: Realtime
+
+    def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: (Integer | Float), ?access_token: String?, ?refresh_token: String?) -> void
+    def current_session: () -> Session?
+    def database: (String name) -> Database
+  end
+end

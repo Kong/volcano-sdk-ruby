@@ -32,7 +32,7 @@ module Volcano
 
     def refresh(original)
       # Resolution has released its cache lock before refresh callbacks run.
-      @client.auth.__send__(:refresh_captured_session, @binding)
+      @client.auth.__send__(:refresh_captured_session, active_binding)
     rescue Error::SessionChangedError
       raise
     rescue Error::VolcanoError
@@ -41,10 +41,17 @@ module Volcano
 
     def validate
       if @binding.last
-        @client.auth.__send__(:validate_read_failure, @binding)
+        @client.auth.__send__(:validate_read_failure, active_binding)
       elsif @client.capture_session_binding[1] != @binding[1]
         raise Error::SessionChangedError
       end
+    end
+
+    def active_binding
+      generation, owner, session = @binding
+      raise Error::SessionChangedError unless session
+
+      [generation, owner, session]
     end
   end
   private_constant :FunctionAuth

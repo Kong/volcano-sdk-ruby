@@ -1,33 +1,21 @@
 # frozen_string_literal: true
 
+# Ruby SDK runtime and immutable database builders.
 module Volcano
-  # Captures caller-owned query values before storing them in immutable builders.
-  module ImmutableQueryValue
-    module_function
-
-    def capture(value)
-      case value
-      when String then value.dup.freeze
-      when Array then value.map { |item| capture(item) }.freeze
-      when Hash then capture_hash(value)
-      else value
-      end
-    end
-
-    def capture_hash(value)
-      value.to_h { |key, item| [capture(key), capture(item)] }.freeze
-    end
-  end
-  private_constant :ImmutableQueryValue
-
   QueryContext = Data.define(:client, :transport, :database_name)
   private_constant :QueryContext
   QueryState = Data.define(:columns, :filters, :order, :limit, :offset)
   private_constant :QueryState
+  # @type var empty_columns: Array[String]
+  empty_columns = []
+  empty_columns.freeze
+  # @type var empty_conditions: Array[query_condition]
+  empty_conditions = []
+  empty_conditions.freeze
   EMPTY_QUERY_STATE = QueryState.new(
-    columns: [].freeze,
-    filters: [].freeze,
-    order: [].freeze,
+    columns: empty_columns,
+    filters: empty_conditions,
+    order: empty_conditions,
     limit: nil,
     offset: nil
   )
@@ -35,6 +23,7 @@ module Volcano
 
   # Adds the shared immutable filter vocabulary to database builders.
   module FilterMethods
+    # @dynamic copy
     def eq(column, value) = add_filter(column, 'eq', value)
     def neq(column, value) = add_filter(column, 'neq', value)
     def gt(column, value) = add_filter(column, 'gt', value)
@@ -50,9 +39,9 @@ module Volcano
 
     def add_filter(column, operator, value)
       condition = {
-        'column' => ImmutableQueryValue.capture(column),
+        'column' => ImmutableRequestValue.capture(column),
         'operator' => operator,
-        'value' => ImmutableQueryValue.capture(value)
+        'value' => ImmutableRequestValue.capture(value)
       }.freeze
       copy(filters: [*@filters, condition])
     end
@@ -62,7 +51,7 @@ module Volcano
   # Creates immutable queries scoped to one project database.
   class Database
     def initialize(client, transport, name)
-      database_name = ImmutableQueryValue.capture(name)
+      database_name = ImmutableRequestValue.capture(name)
       @context = QueryContext.new(client:, transport:, database_name:)
     end
 
@@ -77,7 +66,7 @@ module Volcano
 
     def initialize(context, table, state: EMPTY_QUERY_STATE)
       @context = context
-      @table = ImmutableQueryValue.capture(table)
+      @table = ImmutableRequestValue.capture(table)
       @columns = state.columns
       @filters = state.filters
       @order = state.order
@@ -87,13 +76,13 @@ module Volcano
     end
 
     def select(*columns)
-      copy(columns: ImmutableQueryValue.capture(columns))
+      copy(columns: ImmutableRequestValue.capture(columns))
     end
 
-    def insert(values) = InsertBuilder.new(@context, @table, ImmutableQueryValue.capture(values))
+    def insert(values) = InsertBuilder.new(@context, @table, ImmutableRequestValue.capture(values))
 
     def update(values)
-      UpdateBuilder.new(@context, @table, ImmutableQueryValue.capture(values), filters: @filters)
+      UpdateBuilder.new(@context, @table, ImmutableRequestValue.capture(values), filters: @filters)
     end
 
     def delete
@@ -101,7 +90,7 @@ module Volcano
     end
 
     def order(column, ascending: true)
-      clause = { 'column' => ImmutableQueryValue.capture(column), 'ascending' => ascending }.freeze
+      clause = { 'column' => ImmutableRequestValue.capture(column), 'ascending' => ascending }.freeze
       copy(order: [*@order, clause])
     end
 
@@ -123,7 +112,7 @@ module Volcano
           )
         end
       end
-      Transport.body(response, 200).fetch('data')
+      Transport.json_rows(Transport.body(response, 200))
     end
 
     private
@@ -149,7 +138,9 @@ module Volcano
     end
 
     def query_body
-      { 'table' => @table }.tap do |body|
+      # @type var body: sdk_payload
+      body = { 'table' => @table }
+      body.tap do |body|
         add_query_selection(body)
         body['limit'] = @limit unless @limit.nil?
         body['offset'] = @offset unless @offset.nil?
@@ -184,7 +175,7 @@ module Volcano
           )
         end
       end
-      Transport.body(response, 200).fetch('data')
+      Transport.json_rows(Transport.body(response, 200))
     end
   end
 
@@ -192,7 +183,7 @@ module Volcano
   class UpdateBuilder
     include FilterMethods
 
-    def initialize(context, table, values, filters: [].freeze)
+    def initialize(context, table, values, filters: EMPTY_QUERY_STATE.filters)
       @context = context
       @table = table
       @values = values
@@ -210,7 +201,7 @@ module Volcano
           )
         end
       end
-      Transport.body(response, 200).fetch('data')
+      Transport.json_rows(Transport.body(response, 200))
     end
 
     private
@@ -224,7 +215,7 @@ module Volcano
   class DeleteBuilder
     include FilterMethods
 
-    def initialize(context, table, filters: [].freeze)
+    def initialize(context, table, filters: EMPTY_QUERY_STATE.filters)
       @context = context
       @table = table
       @filters = filters
@@ -241,7 +232,7 @@ module Volcano
           )
         end
       end
-      Transport.body(response, 200).fetch('data')
+      Transport.json_rows(Transport.body(response, 200))
     end
 
     private

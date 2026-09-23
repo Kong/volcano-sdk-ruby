@@ -47,7 +47,7 @@ module Volcano
     self.@stripes: Array[Mutex]
 
     def self.resolve_lock: (String api_url, String authorization, String name) -> Mutex
-    def self.valid_invoke_url: (Object value, String api_url) -> String?
+    def self.valid_invoke_url: (Object? value, String api_url) -> String?
     def self.lookup: (String api_url, String authorization, String name) -> Outcome?
     def self.store: (String api_url, String authorization, String name, Resolution resolution, Integer ttl_seconds) -> void
     def self.store_missing: (String api_url, String authorization, String name, Error::NotFoundError error) -> void
@@ -56,7 +56,7 @@ module Volcano
     def self.clear: () -> void
     def self.now: () -> Float
 
-    private def self.nonempty_url: (Object value) -> String?
+    private def self.nonempty_url: (Object? value) -> String?
     private def self.usable_address?: (_InvocationAddress uri) -> bool
     private def self.usable_scheme?: (String? scheme, String api_url) -> bool
     private def self.write: ([String, String, String] key, Outcome outcome, Integer ttl_seconds) -> void

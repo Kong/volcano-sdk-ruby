@@ -3,8 +3,6 @@
 module Volcano
   # Searches retained project logs and activity.
   class Logs
-    include ImmutableLogJSON
-
     def initialize(client, transport)
       @client = client
       @transport = transport
@@ -46,18 +44,19 @@ module Volcano
       end
       raise TypeError, 'Log request must be a Hash' unless request.is_a?(Hash)
 
-      [project_id.dup.freeze, immutable_json(request)]
+      [project_id.dup.freeze, ImmutableRequestValue.capture(request)]
     end
 
     def search_response(body)
-      data = response_data(body)
+      body, data = response_data(body)
       limit = body['limit']
       has_more = body['has_more']
       next_cursor = body['next_cursor']
-      unless limit.is_a?(Integer) && [true, false].include?(has_more) &&
-             (next_cursor.nil? || next_cursor.is_a?(String))
+      unless limit.is_a?(Integer) && boolean?(has_more) && (next_cursor.nil? || next_cursor.is_a?(String))
         raise TypeError, 'Expected a complete log response'
       end
+
+      has_more = has_more == true
 
       LogSearchResponse.new(
         data: data, limit: limit, has_more: has_more, next_cursor: next_cursor
@@ -65,7 +64,7 @@ module Volcano
     end
 
     def activity_response(body)
-      data = response_data(body)
+      body, data = response_data(body)
       total = body['total']
       raise TypeError, 'Expected a complete log response' unless total.is_a?(Integer)
 
@@ -73,10 +72,16 @@ module Volcano
     end
 
     def response_data(body)
-      data = body['data'] if body.is_a?(Hash)
+      raise TypeError, 'Expected a complete log response' unless body.is_a?(Hash)
+
+      data = body['data']
       raise TypeError, 'Expected a complete log response' unless data.is_a?(Array) && data.all?(Hash)
 
-      data
+      [body, data]
+    end
+
+    def boolean?(value)
+      value.is_a?(TrueClass) || value.is_a?(FalseClass)
     end
   end
 end

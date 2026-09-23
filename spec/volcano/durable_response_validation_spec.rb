@@ -25,13 +25,24 @@ RSpec.describe Volcano::Durable do
     end
   end
 
-  [{ 'created_at' => nil }, { 'error' => 'failure' }, { 'status' => ' ' }].each do |fields|
+  [{ 'created_at' => nil }, { 'error' => 'failure' }, { 'status' => ' ' },
+   { 'id' => nil }, { 'created_at' => 12 }, { 'completed_at' => 12 },
+   { 'result_expired' => 'false' }, { 'result' => Object.new },
+   { 'result' => { status: 'done' } }].each do |fields|
     it "rejects malformed execution fields #{fields.inspect}" do
       allow(transport).to receive(:get_durable_execution).and_return(response(execution.merge(fields)))
 
       expect { client.durable.get('project', 'function', 'execution') }
         .to raise_error(TypeError, 'Expected a complete durable execution')
     end
+  end
+
+  it 'preserves a timestamp object in an execution response' do
+    timestamp = Time.utc(2026)
+    allow(transport).to receive(:get_durable_execution)
+      .and_return(response(execution.merge('created_at' => timestamp)))
+
+    expect(client.durable.get('project', 'function', 'execution').created_at).to eq(timestamp)
   end
 
   [nil, [], 'invalid', {}].each do |payload|

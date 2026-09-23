@@ -19,7 +19,7 @@ module Volcano
                | (id: String, email: String, status: String, ?project_id: String?, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> User
     def self.members: () -> [:id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata, :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at]
 
-    def initialize: (id: String, email: String, status: String, ?project_id: String?, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> void
+    private def initialize: (id: String, email: String, status: String, **Object? attributes) -> void
     def members: () -> [:id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata, :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at]
     def with: (?id: String, ?project_id: String?, ?email: String, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?status: String, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> User
     def to_h: () -> { id: String, project_id: String?, email: String, email_confirmed: bool?, user_metadata: Hash[String, json_value]?, app_metadata: Hash[String, json_value]?, avatar_url: String?, status: String, banned_until: Time?, last_sign_in_at: Time?, created_at: Time?, updated_at: Time? }

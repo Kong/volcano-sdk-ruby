@@ -8,9 +8,10 @@ module Volcano
 
     def refresh_session
       binding = @client.capture_session_binding
-      raise Error::AuthenticationError, 'No active session' unless binding.last
+      session = binding.last
+      raise Error::AuthenticationError, 'No active session' unless session
 
-      refresh_captured_session(owned_session_binding(binding))
+      refresh_captured_session([binding.first, binding[1], session])
     end
 
     def session_request(binding: @client.capture_session_binding)

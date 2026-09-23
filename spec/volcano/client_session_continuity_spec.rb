@@ -86,6 +86,22 @@ RSpec.describe Volcano::Client do
     expect(transport).not_to have_received(:auth_delete_my_session)
   end
 
+  it 'joins a refresh completed after capturing its original generation' do
+    allow(transport).to receive(:auth_refresh).and_return(refresh_response(session_a))
+    first_capture = true
+    allow(client).to receive(:capture_session_binding).and_wrap_original do |original|
+      binding = original.call
+      if first_capture
+        first_capture = false
+        client.auth.refresh_session
+      end
+      binding
+    end
+
+    expect(client.auth.refresh_session.access_token).to eq(token(session_a, renewed: true))
+    expect(transport).to have_received(:auth_refresh).once
+  end
+
   it 'does not revoke an unrelated session while recovering expired access' do
     allow(transport).to receive_messages(auth_delete_my_session: response(401, 'error' => 'expired'),
                                          auth_refresh: refresh_response(session_b))

@@ -3,10 +3,11 @@ module Volcano
   type auth_profile_optional = { project_id: String?, email_confirmed: bool?, user_metadata: Hash[String, json_value]?, app_metadata: Hash[String, json_value]?, avatar_url: String? }
   type auth_profile_timestamps = { banned_until: Time?, last_sign_in_at: Time?, created_at: Time?, updated_at: Time? }
 
-  interface _AuthProfileHost
+  interface _AuthFacadeHost
     def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
     def owned_session_binding: (session_binding binding) -> active_session_binding
     def session_payload: (Integer status, decode: :email_change_result) { () -> ^(String) -> Transport::Response } -> EmailChangeResult
+                       | (Integer status, decode: :session_page) { () -> ^(String) -> Transport::Response } -> SessionPage
                        | (Integer status, ?decode: Symbol?) { () -> ^(String) -> Transport::Response } -> Object?
   end
 
@@ -29,7 +30,7 @@ module Volcano
     private def profile_parse_time: (Object? value) -> Time?
   end
 
-  module AuthProfile : Object, _AuthProfileHost
+  module AuthProfile : Object, _AuthFacadeHost
     include AuthProfileFields
     @client: _AuthLifecycleClient
     @transport: _AuthLifecycleTransport
@@ -53,7 +54,7 @@ module Volcano
     private def update_user_response: (String access_token, password: String?, metadata: Hash[String, json_value]?) -> Transport::Response
   end
 
-  module AuthEmailChange : Object, AuthProfile, _AuthProfileHost
+  module AuthEmailChange : Object, AuthProfile, _AuthFacadeHost
     @transport: _AuthLifecycleTransport
 
     INVALID_EMAIL_CHANGE_RESULT: String
@@ -70,7 +71,7 @@ module Volcano
   end
 
   class Auth
-    include _AuthProfileHost
+    include _AuthFacadeHost
     include AuthProfile
     include AuthUpdateUser
     include AuthEmailChange

@@ -71,6 +71,12 @@ target :auth_profile do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_sessions do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/auth_sessions.rb'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

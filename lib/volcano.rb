@@ -25,13 +25,13 @@ require_relative 'volcano/auth_profile_fields'
 require_relative 'volcano/auth_get_user'
 require_relative 'volcano/auth_update_user'
 require_relative 'volcano/auth_email_change'
+require_relative 'volcano/auth_sessions'
 require_relative 'volcano/auth'
 require_relative 'volcano/auth_sign_up'
 require_relative 'volcano/sign_up_result'
 require_relative 'volcano/auth_anonymous'
 require_relative 'volcano/auth_confirm_email'
 require_relative 'volcano/auth_resend_confirmation'
-require_relative 'volcano/auth_sessions'
 require_relative 'volcano/auth_oauth'
 require_relative 'volcano/auth_oauth_sign_in'
 require_relative 'volcano/auth_hosted'
@@ -63,6 +63,7 @@ require_relative 'volcano/client'
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :AuthRefresh, :AuthSignOut, :AuthProfile, :AuthProfileFields, :AuthUpdateUser, :AuthEmailChange,
+                   :AuthSessions,
                    :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer,
                    :LockSession, :LockResponse, :Redaction, :SessionOperations
 

@@ -29,6 +29,8 @@ module Volcano
     end
 
     def build_sign_up_result(payload)
+      raise TypeError, INVALID_SIGN_UP_RESULT unless payload.is_a?(Hash)
+
       confirmation_required = payload.fetch('confirmation_required')
       message = payload.fetch('message')
       valid = [true, false].include?(confirmation_required) && message.is_a?(String)

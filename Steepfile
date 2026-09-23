@@ -108,6 +108,20 @@ target :storage do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_flows do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/auth_session_construction.rb'
+  check 'lib/volcano/auth.rb'
+  check 'lib/volcano/auth_sign_up.rb'
+  check 'lib/volcano/auth_anonymous.rb'
+  check 'lib/volcano/auth_confirm_email.rb'
+  check 'lib/volcano/auth_resend_confirmation.rb'
+  check 'lib/volcano/auth_reset_password_for_email.rb'
+  check 'lib/volcano/auth_reset_password.rb'
+  library 'json'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

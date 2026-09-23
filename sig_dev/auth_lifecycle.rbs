@@ -7,6 +7,8 @@ module Volcano
     def capture_session_binding: () -> session_binding
     def anon_token: () -> String
     def store_session: (Session session, ?event: Symbol?) -> void
+    def current_session: () -> Session?
+    def subscribe_auth_state_change: () { (Symbol, Session?) -> void } -> AuthSubscription
     def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
     def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
     def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
@@ -33,6 +35,14 @@ module Volcano
     def auth_get_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
     def auth_refresh_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
     def auth_call_oauth_api: (authorization: String, provider: String, endpoint: String, method: String, body: json_value) -> Transport::Response
+    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+    def auth_signin: (authorization: String, email: String, password: String) -> Transport::Response
+    def auth_signup_anonymous: (authorization: String, metadata: session_user_input) -> Transport::Response
+    def auth_convert_anonymous: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+    def auth_confirm_email: (authorization: String, token: String) -> Transport::Response
+    def auth_resend_confirmation: (authorization: String, email: String) -> Transport::Response
+    def auth_forgot_password: (authorization: String, email: String) -> Transport::Response
+    def auth_reset_password: (authorization: String, token: String, new_password: String) -> Transport::Response
   end
 
   interface _AuthLifecycleHost

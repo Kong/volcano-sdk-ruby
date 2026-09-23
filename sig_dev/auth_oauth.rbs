@@ -37,7 +37,5 @@ module Volcano
     private def validate_hosted_auth_callback_state: (Object? state, Object? expected_state) -> void
     private def hosted_auth_parameter: (Object? value) -> String
 
-    private def build_session: (Object? payload) -> Session
-    private def owned_complete_session: (Object? session) -> Session
   end
 end

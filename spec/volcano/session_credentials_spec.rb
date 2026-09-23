@@ -31,5 +31,22 @@ module Volcano
         expect(described_class.session_id(token)).to be_nil
       end
     end
+
+    it 'normalizes every encoded UUID without changing its digits' do
+      check_property(PropCheck::Generators.choose(0..((1 << 128) - 1))) do |number|
+        hex = number.to_s(16).rjust(32, '0')
+        id = "#{hex[0, 8]}-#{hex[8, 4]}-#{hex[12, 4]}-#{hex[16, 4]}-#{hex[20, 12]}"
+        payload = [JSON.generate(session_id: id.upcase)].pack('m0').tr('+/', '-_').delete('=')
+
+        expect(described_class.session_id("header.#{payload}.signature")).to eq(id)
+      end
+    end
+
+    it 'rejects a profile without a string user identifier' do
+      session = Session.new(access_token: 'access')
+
+      expect { described_class.with_user(session, 'id' => 42) }
+        .to raise_error(Error::AuthenticationError, 'Profile has no valid user identifier')
+    end
   end
 end

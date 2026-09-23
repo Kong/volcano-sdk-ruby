@@ -1,47 +1,8 @@
 # frozen_string_literal: true
 
-require 'json'
+require_relative 'session_page_mapping'
 
 module Volcano
-  # Maps the internal wire response to immutable public session values.
-  module SessionPageMapping
-    SESSION_FIELDS = %i[
-      id user_id provider expires_at is_active is_current user_agent ip_address last_ip_address
-      last_activity_at session_started_at created_at updated_at
-    ].freeze
-    REQUIRED_SESSION_FIELDS = SESSION_FIELDS.first(6).freeze
-
-    private
-
-    def session_page(body)
-      raise TypeError, 'Expected a complete session page' unless body.is_a?(Hash)
-
-      sessions = body.fetch('sessions')
-      raise TypeError, 'Expected a complete session page' unless sessions.is_a?(Array)
-
-      SessionPage.new(
-        sessions: sessions.map { |attributes| auth_session(attributes) },
-        total: body.fetch('total'), page: body.fetch('page'), limit: body.fetch('limit'),
-        total_pages: body.fetch('total_pages')
-      )
-    rescue KeyError
-      raise TypeError, 'Expected a complete session page'
-    end
-
-    def auth_session(attributes)
-      raise TypeError, 'Expected a complete authentication session' unless attributes.is_a?(Hash)
-
-      required = REQUIRED_SESSION_FIELDS.to_h { |name| [name, attributes.fetch(name.to_s)] }
-      optional = (SESSION_FIELDS - REQUIRED_SESSION_FIELDS).to_h do |name|
-        [name, attributes[name.to_s]]
-      end
-      AuthSession.new(**required, **optional)
-    rescue KeyError
-      raise TypeError, 'Expected a complete authentication session'
-    end
-  end
-  private_constant :SessionPageMapping
-
   # Multi-device session behavior for the authentication facade.
   class Auth
     include SessionPageMapping

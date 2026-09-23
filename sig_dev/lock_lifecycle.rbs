@@ -20,7 +20,6 @@ module Volcano
     @expiry_stopped: bool
     @expiry_thread: Thread?
 
-    def initialize: (LockLease lease, ttl: Integer, started_at: LockLeaseClock::Timestamp) -> void
     def replace_lease: (LockLease lease, started_at: LockLeaseClock::Timestamp) -> bool
     def mark_lost: (StandardError failure) -> void
     def renewal_delay: (_RenewalDelay delay) -> Float

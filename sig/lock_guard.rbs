@@ -1,4 +1,9 @@
 module Volcano
+  interface _LeaseStartedAt
+    def monotonic: () -> Float
+    def wall: () -> Time
+  end
+
   class LockGuard
     EXPIRY_MESSAGE: String
     MAX_EXPIRY_POLL_SECONDS: Float
@@ -6,6 +11,7 @@ module Volcano
 
     attr_reader ttl: Integer
 
+    def initialize: (LockLease lease, ttl: Integer, started_at: _LeaseStartedAt) -> void
     def lease: () -> LockLease
     def lost?: () -> bool
     def wait_lost: (?timeout: Numeric?) -> bool

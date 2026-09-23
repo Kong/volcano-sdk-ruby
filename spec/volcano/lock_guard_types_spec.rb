@@ -15,6 +15,7 @@ RSpec.describe Volcano::LockGuard do
 
     expect(status.exitstatus).to eq(1), output + errors
     expect(output).to include('Ruby::ArgumentTypeMismatch')
+    expect(output).to include('Ruby::InsufficientPositionalArguments')
   end
 
   it 'ships the public guard signature in the gem manifest' do

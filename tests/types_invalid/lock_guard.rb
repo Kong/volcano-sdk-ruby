@@ -4,3 +4,5 @@
 def invalid_lock_timeout(guard)
   guard.wait_lost(timeout: 'later')
 end
+
+Volcano::LockGuard.new

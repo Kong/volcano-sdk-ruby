@@ -28,6 +28,10 @@ module Volcano
         expect(clock.remaining).to eq(ttl / 2.0)
         allow(described_class).to receive(:now).and_return(described_class::MAX_LEASE_LIFETIME_SECONDS + 1.0)
         expect(clock.remaining).to eq(0.0)
+
+        allow(described_class).to receive_messages(now: renewed_at, suspend_aware?: false)
+        allow(Time).to receive(:now).and_return(Time.at(described_class::MAX_LEASE_LIFETIME_SECONDS + 1.0))
+        expect(clock.remaining).to eq(0.0)
       end
     end
   end

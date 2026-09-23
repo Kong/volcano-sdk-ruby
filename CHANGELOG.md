@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.26.0...v0.27.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish storage public URL signature ([#261](https://github.com/Kong/volcano-sdk-ruby/issues/261)) ([7d82506](https://github.com/Kong/volcano-sdk-ruby/commit/7d82506b63e0e3949c84970780e3fde782ce27f2))
+
 ## [0.26.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.25.0...v0.26.0) (2026-09-23)
 
 

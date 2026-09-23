@@ -33,5 +33,5 @@ end
 
 # @type method provider_api_data: (Volcano::Auth) -> Object?
 def provider_api_data(auth)
-  auth.call_oauth_api('github', endpoint: '/user', method: 'GET')
+  auth.call_oauth_api('github', endpoint: '/user', method: 'POST', body: { visibility: 'private' })
 end

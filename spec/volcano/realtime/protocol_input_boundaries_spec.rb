@@ -15,7 +15,8 @@ RSpec.describe ProtocolInputBoundaries do
 
   after { protocol.close }
 
-  [" \t\n", JSON.generate('unknown' => {}), JSON.generate('push' => { 'unknown' => {} })].each do |frame|
+  [" \t\n", JSON.generate('unknown' => {}), JSON.generate('id' => 'invalid'),
+   JSON.generate('push' => { 'unknown' => {} })].each do |frame|
     it "continues receiving after an ignored frame #{frame.inspect}" do
       delivered = Async::Queue.new
       protocol.on_presence('presence:room') { |event, info| delivered.enqueue([event, info]) }
@@ -26,6 +27,47 @@ RSpec.describe ProtocolInputBoundaries do
       expect(socket).not_to be_closed
       expect(socket.writes).to be_empty
     end
+  end
+
+  it 'closes a connection after a non-object push' do
+    socket.receive(JSON.generate('push' => 'malformed'))
+
+    Async::Task.current.with_timeout(1) { protocol.instance_variable_get(:@reader_task).wait }
+
+    expect(socket).to be_closed
+  end
+
+  it 'rejects a malformed command error before exposing it to a caller' do
+    expect do
+      protocol.__send__(:reply_value, { 'error' => 'malformed' }, 'presence')
+    end.to raise_error(TypeError, 'realtime error must be an object')
+  end
+
+  it 'rejects a malformed connect reply without emitting a connected lifecycle event' do
+    events = []
+    callbacks = described_class::Events.new(
+      on_close: ->(_) { events << :close },
+      on_error: ->(_) { events << :error },
+      on_failure: ->(*) { events << :failure }
+    )
+    connection = described_class.new(socket:, task: Async::Task.current, events: callbacks)
+    socket.on_write = lambda do |command|
+      socket.receive(JSON.generate('id' => command.fetch('id'), 'connect' => []))
+    end
+
+    expect { connection.connect(token: 'access-token') }
+      .to raise_error(TypeError, 'realtime connect result must be an object')
+    expect(connection).not_to be_connected
+    connection.close
+    expect(events).to be_empty
+  end
+
+  it 'preserves a missing backtrace while wrapping a socket error' do
+    error = protocol.__send__(:closed_error, IOError.new('socket closed'))
+
+    expect(error).to be_a(Volcano::Realtime::ClosedError)
+    expect(error.message).to eq('socket closed')
+    expect(error.backtrace).to be_nil
   end
 
   it 'keeps the remaining presence handler when another is removed' do

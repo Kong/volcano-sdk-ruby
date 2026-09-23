@@ -91,6 +91,43 @@ RSpec.describe Volcano::Realtime do
     expect(transport.queries.length).to eq(1)
   end
 
+  it 'preserves a non-request queue item for the delivery loop to reject' do
+    first = request_for(change(1))
+    invalid = Object.new
+    channel.instance_variable_get(:@postgres_queue).enqueue(invalid)
+    requests = [first]
+
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 1
+    pending = channel.__send__(:collect_compatible_requests, requests, deadline)
+
+    expect(pending).to equal(invalid)
+    expect(requests).to eq([first])
+  end
+
+  it 'rejects an invalid queued delivery instead of silently discarding it' do
+    channel.instance_variable_get(:@postgres_queue).enqueue(Object.new)
+
+    expect { channel.__send__(:run_postgres_worker) }
+      .to raise_error(TypeError, 'invalid Postgres delivery request')
+  end
+
+  it 'rejects a fetch request without a captured session lineage' do
+    request = request_for(change(1), session_lineage: 0)
+
+    expect { channel.__send__(:fetch_postgres_records, [request]) }
+      .to raise_error(TypeError, 'invalid Postgres fetch request')
+  end
+
+  it 'delivers a lightweight delete without an ID as an empty old record' do
+    channel.on('*') { |change| delivered.enqueue(change) }
+    channel.subscribe
+
+    publish(change(nil).merge('type' => 'DELETE', 'mode' => 'lightweight'))
+
+    result = wait_for(delivered)
+    expect([result.old_record, result.id, result.mode]).to eq([nil, nil, nil])
+  end
+
   it 'does not enqueue publications received after unsubscribe' do
     channel.on('*') { |change| delivered.enqueue(change.id) }
     channel.subscribe
@@ -120,6 +157,12 @@ RSpec.describe Volcano::Realtime do
   end
 
   private
+
+  def request_for(data, session_lineage: 0)
+    request_class = described_class.const_get(:PostgresDeliveryRequest, false)
+    request_class.new(change: channel.__send__(:postgres_change, data), database_name: 'app',
+                      session_lineage:, subscription_epoch: 0)
+  end
 
   def fetching_channel
     client.realtime.database_name = 'app'

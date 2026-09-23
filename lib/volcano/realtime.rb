@@ -32,134 +32,148 @@ module Volcano
 
     # Recursively snapshots JSON-compatible values for callback and state safety.
     module Immutable
-      module_function
-
-      def optional(value)
-        value && call(value)
+      def self.optional(value)
+        value && snapshot(value)
       end
 
-      def call(value)
+      def self.call(value) = snapshot(value)
+
+      def self.snapshot(value)
         case value
         when Hash then call_hash(value)
-        when Array then value.map { |child| call(child) }.freeze
+        when Array then value.map { |child| snapshot(child) }.freeze
         when String then value.dup.freeze
         else value.freeze
         end
       end
 
-      def call_hash(value)
-        value.to_h { |key, item| [call(key), call(item)] }.freeze
+      def self.call_hash(value)
+        value.to_h { |key, item| [snapshot(key), snapshot(item)] }.freeze
       end
     end
     private_constant :Immutable
 
-    PresenceInfo = Data.define(:client, :user, :data) do
+    PresenceInfo = Data.define(:client, :user, :data)
+
+    # An immutable snapshot of one presence client.
+    class PresenceInfo
+      # @dynamic client, user, data, members, with, to_h, deconstruct, deconstruct_keys
+      # @dynamic self.[], self.members
       def initialize(client:, user: nil, data: {})
-        super(
-          client: Immutable.call(client.to_s),
-          user: user.nil? ? nil : Immutable.call(user.to_s),
-          data: Immutable.call(data)
-        )
+        client = Immutable.call(client.to_s)
+        user = user.nil? ? nil : Immutable.call(user.to_s)
+        data = Immutable.call(data)
+        super
       end
     end
 
     CHANNEL_TYPES = %i[broadcast presence postgres].freeze
 
-    def initialize(client, api_url:, socket_factory: nil, reconnect_delay: nil)
-      @client = client
-      @api_url = api_url
-      @socket_factory = socket_factory || method(:open_socket)
-      @reconnect_delay = reconnect_delay || method(:default_reconnect_delay)
-      initialize_realtime_state
-      initialize_postgres_database
-    end
+    # Owns the public realtime facade and its channel collection.
+    module Core
+      # @dynamic initialize_postgres_database, connect_protocol, close_protocol, public_error
+      # @dynamic protocol_error, open_socket, default_reconnect_delay, __send__
+      def initialize(client, api_url:, socket_factory: nil, reconnect_delay: nil)
+        @client = client
+        @api_url = api_url
+        @socket_factory = socket_factory || ->(address) { open_socket(address) }
+        @reconnect_delay = reconnect_delay || ->(attempt) { default_reconnect_delay(attempt) }
+        initialize_realtime_state
+        initialize_postgres_database
+      end
 
-    def initialize_realtime_state
-      @protocol = nil
-      @protocol_lock = nil
-      @channel_lock = nil
-      @channels = {}
-      @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
-      @next_connection_callback_id = 0
-      @protocol_session_lineage = nil
-      @reconnect_task = nil
-      @closed = false
-    end
-    private :initialize_realtime_state
+      def initialize_realtime_state
+        @protocol = nil
+        @protocol_lock = nil
+        @channel_lock = nil
+        @channels = {}
+        @connection_callbacks = { connect: {}, disconnect: {}, error: {} }
+        @next_connection_callback_id = 0
+        @protocol_session_lineage = nil
+        @reconnect_task = nil
+        @closed = false
+      end
+      private :initialize_realtime_state
 
-    def channel(
-      name, type: :broadcast, auto_fetch: true,
-      fetch_batch_window_ms: 20, fetch_max_batch_size: 50
-    )
-      type = normalize_channel_type(type)
-      batch_config = PostgresBatchConfig.new(
-        auto_fetch:, batch_window_ms: fetch_batch_window_ms,
-        max_batch_size: fetch_max_batch_size
+      def channel(
+        name, type: :broadcast, auto_fetch: true,
+        fetch_batch_window_ms: 20, fetch_max_batch_size: 50
       )
-      channel_lock.acquire do
-        ensure_open!
-        channel_name = "#{type}:#{name}"
-        channel = @channels[channel_name]
-        next cached_channel(channel, batch_config) if channel
+        type = normalize_channel_type(type)
+        batch_config = PostgresBatchConfig.new(
+          auto_fetch:, batch_window_ms: fetch_batch_window_ms,
+          max_batch_size: fetch_max_batch_size
+        )
+        channel_lock.acquire do
+          ensure_open!
+          channel_name = "#{type}:#{name}"
+          channel = @channels[channel_name]
+          next cached_channel(channel, batch_config) if channel
 
-        @channels[channel_name] = build_channel(channel_name, type, batch_config)
+          @channels[channel_name] = build_channel(channel_name, type, batch_config)
+        end
+      end
+
+      def protocol
+        ensure_open!
+        current_protocol = @protocol
+        return current_protocol if current_protocol
+
+        protocol_lock.acquire do
+          ensure_open!
+          @protocol ||= connect_protocol
+        end
+      rescue StandardError => e
+        raise public_error(e), cause: nil
+      end
+      private :protocol
+
+      def disconnect
+        lock = @protocol_lock
+        lock ? lock.acquire { close_protocol } : close_protocol
+      rescue StandardError => e
+        raise public_error(e), cause: nil
+      end
+
+      def ensure_open!
+        raise ClosedError, 'realtime connection closed' if @closed
+
+        self
+      end
+
+      private
+
+      def normalize_channel_type(type)
+        normalized = type.to_s.to_sym
+        return normalized if CHANNEL_TYPES.include?(normalized)
+
+        raise ArgumentError, "unsupported realtime channel type: #{type}"
+      end
+
+      def report_channel_error(error) = protocol_error(public_error(error))
+
+      def cached_channel(channel, batch_config)
+        channel.__send__(:ensure_fetch_config!, batch_config)
+        channel
+      end
+
+      def build_channel(name, type, batch_config)
+        Channel.new(self, -> { protocol }, name, type, batch_config:)
+      end
+
+      def protocol_lock
+        require 'async/semaphore'
+        @protocol_lock ||= Async::Semaphore.new(1)
+      end
+
+      def channel_lock
+        require 'async/semaphore'
+        @channel_lock ||= Async::Semaphore.new(1)
       end
     end
+    include Core
 
-    def protocol
-      ensure_open!
-      return @protocol if @protocol
-
-      protocol_lock.acquire do
-        ensure_open!
-        @protocol ||= connect_protocol
-      end
-    rescue StandardError => e
-      raise public_error(e), cause: nil
-    end
-    private :protocol
-
-    def disconnect
-      @protocol_lock ? @protocol_lock.acquire { close_protocol } : close_protocol
-    rescue StandardError => e
-      raise public_error(e), cause: nil
-    end
-
-    def ensure_open!
-      raise ClosedError, 'realtime connection closed' if @closed
-
-      self
-    end
-
-    private
-
-    def normalize_channel_type(type)
-      normalized = type.to_s.to_sym
-      return normalized if CHANNEL_TYPES.include?(normalized)
-
-      raise ArgumentError, "unsupported realtime channel type: #{type}"
-    end
-
-    def report_channel_error(error) = protocol_error(public_error(error))
-
-    def cached_channel(channel, batch_config)
-      channel.__send__(:ensure_fetch_config!, batch_config)
-      channel
-    end
-
-    def build_channel(name, type, batch_config)
-      Channel.new(self, method(:protocol), name, type, batch_config:)
-    end
-
-    def protocol_lock
-      require 'async/semaphore'
-      @protocol_lock ||= Async::Semaphore.new(1)
-    end
-
-    def channel_lock
-      require 'async/semaphore'
-      @channel_lock ||= Async::Semaphore.new(1)
-    end
+    private_constant :Core
 
     # Represents one realtime broadcast channel.
     class Channel
@@ -175,14 +189,15 @@ module Volcano
 
       attr_reader :name
 
+      # @dynamic name
+
       def initialize(realtime, protocol_provider, name, type, batch_config:)
         @realtime = realtime
         @protocol_provider = protocol_provider
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
         @lifecycle_lock = nil
-        @recovery_position = {}.freeze
-        @recovery_lineage = nil
+        initialize_recovery_state
         initialize_callback_dispatch
         initialize_presence(type)
         initialize_postgres_delivery(batch_config)
@@ -208,7 +223,7 @@ module Volcano
 
       def unsubscribe
         state = with_lifecycle_lock { unsubscribe_protocol }
-        emit_presence_sync(state)
+        emit_presence_sync(state) if state.is_a?(Hash)
         nil
       end
 
@@ -218,11 +233,12 @@ module Volcano
 
       def restore_subscription(protocol)
         state = with_lifecycle_lock do
-          next unless restoration_needed?
-
-          subscribe_protocol(protocol)
+          restoration_needed? ? subscribe_protocol(protocol) : nil
         end
-        sync_presence(*state) if state
+        if state
+          subscribed_protocol, epoch = state
+          sync_presence(subscribed_protocol, epoch)
+        end
         nil
       end
 
@@ -240,6 +256,13 @@ module Volcano
 
       private
 
+      def initialize_recovery_state
+        # @type var recovery_position: Hash[Symbol, String | Integer]
+        recovery_position = {}
+        @recovery_position = recovery_position.freeze
+        @recovery_lineage = nil
+      end
+
       def subscribe_with_intent
         ensure_open!
         raise DuplicateSubscriptionError, "already subscribed to #{@name}" if @subscription_desired
@@ -254,8 +277,8 @@ module Volcano
 
       def with_lifecycle_lock(&)
         require 'async/semaphore'
-        @lifecycle_lock ||= Async::Semaphore.new(1)
-        @lifecycle_lock.acquire(&)
+        lock = @lifecycle_lock ||= Async::Semaphore.new(1)
+        lock.acquire(&)
       end
 
       def ensure_open!

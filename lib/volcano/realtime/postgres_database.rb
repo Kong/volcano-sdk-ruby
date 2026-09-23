@@ -10,6 +10,8 @@ module Volcano
 
       attr_reader :database_name
 
+      # @dynamic database_name
+
       def database_name=(name)
         unless valid_database_name?(name)
           raise ArgumentError,
@@ -48,11 +50,22 @@ module Volcano
 
       def fetch_postgres_rows(change, ids, database_name, access_token)
         table = change.schema == 'public' ? change.table : "#{change.schema}.#{change.table}"
-        postgres_fetch_semaphore.acquire do
+        rows = postgres_fetch_semaphore.acquire do
           BlockingCall.call do
             @client.__send__(:database_with_token, database_name, access_token)
                    .from(table).select('*').in('id', ids).execute
           end
+        end
+        validate_postgres_rows(rows)
+      end
+
+      def validate_postgres_rows(rows)
+        raise TypeError, 'Postgres row lookup must return an array' unless rows.is_a?(Array)
+
+        rows.map do |row|
+          raise TypeError, 'Postgres row lookup must return objects' unless row.is_a?(Hash)
+
+          row
         end
       end
 

@@ -6,12 +6,15 @@ module Volcano
     class Protocol
       # Coordinates protocol requests and the socket reader loop.
       module IO
+        # @dynamic ensure_open!, close_with, process
+
         private
 
         def request(reply_key, on_reply: nil)
+          # @type var registered_id: Integer?
           ensure_open!
-          id, reply_queue = register_request(reply_key, on_reply)
-          write_frame(yield(id))
+          registered_id, reply_queue = register_request(reply_key, on_reply)
+          write_frame(yield(registered_id || raise(TypeError, 'invalid realtime request id')))
           reply = await_reply(reply_queue)
           raise reply.error if reply.is_a?(Failure)
 
@@ -19,7 +22,7 @@ module Volcano
         rescue StandardError => e
           raise Redaction.exception(e, secrets: @secrets), cause: nil
         ensure
-          @pending.delete(id)
+          @pending.delete(registered_id) if registered_id
         end
 
         def register_request(reply_key, on_reply)
@@ -83,7 +86,8 @@ module Volcano
 
         def closed_error(error)
           ClosedError.new(Redaction.message(error.message, secrets: @secrets)).tap do |closed|
-            closed.set_backtrace(error.backtrace)
+            trace = error.backtrace
+            closed.set_backtrace(trace) if trace
           end
         end
       end

@@ -1,0 +1,965 @@
+module Volcano
+  interface _RealtimeDatabase
+    def from: (String table) -> _RealtimeQuery
+  end
+
+  interface _RealtimeQuery
+    def select: (String column) -> _RealtimeQuery
+    def in: (String column, Array[json_value] ids) -> _RealtimeQuery
+    def execute: () -> Object?
+  end
+
+  interface _RealtimeClient
+    def anon_token: () -> String
+    def current_session: () -> Session?
+    def capture_session: () -> [Integer, Session?]
+    def capture_session_binding: () -> session_binding
+    def database_with_token: (String database_name, String access_token) -> _RealtimeDatabase
+    def __send__: (:database_with_token, String database_name, String access_token) -> _RealtimeDatabase
+  end
+
+  # Manages a project's realtime connection and broadcast channels.
+  class Realtime
+    @client: _RealtimeClient
+
+    @api_url: String
+
+    @socket_factory: ^(String) -> _RealtimeSocket
+
+    @reconnect_delay: ^(Integer) -> Numeric
+
+    @protocol: Protocol?
+
+    @protocol_lock: Async::Semaphore?
+
+    @channel_lock: Async::Semaphore?
+
+    @channels: Hash[String, Channel]
+
+    @connection_callbacks: Hash[ConnectionCallbacks::connection_event, ConnectionCallbacks::connection_callbacks]
+
+    @next_connection_callback_id: Integer
+
+    @protocol_session_lineage: SessionOperations?
+
+    @reconnect_task: Async::Task?
+
+    @closed: bool
+
+    include Lifecycle
+
+    include ConnectionCallbacks
+
+    include Connection
+
+    include Reconnect
+
+    include PostgresDatabase
+
+    include Core
+
+
+
+
+    # Recursively snapshots JSON-compatible values for callback and state safety.
+    module Immutable
+      def self.optional: (Object? value) -> Object?
+
+      def self.call: [K, V] (Hash[K, V] value) -> Hash[K, V]
+                   | [T] (Array[T] value) -> Array[T]
+                   | (String value) -> String
+                   | (Object? value) -> Object?
+
+      def self.snapshot: (Object? value) -> Object?
+
+      def self.call_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
+    end
+
+
+    CHANNEL_TYPES: Array[Symbol]
+
+    class PostgresBatchConfig < Data
+      attr_reader auto_fetch: bool
+      attr_reader batch_window_ms: Integer
+      attr_reader max_batch_size: Integer
+      def self.new: (auto_fetch: bool, batch_window_ms: Integer, max_batch_size: Integer) -> PostgresBatchConfig
+      def initialize: (auto_fetch: bool, batch_window_ms: Integer, max_batch_size: Integer) -> void
+    end
+
+    interface _LifecycleContext
+      def channel_lock: () -> Async::Semaphore
+      def normalize_channel_type: (String | Symbol type) -> Symbol
+    end
+
+    interface _ConnectionContext
+      def protocol_connected: (Object result) -> void
+      def protocol_error: (Exception error) -> void
+      def protocol_closed: (Exception error) -> void
+      def protocol_error_started: (Exception error) -> void
+      def protocol_failed: (Exception error, bool disconnected) -> void
+    end
+
+    interface _ReconnectContext
+      def channel_lock: () -> Async::Semaphore
+      def protocol_lock: () -> Async::Semaphore
+      def connect_protocol: () -> Protocol
+    end
+
+    interface _ReconnectStartContext
+      def start_reconnect: () -> void
+    end
+
+    interface _ReconnectStopContext
+      def stop_reconnect: () -> void
+    end
+
+    interface _ChannelErrorContext
+      def report_channel_error: (StandardError error) -> void
+    end
+
+    interface _CoreDependencies
+      def initialize_postgres_database: () -> void
+      def connect_protocol: () -> Protocol
+      def close_protocol: () -> void
+      def public_error: (StandardError error) -> Exception
+      def protocol_error: (Exception error) -> void
+      def open_socket: (String address) -> _RealtimeSocket
+      def default_reconnect_delay: (Integer attempt) -> Float
+    end
+
+    module Core
+      include _CoreDependencies
+      @client: _RealtimeClient
+      @api_url: String
+      @socket_factory: ^(String) -> _RealtimeSocket
+      @reconnect_delay: ^(Integer) -> Numeric
+      @protocol: Protocol?
+      @protocol_lock: Async::Semaphore?
+      @channel_lock: Async::Semaphore?
+      @channels: Hash[String, Channel]
+      @connection_callbacks: Hash[ConnectionCallbacks::connection_event, ConnectionCallbacks::connection_callbacks]
+      @next_connection_callback_id: Integer
+      @protocol_session_lineage: SessionOperations?
+      @reconnect_task: Async::Task?
+      @closed: bool
+
+      def initialize: (_RealtimeClient client, api_url: String, ?socket_factory: (^(String) -> _RealtimeSocket)?, ?reconnect_delay: (^(Integer) -> Numeric)?) -> void
+
+      private
+
+      def initialize_realtime_state: () -> Object
+
+      public
+
+      def channel: (String name, ?type: String | Symbol, ?auto_fetch: bool, ?fetch_batch_window_ms: Integer, ?fetch_max_batch_size: Integer) -> Channel
+
+      private
+
+      def protocol: () -> Protocol
+
+      public
+
+      def disconnect: () -> void
+
+      def ensure_open!: () -> self
+
+      def __send__: (:report_channel_error method_name, StandardError error) -> void
+                    | (:access_token_for_protocol_lineage method_name, SessionOperations lineage) -> String
+                    | (:fetch_postgres_rows method_name, PostgresChange change, Array[json_value] ids, String database_name, String access_token) -> Array[Hash[String, json_value]]
+                    | (:capture_protocol_session method_name) -> [Integer, SessionOperations, Session]
+                    | (:capture_session_binding method_name) -> session_binding
+                    | (:database_name method_name) -> String?
+
+      private
+
+      def normalize_channel_type: (String | Symbol type) -> Symbol
+
+      def report_channel_error: (StandardError error) -> void
+
+      def cached_channel: (Channel channel, PostgresBatchConfig batch_config) -> Channel
+
+      def build_channel: (String name, Symbol type, PostgresBatchConfig batch_config) -> Channel
+
+      def protocol_lock: () -> Async::Semaphore
+
+      def channel_lock: () -> Async::Semaphore
+
+    end
+
+    # Represents one realtime broadcast channel.
+    class Channel
+      @realtime: Core
+
+      @protocol_provider: ^() -> Protocol
+
+      @name: String
+
+      @handler_registered: bool
+
+      @lifecycle_lock: Async::Semaphore?
+
+      @recovery_position: Hash[Symbol, String | Integer]
+
+      @recovery_lineage: SessionOperations?
+
+      @subscription_desired: bool
+
+      @subscribed: bool
+
+      @closed: bool
+
+      include PostgresChanges
+
+      include BroadcastDelivery
+
+      include PostgresDelivery
+
+      include PostgresExpansion
+
+      include Presence
+
+      include ChannelCallbacks
+
+      include PostgresBatch
+
+      include PresenceState
+
+      include ChannelLifecycle
+
+      def initialize: (Core realtime, ^() -> Protocol protocol_provider, String name, Symbol type, batch_config: PostgresBatchConfig) -> void
+
+      def subscription_desired?: () -> bool
+
+      def restoration_needed?: () -> bool
+
+      def restore_subscription: (Protocol protocol) -> nil
+
+      private
+
+      def remove: () -> nil
+
+      def subscribe_with_intent: () -> [Protocol, Integer]
+
+      def initialize_recovery_state: () -> void
+
+      def with_lifecycle_lock: [T] () { () -> T } -> T
+
+      def ensure_open!: () -> Core
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    module BroadcastDelivery
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    module ChannelCallbacks
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    module ChannelLifecycle
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Opens the WebSocket transport and maps its failures to public errors.
+    module Connection
+      include _ConnectionContext
+      include _ReconnectStopContext
+      @client: _RealtimeClient
+      @api_url: String
+      @socket_factory: ^(String) -> _RealtimeSocket
+      @channels: Hash[String, Channel]
+      @protocol_error_reported: bool
+
+      @protocol: Protocol?
+
+      @protocol_session_lineage: SessionOperations?
+
+      @closed: bool
+
+      @manual_disconnect: bool
+
+      private
+
+      def connect_protocol: () -> Protocol
+
+      def active_session_lineage: () -> SessionOperations
+
+      def session_for_lineage: (SessionOperations expected_lineage) -> Session
+
+      def activate_protocol: (Protocol protocol, SessionOperations session_lineage, Hash[String, Object] result) -> Protocol
+
+      def close_protocol: () -> nil
+
+      def close_connected_protocol: () -> void
+
+      def handle_connection_failure: (_RealtimeSocket? socket, StandardError error) -> bot
+
+      def build_protocol: (_RealtimeSocket socket) -> Protocol
+
+      def close_socket: (_RealtimeSocket? socket) -> void
+
+      def address: () -> String
+
+      def open_socket: (String address) -> _RealtimeSocket
+
+      def realtime_secrets: () -> Array[String?]
+
+      def public_error: (StandardError error) -> Exception
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Channel collection and connection-state lifecycle operations.
+    module Lifecycle
+      include _LifecycleContext
+      @closed: bool
+      @protocol: Protocol?
+      @channels: Hash[String, Channel]
+
+      def connected?: () -> bool
+
+      def remove_channel: (String name, ?type: String | Symbol) -> nil
+
+      def remove_all_channels: () -> nil
+
+      private
+
+      def remove_channel_locked: (String name) -> Channel?
+
+      def remove_channel_entry: (String name, Channel channel) -> StandardError?
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    module PostgresBatch
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    class PostgresChange
+      private def snapshot_payload: (Hash[Symbol, Object?] payload) -> Hash[Symbol, Object?]
+    end
+
+    interface _PostgresChangesContext
+      def on: (String event, ?(^(Object?) -> void)? callback) ?{ (Object?) -> void } -> Channel
+      def enqueue_postgres_delivery: (PostgresChange change) -> void
+    end
+
+    # Registers filtered callbacks for Postgres change publications.
+    module PostgresChanges
+      include _PostgresChangesContext
+      CHANGE_EVENTS: Array[String]
+      EVENTS: Array[String]
+
+      @type: Symbol
+      @callbacks: Hash[String, Array[^(Object?) -> void]]
+      @postgres_filters: Hash[^(Object?) -> void, [String, String, String]]
+
+      def on_postgres_changes: (Object event, schema: Object, table: Object, ?callback: (^(PostgresChange) -> void)?) ?{ (PostgresChange) -> void } -> Channel
+
+      private
+
+      def dispatch_postgres_change: (Object? data) -> void
+      def postgres_change: (Object? data) -> PostgresChange?
+      def postgres_event: (Object event) -> String
+      def register_postgres_listener: (String event, String schema, String table, ^(PostgresChange) -> void handler) -> Channel
+      def postgres_listener?: (PostgresChange change) -> bool
+      def postgres_filter_matches?: (String event, String schema, String table, PostgresChange change) -> bool
+      def valid_postgres_change?: (Object? data) -> bool
+      def valid_postgres_identity?: (Object? data) -> bool
+      def valid_postgres_payload?: (Hash[String, Object?] data) -> bool
+      def optional_hash?: (Object? value) -> bool
+      def optional_array?: (Object? value) -> bool
+      def broadcast?: () -> bool
+      def postgres?: () -> bool
+      def ensure_postgres!: () -> void
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Holds the database selection and performs token-bound row lookups.
+    module PostgresDatabase
+      @client: _RealtimeClient
+      @protocol_session_lineage: SessionOperations?
+      @database_name: String?
+
+      @postgres_fetch_semaphore: Async::Semaphore?
+
+      DATABASE_NAME: ::Regexp
+
+      FETCH_CONCURRENCY: Integer
+
+      attr_reader database_name: String?
+
+      def database_name=: (String? name) -> String?
+
+      private
+
+      def valid_database_name?: (String? name) -> bool
+
+      def initialize_postgres_database: () -> void
+
+      def capture_session: () -> [Integer, Session?]
+
+      def capture_session_binding: () -> session_binding
+
+      def capture_protocol_session: () -> [Integer, SessionOperations, Session]
+
+      def access_token_for_protocol_lineage: (SessionOperations expected_lineage) -> String
+
+      def fetch_postgres_rows: (PostgresChange change, Array[json_value] ids, String database_name, String access_token) -> Array[Hash[String, json_value]]
+
+      def validate_postgres_rows: (Object? rows) -> Array[Hash[String, json_value]]
+
+      def postgres_fetch_semaphore: () -> Async::Semaphore
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    interface _PostgresDeliveryContext
+      def postgres?: () -> bool
+      def collect_postgres_batch: (PostgresDeliveryRequest first) -> [Array[PostgresDeliveryRequest], Object?]
+      def deliver_postgres_batch: (Array[PostgresDeliveryRequest] requests) -> void
+    end
+
+    # Serializes Postgres publications and expands lightweight row identities.
+    module PostgresDelivery
+      include _PostgresDeliveryContext
+      @postgres_batch_config: PostgresBatchConfig
+      @postgres_filters: Hash[^(Object?) -> void, [String, String, String]]
+      @postgres_queue: Async::LimitedQueue[Object]
+      @postgres_worker: Async::Task?
+      @postgres_epoch: Integer
+      @postgres_session_lineage: SessionOperations | Integer
+      @name: String
+      @subscribed: bool
+      @realtime: Core
+
+      QUEUE_LIMIT: 128
+      STOP: Object
+
+      private
+
+      def initialize_postgres_delivery: (PostgresBatchConfig batch_config) -> void
+      def ensure_fetch_config!: (PostgresBatchConfig batch_config) -> void
+      def begin_postgres_delivery: () -> void
+      def end_postgres_delivery: () -> void
+      def enqueue_postgres_delivery: (PostgresChange change) -> void
+      def fetch_postgres_change?: (PostgresChange change, String? database_name) -> (String | bool | nil)
+      def report_postgres_queue_overflow: () -> void
+      def start_postgres_worker: () -> void
+      def run_postgres_worker: () -> void
+      def postgres_stop?: (Object request) -> bool
+      def current_postgres_request?: (PostgresDeliveryRequest request) -> bool?
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    module PostgresExpansion
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    interface _PresenceContext
+      def on: (String event, ?(^(Object?) -> void)? callback) ?{ (Object?) -> void } -> Channel
+      def emit: (String event, Object? data) -> void
+      def with_lifecycle_lock: [T] () { () -> T } -> T
+      def ensure_open!: () -> Core
+      def replace_presence: (Object? clients) -> Hash[String, PresenceInfo]
+      def apply_presence_event: (String event, Object? info, Integer epoch) -> [PresenceInfo, Hash[String, PresenceInfo]]?
+    end
+
+    interface _PresenceStateContext
+      def presence_lock: () -> Async::Semaphore
+      def active_presence_epoch?: (Integer epoch) -> bool
+      def presence?: () -> bool
+    end
+
+    # Presence behavior mixed into realtime channels.
+    module Presence
+      include _PresenceContext
+      @type: Symbol
+      @presence_state: Hash[String, PresenceInfo]
+      @tracked_state: Hash[String, json_value]
+      @presence_handler: (^(String, Object?) -> void)?
+      @presence_lock: Async::Semaphore?
+      @subscription_epoch: Integer
+      @subscribed: bool
+      @name: String
+      @protocol_provider: ^() -> Protocol
+      @realtime: Core
+
+      def on_presence_sync: (?(^(Object?) -> void)? callback) ?{ (Object?) -> void } -> Channel
+      def track: (?Hash[String, json_value] state) -> nil
+      def presence_state: () -> Hash[String, PresenceInfo]
+      def tracked_state: () -> Hash[String, json_value]
+      def get_presence_state: () -> Hash[String, PresenceInfo]
+
+      private
+
+      def initialize_presence: (Symbol type) -> void
+      def presence?: () -> bool
+      def ensure_presence!: () -> void
+      def validate_presence_state: (Object state) -> void
+      def register_presence_handler: (Protocol protocol, Integer epoch) -> void
+      def sync_presence: (Protocol protocol, Integer epoch) -> void
+      def fetch_presence_state: (Protocol protocol, Integer epoch) -> Hash[String, PresenceInfo]?
+      def presence_event: (String event, Object? info, Integer epoch) -> void
+      def emit_presence_sync: (Hash[String, PresenceInfo]? state) -> void
+      def report_presence_error: (Protocol protocol, Integer epoch, StandardError error) -> void
+      def next_presence_epoch: () -> Integer
+      def active_presence_epoch?: (Integer epoch) -> bool
+      def invalidate_presence_subscription: (Protocol protocol) -> void
+      def detach_presence_handler: (Protocol protocol) -> void
+      def presence_lock: () -> Async::Semaphore
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Maintains immutable presence state independently of protocol lifecycle.
+    module PresenceState
+      include _PresenceStateContext
+      @presence_state: Hash[String, PresenceInfo]
+      @subscription_epoch: Integer
+      @tracked_state: Hash[String, json_value]
+
+      private
+
+      def replace_presence: (Object? clients) -> Hash[String, PresenceInfo]
+      def apply_presence_event: (String event, Object? info, Integer epoch) -> [PresenceInfo, Hash[String, PresenceInfo]]?
+      def update_presence_state: (String event, PresenceInfo snapshot) -> void
+      def presence_info: (Hash[String, Object?] info, Object? fallback_client) -> PresenceInfo
+      def clear_presence: () -> Hash[String, PresenceInfo]?
+      def reset_presence: () -> void
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    class ClosedError < StandardError
+    end
+
+    class DuplicateSubscriptionError < StandardError
+    end
+
+    class PendingLimitError < StandardError
+    end
+
+    class RequestTimeoutError < StandardError
+    end
+
+    # Implements the Centrifuge request and publication protocol.
+    class Protocol
+      interface _DispatchContext
+        def write_frame: (Hash[String, Object?] frame) -> void
+        def dispatch_publication: (Hash[String, Object?] push) -> void
+        def dispatch_queued_callback: (Object delivery) -> void
+        def close_with: (StandardError error, ?notify_error: bool) -> void
+        def closed_error: (StandardError error) -> ClosedError
+      end
+
+      interface _LifecycleContext
+        def ensure_open!: () -> self
+        def initialize_recovery_positions: () -> void
+        def initialize_publication_producer: () -> void
+        def dispatch_callbacks: () -> void
+        def dispatch_publication_batches: () -> void
+        def read_loop: () -> void
+      end
+
+      interface _PublicationContext
+        def enqueue_live_publication: (ProtocolPublicationDispatch::PublicationDelivery delivery) -> void
+        def matching_channel: [T] (Hash[String, T] handlers, String channel) -> String?
+        def drop_publication: (String channel, Object? publication) -> void
+        def mark_unknown_gap: (String channel) -> void
+        def dispatch_callback_delivery: (Array[^(String, Object?) -> void] handlers, String event, Object? data) -> void
+      end
+
+      interface _IOContext
+        def ensure_open!: () -> self
+        def close_with: (StandardError error, ?notify_error: bool) -> void
+        def process: (Hash[String, Object?] frame) -> void
+      end
+
+      class Failure < Data
+        attr_reader error: StandardError
+        def self.new: (error: StandardError) -> Failure
+        def initialize: (error: StandardError) -> void
+      end
+
+      class Pending < Data
+        attr_reader queue: Async::Queue[Object?]
+        attr_reader on_reply: (^(Object?) -> void)?
+        attr_reader reply_key: String
+        def self.new: (queue: Async::Queue[Object?], on_reply: (^(Object?) -> void)?, reply_key: String) -> Pending
+        def initialize: (queue: Async::Queue[Object?], on_reply: (^(Object?) -> void)?, reply_key: String) -> void
+      end
+
+      class Events < Data
+        attr_reader on_close: (^(Exception) -> void)?
+        attr_reader on_error: (^(Exception) -> void)?
+        attr_reader on_failure: (^(Exception, bool) -> void)?
+        def self.new: (on_close: (^(Exception) -> void)?, on_error: (^(Exception) -> void)?, on_failure: (^(Exception, bool) -> void)?) -> Events
+        def initialize: (on_close: (^(Exception) -> void)?, on_error: (^(Exception) -> void)?, on_failure: (^(Exception, bool) -> void)?) -> void
+      end
+
+      @socket: _RealtimeSocket
+
+      @secrets: Array[String?]
+
+      @events: Events?
+
+      @connected: bool
+
+      @request_timeout: Numeric
+
+      @max_pending: Integer
+
+      @max_callback_queue: Integer
+
+      @subscription_lock: Async::Semaphore
+      @subscriptions: Set[String]
+      @closed: bool
+      @closed_error: StandardError?
+
+      include ProtocolDispatch
+
+      include Lifecycle
+
+      include ProtocolPublicationDispatch
+
+      include ProtocolRecovery
+
+      include ProtocolRecoveryDispatch
+
+      include ProtocolRecoveryPosition
+
+
+      DEFAULT_REQUEST_TIMEOUT: 10
+
+      DEFAULT_MAX_PENDING: 128
+
+      DEFAULT_MAX_CALLBACK_QUEUE: 128
+
+      LIMIT_KEYS: Array[Symbol]
+
+      def self.connect: (id: Integer, token: String) -> Hash[String, Object]
+
+      def self.subscribe: (id: Integer, channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Hash[String, Object]
+
+      def self.add_recovery_options: (Hash[String, Object] options, Hash[Symbol, String | Integer] recovery) -> void
+
+      def self.publish: (id: Integer, channel: String, data: Object) -> Hash[String, Object]
+
+      def self.unsubscribe: (id: Integer, channel: String) -> Hash[String, Object]
+
+      def self.presence: (id: Integer, channel: String) -> Hash[String, Object]
+
+      def initialize: (socket: _RealtimeSocket, ?task: Async::Task?, ?secrets: Array[String?], ?events: Events?, **Integer limits) -> void
+
+      def connect: (token: String) -> Hash[String, Object]
+
+      def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Object?
+
+      def publish: (channel: String, data: Object) -> Object?
+
+      def unsubscribe: (channel: String) -> Object?
+
+      def presence: (channel: String) -> Object?
+
+      def __send__: (:position method_name, String channel) -> Hash[Symbol, String | Integer]?
+                    | (:drop_publication method_name, String channel, Object? publication) -> void
+                    | (:complete_publication method_name, String channel, Object? publication) -> void
+                    | (:delete_recovery_state method_name, String channel) -> void
+
+      def close: () -> nil
+
+      private
+
+      def load_async: () -> Object
+
+      def configure_limits: (Hash[Symbol, Integer] limits) -> void
+
+      def ensure_open!: () -> self
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Dispatches protocol replies and publications to their waiting consumers.
+    module ProtocolDispatch
+      include Protocol::_DispatchContext
+      class PresenceDelivery < Data
+        attr_reader handlers: Array[^(String, Object?) -> void]
+        attr_reader event: String
+        attr_reader data: Hash[String, Object?]
+        def self.new: (handlers: Array[^(String, Object?) -> void], event: String, data: Hash[String, Object?]) -> PresenceDelivery
+      end
+
+      @pending: Hash[Integer, Protocol::Pending]
+      @presence_handlers: Hash[String, Array[^(String, Object?) -> void]]
+      @pending_presence_resyncs: Hash[String, Array[^(String, Object?) -> void]]
+      @callback_queue: Async::LimitedQueue[Object]
+      @max_callback_queue: Integer
+      @callback_stopping: bool
+
+      private
+
+      def process: (Hash[String, Object?] frame) -> void
+
+      def dispatch_push: (Hash[String, Object?] push) -> void
+
+      def dispatch_reply: (Hash[String, Object?] frame) -> void
+
+      def apply_reply_hook: (Protocol::Pending pending, Object? reply) -> Object?
+
+      def reply_value: (Hash[String, Object?] frame, String reply_key) -> Object?
+
+      def successful_reply: (Hash[String, Object?] frame, String reply_key) -> Object?
+
+      def dispatch_presence: (Hash[String, Object?] push, String event) -> void
+
+      def matching_channel: [T] (Hash[String, T] handlers, String channel) -> String?
+
+      def postgres_channel?: (String candidate, String channel) -> bool
+
+      def dispatch_callbacks: () -> void
+
+      def dispatch_callback_delivery: (Array[^(String, Object?) -> void] handlers, String event, Object? data) -> void
+
+      def enqueue_pending_presence_resync: () -> void
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Centrifuge protocol implementation extended with socket IO helpers.
+    class Protocol
+      # Coordinates protocol requests and the socket reader loop.
+      module IO
+        include _IOContext
+        @next_id: Integer
+        @pending: Hash[Integer, Pending]
+        @max_pending: Integer
+        @secrets: Array[String?]
+        @write_lock: Async::Semaphore
+        @socket: _RealtimeSocket
+        @request_timeout: Numeric
+
+        private
+
+        def request: (String reply_key, ?on_reply: (^(Object?) -> void)?) { (Integer) -> Hash[String, Object] } -> Object?
+
+        def register_request: (String reply_key, (^(Object?) -> void)? on_reply) -> [Integer, Async::Queue[Object?]]
+
+        def write_frame: (Hash[String, Object] frame) -> void
+
+        def write_serialized_frame: (String frame) -> void
+
+        def await_reply: (Async::Queue[Object?] reply_queue) -> Object?
+
+        def read_loop: () -> void
+
+        def read_message: () -> _RealtimeFrame?
+
+        def process_message: (_RealtimeFrame message) -> void
+
+        def invalid_frame_message: (StandardError error) -> String
+
+        def closed_error: (StandardError error) -> ClosedError
+      end
+
+      include IO
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    class Protocol
+      # Exposes connection state and manages publication handlers.
+      module Lifecycle
+        include _LifecycleContext
+        @next_id: Integer
+        @pending: Hash[Integer, Pending]
+        @callback_stopping: bool
+        @subscriptions: Set[String]
+        @closed_error: StandardError?
+        @write_lock: Async::Semaphore
+        @subscription_lock: Async::Semaphore
+        @publication_handlers: Hash[String, Array[ProtocolPublicationDispatch::Registration]]
+        @presence_handlers: Hash[String, Array[^(String, Object?) -> void]]
+        @pending_presence_resyncs: Hash[String, Array[^(String, Object?) -> void]]
+        @callback_queue: Async::LimitedQueue[Object]
+        @callback_task: Async::Task?
+        @producer_task: Async::Task?
+        @reader_task: Async::Task?
+        @producer_stopping: bool
+        @connected: bool
+        @closed: bool
+        @events: Events?
+        @socket: _RealtimeSocket
+        @max_callback_queue: Integer
+
+        def connected?: () -> bool
+
+        def on_publication: (String channel, ?on_rejection: (^(Object?) -> void)?) { (Object?, Object?, Object?, recovered: bool) -> void } -> ^(Object?, Object?, Object?, recovered: bool) -> void
+
+        def off_publication: (String channel, ^(Object?, Object?, Object?, recovered: bool) -> void handler) -> nil
+
+        def on_presence: (String channel) { (String, Object?) -> void } -> ^(String, Object?) -> void
+
+        def off_presence: (String channel, ^(String, Object?) -> void handler) -> nil
+
+        private
+
+        def initialize_state: () -> void
+
+        def initialize_locks: () -> void
+
+        def initialize_handlers: () -> void
+
+        def start_tasks: (Async::Task task) -> void
+
+        def reject_pending: (StandardError error) -> void
+
+        def close_socket: () -> void
+
+        def stop_protocol_tasks: () -> void
+
+        def close_with: (StandardError error, ?notify_error: bool) -> void
+
+        def close_state: (StandardError error) -> void
+
+        def stop_protocol: (StandardError error) -> void
+
+        def notify_protocol_error: (StandardError error) -> void
+
+        def notify_protocol_failure: (StandardError error, bool disconnected) -> void
+
+        def notify_protocol_close: (StandardError error) -> void
+      end
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Normalizes publications and admits live deliveries without blocking the reader.
+    module ProtocolPublicationDispatch
+      include Protocol::_PublicationContext
+      class Registration < Data
+        attr_reader handler: ^(Object?, Object?, Object?, recovered: bool) -> void
+        attr_reader on_rejection: (^(Object?) -> void)?
+        def self.new: (handler: ^(Object?, Object?, Object?, recovered: bool) -> void, on_rejection: (^(Object?) -> void)?) -> Registration
+      end
+
+      @publication_handlers: Hash[String, Array[Registration]]
+      @stream_positions: Hash[String, ProtocolRecoveryPosition::position]
+      @callback_queue: Async::LimitedQueue[Object]
+      @callback_stopping: bool
+
+      private
+
+      def dispatch_publication: (Hash[String, Object?] push) -> void
+
+      def publication_delivery: (String channel, Object? publication, recovered: bool) -> PublicationDelivery?
+
+      def matching_publication_channel: (String channel) -> String?
+
+      def reject_invalid_publication: (String channel, Object? publication) -> nil
+
+      def drop_handlerless_publication: (String channel, Object? publication) -> nil
+
+      def build_publication_delivery: (String channel, Hash[String, Object?] publication, Hash[String, Object?] data, recovered: bool) -> PublicationDelivery
+
+      def combined_rejection_hook: (Array[Registration] registrations) -> (^(Object?) -> void)?
+
+      def admit_live_publication: (PublicationDelivery delivery) -> void
+
+      def callback_queue_full?: () -> bool
+
+      def reject_publication_delivery: (PublicationDelivery delivery) -> void
+
+      def dispatch_queued_callback: (Object delivery) -> void
+
+      def dispatch_publication_callbacks: (PublicationDelivery delivery) -> void
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    # Reconnects unexpected transport losses and restores subscription intent.
+    module Reconnect
+      include _ReconnectContext
+      include _ChannelErrorContext
+      @closed: bool
+      @reconnect_task: Async::Task?
+      @reconnect_delay: ^(Integer) -> Numeric
+      @protocol: Protocol?
+      @channels: Hash[String, Channel]
+
+      RECONNECT_MIN_DELAY: ::Float
+
+      RECONNECT_MAX_DELAY: ::Float
+
+      MAX_BACKOFF_EXPONENT: Integer
+
+      private
+
+      def start_reconnect: () -> void
+
+      def stop_reconnect: () -> void
+
+      def reconnect_loop: () -> void
+
+      def reconnect_attempt_finished?: (Integer attempt) -> bool
+
+      def wait_before_reconnect: (Integer attempt) -> void
+
+      def current_or_connect_protocol: () -> Protocol?
+
+      def restore_subscriptions: (Protocol protocol) -> void
+
+      def subscriptions_restored?: (Protocol protocol) -> bool
+
+      def channels_snapshot: () -> Array[Channel]
+
+      def reconnect_needed?: () -> bool
+
+      def default_reconnect_delay: (Integer attempt) -> Float
+    end
+  end
+end

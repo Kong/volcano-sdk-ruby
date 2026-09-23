@@ -4,6 +4,10 @@ module Volcano
   class Realtime
     # Validates recovery subscribe results before updating stream positions.
     module ProtocolRecovery
+      # @dynamic class, request, dispatch_recovered_publications, recovery_position
+      # @dynamic delete_recovery_state, set_recovery_position, mark_unknown_gap
+      # @dynamic mark_publication_gap, same_epoch?
+
       private
 
       def subscribe_request(channel:, recoverable:, join_leave:, recovery:)
@@ -28,7 +32,7 @@ module Volcano
 
       def parse_recovery_result(channel:, recovery:, result:)
         result_position, publications = validated_recovery_result(result)
-        return block_malformed_recovery_result(channel, recovery) unless result_position
+        return block_malformed_recovery_result(channel, recovery) unless result_position && publications
 
         requested_position = requested_recovery_position(recovery)
         return block_recovery_result(channel, requested_position) if unrecovered_empty_result?(
@@ -50,7 +54,7 @@ module Volcano
       end
 
       def unrecovered_empty_result?(result, requested_position, publications)
-        requested_position && result['recovered'] == false && publications.empty?
+        requested_position && result.is_a?(Hash) && result['recovered'] == false && publications.empty?
       end
 
       def validated_recovery_result(result)
@@ -68,7 +72,7 @@ module Volcano
         validated = publications.map { |publication| validated_recovery_publication(publication, result_position) }
         return [nil, nil] if validated.any?(&:nil?)
 
-        [result_position, validated]
+        [result_position, validated.compact]
       end
 
       def validated_recovery_publication(publication, fallback_position)

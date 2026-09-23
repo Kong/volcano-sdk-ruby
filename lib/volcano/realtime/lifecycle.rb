@@ -4,6 +4,7 @@ module Volcano
   class Realtime
     # Channel collection and connection-state lifecycle operations.
     module Lifecycle
+      # @dynamic channel_lock, normalize_channel_type
       def connected? = !@closed && (@protocol&.connected? || false)
 
       def remove_channel(name, type: :broadcast)
@@ -26,7 +27,7 @@ module Volcano
       private
 
       def remove_channel_locked(name)
-        channel = @channels[name]
+        channel = @channels.fetch(name, nil)
         return unless channel
 
         channel.__send__(:remove)

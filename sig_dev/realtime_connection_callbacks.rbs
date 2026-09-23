@@ -1,0 +1,48 @@
+module Volcano
+  class Realtime
+    interface _ConnectionCallbackContext
+      def start_reconnect: () -> void
+    end
+
+    module ConnectionCallbacks
+      include _ConnectionCallbackContext
+      type connection_event = :connect | :disconnect | :error
+      type connection_context = ConnectContext | DisconnectContext | ErrorContext
+      type connection_callbacks = Hash[Integer, Proc]
+      type connection_delivery = [connection_event, connection_context, connection_callbacks]
+
+      @connection_callbacks: Hash[connection_event, connection_callbacks]
+      @next_connection_callback_id: Integer
+      @connection_callback_lock: Async::Semaphore?
+      @protocol_error_reported: bool
+      @manual_disconnect: bool
+      @protocol: Protocol?
+      @protocol_session_lineage: SessionOperations?
+      @channels: Hash[String, Channel]
+
+      def on_connect: (?Proc? callback) ?{ (ConnectContext) -> void } -> ^() -> Proc?
+      def on_disconnect: (?Proc? callback) ?{ (DisconnectContext) -> void } -> ^() -> Proc?
+      def on_error: (?Proc? callback) ?{ (ErrorContext) -> void } -> ^() -> Proc?
+
+      private
+
+      def register_connection_callback: (connection_event event, Proc? callback, Proc? block) -> ^() -> Proc?
+      def emit_connection_event: (connection_event event, connection_context context) -> nil
+      def emit_connection_events: (Array[[connection_event, connection_context]] events) -> nil
+      def connection_deliveries: (Array[[connection_event, connection_context]] events) -> Array[connection_delivery]
+      def dispatch_connection_callbacks: (connection_event event, connection_context context, connection_callbacks callbacks) -> void
+      def protocol_connected: (Hash[String, Object] result) -> nil
+      def protocol_closed: (Exception error) -> void
+      def protocol_error: (Exception error) -> nil
+      def protocol_error_started: (Exception error) -> bool
+      def protocol_failed: (Exception error, bool disconnected) -> void
+      def error_context: (Exception error) -> ErrorContext
+      def disconnect_context: (Exception error) -> DisconnectContext
+      def immutable_exception: (Exception error) -> Exception
+      def immutable_string: (String value) -> String
+                          | (Object? value) -> String?
+      def connection_callback_lock: () -> Async::Semaphore
+      def reset_after_protocol_loss: () -> void
+    end
+  end
+end

@@ -4,6 +4,9 @@ module Volcano
   class Realtime
     # Registers channel callbacks and connects them to protocol pushes.
     module ChannelCallbacks
+      # @dynamic presence?, postgres?, broadcast?, register_presence_handler, detach_presence_handler
+      # @dynamic deliver_broadcast, publication_context, reject_broadcast, publication_rejection
+      # @dynamic dispatch_postgres_change
       def on(event, callback = nil, &block)
         raise ArgumentError, "unsupported realtime event: #{event}" unless allowed_event?(event)
 
@@ -37,21 +40,21 @@ module Volcano
         generation = @publication_generation
         @publication_protocol = protocol if broadcast?
         @publication_handler = protocol.on_publication(
-          @name, on_rejection: publication_rejection(protocol, generation)
-        ) do |event, data, publication, recovered:|
-          next deliver_publication(event, data) unless broadcast?
-
-          context = publication_context(protocol, publication, generation, recovered)
-          deliver_broadcast(event, data, context)
-        end
+          @name, on_rejection: publication_rejection(protocol, generation),
+          &publication_callback(protocol, generation)
+        )
         @handler_registered = true
       end
 
-      def publication_rejection(protocol, generation)
-        return unless broadcast?
-
-        lambda do |publication|
-          reject_broadcast(publication_context(protocol, publication, generation, false))
+      def publication_callback(protocol, generation)
+        lambda do |event, data, publication, recovered:|
+          # @type var recovered: bool
+          if broadcast?
+            context = publication_context(protocol, publication, generation, recovered)
+            deliver_broadcast(event, data, context)
+          else
+            deliver_publication(event, data)
+          end
         end
       end
 
@@ -67,6 +70,7 @@ module Volcano
         callbacks = @callbacks[event].dup
         return if callbacks.empty?
 
+        # @type var delivery: delivery
         delivery = [event, data, callbacks, before_delivery]
         return defer_callback_delivery(delivery) if callback_dispatching?
 
@@ -109,8 +113,9 @@ module Volcano
       end
 
       def detach_publication_handler(protocol)
-        if @publication_handler
-          protocol.off_publication(@name, @publication_handler)
+        handler = @publication_handler
+        if handler
+          protocol.off_publication(@name, handler)
           @publication_generation += 1 if broadcast?
         end
         detach_presence_handler(protocol)

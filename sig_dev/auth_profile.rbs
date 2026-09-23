@@ -8,6 +8,10 @@ module Volcano
     def owned_session_binding: (session_binding binding) -> active_session_binding
     def session_payload: (Integer status, decode: :email_change_result) { () -> ^(String) -> Transport::Response } -> EmailChangeResult
                        | (Integer status, decode: :session_page) { () -> ^(String) -> Transport::Response } -> SessionPage
+                       | (Integer status, decode: :linked_oauth_providers) { () -> ^(String) -> Transport::Response } -> Array[LinkedOAuthProvider]
+                       | (Integer status, decode: :oauth_authorization_url) { () -> ^(String) -> Transport::Response } -> String
+                       | (Integer status, decode: :oauth_provider_token_status) { () -> ^(String) -> Transport::Response } -> OAuthProviderTokenStatus
+                       | (Integer status, decode: :oauth_api_data) { () -> ^(String) -> Transport::Response } -> Object?
                        | (Integer status, ?decode: Symbol?) { () -> ^(String) -> Transport::Response } -> Object?
   end
 

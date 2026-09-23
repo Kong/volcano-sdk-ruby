@@ -1,0 +1,43 @@
+module Volcano
+  class Auth
+    include _AuthFacadeHost
+    @client: _AuthLifecycleClient
+    @transport: _AuthLifecycleTransport
+    @api_url: String
+
+    OAUTH_PROVIDERS: Array[String]
+    MAX_OAUTH_STATE_LENGTH: Integer
+    HOSTED_AUTH_ACTIONS: Array[String]
+
+    private def list_oauth_providers_response: (String access_token) -> Transport::Response
+    private def link_oauth_provider_response: (String access_token, String provider) -> Transport::Response
+    private def unlink_oauth_provider_response: (String access_token, String provider) -> Transport::Response
+    private def oauth_provider_name: (Object? provider) -> String
+    private def oauth_authorization_url: (Object? body) -> String
+    private def linked_oauth_providers: (Object? body) -> Array[LinkedOAuthProvider]
+    private def linked_oauth_provider: (Object? attributes) -> LinkedOAuthProvider
+    private def valid_linked_oauth_provider?: (Object? provider, Object? linked_at, Object? updated_at) -> bool
+    private def complete_string?: (Object? value) -> bool
+
+    private def oauth_provider_token_response: (String access_token, String provider) -> Transport::Response
+    private def refresh_oauth_provider_token_response: (String access_token, String provider) -> Transport::Response
+    private def oauth_provider_token_status: (Object? body) -> OAuthProviderTokenStatus
+
+    private def oauth_api_response: (String access_token, String provider, endpoint: String, method: String, body: json_value) -> Transport::Response
+    private def oauth_api_data: (Object? response_body) -> Object?
+    private def freeze_oauth_api_data: (Object? value) -> Object?
+    private def freeze_oauth_api_data_scalar: (Object? value) -> Object?
+    private def freeze_oauth_api_data_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
+
+    private def oauth_exchange_response: (String code, String redirect_to) -> Transport::Response
+    private def oauth_parameter: (Object? value) -> String
+    private def oauth_state: (Object? value) -> String
+    private def validate_oauth_callback_state: (Object? state, Object? expected_state) -> void
+
+    private def validate_hosted_auth_callback_state: (Object? state, Object? expected_state) -> void
+    private def hosted_auth_parameter: (Object? value) -> String
+
+    private def build_session: (Object? payload) -> Session
+    private def owned_complete_session: (Object? session) -> Session
+  end
+end

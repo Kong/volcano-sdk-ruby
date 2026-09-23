@@ -6,9 +6,12 @@ module Volcano
     def call_oauth_api(provider, endpoint:, method: 'GET', body: nil)
       session_payload(200, decode: :oauth_api_data) do
         provider_name = oauth_provider_name(provider)
-        request = { endpoint: endpoint.dup.freeze, method: method.dup.freeze,
-                    body: body.nil? ? nil : JSON.parse(JSON.generate(body), freeze: true) }
-        ->(token) { oauth_api_response(token, provider_name, **request) }
+        owned_endpoint = endpoint.dup.freeze
+        owned_method = method.dup.freeze
+        owned_body = body.nil? ? nil : JSON.parse(JSON.generate(body), freeze: true)
+        lambda do |token|
+          oauth_api_response(token, provider_name, endpoint: owned_endpoint, method: owned_method, body: owned_body)
+        end
       end
     end
 
@@ -24,6 +27,8 @@ module Volcano
     end
 
     def oauth_api_data(response_body)
+      raise TypeError, 'Expected OAuth provider API response data' unless response_body.is_a?(Hash)
+
       data = response_body.fetch('data')
       freeze_oauth_api_data(data)
     rescue KeyError, NoMethodError

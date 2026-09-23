@@ -49,4 +49,15 @@ RSpec.describe Volcano::Auth do
       )
     end.to raise_error(ArgumentError, 'OAuth state mismatch')
   end
+
+  it 'rejects a non-object provider token response' do
+    client.auth.current_session = Volcano::Session.new(
+      access_token: 'access', refresh_token: 'refresh', user_id: 'user'
+    )
+    response = Volcano::Transport::Response.new(status: 200, body: [], headers: {}, data: nil)
+    allow(transport).to receive(:auth_get_oauth_provider_token).and_return(response)
+
+    expect { client.auth.get_oauth_provider_token('github') }
+      .to raise_error(TypeError, 'Expected complete OAuth provider token status')
+  end
 end

@@ -77,6 +77,19 @@ target :auth_sessions do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_oauth do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/auth_oauth.rb'
+  check 'lib/volcano/auth_oauth_sign_in.rb'
+  check 'lib/volcano/auth_hosted.rb'
+  check 'lib/volcano/auth_oauth_token.rb'
+  check 'lib/volcano/auth_oauth_api.rb'
+  library 'json'
+  library 'openssl'
+  library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

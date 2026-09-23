@@ -20,7 +20,7 @@ module Volcano
                | (id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> AuthSession
     def self.members: () -> [:id, :user_id, :provider, :expires_at, :is_active, :is_current, :user_agent, :ip_address, :last_ip_address, :last_activity_at, :session_started_at, :created_at, :updated_at]
 
-    def initialize: (id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> void
+    private def initialize: (**Object? attributes) -> void
     def members: () -> [:id, :user_id, :provider, :expires_at, :is_active, :is_current, :user_agent, :ip_address, :last_ip_address, :last_activity_at, :session_started_at, :created_at, :updated_at]
     def with: (?id: String, ?user_id: String, ?provider: String, ?expires_at: Time, ?is_active: bool, ?is_current: bool, ?user_agent: String?, ?ip_address: String?, ?last_ip_address: String?, ?last_activity_at: Time?, ?session_started_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> AuthSession
     def to_h: () -> { id: String, user_id: String, provider: String, expires_at: Time, is_active: bool, is_current: bool, user_agent: String?, ip_address: String?, last_ip_address: String?, last_activity_at: Time?, session_started_at: Time?, created_at: Time?, updated_at: Time? }

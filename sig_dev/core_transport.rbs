@@ -1,0 +1,15 @@
+module Volcano
+  module Transport
+    ERROR_TYPES: Hash[Integer, singleton(Error::VolcanoError)]
+
+    private def self.response_error: (Response response) -> Error::VolcanoError
+    def self.error_message: (Hash[String, Object?] payload) -> String
+    private def self.error_type: (Integer status) -> singleton(Error::VolcanoError)
+    private def self.integer_header: (Hash[String, String]? headers, String name) -> Integer?
+    def self.json_value: (Object? value) -> json_value
+    def self.json_object: (Object? value, ?message: String) -> Hash[String, json_value]
+    def self.json_rows: (Object? value) -> database_rows
+    private def self.finite_float: (Float value) -> Float
+    private def self.json_scalar: (Object? value) -> json_value
+  end
+end

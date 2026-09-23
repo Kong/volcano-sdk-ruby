@@ -28,6 +28,13 @@ module Volcano
       expect(client.functions.invoke('echo')).to have_attributes(data: 'result', status: 200, headers: {}, version: nil)
     end
 
+    it 'rejects a resolution without a function ID' do
+      allow(transport).to receive(:resolve_function_for_invocation)
+        .and_return(response('cache_ttl_seconds' => 60))
+
+      expect { client.functions.invoke('echo') }.to raise_error(TypeError, 'Expected a complete function response')
+    end
+
     private
 
     def response(body) = Volcano::Transport::Response.new(status: 200, body: body, headers: nil, data: nil)

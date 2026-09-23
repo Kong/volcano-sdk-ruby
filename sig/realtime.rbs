@@ -1,11 +1,4 @@
 module Volcano
-  class Client
-    attr_reader auth: Auth
-    attr_reader realtime: Realtime
-
-    def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: Integer, ?access_token: String?, ?refresh_token: String?) -> void
-  end
-
   class Realtime
     def channel: (String name, ?type: String | Symbol, ?auto_fetch: bool, ?fetch_batch_window_ms: Integer, ?fetch_max_batch_size: Integer) -> Channel
     def connected?: () -> bool

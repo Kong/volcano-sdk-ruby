@@ -7,7 +7,14 @@ module Volcano
   ].freeze
   private_constant :AUTH_SESSION_ATTRIBUTES
 
-  AuthSession = Data.define(*AUTH_SESSION_ATTRIBUTES) do
+  AuthSession = Data.define(*AUTH_SESSION_ATTRIBUTES)
+
+  # Reopens the generated record for checked initialization.
+  class AuthSession
+    # @dynamic id, user_id, provider, expires_at, is_active, is_current, user_agent
+    # @dynamic ip_address, last_ip_address, last_activity_at, session_started_at
+    # @dynamic created_at, updated_at, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - AUTH_SESSION_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -18,7 +25,8 @@ module Volcano
       values = AUTH_SESSION_ATTRIBUTES.to_h do |name|
         [name, freeze_session_value(attributes[name])]
       end
-      super(**values)
+      attributes = values
+      super
     end
 
     private
@@ -28,19 +36,28 @@ module Volcano
     end
   end
 
-  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages) do
+  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages)
+
+  # Reopens the generated record for checked initialization.
+  class SessionPage
+    # @dynamic sessions, total, page, limit, total_pages, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(sessions:, total:, page:, limit:, total_pages:)
-      super(sessions: sessions.to_a.dup.freeze, total: total, page: page, limit: limit,
-            total_pages: total_pages)
+      sessions = sessions.to_a.dup.freeze
+      super
     end
   end
-  LinkedOAuthProvider = Data.define(:provider, :linked_at, :updated_at) do
+  LinkedOAuthProvider = Data.define(:provider, :linked_at, :updated_at)
+
+  # Reopens the generated record for checked initialization.
+  class LinkedOAuthProvider
+    # @dynamic provider, linked_at, updated_at, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(provider:, linked_at:, updated_at:)
-      super(
-        provider: immutable_value(provider),
-        linked_at: immutable_value(linked_at),
-        updated_at: immutable_value(updated_at)
-      )
+      provider = immutable_value(provider)
+      linked_at = immutable_value(linked_at)
+      updated_at = immutable_value(updated_at)
+      super
     end
 
     private
@@ -49,30 +66,46 @@ module Volcano
       value.frozen? ? value : value.dup.freeze
     end
   end
-  OAuthProviderTokenStatus = Data.define(:message, :provider, :expires_in) do
+  OAuthProviderTokenStatus = Data.define(:message, :provider, :expires_in)
+
+  # Reopens the generated record for checked initialization.
+  class OAuthProviderTokenStatus
+    # @dynamic message, provider, expires_in, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(message:, provider:, expires_in:)
       values = [message, provider]
       valid = values.all? { |value| value.is_a?(String) && !value.strip.empty? }
       raise TypeError, 'Expected complete OAuth provider token status' unless valid && expires_in.is_a?(Integer)
 
-      super(message: message.dup.freeze, provider: provider.dup.freeze, expires_in: expires_in)
+      message = message.dup.freeze
+      provider = provider.dup.freeze
+      super
     end
   end
   EmailChangeResult = Data.define(:message, :new_email)
-  LockLease = Data.define(:key, :token, :expires_at, :fencing_token) do
+  LockLease = Data.define(:key, :token, :expires_at, :fencing_token)
+
+  # Reopens the generated record for checked initialization.
+  class LockLease
+    # @dynamic key, token, expires_at, fencing_token, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(key:, token:, expires_at:, fencing_token:)
-      super(
-        key: key.dup.freeze,
-        token: token.dup.freeze,
-        expires_at: expires_at&.dup&.freeze,
-        fencing_token: fencing_token
-      )
+      key = key.dup.freeze
+      token = token.dup.freeze
+      expires_at = expires_at&.dup&.freeze
+      super
     end
   end
-  LockState = Data.define(:held, :expires_at, :fencing_token) do
+  LockState = Data.define(:held, :expires_at, :fencing_token)
+
+  # Reopens the generated record for checked initialization.
+  class LockState
+    # @dynamic held, expires_at, fencing_token, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(held:, expires_at:, fencing_token:)
       immutable_expiry = expires_at&.then { |value| value.frozen? ? value : value.dup.freeze }
-      super(held: held, expires_at: immutable_expiry, fencing_token: fencing_token)
+      expires_at = immutable_expiry
+      super
     end
   end
 end

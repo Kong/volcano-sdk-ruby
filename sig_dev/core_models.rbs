@@ -1,0 +1,33 @@
+module JSON
+  class Coder
+    def self.new: (freeze: bool, allow_duplicate_key: bool) { (Object) -> Object } -> Coder
+    def dump: (Volcano::session_user_input?) -> String
+    def load: (String) -> Volcano::json_value
+  end
+end
+
+module Volcano
+  SESSION_USER_CODER: JSON::Coder
+  USER_OPTIONAL_ATTRIBUTES: Array[Symbol]
+  AUTH_SESSION_ATTRIBUTES: Array[Symbol]
+  VERSION: String
+
+  class Session
+    private def immutable_user: (session_user_input? value) -> Hash[String, json_value]?
+  end
+
+  class User
+    private def validate_optional_attributes: (Hash[Symbol, Object?] attributes) -> void
+    private def freeze_value: (Object? value) -> Object?
+    private def freeze_value_scalar: (Object? value) -> Object?
+    private def freeze_value_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
+  end
+
+  class AuthSession
+    private def freeze_session_value: (Object? value) -> Object?
+  end
+
+  class LinkedOAuthProvider
+    private def immutable_value: (String | Time value) -> (String | Time)
+  end
+end

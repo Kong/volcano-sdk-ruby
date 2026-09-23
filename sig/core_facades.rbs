@@ -1,0 +1,81 @@
+module Volcano
+  type sdk_json = nil | bool | Integer | Float | String | Array[sdk_json] | Hash[String | Symbol, sdk_json]
+  type sdk_payload = Hash[String | Symbol, sdk_json]
+  type database_rows = Array[Hash[String, json_value]]
+
+  class Database
+    def from: (String table) -> QueryBuilder
+  end
+
+  class QueryBuilder
+    def select: (*String columns) -> QueryBuilder
+    def insert: (sdk_payload values) -> InsertBuilder
+    def update: (sdk_payload values) -> UpdateBuilder
+    def delete: () -> DeleteBuilder
+    def order: (String column, ?ascending: bool) -> QueryBuilder
+    def limit: (Integer count) -> QueryBuilder
+    def offset: (Integer count) -> QueryBuilder
+    def execute: () -> database_rows
+
+    def eq: (String column, sdk_json value) -> QueryBuilder
+    def neq: (String column, sdk_json value) -> QueryBuilder
+    def gt: (String column, sdk_json value) -> QueryBuilder
+    def gte: (String column, sdk_json value) -> QueryBuilder
+    def lt: (String column, sdk_json value) -> QueryBuilder
+    def lte: (String column, sdk_json value) -> QueryBuilder
+    def like: (String column, String pattern) -> QueryBuilder
+    def ilike: (String column, String pattern) -> QueryBuilder
+    def is: (String column, sdk_json value) -> QueryBuilder
+    def in: (String column, Array[sdk_json] values) -> QueryBuilder
+  end
+
+  class InsertBuilder
+    def execute: () -> database_rows
+  end
+
+  class UpdateBuilder
+    def execute: () -> database_rows
+
+    def eq: (String column, sdk_json value) -> UpdateBuilder
+    def neq: (String column, sdk_json value) -> UpdateBuilder
+    def gt: (String column, sdk_json value) -> UpdateBuilder
+    def gte: (String column, sdk_json value) -> UpdateBuilder
+    def lt: (String column, sdk_json value) -> UpdateBuilder
+    def lte: (String column, sdk_json value) -> UpdateBuilder
+    def like: (String column, String pattern) -> UpdateBuilder
+    def ilike: (String column, String pattern) -> UpdateBuilder
+    def is: (String column, sdk_json value) -> UpdateBuilder
+    def in: (String column, Array[sdk_json] values) -> UpdateBuilder
+  end
+
+  class DeleteBuilder
+    def execute: () -> database_rows
+
+    def eq: (String column, sdk_json value) -> DeleteBuilder
+    def neq: (String column, sdk_json value) -> DeleteBuilder
+    def gt: (String column, sdk_json value) -> DeleteBuilder
+    def gte: (String column, sdk_json value) -> DeleteBuilder
+    def lt: (String column, sdk_json value) -> DeleteBuilder
+    def lte: (String column, sdk_json value) -> DeleteBuilder
+    def like: (String column, String pattern) -> DeleteBuilder
+    def ilike: (String column, String pattern) -> DeleteBuilder
+    def is: (String column, sdk_json value) -> DeleteBuilder
+    def in: (String column, Array[sdk_json] values) -> DeleteBuilder
+  end
+
+  class Functions
+    def invoke: (String name, ?sdk_payload payload) -> FunctionResponse
+  end
+
+  class Durable
+    def start: (String function_name, ?sdk_payload payload, ?execution_name: String?) -> DurableExecution
+    def get: (String project_id, String function_name, String execution_id) -> DurableExecution
+    def list: (String project_id, String function_name, ?status: String?, ?page: Integer?, ?limit: Integer?) -> DurableExecutionPage
+    def stop: (String project_id, String function_name, String execution_id) -> DurableExecution
+  end
+
+  class Logs
+    def search: (String project_id, sdk_payload request) -> LogSearchResponse
+    def activity: (String project_id, sdk_payload request) -> LogActivityResponse
+  end
+end

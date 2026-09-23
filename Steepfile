@@ -29,6 +29,30 @@ target :realtime do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :core_facades do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano.rb'
+  check 'lib/volcano/database.rb'
+  check 'lib/volcano/durable.rb'
+  check 'lib/volcano/durable_models.rb'
+  check 'lib/volcano/function_auth.rb'
+  check 'lib/volcano/functions.rb'
+  check 'lib/volcano/immutable_request_value.rb'
+  check 'lib/volcano/logs.rb'
+  check 'lib/volcano/models.rb'
+  check 'lib/volcano/session.rb'
+  check 'lib/volcano/transport.rb'
+  check 'lib/volcano/user.rb'
+  check 'lib/volcano/version.rb'
+  library 'json'
+  library 'securerandom'
+  library 'socket'
+  library 'time'
+  library 'timeout'
+  library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :locks do
   signature 'sig', 'sig_dev'
   check 'lib/volcano/lock_lease_clock.rb'

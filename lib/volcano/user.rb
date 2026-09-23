@@ -10,15 +10,20 @@ module Volcano
   User = Data.define(
     :id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata,
     :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at
-  ) do
+  )
+
+  # Reopens the generated record for checked initialization.
+  class User
+    # @dynamic id, project_id, email, email_confirmed, user_metadata, app_metadata
+    # @dynamic avatar_url, status, banned_until, last_sign_in_at, created_at, updated_at
+    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(id:, email:, status:, **attributes)
       validate_optional_attributes(attributes)
-      super(
-        id: freeze_value(id),
-        email: freeze_value(email),
-        status: freeze_value(status),
-        **USER_OPTIONAL_ATTRIBUTES.to_h { |name| [name, freeze_value(attributes[name])] }
-      )
+      id = freeze_value(id)
+      email = freeze_value(email)
+      status = freeze_value(status)
+      attributes = USER_OPTIONAL_ATTRIBUTES.to_h { |name| [name, freeze_value(attributes[name])] }
+      super
     end
 
     private

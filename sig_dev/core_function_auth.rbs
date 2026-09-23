@@ -1,0 +1,27 @@
+module Volcano
+  interface _FunctionClient
+    def auth: () -> Auth
+    def capture_session_binding: () -> session_binding
+    def function_token: () -> String
+  end
+
+  class Auth
+    def __send__: (:owned_session_binding, session_binding) -> active_session_binding
+                 | (:refresh_captured_session, active_session_binding) -> Session
+                 | (:validate_read_failure, active_session_binding) -> void
+  end
+
+  class FunctionAuth
+    @client: _FunctionClient
+    @binding: session_binding
+    @fallback_token: String
+
+    def initialize: (_FunctionClient client) -> void
+    def run: [T] () { (String) -> T } -> T
+
+    private def token: () -> String
+    private def refresh: (Error::AuthenticationError original) -> void
+    private def validate: () -> void
+    private def active_binding: () -> active_session_binding
+  end
+end

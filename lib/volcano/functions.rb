@@ -3,6 +3,9 @@
 require_relative 'function_auth'
 
 module Volcano
+  INVALID_FUNCTION_NAME = 'Function name must be DNS-safe: lowercase letters, numbers, and hyphens; 1-63 characters'
+  private_constant :INVALID_FUNCTION_NAME
+
   # Invokes deployed Volcano functions by name.
   class Functions
     FUNCTION_NAME = /\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/
@@ -21,7 +24,7 @@ module Volcano
     def invoke(name, payload = {})
       auth = FunctionAuth.new(@client)
       validate_invocation(name, payload)
-      invoke_owned(auth, name.dup.freeze, ImmutableQueryValue.capture(payload))
+      invoke_owned(auth, name.dup.freeze, ImmutableRequestValue.capture(payload))
     end
 
     private
@@ -53,9 +56,7 @@ module Volcano
     # X-Volcano-Function-Invoked only after dispatch, so its absence is what
     # separates the two. X-Volcano-Version cannot: the server stamps it on every
     # response, including errors raised before the function is reached.
-    def stale_mapping?(response)
-      response.status == 404 && header(response.headers, FUNCTION_INVOKED_HEADER).nil?
-    end
+    def stale_mapping?(response) = response.status == 404 && header(response.headers, FUNCTION_INVOKED_HEADER).nil?
 
     def invoke_resolved(authorization, resolution, payload)
       if resolution.invoke_url.nil?
@@ -77,8 +78,8 @@ module Volcano
       # Hold the name's lock across the round trip so concurrent callers wait
       # for one resolve instead of each opening their own.
       FunctionResolution.resolve_lock(@api_url, authorization, name).synchronize do
-        cached = FunctionResolution.lookup(@api_url, authorization, name)
-        next cached_resolution(cached) if cached
+        cached_under_lock = FunctionResolution.lookup(@api_url, authorization, name)
+        next cached_resolution(cached_under_lock) if cached_under_lock
 
         resolve_uncached(authorization, name)
       end
@@ -88,7 +89,7 @@ module Volcano
       resolved = Transport.invoke do
         @transport.resolve_function_for_invocation(authorization: authorization, name: name)
       end
-      payload = Transport.body(resolved, 200)
+      payload = Transport.json_object(Transport.body(resolved, 200), message: 'Expected a complete function response')
       resolution = resolved_resolution(payload)
       FunctionResolution.store(@api_url, authorization, name, resolution, cache_ttl(payload))
       resolution
@@ -98,24 +99,26 @@ module Volcano
     end
 
     def cached_resolution(cached)
-      cached.resolution || raise(FunctionResolution.error_for(cached.failure))
+      return cached.resolution if cached.resolution
+
+      failure = cached.failure || raise(TypeError, 'Expected a cached function resolution')
+      raise FunctionResolution.error_for(failure)
     end
 
     def validate_invocation(name, payload)
-      unless name.is_a?(String) && FUNCTION_NAME.match?(name)
-        raise ArgumentError,
-              'Function name must be DNS-safe: lowercase letters, numbers, and hyphens; 1-63 characters'
-      end
+      raise ArgumentError, INVALID_FUNCTION_NAME unless name.is_a?(String) && FUNCTION_NAME.match?(name)
       raise TypeError, 'Function payload must be a Hash' unless payload.is_a?(Hash)
     end
 
     def resolved_resolution(payload)
-      function_id = payload['function_id'] if payload.is_a?(Hash)
+      payload = Transport.json_object(payload)
+      function_id = payload['function_id']
       raise TypeError, 'Expected a complete function response' unless function_id.is_a?(String) && !function_id.empty?
 
       # Absent when the deployment serves no public invocation domain, as in
       # local development; the function is reached through the API instead.
-      invoke_url = FunctionResolution.valid_invoke_url(payload['invoke_url'], @api_url)
+      candidate = payload['invoke_url']
+      invoke_url = FunctionResolution.valid_invoke_url(candidate.is_a?(String) ? candidate : nil, @api_url)
       FunctionResolution::Resolution.new(function_id: function_id, invoke_url: invoke_url)
     end
 
@@ -136,7 +139,7 @@ module Volcano
       Transport.body(response, 200) unless response.status.between?(200, 299) || dispatched
 
       FunctionResponse.new(
-        data: response.body, status: response.status,
+        data: Transport.json_value(response.body), status: response.status,
         headers: response.headers || {}, version: version
       )
     end

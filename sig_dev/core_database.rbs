@@ -1,0 +1,106 @@
+module Volcano
+  type query_condition = Hash[String, sdk_json]
+
+  interface _DatabaseClient
+    def session_request: () { (String) -> Transport::Response } -> Transport::Response
+  end
+
+  interface _DatabaseTransport
+    def query_database_select: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+    def query_database_insert: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+    def query_database_update: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+    def query_database_delete: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+  end
+
+  module ImmutableRequestValue
+    def self.capture: (String value) -> String
+                    | (Symbol value) -> Symbol
+                    | (Time value) -> Time
+                    | (String | Symbol value) -> (String | Symbol)
+                    | (Array[String] value) -> Array[String]
+                    | (sdk_payload value) -> sdk_payload
+                    | (sdk_json value) -> sdk_json
+    def self.capture_hash: (sdk_payload value) -> sdk_payload
+  end
+
+  class QueryContext < Data
+    attr_reader client: _DatabaseClient
+    attr_reader transport: _DatabaseTransport
+    attr_reader database_name: String
+    def self.new: (client: _DatabaseClient, transport: _DatabaseTransport, database_name: String) -> QueryContext
+  end
+
+  class QueryState < Data
+    attr_reader columns: Array[String]
+    attr_reader filters: Array[query_condition]
+    attr_reader order: Array[query_condition]
+    attr_reader limit: Integer?
+    attr_reader offset: Integer?
+    def self.new: (columns: Array[String], filters: Array[query_condition], order: Array[query_condition], limit: Integer?, offset: Integer?) -> QueryState
+  end
+
+  EMPTY_QUERY_STATE: QueryState
+
+  module FilterMethods
+    @filters: Array[query_condition]
+    def eq: (String column, sdk_json value) -> FilterMethods
+    def neq: (String column, sdk_json value) -> FilterMethods
+    def gt: (String column, sdk_json value) -> FilterMethods
+    def gte: (String column, sdk_json value) -> FilterMethods
+    def lt: (String column, sdk_json value) -> FilterMethods
+    def lte: (String column, sdk_json value) -> FilterMethods
+    def like: (String column, String pattern) -> FilterMethods
+    def ilike: (String column, String pattern) -> FilterMethods
+    def is: (String column, sdk_json value) -> FilterMethods
+    def in: (String column, Array[sdk_json] values) -> FilterMethods
+    private def add_filter: (String column, String operator, sdk_json value) -> FilterMethods
+    private def copy: (filters: Array[query_condition]) -> FilterMethods
+  end
+
+  class Database
+    @context: QueryContext
+    def initialize: (_DatabaseClient client, _DatabaseTransport transport, String name) -> void
+  end
+
+  class QueryBuilder
+    include FilterMethods
+    @context: QueryContext
+    @table: String
+    @columns: Array[String]
+    @filters: Array[query_condition]
+    @order: Array[query_condition]
+    @limit: Integer?
+    @offset: Integer?
+
+    def initialize: (QueryContext context, String table, ?state: QueryState) -> void
+    private def copy: (?columns: Array[String], ?filters: Array[query_condition], ?order: Array[query_condition], ?limit: Integer?, ?offset: Integer?) -> QueryBuilder
+    private def query_body: () -> sdk_payload
+    private def add_query_selection: (sdk_payload body) -> sdk_payload
+  end
+
+  class InsertBuilder
+    @context: QueryContext
+    @table: String
+    @values: sdk_payload
+    def initialize: (QueryContext context, String table, sdk_payload values) -> void
+  end
+
+  class UpdateBuilder
+    include FilterMethods
+    @context: QueryContext
+    @table: String
+    @values: sdk_payload
+    @filters: Array[query_condition]
+    def initialize: (QueryContext context, String table, sdk_payload values, ?filters: Array[query_condition]) -> void
+    private def copy: (filters: Array[query_condition]) -> UpdateBuilder
+  end
+
+  class DeleteBuilder
+    include FilterMethods
+    @context: QueryContext
+    @table: String
+    @filters: Array[query_condition]
+    def initialize: (QueryContext context, String table, ?filters: Array[query_condition]) -> void
+    private def copy: (filters: Array[query_condition]) -> DeleteBuilder
+  end
+end

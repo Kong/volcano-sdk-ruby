@@ -36,7 +36,7 @@ module Volcano
                | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
     def self.members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
 
-    def initialize: (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> void
+    private def initialize: (**(json_value | Time | DurableExecutionError) attributes) -> void
     def members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
     def with: (?id: String, ?function_id: String, ?name: String, ?status: String, ?region: String, ?created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
     def to_h: () -> { id: String, function_id: String, name: String, status: String, region: String, created_at: Time, result: json_value, result_expired: bool?, error: DurableExecutionError?, completed_at: Time? }

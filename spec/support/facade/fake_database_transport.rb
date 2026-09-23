@@ -11,13 +11,15 @@ module SpecSupport
       def query_database_insert(**arguments)
         @calls << [:query_database_insert, arguments]
         values = arguments.fetch(:body).fetch('values')
-        Volcano::Transport::Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
+        Volcano::Transport::Response.new(status: 200, body: { 'data' => [JSON.parse(JSON.generate(values))] },
+                                         headers: {}, data: nil)
       end
 
       def query_database_update(**arguments)
         @calls << [:query_database_update, arguments]
         values = arguments.fetch(:body).fetch('values')
-        Volcano::Transport::Response.new(status: 200, body: { 'data' => [values] }, headers: {}, data: nil)
+        Volcano::Transport::Response.new(status: 200, body: { 'data' => [JSON.parse(JSON.generate(values))] },
+                                         headers: {}, data: nil)
       end
 
       def query_database_delete(**arguments)

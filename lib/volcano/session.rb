@@ -10,15 +10,26 @@ module Volcano
   private_constant :SESSION_USER_CODER
 
   # Local credentials; refresh credentials and user identity may be unknown.
-  Session = Data.define(:access_token, :refresh_token, :user_id, :user) do
+  Session = Data.define(:access_token, :refresh_token, :user_id, :user)
+
+  # Reopens the generated record for checked initialization.
+  class Session
+    # @dynamic access_token, refresh_token, user_id, user, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(access_token:, refresh_token: nil, user_id: nil, user: nil)
-      super(access_token:, refresh_token:, user_id:, user: immutable_user(user))
+      user = immutable_user(user)
+      super
     end
 
     private
 
     def immutable_user(value)
-      SESSION_USER_CODER.load(SESSION_USER_CODER.dump(value))
+      return if value.nil?
+
+      snapshot = SESSION_USER_CODER.load(SESSION_USER_CODER.dump(value))
+      raise TypeError, 'Session user snapshot must be a Hash' unless snapshot.is_a?(Hash)
+
+      snapshot
     rescue JSON::GeneratorError, JSON::NestingError
       raise TypeError, 'Session user snapshot must contain JSON values or timestamps', cause: nil
     end

@@ -81,9 +81,10 @@ module Volcano
 
     def update_user_if_current?(user, generation)
       @mutex.synchronize do
-        return false unless generation == @generation && @session
+        current = @session
+        return false unless generation == @generation && current
 
-        @session = SessionCredentials.with_user(@session, user)
+        @session = SessionCredentials.with_user(current, user)
         true
       end
     end

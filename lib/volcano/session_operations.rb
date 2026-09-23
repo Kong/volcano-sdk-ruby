@@ -42,7 +42,9 @@ module Volcano
     def refresh(&)
       operation, owner = @mutex.synchronize do
         raise Error::SessionChangedError if @sign_out || @locally_cleared
-        next [@refresh, false] if @refresh && !@refresh.done
+
+        current = @refresh
+        next [current, false] if current && !current.done
 
         @refresh = Outcome.new(false)
         [@refresh, true]
@@ -51,11 +53,7 @@ module Volcano
     end
 
     def sign_out
-      operation, owner, preceding, pending = @mutex.synchronize do
-        first = @sign_out.nil?
-        @sign_out ||= Outcome.new(false)
-        [@sign_out, first, @refresh, @refresh && !@refresh.done]
-      end
+      operation, owner, preceding, pending = @mutex.synchronize { claim_sign_out }
       execute(operation, owner) do
         yield(preceding, pending)
       ensure
@@ -79,10 +77,19 @@ module Volcano
 
     private
 
+    def claim_sign_out
+      first = @sign_out.nil? == true
+      operation = @sign_out ||= Outcome.new(false)
+      current = @refresh
+      [operation, first, current, current && !current.done]
+    end
+
     def execute(operation, owner)
       return result(operation) unless owner
 
       completed = false
+      # @type var value: Object?
+      value = nil
       begin
         value = yield
         completed = true

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.23.0...v0.24.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish durable execution RBS records ([#254](https://github.com/Kong/volcano-sdk-ruby/issues/254)) ([f7f3166](https://github.com/Kong/volcano-sdk-ruby/commit/f7f3166f92d57db22a9f2bb86971890b95c2fa99))
+
 ## [0.23.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.22.0...v0.23.0) (2026-09-23)
 
 

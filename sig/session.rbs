@@ -1,7 +1,7 @@
 module Volcano
   type json_value = nil | bool | Integer | Float | String | Array[json_value] | Hash[String, json_value]
   type session_input = nil | bool | Integer | Float | String | Symbol | Time | Array[session_input] | Hash[String | Symbol, session_input]
-  type session_user_input = Hash[String, session_input] | Hash[Symbol, session_input] | Hash[String | Symbol, session_input]
+  type session_user_input = Hash[String, json_value] | Hash[String, session_input] | Hash[Symbol, session_input] | Hash[String | Symbol, session_input]
 
   class Session < Data
     attr_reader access_token: String

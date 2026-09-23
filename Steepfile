@@ -42,6 +42,15 @@ target :auth_state do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_credentials do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/session_credentials.rb'
+  check 'lib/volcano/session_page_mapping.rb'
+  library 'base64'
+  library 'json'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

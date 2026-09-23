@@ -7,6 +7,12 @@ module Volcano
   module SessionCredentials
     def self.validate_refresh: (Session? current, Session? refreshed) -> void
     def self.with_user: (Session session, Hash[String, json_value] user) -> Session
+    def self.build: (Object? access_token, Object? refresh_token) -> Session?
+    def self.credential: (Object value, Symbol name) -> String
+    def self.validate_refresh_source: (Session current, ?verified: bool) -> void
+    def self.validate_refresh_session_id: (Session current, Session? refreshed) -> void
+    def self.session_id: (Object? access_token) -> String?
+    def self.token_payload: (Object? access_token) -> Object?
   end
 
   module AuthStateNotifications

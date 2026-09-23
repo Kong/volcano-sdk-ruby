@@ -1,0 +1,13 @@
+module Volcano
+  module SessionPageMapping
+    private def session_page: (Object? body) -> SessionPage
+    private def auth_session: (Object? attributes) -> AuthSession
+    private def build_auth_session: (Hash[Object?, Object?] attributes) -> AuthSession
+    private def required_integer: (Hash[Object?, Object?] body, String name) -> Integer
+    private def required_string: (Hash[Object?, Object?] body, String name) -> String
+    private def required_time: (Hash[Object?, Object?] body, String name) -> Time
+    private def required_boolean: (Hash[Object?, Object?] body, String name) -> bool
+    private def optional_string: (Hash[Object?, Object?] body, String name) -> String?
+    private def optional_time: (Hash[Object?, Object?] body, String name) -> Time?
+  end
+end

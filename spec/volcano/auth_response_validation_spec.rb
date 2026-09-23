@@ -8,6 +8,15 @@ RSpec.describe Volcano::Auth do
     Volcano::Transport::Response.new(status: 200, body: payload, headers: {}, data: nil)
   end
 
+  def valid_session_entry
+    { 'id' => 'session', 'user_id' => 'user', 'provider' => 'email', 'expires_at' => Time.utc(2026),
+      'is_active' => true, 'is_current' => false }
+  end
+
+  def valid_session_page
+    { 'sessions' => [valid_session_entry], 'total' => 1, 'page' => 1, 'limit' => 20, 'total_pages' => 1 }
+  end
+
   [nil, [], {}, { 'sessions' => nil }, { 'sessions' => [] }].each do |payload|
     it "rejects an incomplete session page #{payload.inspect}" do
       allow(transport).to receive(:auth_get_my_sessions).and_return(response(payload))
@@ -21,6 +30,27 @@ RSpec.describe Volcano::Auth do
       allow(transport).to receive(:auth_get_my_sessions).and_return(response({ 'sessions' => [session] }))
 
       expect { client.auth.list_sessions }.to raise_error(TypeError, 'Expected a complete authentication session')
+    end
+  end
+
+  { 'id' => 42, 'user_id' => nil, 'provider' => false, 'expires_at' => 'later',
+    'is_active' => 1, 'is_current' => nil, 'user_agent' => 3, 'ip_address' => false,
+    'last_ip_address' => [], 'last_activity_at' => 'later', 'session_started_at' => 0,
+    'created_at' => false, 'updated_at' => {} }.each do |field, invalid|
+    it "rejects an invalid session #{field}" do
+      entry = valid_session_entry.merge(field => invalid)
+      payload = valid_session_page.merge('sessions' => [entry])
+      allow(transport).to receive(:auth_get_my_sessions).and_return(response(payload))
+
+      expect { client.auth.list_sessions }.to raise_error(TypeError, 'Expected a complete authentication session')
+    end
+  end
+
+  %w[total page limit total_pages].each do |field|
+    it "rejects an invalid page #{field}" do
+      allow(transport).to receive(:auth_get_my_sessions).and_return(response(valid_session_page.merge(field => '1')))
+
+      expect { client.auth.list_sessions }.to raise_error(TypeError, 'Expected a complete session page')
     end
   end
 

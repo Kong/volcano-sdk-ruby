@@ -46,7 +46,7 @@ RSpec.describe Volcano::Locks do
     clock = advance_acquire_past_ttl
     transport.renew_handler = lambda do |_arguments|
       clock.advance(31)
-      transport.response(200, 'expires_at' => (Time.now.utc - 1).iso8601)
+      transport.response(200, 'expires_at' => (Time.now.utc - 1).iso8601, 'fencing_token' => 8)
     end
 
     expect { |block| locks.with_lock('build', ttl: 30, &block) }

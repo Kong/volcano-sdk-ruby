@@ -1,0 +1,33 @@
+module Volcano
+  interface _LockClient
+    def service_token: () -> String
+  end
+
+  interface _LockTransport
+    def acquire_project_lock: (authorization: String, key: String, ttl: Integer, token: String, request_id: String) -> Transport::Response
+    def get_project_lock: (authorization: String, key: String, request_id: String) -> Transport::Response
+    def renew_project_lock: (authorization: String, key: String, ttl: Integer, token: String, request_id: String) -> Transport::Response
+    def release_project_lock: (authorization: String, key: String, token: String, request_id: String) -> Transport::Response
+    def force_release_project_lock: (authorization: String, key: String, request_id: String) -> Transport::Response
+  end
+
+  class Locks
+    include LockAutoRenewal
+    include LockResponse
+
+    @client: _LockClient
+    @transport: _LockTransport
+
+    def initialize: (_LockClient client, _LockTransport transport) -> void
+    def get: (String key, ?request_id: String?) -> LockState
+    def acquire: (String key, ttl: Integer, ?token: String?, ?request_id: String?) -> LockLease
+    def renew: (String key, LockLease lease, ttl: Integer, ?request_id: String?) -> LockLease
+    def release: (String key, LockLease lease, ?request_id: String?) -> nil
+    def force_release: (String key, ?request_id: String?) -> nil
+
+    private def acquire_payload: (authorization: String, key: String, ttl: Integer, token: String, request_id: String) -> Hash[String, Object?]
+    private def perform_request: (Integer status) { () -> Transport::Response } -> Object?
+    private def request_uuid: (Object? value, String name) -> String
+    private def build_lease: (String key, String token, Hash[String, Object?] payload) -> LockLease
+  end
+end

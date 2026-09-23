@@ -1,0 +1,13 @@
+module Volcano
+  module Transport
+    class Response < Data
+      attr_reader status: Integer
+      attr_reader body: Object?
+      attr_reader headers: Hash[String, String]
+      attr_reader data: Object?
+    end
+
+    def self.invoke: [T] () { () -> T } -> T
+    def self.body: (Response response, Integer expected_status) -> Object?
+  end
+end

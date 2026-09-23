@@ -3,6 +3,9 @@
 module Volcano
   # Authenticates users and updates the client session.
   class Auth
+    include AuthRefresh
+    include AuthSignOut
+
     INCOMPLETE_SESSION = 'Expected a complete Volcano::Session'
     private_constant :INCOMPLETE_SESSION
 

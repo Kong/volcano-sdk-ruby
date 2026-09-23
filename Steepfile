@@ -51,6 +51,15 @@ target :auth_credentials do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_lifecycle do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/auth_notification_dispatch.rb'
+  check 'lib/volcano/auth_session_binding.rb'
+  check 'lib/volcano/auth_refresh.rb'
+  check 'lib/volcano/auth_sign_out.rb'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

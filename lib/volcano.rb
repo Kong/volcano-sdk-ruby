@@ -17,9 +17,11 @@ require_relative 'volcano/errors'
 require_relative 'volcano/redaction'
 require_relative 'volcano/transport'
 require_relative 'volcano/generated_transport'
-require_relative 'volcano/auth'
+require_relative 'volcano/auth_notification_dispatch'
+require_relative 'volcano/auth_session_binding'
 require_relative 'volcano/auth_sign_out'
 require_relative 'volcano/auth_refresh'
+require_relative 'volcano/auth'
 require_relative 'volcano/auth_sign_up'
 require_relative 'volcano/sign_up_result'
 require_relative 'volcano/auth_anonymous'
@@ -59,8 +61,8 @@ require_relative 'volcano/client'
 
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
-  private_constant :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer, :LockSession, :LockResponse,
-                   :Redaction, :SessionOperations
+  private_constant :AuthRefresh, :AuthSignOut, :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer,
+                   :LockSession, :LockResponse, :Redaction, :SessionOperations
 
   Realtime.private_constant :Protocol, :ProtocolDispatch, :ProtocolPublicationDispatch, :ProtocolRecovery,
                             :ProtocolRecoveryDispatch, :ProtocolRecoveryPosition

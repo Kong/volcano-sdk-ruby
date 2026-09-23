@@ -98,7 +98,7 @@ module Volcano
     end
 
     def cached_resolution(cached)
-      cached.resolution || raise(cached.failure.exception)
+      cached.resolution || raise(FunctionResolution.error_for(cached.failure))
     end
 
     def validate_invocation(name, payload)

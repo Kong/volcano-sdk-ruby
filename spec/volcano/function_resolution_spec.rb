@@ -184,7 +184,7 @@ RSpec.describe Volcano::FunctionResolution do
 
   context 'when the name does not resolve' do
     let(:resolve_status) { 404 }
-    let(:resolve_payload) { { 'error' => 'function not found' } }
+    let(:resolve_payload) { { 'error' => 'function not found', 'code' => 'function_missing' } }
 
     it 'remembers the miss rather than re-resolving', :aggregate_failures do
       instance = client
@@ -193,6 +193,20 @@ RSpec.describe Volcano::FunctionResolution do
           .to raise_error(Volcano::Error::NotFoundError)
       end
 
+      expect(resolve_calls).to eq(1)
+    end
+
+    it 'rebuilds an independent error from a cached miss' do
+      instance = client
+      errors = []
+      3.times do
+        expect { instance.functions.invoke('missing-function') }
+          .to raise_error(Volcano::Error::NotFoundError) { |error| errors << error }
+      end
+
+      errors[1].code.replace('changed')
+      expect(errors[2].code).to eq('function_missing')
+      expect(errors.last.message).to eq('function not found')
       expect(resolve_calls).to eq(1)
     end
   end

@@ -3,8 +3,8 @@
 module Volcano
   # Queues auth events under the state mutex and invokes subscribers outside it.
   module AuthStateNotifications
-    CALLBACK_FAILURES = [Exception].freeze
-    private_constant :CALLBACK_FAILURES
+    CALLBACK_FAILURE = Exception
+    private_constant :CALLBACK_FAILURE
 
     private
 
@@ -26,12 +26,14 @@ module Volcano
     end
 
     def drain_notifications
+      # @type var failure: Exception?
       failure = nil
       loop do
         notification = next_notification
         break unless notification
 
-        current_failure = notify(*notification)
+        callback_ids, event, session = notification
+        current_failure = notify(callback_ids, event, session)
         failure ||= current_failure
       end
       raise failure if failure
@@ -48,12 +50,13 @@ module Volcano
     end
 
     def notify(callback_ids, event, session)
+      # @type var failure: Exception?
       failure = nil
       callback_ids.each do |callback_id|
         @mutex.synchronize { @callbacks[callback_id] }&.call(event, session)
       rescue StandardError => e
         Warning.warn("Volcano auth-state callback failed (#{e.class})\n")
-      rescue *CALLBACK_FAILURES => e
+      rescue CALLBACK_FAILURE => e
         unsubscribe(callback_id)
         failure ||= e
       end

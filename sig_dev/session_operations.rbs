@@ -1,0 +1,32 @@
+module Volcano
+  class SessionOperations
+    class Outcome < Struct[Object?]
+      attr_accessor done: bool
+      attr_accessor value: Object?
+      attr_accessor error: Exception?
+
+      def self.new: (?bool done, ?Object? value, ?Exception? error) -> Outcome
+    end
+
+    @mutex: Mutex
+    @condition: ConditionVariable
+    @refresh: Outcome?
+    @sign_out: Outcome?
+    @locally_cleared: bool
+    @verified_pair: Array[String?]?
+
+    def initialize: (?Session? verified) -> void
+    def verify_pair: (Session? session) -> void
+    def clear_local_credentials: () -> void
+    def verified_pair?: (Session session) -> bool?
+    def closing?: () -> bool
+    def refresh: () { () -> Object? } -> Object?
+    def sign_out: () { (Outcome?, bool?) -> Object? } -> Object?
+    def wait_for_sign_out: () -> Object?
+    def result: (Outcome? operation) -> Object?
+
+    private def claim_sign_out: () -> [Outcome, bool, Outcome?, bool?]
+    private def execute: (Outcome operation, bool owner) { () -> Object? } -> Object?
+    private def complete: (Outcome operation, Object? value, Exception? error) -> void
+  end
+end

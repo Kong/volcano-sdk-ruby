@@ -34,6 +34,14 @@ target :locks do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_state do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/session_operations.rb'
+  check 'lib/volcano/auth_state.rb'
+  check 'lib/volcano/auth_state_notifications.rb'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

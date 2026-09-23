@@ -1,21 +1,12 @@
 # frozen_string_literal: true
 
-require 'time'
-
 module Volcano
-  # Server-validated current-user behavior for the authentication facade.
-  class Auth
-    INVALID_USER = 'Expected a complete user profile'
-    RFC3339_OFFSET = /(?:[Zz]|[+-]\d{2}:\d{2})\z/
-    USER_OPTIONAL_VALUES = %w[project_id email_confirmed user_metadata app_metadata avatar_url].freeze
-    USER_OPTIONAL_STRINGS = %w[project_id avatar_url].freeze
-    USER_STATUSES = %w[active banned deleted].freeze
-    USER_TIMESTAMPS = %w[banned_until last_sign_in_at created_at updated_at].freeze
-    private_constant :INVALID_USER, :RFC3339_OFFSET, :USER_OPTIONAL_STRINGS,
-                     :USER_OPTIONAL_VALUES, :USER_STATUSES, :USER_TIMESTAMPS
+  # Current-user requests and session cache updates.
+  module AuthProfile
+    include AuthProfileFields
 
     def user
-      profile_request { method(:get_user_response) }
+      profile_request { ->(token) { get_user_response(token) } }
     end
 
     alias get_user user
@@ -32,7 +23,7 @@ module Volcano
     end
 
     def cache_current_user(payload, generation)
-      profile = user_payload(payload)
+      profile = profile_user_payload(payload)
       user = build_user(profile)
       raise Error::SessionChangedError unless @client.update_session_user_if_current?(profile, generation)
 
@@ -46,79 +37,47 @@ module Volcano
     end
 
     def build_user(payload)
-      raise Error::AuthenticationError, INVALID_USER unless valid_user?(payload)
-
-      User.new(**user_attributes(payload))
+      new_profile_user(user_identity(payload), user_optional_attributes(payload), user_timestamps(payload))
     rescue ArgumentError => e
       raise Error::AuthenticationError, INVALID_USER, cause: e
     end
 
-    def user_attributes(payload)
+    def new_profile_user(identity, optional, timestamps)
+      User.new(
+        id: identity[:id], email: identity[:email], status: identity[:status],
+        project_id: optional[:project_id], email_confirmed: optional[:email_confirmed],
+        user_metadata: optional[:user_metadata], app_metadata: optional[:app_metadata],
+        avatar_url: optional[:avatar_url], banned_until: timestamps[:banned_until],
+        last_sign_in_at: timestamps[:last_sign_in_at], created_at: timestamps[:created_at],
+        updated_at: timestamps[:updated_at]
+      )
+    end
+
+    def user_identity(payload)
       {
-        id: payload.fetch('id'),
-        email: payload.fetch('email'),
-        status: payload.fetch('status'),
-        **USER_OPTIONAL_VALUES.to_h { |name| [name.to_sym, payload[name]] },
-        **USER_TIMESTAMPS.to_h { |name| [name.to_sym, parse_time(payload[name])] }
+        id: profile_required_id(payload['id']),
+        email: profile_required_string(payload['email']),
+        status: profile_status(payload['status'])
       }
     end
 
-    def user_payload(payload)
-      raise Error::AuthenticationError, INVALID_USER unless payload.is_a?(Hash)
-
-      payload['user']
+    def user_optional_attributes(payload)
+      {
+        project_id: profile_optional_string(payload['project_id']),
+        email_confirmed: profile_optional_boolean(payload['email_confirmed']),
+        user_metadata: profile_optional_object(payload['user_metadata']),
+        app_metadata: profile_optional_object(payload['app_metadata']),
+        avatar_url: profile_optional_string(payload['avatar_url'])
+      }
     end
 
-    def valid_user?(payload)
-      return false unless payload.is_a?(Hash)
-
-      required_user_fields?(payload) && valid_optional_user_fields?(payload)
-    end
-
-    def valid_optional_user_fields?(payload)
-      valid_email_confirmation?(payload) && valid_metadata?(payload) &&
-        valid_optional_strings?(payload) && valid_timestamps?(payload)
-    end
-
-    def required_user_fields?(payload)
-      complete_string?(payload['id']) && payload['email'].is_a?(String) &&
-        USER_STATUSES.include?(payload['status'])
-    end
-
-    def valid_email_confirmation?(payload)
-      [true, false, nil].include?(payload['email_confirmed'])
-    end
-
-    def valid_metadata?(payload)
-      %w[user_metadata app_metadata].all? do |name|
-        payload[name].nil? || payload[name].is_a?(Hash)
-      end
-    end
-
-    def valid_optional_strings?(payload)
-      USER_OPTIONAL_STRINGS.all? do |name|
-        payload[name].nil? || payload[name].is_a?(String)
-      end
-    end
-
-    def valid_timestamps?(payload)
-      USER_TIMESTAMPS.all? { |name| valid_timestamp?(payload[name]) }
-    end
-
-    def valid_timestamp?(value)
-      return true if value.nil?
-
-      value.is_a?(String) && RFC3339_OFFSET.match?(value) && Time.iso8601(value)
-    rescue ArgumentError
-      false
-    end
-
-    def parse_time(value)
-      Time.iso8601(value).freeze unless value.nil?
-    end
-
-    def complete_string?(value)
-      value.is_a?(String) && !value.strip.empty?
+    def user_timestamps(payload)
+      {
+        banned_until: profile_parse_time(payload['banned_until']),
+        last_sign_in_at: profile_parse_time(payload['last_sign_in_at']),
+        created_at: profile_parse_time(payload['created_at']),
+        updated_at: profile_parse_time(payload['updated_at'])
+      }
     end
   end
 end

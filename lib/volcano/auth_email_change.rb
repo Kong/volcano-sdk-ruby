@@ -2,7 +2,7 @@
 
 module Volcano
   # Email-change request behavior for the authentication facade.
-  class Auth
+  module AuthEmailChange
     INVALID_EMAIL_CHANGE_RESULT = 'Expected a valid email-change acknowledgement'
     private_constant :INVALID_EMAIL_CHANGE_RESULT
 

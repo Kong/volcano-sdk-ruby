@@ -2,7 +2,7 @@
 
 module Volcano
   # Current-user update behavior for the authentication facade.
-  class Auth
+  module AuthUpdateUser
     def update_user(password: nil, metadata: nil)
       profile_request do
         request_password = password&.dup&.freeze

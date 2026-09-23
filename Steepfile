@@ -60,6 +60,17 @@ target :auth_lifecycle do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :auth_profile do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/auth_profile_fields.rb'
+  check 'lib/volcano/auth_get_user.rb'
+  check 'lib/volcano/auth_update_user.rb'
+  check 'lib/volcano/auth_email_change.rb'
+  library 'json'
+  library 'time'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :consumers do
   signature 'sig'
   check 'tests/types'

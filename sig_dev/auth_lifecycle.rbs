@@ -9,11 +9,17 @@ module Volcano
     def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
     def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
     def reject_refresh_if_current?: (Integer generation, ?notifications: Array[Method]?) -> bool
+    def update_session_user_if_current?: (Hash[String, json_value] user, Integer generation) -> bool
   end
 
   interface _AuthLifecycleTransport
     def auth_refresh: (authorization: String, refresh_token: String) -> Transport::Response
     def auth_logout: (authorization: String, refresh_token: String) -> Transport::Response
+    def auth_get_user: (authorization: String) -> Transport::Response
+    def auth_update_user: (authorization: String, password: String?, metadata: Hash[String, json_value]?) -> Transport::Response
+    def auth_request_email_change: (authorization: String, new_email: String) -> Transport::Response
+    def auth_cancel_email_change: (authorization: String) -> Transport::Response
+    def auth_confirm_email_change: (authorization: String, token: String) -> Transport::Response
   end
 
   interface _AuthLifecycleHost

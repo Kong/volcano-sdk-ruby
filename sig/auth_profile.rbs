@@ -1,0 +1,10 @@
+module Volcano
+  class Auth
+    def user: () -> User
+    def get_user: () -> User
+    def update_user: (?password: String?, ?metadata: Hash[String, json_value]?) -> User
+    def request_email_change: (new_email: String) -> EmailChangeResult
+    def cancel_email_change: () -> nil
+    def confirm_email_change: (token: String) -> User
+  end
+end

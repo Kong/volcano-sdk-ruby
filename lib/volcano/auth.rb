@@ -5,6 +5,9 @@ module Volcano
   class Auth
     include AuthRefresh
     include AuthSignOut
+    include AuthProfile
+    include AuthUpdateUser
+    include AuthEmailChange
 
     INCOMPLETE_SESSION = 'Expected a complete Volcano::Session'
     private_constant :INCOMPLETE_SESSION

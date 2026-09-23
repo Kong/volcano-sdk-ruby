@@ -59,6 +59,25 @@ RSpec.describe Volcano::StorageBucket do
     expect(source).not_to be_closed
   end
 
+  it 'spools a stream whose reported size is not an integer' do
+    allow(source).to receive(:size).and_return('unknown')
+
+    expect(bucket.upload_resumable('file.bin', source).name).to eq('file.bin')
+    expect(transport).to have_received(:create_upload_session)
+      .with(authorization: 'access', bucket_name: 'assets', request: have_attributes(total_size: 7))
+    expect(source).not_to be_closed
+  end
+
+  it 'aborts when a source ends before the declared part count' do
+    allow(source).to receive(:read).and_return(nil)
+    allow(transport).to receive(:abort_upload_session).and_return(response(200, {}))
+
+    expect { bucket.upload_resumable('file.bin', source) }
+      .to raise_error(IOError, 'upload source ended before completion')
+    expect(transport).to have_received(:abort_upload_session)
+      .with(authorization: 'access', bucket_name: 'assets', request: have_attributes(session_id: 'upload'))
+  end
+
   it 'rejects unsupported input before creating a remote session' do
     expect { bucket.upload_resumable('file.bin', Object.new) }
       .to raise_error(ArgumentError, 'upload data must be a String or IO')

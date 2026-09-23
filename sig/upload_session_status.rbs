@@ -1,4 +1,6 @@
 module Volcano
+  type upload_status_attribute = String | Integer | Array[UploadPart] | Time
+
   class UploadSessionStatus < Data
     attr_reader session_id: String
     attr_reader status: String
@@ -19,7 +21,7 @@ module Volcano
                | (session_id: String, status: String, path: String, content_type: String, total_size: Integer, part_size: Integer, total_parts: Integer, parts_uploaded: Integer, bytes_uploaded: Integer, parts: Array[UploadPart], expires_at: Time, created_at: Time) -> UploadSessionStatus
     def self.members: () -> [:session_id, :status, :path, :content_type, :total_size, :part_size, :total_parts, :parts_uploaded, :bytes_uploaded, :parts, :expires_at, :created_at]
 
-    def initialize: (session_id: String, status: String, path: String, content_type: String, total_size: Integer, part_size: Integer, total_parts: Integer, parts_uploaded: Integer, bytes_uploaded: Integer, parts: Array[UploadPart], expires_at: Time, created_at: Time) -> void
+    def initialize: (**upload_status_attribute attributes) -> void
     def members: () -> [:session_id, :status, :path, :content_type, :total_size, :part_size, :total_parts, :parts_uploaded, :bytes_uploaded, :parts, :expires_at, :created_at]
     def with: (?session_id: String, ?status: String, ?path: String, ?content_type: String, ?total_size: Integer, ?part_size: Integer, ?total_parts: Integer, ?parts_uploaded: Integer, ?bytes_uploaded: Integer, ?parts: Array[UploadPart], ?expires_at: Time, ?created_at: Time) -> UploadSessionStatus
     def to_h: () -> { session_id: String, status: String, path: String, content_type: String, total_size: Integer, part_size: Integer, total_parts: Integer, parts_uploaded: Integer, bytes_uploaded: Integer, parts: Array[UploadPart], expires_at: Time, created_at: Time }

@@ -6,7 +6,13 @@ module Volcano
   ].freeze
   private_constant :STORAGE_OBJECT_ATTRIBUTES
 
-  StorageObject = Data.define(*STORAGE_OBJECT_ATTRIBUTES) do
+  StorageObject = Data.define(*STORAGE_OBJECT_ATTRIBUTES)
+
+  # Validates and freezes object metadata returned by storage.
+  class StorageObject
+    # @dynamic id, bucket_id, name, size, mime_type, is_public, owner_id, etag
+    # @dynamic metadata, created_at, updated_at, public_url
+    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - STORAGE_OBJECT_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -17,7 +23,8 @@ module Volcano
       values = STORAGE_OBJECT_ATTRIBUTES.to_h do |name|
         [name, immutable_value(attributes[name])]
       end
-      super(**values)
+      attributes = values
+      super
     end
 
     private
@@ -40,10 +47,16 @@ module Volcano
     end
   end
 
-  StoragePage = Data.define(:objects, :next_cursor) do
+  StoragePage = Data.define(:objects, :next_cursor)
+
+  # Freezes a page of storage objects and its cursor.
+  class StoragePage
+    # @dynamic objects, next_cursor, members, with, to_h, deconstruct, deconstruct_keys
+    # @dynamic self.[], self.members
     def initialize(objects:, next_cursor: nil)
-      cursor = next_cursor.nil? ? nil : next_cursor.dup.freeze
-      super(objects: objects.to_a.dup.freeze, next_cursor: cursor)
+      objects = objects.to_a.dup.freeze
+      next_cursor = next_cursor.nil? ? nil : next_cursor.dup.freeze
+      super
     end
   end
 end

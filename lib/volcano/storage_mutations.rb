@@ -11,7 +11,9 @@ module Volcano
     end
 
     def move(from_path, to_path)
-      source, destination = storage_paths([from_path, to_path])
+      paths = storage_paths([from_path, to_path])
+      source = paths.fetch(0)
+      destination = paths.fetch(1)
       response = storage_request do |token|
         @transport.move_storage_object(
           authorization: token,
@@ -24,7 +26,9 @@ module Volcano
     end
 
     def copy(from_path, to_path)
-      source, destination = storage_paths([from_path, to_path])
+      paths = storage_paths([from_path, to_path])
+      source = paths.fetch(0)
+      destination = paths.fetch(1)
       response = storage_request do |token|
         @transport.copy_storage_object(
           authorization: token,
@@ -75,7 +79,8 @@ module Volcano
     end
 
     def visibility_value(value)
-      return value if [true, false].include?(value)
+      return true if value == true
+      return false if value == false
 
       raise ArgumentError, 'public must be true or false'
     end

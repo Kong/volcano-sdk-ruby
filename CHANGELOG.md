@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.24.0...v0.25.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish realtime context RBS records ([#256](https://github.com/Kong/volcano-sdk-ruby/issues/256)) ([880e1be](https://github.com/Kong/volcano-sdk-ruby/commit/880e1bec41aea858bebebbb4f5c680d7e78f0490))
+
 ## [0.24.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.23.0...v0.24.0) (2026-09-23)
 
 

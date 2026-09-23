@@ -2,9 +2,14 @@
 
 module Volcano
   class Realtime
+    # Immutable limits for one channel's automatic row-fetch queue.
     PostgresBatchConfig = Data.define(
       :auto_fetch, :batch_window_ms, :max_batch_size
-    ) do
+    )
+
+    # Validates the queue limits supplied to a Postgres channel.
+    class PostgresBatchConfig
+      # @dynamic auto_fetch, batch_window_ms, max_batch_size
       def initialize(auto_fetch:, batch_window_ms:, max_batch_size:)
         unless batch_window_ms.is_a?(Integer) && batch_window_ms.positive?
           raise ArgumentError, 'fetch_batch_window_ms must be a positive integer'
@@ -20,6 +25,8 @@ module Volcano
 
     # Collects compatible row lookups and preserves their callback order.
     module PostgresBatch
+      # @dynamic postgres_stop?, current_postgres_request?, expanded_postgres_changes, emit
+
       private
 
       def collect_postgres_batch(first)
@@ -35,6 +42,7 @@ module Volcano
         while requests.length < @postgres_batch_config.max_batch_size
           request = dequeue_postgres_before(deadline)
           return unless request
+          return request unless request.is_a?(PostgresDeliveryRequest)
           return request unless compatible_postgres_request?(requests.first, request)
 
           requests << request
@@ -72,8 +80,8 @@ module Volcano
         return unless current_postgres_request?(requests.first)
 
         changes = expanded_postgres_changes(requests)
-        requests.zip(changes).each do |request, change|
-          deliver_expanded_postgres_change(request, change)
+        requests.each_with_index do |request, index|
+          deliver_expanded_postgres_change(request, changes.fetch(index))
         end
       end
 

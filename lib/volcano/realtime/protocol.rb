@@ -14,6 +14,8 @@ module Volcano
     class ServerError < StandardError
       attr_reader :code
 
+      # @dynamic code
+
       def initialize(message, code: nil)
         super(message)
         @code = code.is_a?(String) ? code.dup.freeze : code
@@ -46,12 +48,10 @@ module Volcano
       def self.connect(id:, token:) = { 'id' => id, 'connect' => { 'token' => token } }
 
       def self.subscribe(id:, channel:, recoverable: false, join_leave: false, recovery: nil)
+        # @type var options: Hash[String, Object]
         options = { 'channel' => channel }
-        if recovery
-          add_recovery_options(options, recovery)
-        elsif recoverable
-          options['recoverable'] = true
-        end
+        add_recovery_options(options, recovery) if recovery
+        options['recoverable'] = true if !recovery && recoverable
         options['join_leave'] = true if join_leave
         { 'id' => id, 'subscribe' => options }
       end
@@ -111,7 +111,11 @@ module Volcano
       def unsubscribe(channel:)
         @subscription_lock.acquire do
           ensure_open!
-          next {} unless @subscriptions.include?(channel)
+          unless @subscriptions.include?(channel)
+            # @type var empty_reply: Hash[String, Object]
+            empty_reply = {}
+            next empty_reply
+          end
 
           result = request('unsubscribe') { |id| self.class.unsubscribe(id: id, channel: channel) }
           @subscriptions.delete(channel)
@@ -146,7 +150,7 @@ module Volcano
       end
 
       def ensure_open!
-        raise @closed_error if @closed
+        raise(@closed_error || ClosedError.new('realtime connection closed')) if @closed
 
         self
       end

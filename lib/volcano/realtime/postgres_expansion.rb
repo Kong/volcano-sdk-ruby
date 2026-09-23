@@ -4,6 +4,8 @@ module Volcano
   class Realtime
     # Expands lightweight Postgres identities into callback-ready changes.
     module PostgresExpansion
+      # @dynamic current_postgres_request?, postgres_batch_key
+
       private
 
       def expanded_postgres_changes(requests)
@@ -26,12 +28,16 @@ module Volcano
 
       def fetch_postgres_records(requests)
         request = requests.first
+        database_name = request.database_name
+        lineage = request.session_lineage
+        raise TypeError, 'invalid Postgres fetch request' unless database_name && lineage.is_a?(SessionOperations)
+
         access_token = @realtime.__send__(
-          :access_token_for_protocol_lineage, request.session_lineage
+          :access_token_for_protocol_lineage, lineage
         )
         rows = @realtime.__send__(
           :fetch_postgres_rows, request.change, postgres_ids(requests),
-          request.database_name, access_token
+          database_name, access_token
         )
         rows.to_h { |row| [row.fetch('id').to_s, row] }
       end
@@ -41,7 +47,7 @@ module Volcano
       end
 
       def expanded_postgres_record(request, records)
-        record = records[request.change.id.to_s]
+        record = records.fetch(request.change.id.to_s, nil)
         unless record
           report_postgres_fetch_error(request, Error::NotFoundError.new('Postgres row not found'))
           return request.change
@@ -55,7 +61,7 @@ module Volcano
       end
 
       def delete_postgres_change(change)
-        old_record = change.old_record || (change.id && { 'id' => change.id })
+        old_record = change.old_record || (change.id ? { 'id' => change.id } : nil)
         change.with(old_record:, id: nil, mode: nil)
       end
 

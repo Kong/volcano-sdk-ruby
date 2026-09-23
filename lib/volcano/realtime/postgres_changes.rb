@@ -4,23 +4,34 @@ module Volcano
   class Realtime
     PostgresChange = Data.define(
       :type, :schema, :table, :record, :old_record, :columns, :timestamp, :id, :mode
-    ) do
-      def initialize(
-        type:, schema:, table:, timestamp:, record: nil, old_record: nil, columns: nil,
-        id: nil, mode: nil
-      )
-        super(
-          type: Immutable.call(type.to_s), schema: Immutable.call(schema.to_s),
-          table: Immutable.call(table.to_s), record: Immutable.optional(record),
-          old_record: Immutable.optional(old_record),
-          columns: Immutable.optional(columns), timestamp: Immutable.call(timestamp.to_s),
-          id: Immutable.optional(id), mode: mode && Immutable.call(mode.to_s)
-        )
+    )
+
+    # Immutable snapshot of a Postgres change publication.
+    class PostgresChange
+      # @dynamic type, schema, table, record, old_record, columns, timestamp, id, mode
+      # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
+      def initialize(type:, schema:, table:, timestamp:, **payload)
+        type = Immutable.call(type.to_s)
+        schema = Immutable.call(schema.to_s)
+        table = Immutable.call(table.to_s)
+        timestamp = Immutable.call(timestamp.to_s)
+        payload = snapshot_payload(payload)
+        super
+      end
+
+      private
+
+      def snapshot_payload(payload)
+        payload = { record: nil, old_record: nil, columns: nil, id: nil, mode: nil }.merge(payload)
+        %i[record old_record columns id].each { |field| payload[field] = Immutable.optional(payload[field]) }
+        payload[:mode] &&= Immutable.call(payload[:mode].to_s)
+        payload
       end
     end
 
     # Registers filtered callbacks for Postgres change publications.
     module PostgresChanges
+      # @dynamic on, enqueue_postgres_delivery
       CHANGE_EVENTS = %w[INSERT UPDATE DELETE].freeze
       EVENTS = [*CHANGE_EVENTS, '*'].freeze
 
@@ -41,7 +52,7 @@ module Volcano
       end
 
       def postgres_change(data)
-        return unless valid_postgres_change?(data)
+        return unless data.is_a?(Hash) && valid_postgres_change?(data)
 
         PostgresChange.new(
           type: data.fetch('type'), schema: data.fetch('schema'), table: data.fetch('table'),
@@ -58,7 +69,10 @@ module Volcano
       end
 
       def register_postgres_listener(event, schema, table, handler)
-        filtered = proc { |change| handler.call(change) if change.schema == schema && change.table == table }
+        # @type var filtered: ^(Object?) -> void
+        filtered = lambda do |change|
+          handler.call(change) if change.is_a?(PostgresChange) && change.schema == schema && change.table == table
+        end
         @postgres_filters[filtered] = [event, schema, table]
         on(event, filtered)
       end
@@ -77,7 +91,7 @@ module Volcano
       end
 
       def valid_postgres_change?(data)
-        valid_postgres_identity?(data) && valid_postgres_payload?(data)
+        data.is_a?(Hash) && valid_postgres_identity?(data) && valid_postgres_payload?(data)
       end
 
       def valid_postgres_identity?(data)
@@ -87,8 +101,9 @@ module Volcano
       end
 
       def valid_postgres_payload?(data)
+        mode = data['mode']
         optional_hash?(data['record']) && optional_hash?(data['old_record']) &&
-          optional_array?(data['columns']) && [nil, 'lightweight'].include?(data['mode'])
+          optional_array?(data['columns']) && (mode.nil? || mode == 'lightweight')
       end
 
       def optional_hash?(value) = value.nil? || value.is_a?(Hash)

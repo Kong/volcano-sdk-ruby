@@ -4,6 +4,9 @@ module Volcano
   class Realtime
     # Coordinates a channel's protocol subscription and local lifecycle state.
     module ChannelLifecycle
+      # @dynamic end_postgres_delivery, reset_presence, detach_publication_handler, ensure_open!
+      # @dynamic broadcast?, next_presence_epoch, register_handlers, begin_postgres_delivery
+      # @dynamic invalidate_presence_subscription, clear_presence, presence?
       def mark_closed
         @closed = true
         @subscription_desired = @subscribed = false
@@ -84,14 +87,18 @@ module Volcano
         return unless broadcast?
 
         _, lineage, = @realtime.__send__(:capture_protocol_session)
-        [lineage, recovery_position(lineage)].freeze
+        # @type var binding: recovery_binding
+        binding = [lineage, recovery_position(lineage)]
+        binding.freeze
       end
 
       def recovery_position(lineage)
         return @recovery_position if @recovery_lineage == lineage
 
         @recovery_lineage = lineage
-        @recovery_position = {}.freeze
+        # @type var position: recovery_position
+        position = {}
+        @recovery_position = position.freeze
       end
 
       def validate_recovery_binding!(binding)
@@ -111,13 +118,6 @@ module Volcano
         return unless broadcast?
 
         @recovery_position = protocol.__send__(:position, @name) || @recovery_position
-      end
-
-      def clear_channel_recovery_state
-        return unless broadcast?
-
-        @recovery_position = {}.freeze
-        @recovery_lineage = nil
       end
 
       def mark_removed

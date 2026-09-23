@@ -4,6 +4,7 @@ module Volcano
   class Realtime
     # Reconnects unexpected transport losses and restores subscription intent.
     module Reconnect
+      # @dynamic channel_lock, protocol_lock, connect_protocol, report_channel_error
       RECONNECT_MIN_DELAY = 0.1
       RECONNECT_MAX_DELAY = 20.0
       MAX_BACKOFF_EXPONENT = 8
@@ -19,7 +20,9 @@ module Volcano
       def stop_reconnect
         task = @reconnect_task
         @reconnect_task = nil
-        task&.stop unless task.equal?(Async::Task.current)
+        return unless task
+
+        task.stop unless task.equal?(Async::Task.current)
       end
 
       def reconnect_loop

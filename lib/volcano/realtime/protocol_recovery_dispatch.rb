@@ -4,6 +4,8 @@ module Volcano
   class Realtime
     # Preserves publication order while recovered deliveries wait for callback capacity.
     module ProtocolRecoveryDispatch
+      # @dynamic publication_delivery, reject_publication_delivery, admit_live_publication
+      # @dynamic close_with, closed_error
       PublicationBatch = Data.define(:channel, :deliveries, :rejection_key)
       private_constant :PublicationBatch
 

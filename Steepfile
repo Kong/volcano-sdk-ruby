@@ -7,13 +7,24 @@ target :sdk do
   check 'lib/volcano/function_response.rb'
   check 'lib/volcano/function_resolution.rb'
   check 'lib/volcano/log_responses.rb'
-  check 'lib/volcano/realtime/protocol_recovery_position.rb'
-  check 'lib/volcano/realtime/blocking_call.rb'
   check 'lib/volcano/connection_string.rb'
   check 'lib/volcano/redaction.rb'
   library 'base64'
   library 'cgi'
   library 'json'
+  library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
+target :realtime do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/realtime.rb'
+  check 'lib/volcano/realtime'
+  library 'base64'
+  library 'cgi'
+  library 'json'
+  library 'securerandom'
+  library 'timeout'
   library 'uri'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end

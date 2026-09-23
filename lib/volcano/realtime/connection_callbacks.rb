@@ -4,6 +4,7 @@ module Volcano
   class Realtime
     # Registers and dispatches public connection lifecycle callbacks.
     module ConnectionCallbacks
+      # @dynamic start_reconnect
       def on_connect(callback = nil, &block) = register_connection_callback(:connect, callback, block)
       def on_disconnect(callback = nil, &block) = register_connection_callback(:disconnect, callback, block)
       def on_error(callback = nil, &block) = register_connection_callback(:error, callback, block)
@@ -76,6 +77,7 @@ module Volcano
 
       def protocol_failed(error, disconnected)
         reset_after_protocol_loss if disconnected
+        # @type var events: Array[[connection_event, connection_context]]
         events = [[:error, error_context(error)]]
         events << [:disconnect, disconnect_context(error)] if disconnected
         emit_connection_events(events)
@@ -85,7 +87,7 @@ module Volcano
       def error_context(error)
         snapshot = immutable_exception(error)
         ErrorContext.new(
-          code: snapshot.respond_to?(:code) ? snapshot.code : nil,
+          code: snapshot.respond_to?(:code) ? snapshot.method(:code).call : nil,
           message: immutable_string(snapshot.message), error: snapshot
         )
       end

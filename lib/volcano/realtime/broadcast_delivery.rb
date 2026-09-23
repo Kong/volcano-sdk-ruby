@@ -4,9 +4,16 @@ module Volcano
   class Realtime
     # Delivers broadcasts only while their subscription generation is current.
     module BroadcastDelivery
-      PublicationContext = Data.define(:protocol, :publication, :generation, :recovered) do
+      # @dynamic emit, with_lifecycle_lock, broadcast?
+      # Captures the subscription generation alongside an immutable publication.
+      PublicationContext = Data.define(:protocol, :publication, :generation, :recovered)
+
+      # Freezes the publication before callbacks can observe or modify it.
+      class PublicationContext
+        # @dynamic protocol, publication, generation, recovered
         def initialize(protocol:, publication:, generation:, recovered:)
-          super(protocol:, publication: Immutable.call(publication), generation:, recovered:)
+          publication = Immutable.call(publication)
+          super
         end
       end
       private_constant :PublicationContext
@@ -28,6 +35,14 @@ module Volcano
 
       def publication_context(protocol, publication, generation, recovered)
         PublicationContext.new(protocol:, publication:, generation:, recovered:)
+      end
+
+      def publication_rejection(protocol, generation)
+        return unless broadcast?
+
+        lambda do |publication|
+          reject_broadcast(publication_context(protocol, publication, generation, false))
+        end
       end
 
       def reject_broadcast(context)
@@ -56,6 +71,15 @@ module Volcano
 
         @publication_protocol.__send__(:delete_recovery_state, @name)
         @publication_protocol = nil
+      end
+
+      def clear_channel_recovery_state
+        return unless broadcast?
+
+        # @type var position: Hash[Symbol, String | Integer]
+        position = {}
+        @recovery_position = position.freeze
+        @recovery_lineage = nil
       end
     end
     private_constant :BroadcastDelivery

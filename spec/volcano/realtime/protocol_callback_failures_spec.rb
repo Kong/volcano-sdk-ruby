@@ -23,7 +23,9 @@ RSpec.describe ProtocolCallbackFailures do
   it 'closes the socket and rejects further commands after reporting the failure' do
     queue = protocol.instance_variable_get(:@callback_queue)
     allow(queue).to receive(:dequeue).and_raise(IOError, 'callback queue failed')
-    queue.enqueue([[], 'join', {}])
+    dispatch = Volcano::Realtime.const_get(:ProtocolDispatch, false)
+    delivery = dispatch.const_get(:PresenceDelivery, false).new(handlers: [], event: 'join', data: {})
+    queue.enqueue(delivery)
     error = Async::Task.current.with_timeout(1) { errors.dequeue }
     failure = Async::Task.current.with_timeout(1) { failures.dequeue }
 
@@ -32,5 +34,16 @@ RSpec.describe ProtocolCallbackFailures do
     expect(protocol_socket).to be_closed
     expect { protocol.presence(channel: 'presence:room') }.to raise_error(Volcano::Realtime::ClosedError)
     expect([errors.empty?, failures.empty?]).to eq([true, true])
+  end
+
+  it 'closes the socket when a callback queue receives an invalid delivery' do
+    protocol.instance_variable_get(:@callback_queue).enqueue(Object.new)
+
+    error = Async::Task.current.with_timeout(1) { errors.dequeue }
+    failure = Async::Task.current.with_timeout(1) { failures.dequeue }
+
+    expect(error.message).to eq('invalid realtime callback delivery')
+    expect(failure).to eq([error, false])
+    expect(protocol_socket).to be_closed
   end
 end

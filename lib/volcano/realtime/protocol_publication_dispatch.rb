@@ -4,6 +4,8 @@ module Volcano
   class Realtime
     # Normalizes publications and admits live deliveries without blocking the reader.
     module ProtocolPublicationDispatch
+      # @dynamic enqueue_live_publication, matching_channel, drop_publication, mark_unknown_gap
+      # @dynamic dispatch_callback_delivery
       Registration = Data.define(:handler, :on_rejection)
       PublicationDelivery = Data.define(
         :channel, :handlers, :event, :data, :publication, :recovered, :on_rejection, :rejection_key
@@ -24,22 +26,21 @@ module Volcano
       def publication_delivery(channel, publication, recovered:)
         matched_channel = matching_publication_channel(channel)
         return unless matched_channel
-        return reject_invalid_publication(matched_channel, publication) unless valid_publication?(publication)
+        return reject_invalid_publication(matched_channel, publication) unless publication.is_a?(Hash)
+
+        data = publication['data']
+        return reject_invalid_publication(matched_channel, publication) unless data.is_a?(Hash)
         unless @publication_handlers.key?(matched_channel)
           return drop_handlerless_publication(matched_channel, publication)
         end
 
-        build_publication_delivery(matched_channel, publication, recovered: recovered)
+        build_publication_delivery(matched_channel, publication, data, recovered: recovered)
       end
 
       def matching_publication_channel(channel)
         handler_channel = matching_channel(@publication_handlers, channel)
         recovery_channel = matching_channel(@stream_positions, channel)
         [handler_channel, recovery_channel].compact.max_by(&:length)
-      end
-
-      def valid_publication?(publication)
-        publication.is_a?(Hash) && publication['data'].is_a?(Hash)
       end
 
       def reject_invalid_publication(channel, publication)
@@ -56,9 +57,8 @@ module Volcano
         nil
       end
 
-      def build_publication_delivery(channel, publication, recovered:)
+      def build_publication_delivery(channel, publication, data, recovered:)
         registrations = @publication_handlers.fetch(channel).dup.freeze
-        data = publication.fetch('data')
         PublicationDelivery.new(
           channel: channel.dup.freeze,
           handlers: registrations.map(&:handler).freeze,
@@ -98,14 +98,16 @@ module Volcano
       def dispatch_queued_callback(delivery)
         if delivery.is_a?(PublicationDelivery)
           dispatch_publication_callbacks(delivery)
+        elsif delivery.is_a?(ProtocolDispatch::PresenceDelivery)
+          dispatch_callback_delivery(delivery.handlers, delivery.event, delivery.data)
         else
-          dispatch_callback_delivery(*delivery)
+          raise TypeError, 'invalid realtime callback delivery'
         end
       end
 
       def dispatch_publication_callbacks(delivery)
         delivery.handlers.each do |handler|
-          break if @callback_stopping
+          break delivery.handlers if @callback_stopping
 
           handler.call(
             delivery.event, delivery.data, delivery.publication, recovered: delivery.recovered

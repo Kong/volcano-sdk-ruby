@@ -4,6 +4,9 @@ module Volcano
   class Realtime
     # Opens the WebSocket transport and maps its failures to public errors.
     module Connection
+      # @dynamic protocol_connected, protocol_error, protocol_closed, protocol_error_started
+      # @dynamic protocol_failed, stop_reconnect
+
       private
 
       def connect_protocol
@@ -12,11 +15,18 @@ module Volcano
         socket = @socket_factory.call(address)
         session = session_for_lineage(session_lineage)
         protocol = build_protocol(socket)
-        result = protocol.connect(token: session.access_token)
+        result = checked_connect_result(protocol, session.access_token)
         session_for_lineage(session_lineage)
         activate_protocol(protocol, session_lineage, result)
       rescue StandardError => e
         handle_connection_failure(socket, e)
+      end
+
+      def checked_connect_result(protocol, token)
+        result = protocol.connect(token: token)
+        raise TypeError, 'realtime connect result must be an object' unless result.is_a?(Hash)
+
+        result
       end
 
       def active_session_lineage
@@ -71,9 +81,9 @@ module Volcano
           socket: socket,
           secrets: realtime_secrets,
           events: Protocol::Events.new(
-            on_close: method(:protocol_closed),
-            on_error: method(:protocol_error_started),
-            on_failure: method(:protocol_failed)
+            on_close: ->(error) { protocol_closed(error) },
+            on_error: ->(error) { protocol_error_started(error) },
+            on_failure: ->(error, disconnected) { protocol_failed(error, disconnected) }
           )
         )
       end
@@ -87,7 +97,7 @@ module Volcano
       def address
         uri = URI(@api_url)
         uri.scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-        uri.path = "#{uri.path.delete_suffix('/')}/realtime/v1/websocket"
+        uri.path = "#{uri.path.to_s.delete_suffix('/')}/realtime/v1/websocket"
         encoded_key = URI.encode_www_form_component(@client.anon_token).gsub('+', '%20')
         uri.query = "apikey=#{encoded_key}"
         uri.to_s
@@ -106,7 +116,8 @@ module Volcano
         return redacted unless Transport::NETWORK_ERRORS.any? { |type| error.is_a?(type) }
 
         transport_error = Error::TransportError.new(redacted.message)
-        transport_error.set_backtrace(redacted.backtrace)
+        trace = redacted.backtrace
+        transport_error.set_backtrace(trace) if trace
         transport_error
       end
     end

@@ -38,6 +38,22 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  it 'reports a malformed presence response without replacing the last state' do
+    errors = Async::Queue.new
+    client.realtime.on_error { |event| errors.enqueue(event) }
+    socket.on_write = lambda do |command|
+      next unless command.key?('presence')
+
+      socket.respond(command.fetch('id'), result: [])
+      :defer
+    end
+
+    channel.subscribe
+
+    expect(wait_for(errors).message).to eq('realtime presence result must be an object')
+    expect(channel.presence_state).to be_empty
+  end
+
   def defer_presence
     pending = Async::Queue.new
     socket.on_write = lambda do |command|

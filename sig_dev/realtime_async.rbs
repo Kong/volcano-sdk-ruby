@@ -1,0 +1,63 @@
+module Volcano
+  module Transport
+    NETWORK_ERRORS: Array[Module]
+  end
+end
+
+interface _RealtimeFrame
+  def to_str: () -> String
+end
+
+interface _RealtimeSocket
+  def write: (String frame) -> Object?
+  def flush: () -> Object?
+  def read: () -> _RealtimeFrame?
+  def close: () -> Object?
+end
+
+module Async
+  class TimeoutError < StandardError
+  end
+
+  class Task
+    def self.current: () -> Task
+    def self.current?: () -> Task?
+
+    def async: [T] () { () -> T } -> Task
+    def with_timeout: [T] (Numeric duration, ?singleton(Exception) exception, ?String message) { () -> T } -> T
+    def wait: () -> Object?
+    def stop: (?bool later) -> void
+    def sleep: (Numeric duration) -> void
+    def yield: () -> void
+  end
+
+  class Queue[T]
+    def initialize: () -> void
+    def enqueue: (*T items) -> self
+    def dequeue: () -> T
+    def size: () -> Integer
+    def empty?: () -> bool
+  end
+
+  class LimitedQueue[T] < Queue[T]
+    def initialize: (Integer limit) -> void
+    def limited?: () -> bool
+  end
+
+  class Semaphore
+    def initialize: (?Integer limit) -> void
+    def acquire: [T] () { () -> T } -> T
+  end
+
+  module HTTP
+    class Endpoint
+      def self.parse: (String address) -> Endpoint
+    end
+  end
+
+  module WebSocket
+    module Client
+      def self.connect: (HTTP::Endpoint endpoint) -> _RealtimeSocket
+    end
+  end
+end

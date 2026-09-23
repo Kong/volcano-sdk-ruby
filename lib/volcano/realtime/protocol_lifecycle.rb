@@ -5,6 +5,8 @@ module Volcano
     class Protocol
       # Exposes connection state and manages publication handlers.
       module Lifecycle
+        # @dynamic ensure_open!, initialize_recovery_positions, initialize_publication_producer, dispatch_callbacks
+        # @dynamic dispatch_publication_batches, read_loop
         def connected? = @connected && !@closed
 
         def on_publication(channel, on_rejection: nil, &handler)

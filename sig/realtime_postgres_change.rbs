@@ -17,8 +17,7 @@ module Volcano
                  | (type: String, schema: String, table: String, timestamp: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?id: json_value, ?mode: String?) -> PostgresChange
       def self.members: () -> [:type, :schema, :table, :record, :old_record, :columns, :timestamp, :id, :mode]
 
-      def initialize: (type: String, schema: String, table: String, timestamp: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?id: json_value, ?mode: String?) -> void
-                    | (String type, String schema, String table, Hash[String, json_value]? record, Hash[String, json_value]? old_record, Array[json_value]? columns, String timestamp, json_value id, String? mode) -> void
+      def initialize: (type: String, schema: String, table: String, timestamp: String, **Object? payload) -> void
       def members: () -> [:type, :schema, :table, :record, :old_record, :columns, :timestamp, :id, :mode]
       def with: (?type: String, ?schema: String, ?table: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?timestamp: String, ?id: json_value, ?mode: String?) -> PostgresChange
       def to_h: () -> { type: String, schema: String, table: String, record: Hash[String, json_value]?, old_record: Hash[String, json_value]?, columns: Array[json_value]?, timestamp: String, id: json_value, mode: String? }

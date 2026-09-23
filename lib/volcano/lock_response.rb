@@ -16,6 +16,10 @@ module Volcano
       raise Error::TransportError, 'invalid lock expiry', cause: e
     end
 
+    def required_time(value)
+      parse_time(value) || raise(Error::TransportError, 'invalid lock expiry')
+    end
+
     def lock_payload(body)
       raise Error::TransportError, 'invalid lock response' unless body.is_a?(Hash)
 

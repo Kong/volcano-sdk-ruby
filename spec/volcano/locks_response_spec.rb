@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require_relative '../support/facade/fake_lock_transport'
+require_relative '../support/recording_server'
 
 RSpec.describe Volcano::Locks do
   subject(:locks) { described_class.new(client, transport) }
@@ -31,6 +32,25 @@ RSpec.describe Volcano::Locks do
     expect(locks.get('build')).to eq(Volcano::LockState.new(held: false, expires_at: nil, fencing_token: nil))
   end
 
+  it 'preserves an optional fencing token on an unheld lock' do
+    allow(transport).to receive(:get_project_lock).and_return(response(200, 'held' => false, 'fencing_token' => 7))
+
+    expect(locks.get('build').fencing_token).to eq(7)
+  end
+
+  it 'rejects a held lock without an expiry' do
+    allow(transport).to receive(:get_project_lock).and_return(response(200, 'held' => true, 'fencing_token' => 7))
+
+    expect { locks.get('build') }.to raise_error(Volcano::Error::TransportError, 'invalid lock expiry')
+  end
+
+  it 'rejects a held lock without a fencing token' do
+    body = { 'held' => true, 'expires_at' => '2026-09-23T00:00:00Z' }
+    allow(transport).to receive(:get_project_lock).and_return(response(200, body))
+
+    expect { locks.get('build') }.to raise_error(Volcano::Error::TransportError, 'invalid lock fencing token')
+  end
+
   it 'accepts a parsed expiry from a transport adapter' do
     expiry = Time.utc(2026, 9, 23)
     body = { 'held' => true, 'expires_at' => expiry, 'fencing_token' => 7 }
@@ -54,7 +74,7 @@ RSpec.describe Volcano::Locks do
   end
 
   it 'rejects a malformed fencing token' do
-    body = { 'held' => true, 'fencing_token' => 'seven' }
+    body = { 'held' => true, 'expires_at' => '2026-09-23T00:00:00Z', 'fencing_token' => 'seven' }
     allow(transport).to receive(:get_project_lock).and_return(response(200, body))
 
     expect { locks.get('build') }.to raise_error(Volcano::Error::TransportError, 'invalid lock fencing token')
@@ -69,9 +89,35 @@ RSpec.describe Volcano::Locks do
   end
 
   it 'rejects an acquired lease without a fencing token' do
-    allow(transport).to receive(:acquire_project_lock).and_return(response(201, 'expires_at' => nil))
+    body = { 'expires_at' => '2026-09-23T00:00:00Z' }
+    allow(transport).to receive(:acquire_project_lock).and_return(response(201, body))
 
     expect { locks.acquire('build', ttl: 30) }
       .to raise_error(Volcano::Error::TransportError, 'invalid lock fencing token')
+  end
+
+  it 'rejects an acquired lease without an expiry' do
+    allow(transport).to receive(:acquire_project_lock).and_return(response(201, 'fencing_token' => 7))
+
+    expect { locks.acquire('build', ttl: 30) }
+      .to raise_error(Volcano::Error::TransportError, 'invalid lock expiry')
+  end
+
+  it 'rejects a renewed lease without an expiry' do
+    lease = Volcano::LockLease.new(key: 'build', token: 'owner', expires_at: Time.now, fencing_token: 7)
+    allow(transport).to receive(:renew_project_lock).and_return(response(200, 'fencing_token' => 7))
+
+    expect { locks.renew('build', lease, ttl: 30) }
+      .to raise_error(Volcano::Error::TransportError, 'invalid lock expiry')
+  end
+
+  it 'validates malformed booleans from the real generated HTTP path' do
+    server = RecordingServer.new { [200, { 'held' => 'yes' }, {}] }
+    client = Volcano::Client.new(anon_key: 'anon', service_key: 'service', api_url: server.url)
+
+    expect { client.locks.get('build') }
+      .to raise_error(Volcano::Error::TransportError, 'invalid lock held flag')
+  ensure
+    server&.close
   end
 end

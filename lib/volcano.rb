@@ -58,7 +58,7 @@ require_relative 'volcano/client'
 
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
-  private_constant :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer, :LockSession,
+  private_constant :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer, :LockSession, :LockResponse,
                    :Redaction, :SessionOperations
 
   Realtime.private_constant :Protocol, :ProtocolDispatch, :ProtocolPublicationDispatch, :ProtocolRecovery,

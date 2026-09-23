@@ -9,9 +9,9 @@ module SpecSupport
         @calls = []
       end
 
-      def acquire_project_lock_with_http_info(key, token, request_id, body)
-        @calls << [:acquire, key, token, request_id, body]
-        [FakeGeneratedModel.new(fencing_token: 7), 201, {}]
+      def acquire_project_lock_with_http_info(key, token, request_id, body, options = {})
+        @calls << [:acquire, key, token, request_id, body, options]
+        [FakeGeneratedModel.new(expires_at: Time.iso8601('2026-08-26T12:00:30Z'), fencing_token: 7), 201, {}]
       end
 
       def release_project_lock_with_http_info(key, token, request_id)
@@ -19,8 +19,8 @@ module SpecSupport
         [nil, 204, {}]
       end
 
-      def get_project_lock_with_http_info(key, request_id)
-        @calls << [:get, key, request_id]
+      def get_project_lock_with_http_info(key, request_id, options = {})
+        @calls << [:get, key, request_id, options]
         state = FakeGeneratedModel.new(
           held: true,
           expires_at: Time.iso8601('2026-08-26T12:00:30Z'),
@@ -29,8 +29,8 @@ module SpecSupport
         [state, 200, {}]
       end
 
-      def renew_project_lock_with_http_info(key, token, request_id, body)
-        @calls << [:renew, key, token, request_id, body]
+      def renew_project_lock_with_http_info(key, token, request_id, body, options = {})
+        @calls << [:renew, key, token, request_id, body, options]
         lease = FakeGeneratedModel.new(
           expires_at: Time.iso8601('2026-08-26T12:01:00Z'),
           fencing_token: 7

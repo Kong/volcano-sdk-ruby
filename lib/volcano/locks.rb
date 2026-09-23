@@ -20,11 +20,7 @@ module Volcano
           authorization: @client.service_token, key: key, request_id: request_uuid(request_id, 'request_id')
         )
       end)
-      LockState.new(
-        held: lock_held(payload['held']),
-        expires_at: parse_time(payload['expires_at']),
-        fencing_token: optional_fencing_token(payload['fencing_token'])
-      )
+      build_state(payload)
     end
 
     def acquire(key, ttl:, token: nil, request_id: nil)
@@ -102,9 +98,20 @@ module Volcano
 
     def build_lease(key, token, payload)
       LockLease.new(
-        key: key, token: token, expires_at: parse_time(payload['expires_at']),
+        key: key, token: token, expires_at: required_time(payload['expires_at']),
         fencing_token: required_fencing_token(payload['fencing_token'])
       )
+    end
+
+    def build_state(payload)
+      held = lock_held(payload['held'])
+      expiry = held ? required_time(payload['expires_at']) : parse_time(payload['expires_at'])
+      fencing = if held
+                  required_fencing_token(payload['fencing_token'])
+                else
+                  optional_fencing_token(payload['fencing_token'])
+                end
+      LockState.new(held: held, expires_at: expiry, fencing_token: fencing)
     end
   end
 end

@@ -29,5 +29,6 @@ module Volcano
     private def perform_request: (Integer status) { () -> Transport::Response } -> Object?
     private def request_uuid: (Object? value, String name) -> String
     private def build_lease: (String key, String token, Hash[String, Object?] payload) -> LockLease
+    private def build_state: (Hash[String, Object?] payload) -> LockState
   end
 end

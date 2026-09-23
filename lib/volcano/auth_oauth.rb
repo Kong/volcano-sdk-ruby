@@ -88,5 +88,9 @@ module Volcano
     def valid_linked_oauth_provider?(provider, linked_at, updated_at)
       complete_string?(provider) && linked_at.is_a?(Time) && updated_at.is_a?(Time)
     end
+
+    def complete_string?(value)
+      value.is_a?(String) && !value.strip.empty?
+    end
   end
 end

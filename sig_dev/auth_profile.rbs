@@ -1,0 +1,78 @@
+module Volcano
+  type auth_profile_identity = { id: String, email: String, status: String }
+  type auth_profile_optional = { project_id: String?, email_confirmed: bool?, user_metadata: Hash[String, json_value]?, app_metadata: Hash[String, json_value]?, avatar_url: String? }
+  type auth_profile_timestamps = { banned_until: Time?, last_sign_in_at: Time?, created_at: Time?, updated_at: Time? }
+
+  interface _AuthProfileHost
+    def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
+    def owned_session_binding: (session_binding binding) -> active_session_binding
+    def session_payload: (Integer status, decode: :email_change_result) { () -> ^(String) -> Transport::Response } -> EmailChangeResult
+                       | (Integer status, ?decode: Symbol?) { () -> ^(String) -> Transport::Response } -> Object?
+  end
+
+  module AuthProfileFields
+    INVALID_USER: String
+    RFC3339_OFFSET: Regexp
+    USER_STATUSES: Array[String]
+
+    private def profile_user_payload: (Object? payload) -> Hash[String, json_value]
+    private def profile_json_object: (Object? payload) -> Hash[String, json_value]
+    private def profile_json_value: (Object? value) -> json_value
+    private def profile_json_scalar: (Object? value) -> json_value
+    private def profile_finite_float: (Float value) -> Float
+    private def profile_required_string: (Object? value) -> String
+    private def profile_required_id: (Object? value) -> String
+    private def profile_status: (Object? value) -> String
+    private def profile_optional_string: (Object? value) -> String?
+    private def profile_optional_object: (Object? value) -> Hash[String, json_value]?
+    private def profile_optional_boolean: (Object? value) -> bool?
+    private def profile_parse_time: (Object? value) -> Time?
+  end
+
+  module AuthProfile : Object, _AuthProfileHost
+    include AuthProfileFields
+    @client: _AuthLifecycleClient
+    @transport: _AuthLifecycleTransport
+
+    def user: () -> User
+
+    private def profile_request: () { () -> ^(String) -> Transport::Response } -> User
+    private def cache_current_user: (Object? payload, Integer generation) -> User
+    private def get_user_response: (String access_token) -> Transport::Response
+    private def build_user: (Hash[String, json_value] payload) -> User
+    private def new_profile_user: (auth_profile_identity identity, auth_profile_optional optional, auth_profile_timestamps timestamps) -> User
+    private def user_identity: (Hash[String, json_value] payload) -> auth_profile_identity
+    private def user_optional_attributes: (Hash[String, json_value] payload) -> auth_profile_optional
+    private def user_timestamps: (Hash[String, json_value] payload) -> auth_profile_timestamps
+  end
+
+  module AuthUpdateUser : Object, AuthProfile
+    @transport: _AuthLifecycleTransport
+
+    def update_user: (?password: String?, ?metadata: session_user_input?) -> User
+    private def update_user_response: (String access_token, password: String?, metadata: Hash[String, json_value]?) -> Transport::Response
+  end
+
+  module AuthEmailChange : Object, AuthProfile, _AuthProfileHost
+    @transport: _AuthLifecycleTransport
+
+    INVALID_EMAIL_CHANGE_RESULT: String
+
+    def request_email_change: (new_email: String) -> EmailChangeResult
+    def cancel_email_change: () -> nil
+    def confirm_email_change: (token: String) -> User
+
+    private def email_change_response: (String access_token, String new_email) -> Transport::Response
+    private def cancel_email_change_response: (String access_token) -> Transport::Response
+    private def confirm_email_change_response: (String access_token, String token) -> Transport::Response
+    private def email_change_result: (Object? payload) -> EmailChangeResult
+    private def owned_string: (String? value) -> String?
+  end
+
+  class Auth
+    include _AuthProfileHost
+    include AuthProfile
+    include AuthUpdateUser
+    include AuthEmailChange
+  end
+end

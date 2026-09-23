@@ -23,6 +23,26 @@ module Volcano
       expect(locks).not_to have_received(:renew)
     end
 
+    it 'does not wait after a stop request' do
+      renewer.__send__(:request_stop)
+
+      expect(renewer.__send__(:wait_to_renew)).to be(true)
+      expect(locks).not_to have_received(:renew)
+    end
+
+    it 'keeps the original failure when ownership is lost during renewal' do
+      failure = RuntimeError.new('lost during renewal')
+      lease = guard.lease
+      allow(locks).to receive(:renew) do
+        guard.mark_lost(failure)
+        lease
+      end
+
+      renewer.__send__(:renew)
+
+      expect(guard.failure).to equal(failure)
+    end
+
     it 'does not renew when ownership is lost while waiting to renew' do
       observed_loss = Queue.new
       failure = RuntimeError.new('ownership lost while waiting')

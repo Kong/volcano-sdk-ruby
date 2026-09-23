@@ -206,9 +206,10 @@ RSpec.describe Volcano::Client do
       'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'),
       'fencing_token' => 7
     )
-    operation, key, request_id = apis.locks.calls.last
+    operation, key, request_id, options = apis.locks.calls.last
     expect([operation, key]).to eq([:get, 'build:queue'])
     expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
+    expect(options).to eq(debug_return_type: 'Object')
     expect(authorizations).to eq(['service-key'])
   end
 
@@ -219,12 +220,12 @@ RSpec.describe Volcano::Client do
     )
 
     expect(response.body).to include('fencing_token' => 7)
-    operation, key, token, request_id, body = apis.locks.calls.last
+    operation, key, token, request_id, body, options = apis.locks.calls.last
     expect([operation, key, token]).to eq(
       [:renew, 'build:queue', '00000000-0000-4000-8000-000000000001']
     )
     expect(request_id).to match(/\A[0-9a-f-]{36}\z/)
-    expect(body.ttl_seconds).to eq(60)
+    expect([body.ttl_seconds, options]).to eq([60, { debug_return_type: 'Object' }])
     expect(authorizations).to eq(['service-key'])
   end
 
@@ -779,7 +780,9 @@ RSpec.describe Volcano::Client do
     expect(responses.fetch(:database).body).to eq('data' => [{ 'slug' => 'a' }])
     expect(responses.fetch(:upload).body).to eq('name' => 'a.txt')
     expect(responses.fetch(:download).data).to eq("hello\x00".b)
-    expect(responses.fetch(:acquire).body).to eq('fencing_token' => 7)
+    expect(responses.fetch(:acquire).body).to eq(
+      'expires_at' => Time.iso8601('2026-08-26T12:00:30Z'), 'fencing_token' => 7
+    )
     expect(responses.fetch(:release).status).to eq(204)
   end
 

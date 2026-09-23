@@ -10,17 +10,27 @@ target :sdk do
   check 'lib/volcano/realtime/protocol_recovery_position.rb'
   check 'lib/volcano/realtime/blocking_call.rb'
   check 'lib/volcano/connection_string.rb'
-  check 'lib/volcano/lock_lease_clock.rb'
-  check 'lib/volcano/lock_guard.rb'
-  check 'lib/volcano/lock_renewer.rb'
-  check 'lib/volcano/lock_session.rb'
   check 'lib/volcano/redaction.rb'
   check 'lib/volcano/storage_public_url.rb'
   library 'base64'
   library 'cgi'
   library 'json'
-  library 'timeout'
   library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
+target :locks do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/lock_lease_clock.rb'
+  check 'lib/volcano/lock_guard.rb'
+  check 'lib/volcano/lock_auto_renewal.rb'
+  check 'lib/volcano/lock_response.rb'
+  check 'lib/volcano/locks.rb'
+  check 'lib/volcano/lock_renewer.rb'
+  check 'lib/volcano/lock_session.rb'
+  library 'securerandom'
+  library 'time'
+  library 'timeout'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 

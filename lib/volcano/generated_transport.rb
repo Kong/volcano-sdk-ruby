@@ -52,7 +52,9 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
-        result = apis.locks.acquire_project_lock_with_http_info(key, token, request_id, body)
+        result = apis.locks.acquire_project_lock_with_http_info(
+          key, token, request_id, body, debug_return_type: 'Object'
+        )
         data, status, headers = result
         response(data, status, headers)
       end
@@ -63,7 +65,8 @@ module Volcano
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.get_project_lock_with_http_info(
           key,
-          request_id
+          request_id,
+          debug_return_type: 'Object'
         )
         response(data, status, headers)
       end
@@ -85,7 +88,7 @@ module Volcano
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
         result = apis.locks.renew_project_lock_with_http_info(
-          key, token, request_id, body
+          key, token, request_id, body, debug_return_type: 'Object'
         )
         data, status, headers = result
         response(data, status, headers)

@@ -1,0 +1,70 @@
+module Volcano
+  class DurableExecutionError < Data
+    attr_reader type: String?
+    attr_reader message: String?
+
+    def self.new: (?String? type, ?String? message) -> DurableExecutionError
+                | (?type: String?, ?message: String?) -> DurableExecutionError
+    def self.[]: (?String? type, ?String? message) -> DurableExecutionError
+               | (?type: String?, ?message: String?) -> DurableExecutionError
+    def self.members: () -> [:type, :message]
+
+    def initialize: (?type: String?, ?message: String?) -> void
+    def members: () -> [:type, :message]
+    def with: (?type: String?, ?message: String?) -> DurableExecutionError
+    def to_h: () -> { type: String?, message: String? }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String?, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+
+  class DurableExecution < Data
+    attr_reader id: String
+    attr_reader function_id: String
+    attr_reader name: String
+    attr_reader status: String
+    attr_reader region: String
+    attr_reader created_at: Time
+    attr_reader result: json_value
+    attr_reader result_expired: bool?
+    attr_reader error: DurableExecutionError?
+    attr_reader completed_at: Time?
+
+    def self.new: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at) -> DurableExecution
+                | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
+    def self.[]: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at) -> DurableExecution
+               | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
+    def self.members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
+
+    def initialize: (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> void
+    def members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
+    def with: (?id: String, ?function_id: String, ?name: String, ?status: String, ?region: String, ?created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
+    def to_h: () -> { id: String, function_id: String, name: String, status: String, region: String, created_at: Time, result: json_value, result_expired: bool?, error: DurableExecutionError?, completed_at: Time? }
+            | [K, V] () { (Symbol, String | Time | json_value | bool | DurableExecutionError | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, String, String, String, Time, json_value, bool?, DurableExecutionError?, Time?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time | json_value | bool | DurableExecutionError | nil]
+    def terminal?: () -> bool
+  end
+
+  class DurableExecutionPage < Data
+    attr_reader executions: Array[DurableExecution]
+    attr_reader page: Integer
+    attr_reader limit: Integer
+    attr_reader total: Integer
+    attr_reader has_more: bool
+
+    def self.new: (Enumerable[DurableExecution] executions, Integer page, Integer limit, Integer total, bool has_more) -> DurableExecutionPage
+                | (executions: Enumerable[DurableExecution], page: Integer, limit: Integer, total: Integer, has_more: bool) -> DurableExecutionPage
+    def self.[]: (Enumerable[DurableExecution] executions, Integer page, Integer limit, Integer total, bool has_more) -> DurableExecutionPage
+               | (executions: Enumerable[DurableExecution], page: Integer, limit: Integer, total: Integer, has_more: bool) -> DurableExecutionPage
+    def self.members: () -> [:executions, :page, :limit, :total, :has_more]
+
+    def initialize: (executions: Enumerable[DurableExecution], page: Integer, limit: Integer, total: Integer, has_more: bool) -> void
+    def members: () -> [:executions, :page, :limit, :total, :has_more]
+    def with: (?executions: Enumerable[DurableExecution], ?page: Integer, ?limit: Integer, ?total: Integer, ?has_more: bool) -> DurableExecutionPage
+    def to_h: () -> { executions: Array[DurableExecution], page: Integer, limit: Integer, total: Integer, has_more: bool }
+            | [K, V] () { (Symbol, Array[DurableExecution] | Integer | bool) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[DurableExecution], Integer, Integer, Integer, bool]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[DurableExecution] | Integer | bool]
+  end
+end

@@ -14,7 +14,7 @@ module Volcano
     def initialize: (LockLease lease, ttl: Integer, started_at: _LeaseStartedAt) -> void
     def lease: () -> LockLease
     def lost?: () -> bool
-    def wait_lost: (?timeout: Numeric?) -> bool
+    def wait_lost: (?timeout: (Integer | Float | Rational)?) -> bool
     def failure: () -> StandardError?
   end
 end

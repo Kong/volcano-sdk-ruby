@@ -18,6 +18,14 @@ RSpec.describe Volcano::LockGuard do
     expect(output).to include('Ruby::InsufficientPositionalArguments')
   end
 
+  it 'rejects a complex lock wait timeout' do
+    fixture = File.expand_path('../../tests/types_invalid/lock_guard_complex.rb', __dir__)
+    output, errors, status = SteepConsumer.check(File.read(fixture))
+
+    expect(status.exitstatus).to eq(1), output + errors
+    expect(output).to include('Ruby::ArgumentTypeMismatch')
+  end
+
   it 'ships the public guard signature in the gem manifest' do
     files = Gem::Specification.load(File.expand_path('../../volcano-sdk.gemspec', __dir__)).files
 

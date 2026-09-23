@@ -34,7 +34,7 @@ module Volcano
     private def record_expiry: () -> :finished
     private def record_expiry_if_needed: () -> void
     private def remaining_time: () -> Float
-    private def wait_deadline: (Numeric? timeout) -> Float?
+    private def wait_deadline: ((Integer | Float | Rational)? timeout) -> Float?
   end
 
   class LockRenewer

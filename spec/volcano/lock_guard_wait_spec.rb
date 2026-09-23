@@ -18,6 +18,13 @@ module Volcano
       end
     end
 
+    ['later', Complex(1, 1), Float::NAN, Float::INFINITY].each do |timeout|
+      it "rejects an invalid wait timeout of #{timeout.inspect}" do
+        expect { guard.wait_lost(timeout: timeout) }
+          .to raise_error(ArgumentError, 'invalid timeout')
+      end
+    end
+
     it 'finishes an expiry watcher whose lease expired before it could run' do
       instance = guard
       allow(LockLeaseClock).to receive(:now).and_return(131.0)

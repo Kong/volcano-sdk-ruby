@@ -129,7 +129,11 @@ module Volcano
     def remaining_time = @lease_clock.remaining
 
     def wait_deadline(timeout)
-      timeout && (@lease_clock.monotonic_now + timeout)
+      return unless timeout
+
+      raise ArgumentError, 'invalid timeout' unless timeout.is_a?(Numeric) && timeout.real? && timeout.finite?
+
+      @lease_clock.monotonic_now + timeout
     end
   end
 end

@@ -9,6 +9,7 @@ module Volcano
     attr_reader realtime: Realtime
 
     def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: (Integer | Float), ?access_token: String?, ?refresh_token: String?) -> void
+    def current_session: () -> Session?
     def database: (String name) -> Database
   end
 end

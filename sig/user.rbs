@@ -1,0 +1,30 @@
+module Volcano
+  class User < Data
+    attr_reader id: String
+    attr_reader project_id: String?
+    attr_reader email: String
+    attr_reader email_confirmed: bool?
+    attr_reader user_metadata: Hash[String, json_value]?
+    attr_reader app_metadata: Hash[String, json_value]?
+    attr_reader avatar_url: String?
+    attr_reader status: String
+    attr_reader banned_until: Time?
+    attr_reader last_sign_in_at: Time?
+    attr_reader created_at: Time?
+    attr_reader updated_at: Time?
+
+    def self.new: (String id, String? project_id, String email, bool? email_confirmed, Hash[String, json_value]? user_metadata, Hash[String, json_value]? app_metadata, String? avatar_url, String status, ?Time? banned_until, ?Time? last_sign_in_at, ?Time? created_at, ?Time? updated_at) -> User
+                | (id: String, email: String, status: String, ?project_id: String?, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> User
+    def self.[]: (String id, String? project_id, String email, bool? email_confirmed, Hash[String, json_value]? user_metadata, Hash[String, json_value]? app_metadata, String? avatar_url, String status, ?Time? banned_until, ?Time? last_sign_in_at, ?Time? created_at, ?Time? updated_at) -> User
+               | (id: String, email: String, status: String, ?project_id: String?, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> User
+    def self.members: () -> [:id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata, :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at]
+
+    def initialize: (id: String, email: String, status: String, ?project_id: String?, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> void
+    def members: () -> [:id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata, :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at]
+    def with: (?id: String, ?project_id: String?, ?email: String, ?email_confirmed: bool?, ?user_metadata: Hash[String, json_value]?, ?app_metadata: Hash[String, json_value]?, ?avatar_url: String?, ?status: String, ?banned_until: Time?, ?last_sign_in_at: Time?, ?created_at: Time?, ?updated_at: Time?) -> User
+    def to_h: () -> { id: String, project_id: String?, email: String, email_confirmed: bool?, user_metadata: Hash[String, json_value]?, app_metadata: Hash[String, json_value]?, avatar_url: String?, status: String, banned_until: Time?, last_sign_in_at: Time?, created_at: Time?, updated_at: Time? }
+            | [K, V] () { (Symbol, String | bool | Hash[String, json_value] | Time | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String?, String, bool?, Hash[String, json_value]?, Hash[String, json_value]?, String?, String, Time?, Time?, Time?, Time?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | bool | Hash[String, json_value] | Time | nil]
+  end
+end

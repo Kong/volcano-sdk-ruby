@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.29.0...v0.30.0) (2026-09-23)
+
+
+### Features
+
+* **auth:** type OAuth and hosted sign-in facade ([#282](https://github.com/Kong/volcano-sdk-ruby/issues/282)) ([ba85565](https://github.com/Kong/volcano-sdk-ruby/commit/ba85565e9873dd014ee6020759655792d7215385))
+
 ## [0.29.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.28.0...v0.29.0) (2026-09-23)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.22.0...v0.23.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish User RBS signature ([#252](https://github.com/Kong/volcano-sdk-ruby/issues/252)) ([251ce38](https://github.com/Kong/volcano-sdk-ruby/commit/251ce381053c4215c9d1058f03e2d3ffb45ba011))
+
 ## [0.22.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.21.0...v0.22.0) (2026-09-23)
 
 

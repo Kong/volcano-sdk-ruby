@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.28.0...v0.29.0) (2026-09-23)
+
+
+### Features
+
+* **locks:** type facade and validate responses ([#275](https://github.com/Kong/volcano-sdk-ruby/issues/275)) ([854bc1f](https://github.com/Kong/volcano-sdk-ruby/commit/854bc1f945a99ba4353146081460a975bde1ac82))
+
 ## [0.28.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.27.0...v0.28.0) (2026-09-23)
 
 

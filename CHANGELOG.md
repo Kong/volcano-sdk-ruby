@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.21.0...v0.22.0) (2026-09-23)
+
+
+### Features
+
+* **types:** describe auth session records in RBS ([#250](https://github.com/Kong/volcano-sdk-ruby/issues/250)) ([7a00be7](https://github.com/Kong/volcano-sdk-ruby/commit/7a00be75388cdae4309acaa9a435568d86fe9b9f))
+
 ## [0.21.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.20.0...v0.21.0) (2026-09-22)
 
 

@@ -103,9 +103,11 @@ module Volcano
     end
 
     def upload_bytes(value)
-      raise ArgumentError, 'upload data must be a String or IO' unless value.is_a?(String) || value.respond_to?(:read)
-
-      bytes = value.is_a?(String) ? value : value.read
+      bytes = if value.is_a?(String)
+                value
+              elsif value.respond_to?(:read)
+                value.read
+              end
       raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
 
       bytes.b

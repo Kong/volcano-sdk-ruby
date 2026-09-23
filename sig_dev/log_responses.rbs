@@ -1,0 +1,17 @@
+module Volcano
+  module ImmutableLogJSON
+    private def immutable_json: (String value) -> String
+                              | (Time value) -> Time
+                              | (Array[log_row] value) -> Array[log_row]
+                              | (log_value value) -> log_value
+    private def immutable_json_hash: (Hash[String, log_value] value) -> Hash[String, log_value]
+  end
+
+  class LogSearchResponse
+    include ImmutableLogJSON
+  end
+
+  class LogActivityResponse
+    include ImmutableLogJSON
+  end
+end

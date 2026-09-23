@@ -62,9 +62,26 @@ Network failures do not establish whether a function ran; do not blindly retry o
 
 Invalid invocation arguments and malformed successful resolution responses can raise `ArgumentError` or `TypeError`.
 
-## Read durable execution pages
+## Start and follow a durable execution
 
-`client.durable.list(project_id, function_id)` returns executions and pagination
-metadata. A successful response must include `data`, `page`, `limit`, `total`,
-and `has_more` with the API's declared types. Missing or malformed fields raise
-`TypeError`; a complete response with `data: []` returns an empty execution list.
+A durable execution can run for up to 366 days. Starting one returns a handle instead of waiting for its result:
+
+```ruby
+handle = client.durable.start(
+  "charge-order",
+  { order_id: "order-9" },
+  execution_name: "order-9"
+)
+
+execution = client.durable.get(project_id, "charge-order", handle.id)
+page = client.durable.list(project_id, "charge-order", status: "running")
+client.durable.stop(project_id, "charge-order", handle.id)
+```
+
+`start` accepts the same active session, service key, or anonymous key as `functions.invoke`. It is the only durable operation available to application credentials. An execution name makes a start idempotent.
+
+`get`, `list`, and `stop` are owner-scoped and require the project's platform user token. Configured service keys and auth-user sessions are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
+
+`list` returns executions and pagination metadata. A successful response must include `data`, `page`, `limit`, `total`, and `has_more` with the API's declared types. Missing or malformed fields raise `TypeError`; a complete response with `data: []` returns an empty execution list.
+
+Ruby can start and manage durable functions written in JavaScript or Python. The Ruby SDK has no durable authoring API.

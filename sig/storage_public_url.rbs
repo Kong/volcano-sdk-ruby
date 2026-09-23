@@ -1,0 +1,6 @@
+module Volcano
+  class StorageBucket
+    def initialize: (Object client, Object transport, String name, api_url: String, anon_key: String) -> void
+    def get_public_url: (String path) -> String
+  end
+end

@@ -1,0 +1,30 @@
+module Volcano
+  class Realtime
+    class PostgresChange < Data
+      attr_reader type: String
+      attr_reader schema: String
+      attr_reader table: String
+      attr_reader record: Hash[String, json_value]?
+      attr_reader old_record: Hash[String, json_value]?
+      attr_reader columns: Array[json_value]?
+      attr_reader timestamp: String
+      attr_reader id: json_value
+      attr_reader mode: String?
+
+      def self.new: (String type, String schema, String table, Hash[String, json_value]? record, Hash[String, json_value]? old_record, Array[json_value]? columns, String timestamp, json_value id, String? mode) -> PostgresChange
+                  | (type: String, schema: String, table: String, timestamp: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?id: json_value, ?mode: String?) -> PostgresChange
+      def self.[]: (String type, String schema, String table, Hash[String, json_value]? record, Hash[String, json_value]? old_record, Array[json_value]? columns, String timestamp, json_value id, String? mode) -> PostgresChange
+                 | (type: String, schema: String, table: String, timestamp: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?id: json_value, ?mode: String?) -> PostgresChange
+      def self.members: () -> [:type, :schema, :table, :record, :old_record, :columns, :timestamp, :id, :mode]
+
+      def initialize: (type: String, schema: String, table: String, timestamp: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?id: json_value, ?mode: String?) -> void
+                    | (String type, String schema, String table, Hash[String, json_value]? record, Hash[String, json_value]? old_record, Array[json_value]? columns, String timestamp, json_value id, String? mode) -> void
+      def members: () -> [:type, :schema, :table, :record, :old_record, :columns, :timestamp, :id, :mode]
+      def with: (?type: String, ?schema: String, ?table: String, ?record: Hash[String, json_value]?, ?old_record: Hash[String, json_value]?, ?columns: Array[json_value]?, ?timestamp: String, ?id: json_value, ?mode: String?) -> PostgresChange
+      def to_h: () -> { type: String, schema: String, table: String, record: Hash[String, json_value]?, old_record: Hash[String, json_value]?, columns: Array[json_value]?, timestamp: String, id: json_value, mode: String? }
+              | [K, V] () { (Symbol, json_value) -> [K, V] } -> Hash[K, V]
+      def deconstruct: () -> [String, String, String, Hash[String, json_value]?, Hash[String, json_value]?, Array[json_value]?, String, json_value, String?]
+      def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, json_value]
+    end
+  end
+end

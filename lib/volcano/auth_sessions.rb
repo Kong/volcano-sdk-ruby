@@ -4,7 +4,7 @@ require_relative 'session_page_mapping'
 
 module Volcano
   # Multi-device session behavior for the authentication facade.
-  class Auth
+  module AuthSessions
     include SessionPageMapping
 
     def list_sessions(page: 1, limit: 20)
@@ -18,10 +18,11 @@ module Volcano
 
     def delete_session(session_id)
       binding = @client.capture_session_binding
-      raise Error::AuthenticationError, 'No active session' unless binding.last
+      session = binding.last
+      raise Error::AuthenticationError, 'No active session' unless session
 
       request_id = session_id.dup.freeze
-      deletes_current = same_session_id?(binding.last.access_token, request_id)
+      deletes_current = same_session_id?(session.access_token, request_id)
       error = delete_bound_session_error(binding, request_id)
       current_unchanged = session_unchanged_after_deletion?(deletes_current, error, binding)
       raise Error::SessionChangedError, cause: error unless current_unchanged
@@ -80,12 +81,14 @@ module Volcano
 
     def deletion_binding_current?(binding, error)
       active = @client.capture_session_binding
-      (active.last && active[1] == binding[1]) || (error && rejected_refresh?(binding, active))
+      return true if active.last && active[1] == binding[1]
+
+      !error.nil? && rejected_refresh?(binding, active)
     end
 
     def same_session_id?(access_token, session_id)
       current_session_id = access_token_session_id(access_token)
-      session_id.is_a?(String) && current_session_id&.casecmp?(session_id)
+      session_id.is_a?(String) && current_session_id&.casecmp?(session_id) == true
     end
 
     def access_token_session_id(access_token)

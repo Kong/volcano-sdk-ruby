@@ -20,6 +20,9 @@ module Volcano
     def auth_request_email_change: (authorization: String, new_email: String) -> Transport::Response
     def auth_cancel_email_change: (authorization: String) -> Transport::Response
     def auth_confirm_email_change: (authorization: String, token: String) -> Transport::Response
+    def auth_get_my_sessions: (authorization: String, page: Integer, limit: Integer) -> Transport::Response
+    def auth_delete_all_my_sessions: (authorization: String) -> Transport::Response
+    def auth_delete_my_session: (authorization: String, session_id: String) -> Transport::Response
   end
 
   interface _AuthLifecycleHost

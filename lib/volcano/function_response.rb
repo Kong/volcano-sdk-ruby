@@ -2,14 +2,15 @@
 
 module Volcano
   # Immutable result of one function invocation.
-  FunctionResponse = Data.define(:data, :status, :headers, :version) do
+  FunctionResponse = Data.define(:data, :status, :headers, :version)
+
+  # Reopen the generated Data class so Steep can check its initializer.
+  class FunctionResponse
     def initialize(data:, status:, headers:, version:)
-      super(
-        data: immutable_json(data),
-        status: status,
-        headers: immutable_json(headers),
-        version: version&.dup&.freeze
-      )
+      data = immutable_json(data)
+      headers = immutable_json(headers)
+      version = version&.dup&.freeze
+      super
     end
 
     private

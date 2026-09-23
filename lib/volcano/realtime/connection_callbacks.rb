@@ -86,8 +86,10 @@ module Volcano
 
       def error_context(error)
         snapshot = immutable_exception(error)
+        code = snapshot.respond_to?(:code) ? snapshot.method(:code).call : nil
+        code = nil unless code.is_a?(String) || code.is_a?(Integer)
         ErrorContext.new(
-          code: snapshot.respond_to?(:code) ? snapshot.method(:code).call : nil,
+          code: code,
           message: immutable_string(snapshot.message), error: snapshot
         )
       end

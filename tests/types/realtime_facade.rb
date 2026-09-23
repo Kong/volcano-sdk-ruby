@@ -29,3 +29,9 @@ def typed_realtime_callbacks(channel)
   channel.track('online' => true)
   channel.send(event: 'message', text: 'hello')
 end
+
+# @type method typed_authenticated_realtime: (Volcano::Client) -> void
+def typed_authenticated_realtime(client)
+  client.auth.sign_in(email: 'user@example.test', password: 'password')
+  client.realtime.channel('room').subscribe
+end

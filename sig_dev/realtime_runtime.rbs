@@ -294,8 +294,6 @@ module Volcano
 
       def connect_protocol: () -> Protocol
 
-      def checked_connect_result: (Protocol protocol, String token) -> Hash[String, Object]
-
       def active_session_lineage: () -> SessionOperations
 
       def session_for_lineage: (SessionOperations expected_lineage) -> Session
@@ -688,7 +686,7 @@ module Volcano
 
       def initialize: (socket: _RealtimeSocket, ?task: Async::Task?, ?secrets: Array[String?], ?events: Events?, **Integer limits) -> void
 
-      def connect: (token: String) -> Object?
+      def connect: (token: String) -> Hash[String, Object]
 
       def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Object?
 

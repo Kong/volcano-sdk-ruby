@@ -43,6 +43,25 @@ RSpec.describe ProtocolInputBoundaries do
     end.to raise_error(TypeError, 'realtime error must be an object')
   end
 
+  it 'rejects a malformed connect reply without emitting a connected lifecycle event' do
+    events = []
+    callbacks = described_class::Events.new(
+      on_close: ->(_) { events << :close },
+      on_error: ->(_) { events << :error },
+      on_failure: ->(*) { events << :failure }
+    )
+    connection = described_class.new(socket:, task: Async::Task.current, events: callbacks)
+    socket.on_write = lambda do |command|
+      socket.receive(JSON.generate('id' => command.fetch('id'), 'connect' => []))
+    end
+
+    expect { connection.connect(token: 'access-token') }
+      .to raise_error(TypeError, 'realtime connect result must be an object')
+    expect(connection).not_to be_connected
+    connection.close
+    expect(events).to be_empty
+  end
+
   it 'preserves a missing backtrace while wrapping a socket error' do
     error = protocol.__send__(:closed_error, IOError.new('socket closed'))
 

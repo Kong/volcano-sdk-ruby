@@ -15,18 +15,11 @@ module Volcano
         socket = @socket_factory.call(address)
         session = session_for_lineage(session_lineage)
         protocol = build_protocol(socket)
-        result = checked_connect_result(protocol, session.access_token)
+        result = protocol.connect(token: session.access_token)
         session_for_lineage(session_lineage)
         activate_protocol(protocol, session_lineage, result)
       rescue StandardError => e
         handle_connection_failure(socket, e)
-      end
-
-      def checked_connect_result(protocol, token)
-        result = protocol.connect(token: token)
-        raise TypeError, 'realtime connect result must be an object' unless result.is_a?(Hash)
-
-        result
       end
 
       def active_session_lineage

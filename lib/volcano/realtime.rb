@@ -173,6 +173,8 @@ module Volcano
     end
     include Core
 
+    private_constant :Core
+
     # Represents one realtime broadcast channel.
     class Channel
       include ChannelLifecycle

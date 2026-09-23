@@ -1,5 +1,6 @@
 module Volcano
   class Client
+    attr_reader auth: Auth
     attr_reader realtime: Realtime
 
     def initialize: (anon_key: String, ?api_url: String, ?service_key: String?, ?timeout: Integer, ?access_token: String?, ?refresh_token: String?) -> void

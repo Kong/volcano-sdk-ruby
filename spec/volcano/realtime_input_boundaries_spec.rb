@@ -10,15 +10,14 @@ RSpec.describe Volcano::Realtime do
     ).realtime
   end
 
-  it 'rejects a non-object connect response before activating the protocol' do
-    protocol_class = described_class.const_get(:Protocol, false)
-    protocol = instance_double(protocol_class)
-    allow(protocol).to receive(:connect).and_return([])
+  { 'expired' => 'expired', 42 => 42, [] => nil }.each do |raw_code, expected_code|
+    it "normalizes a server error code #{raw_code.inspect} to its declared type" do
+      error = described_class::ServerError.new('server failed', code: raw_code)
 
-    expect do
-      realtime.__send__(:checked_connect_result, protocol, 'access-token')
-    end.to raise_error(TypeError, 'realtime connect result must be an object')
-    expect(protocol).to have_received(:connect).with(token: 'access-token')
+      context = realtime.__send__(:error_context, error)
+
+      expect(context.code).to eq(expected_code)
+    end
   end
 
   it 'preserves a network error backtrace while mapping it to a transport error' do

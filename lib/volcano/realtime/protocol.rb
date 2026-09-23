@@ -88,8 +88,9 @@ module Volcano
       def connect(token:)
         result = request('connect') { |id| self.class.connect(id: id, token: token) }
         ensure_open!
-        @connected = true
-        result
+        raise TypeError, 'realtime connect result must be an object' unless result.is_a?(Hash)
+
+        result.tap { @connected = true }
       end
 
       def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil)

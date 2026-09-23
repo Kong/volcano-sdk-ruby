@@ -1,0 +1,20 @@
+module Volcano
+  class StorageBucket
+    INVALID_PUBLIC_URL_ANON_KEY: String
+    INVALID_PUBLIC_URL_PATH: String
+    INVALID_STORAGE_PATH: String
+
+    @name: String
+    @api_url: String
+    @anon_key: String
+
+    private
+
+    def project_id: () -> String
+    def anon_key_payload: () -> Hash[String, json_value]
+    def pad_base64: (String encoded) -> String
+    def public_url_path_segments: (String path) -> Array[String]
+    def public_url_path: (String path) -> String
+    def encode_segment: (String segment) -> String
+  end
+end

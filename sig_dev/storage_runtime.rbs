@@ -77,18 +77,19 @@ module Volcano
 
     private def storage_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
     private def upload_content_type: (Object? value) -> String?
-    private def upload_bytes: (String | IO | StringIO value) -> String
+    private def upload_bytes: (String | _StorageReadable value) -> String
     private def storage_paths: (String | Array[String] paths) -> Array[String]
     private def valid_storage_paths?: (Array[Object?] paths) -> bool
     private def delete_path: (String path, session_binding binding) -> Object?
     private def visibility_value: (Object? value) -> bool
 
-    private def upload_session_parts: (String path, IO | StringIO source, UploadSession session, Integer total_size, (^(Integer, Integer) -> void)? on_progress) -> void
+    private def upload_session_parts: (String path, _StorageReadable source, UploadSession session, Integer total_size, (^(Integer, Integer) -> void)? on_progress) -> void
     private def abort_failed_upload: (String path, String session_id) -> nil
-    private def with_resumable_upload_source: [T] (String | IO | StringIO value) { (IO | StringIO, Integer) -> T } -> T
-    private def remaining_upload_bytes: (IO | StringIO source) -> Integer?
-    private def with_spooled_upload_source: [T] (IO | StringIO source) { (IO | StringIO, Integer) -> T } -> T
-    private def spool_upload_source: (IO | StringIO source, File file) -> void
+    private def with_resumable_upload_source: [T] (String | _StorageReadable value) { (_StorageReadable, Integer) -> T } -> T
+    private def remaining_upload_bytes: (_StorageReadable source) -> Integer?
+    private def upload_source_dimensions: (_StorageReadable source) -> [Integer, Integer]?
+    private def with_spooled_upload_source: [T] (_StorageReadable source) { (_StorageReadable, Integer) -> T } -> T
+    private def spool_upload_source: (_StorageReadable source, File file) -> void
   end
 
   STORAGE_OBJECT_ATTRIBUTES: Array[Symbol]

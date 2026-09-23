@@ -65,6 +65,7 @@ module Volcano
 
     def storage_payload(value)
       raise Error::TransportError, 'invalid storage response' unless value.is_a?(Hash)
+      raise Error::TransportError, 'invalid storage response key' unless value.keys.all?(String)
 
       value
     end

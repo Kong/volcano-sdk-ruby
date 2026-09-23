@@ -51,7 +51,7 @@ module Volcano
           content_type: mime_type
         )
       end
-      Transport.body(response, 201)
+      storage_payload(Transport.body(response, 201))
     end
 
     def download(path, range: nil)
@@ -103,6 +103,8 @@ module Volcano
     end
 
     def upload_bytes(value)
+      raise ArgumentError, 'upload data must be a String or IO' unless value.is_a?(String) || value.respond_to?(:read)
+
       bytes = value.is_a?(String) ? value : value.read
       raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
 

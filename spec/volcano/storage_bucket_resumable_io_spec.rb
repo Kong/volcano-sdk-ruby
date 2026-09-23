@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'stringio'
+require 'support/read_only_upload'
 
 RSpec.describe Volcano::StorageBucket do
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
@@ -66,6 +67,23 @@ RSpec.describe Volcano::StorageBucket do
     expect(transport).to have_received(:create_upload_session)
       .with(authorization: 'access', bucket_name: 'assets', request: have_attributes(total_size: 7))
     expect(source).not_to be_closed
+  end
+
+  it 'spools a stream whose reported position is not an integer' do
+    allow(source).to receive(:pos).and_return('unknown')
+
+    expect(bucket.upload_resumable('file.bin', source).name).to eq('file.bin')
+    expect(transport).to have_received(:create_upload_session)
+      .with(authorization: 'access', bucket_name: 'assets', request: have_attributes(total_size: 7))
+  end
+
+  it 'spools a non-seekable readable stream without closing it' do
+    stream = SpecSupport::ReadOnlyUpload.new("\x00\xffbytes".b)
+
+    expect(bucket.upload_resumable('file.bin', stream).name).to eq('file.bin')
+    expect(transport).to have_received(:create_upload_session)
+      .with(authorization: 'access', bucket_name: 'assets', request: have_attributes(total_size: 7))
+    expect(stream.read(1)).to be_nil
   end
 
   it 'aborts when a source ends before the declared part count' do

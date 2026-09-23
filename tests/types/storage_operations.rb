@@ -1,11 +1,18 @@
 # frozen_string_literal: true
 
+require 'tempfile'
+
 bucket = Volcano::StorageBucket.new(
   Object.new, Object.new, 'assets', api_url: 'https://api.example.test', anon_key: 'anon'
 )
 bucket.list('photos/', limit: 10)
 
-bucket.upload('photo.png', 'binary'.b, content_type: 'image/png')
+uploaded = bucket.upload('photo.png', 'binary'.b, content_type: 'image/png')
+uploaded.fetch('name')
+temporary = Tempfile.new('storage-upload')
+bucket.upload('photo.png', temporary)
+bucket.upload_resumable('photo.png', temporary)
+temporary.close!
 bucket.download('photo.png', range: 'bytes=0-4')
 bucket.move('photo.png', 'archive/photo.png')
 bucket.update_visibility('photo.png', public: false)

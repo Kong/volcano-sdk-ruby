@@ -1,10 +1,17 @@
 module Volcano
+  interface _StorageReadable
+    def read: (?Integer length) -> String?
+    def is_a?: (Class) -> bool
+    def respond_to?: (Symbol) -> bool
+    def method: (Symbol) -> Method
+  end
+
   class Storage
     def from: (String bucket) -> StorageBucket
   end
 
   class StorageBucket
-    def upload: (String path, String | IO | StringIO value, ?content_type: String?) -> Object?
+    def upload: (String path, String | _StorageReadable value, ?content_type: String?) -> Hash[String, Object?]
     def download: (String path, ?range: String?) -> String
     def list: (?String prefix, ?limit: Integer?, ?cursor: String?) -> StoragePage
     def remove: (String | Array[String] paths) -> Array[String]
@@ -13,10 +20,10 @@ module Volcano
     def update_visibility: (String path, public: bool) -> StorageObject
 
     def create_upload_session: (String path, total_size: Integer, ?content_type: String, ?part_size: Integer?) -> UploadSession
-    def upload_part: (String path, session_id: String, part_number: Integer, data: String) -> UploadPart
+    def upload_part: (String path, session_id: String, part_number: Integer, data: String | _StorageReadable) -> UploadPart
     def complete_upload_session: (String path, session_id: String) -> StorageObject
     def get_upload_session: (String path, session_id: String) -> UploadSessionStatus
     def abort_upload_session: (String path, session_id: String) -> nil
-    def upload_resumable: (String path, String | IO | StringIO value, ?content_type: String, ?part_size: Integer?, ?on_progress: (^(Integer, Integer) -> void)?) -> StorageObject
+    def upload_resumable: (String path, String | _StorageReadable value, ?content_type: String, ?part_size: Integer?, ?on_progress: (^(Integer, Integer) -> void)?) -> StorageObject
   end
 end

@@ -130,5 +130,6 @@ target :consumers do
   signature 'sig'
   check 'tests/types'
   library 'stringio'
+  library 'tempfile'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end

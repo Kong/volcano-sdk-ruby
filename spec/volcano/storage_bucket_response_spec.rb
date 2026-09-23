@@ -27,6 +27,34 @@ RSpec.describe Volcano::StorageBucket do
       'mime_type' => 'application/octet-stream', 'is_public' => false }
   end
 
+  it 'returns the original decoded upload hash with timestamps intact' do
+    payload = object_payload.merge('created_at' => Time.utc(2026, 9, 23))
+    allow(transport).to receive(:upload_storage_object).and_return(response(201, payload))
+
+    expect(bucket.upload('file.bin', 'bytes')).to equal(payload)
+  end
+
+  it 'rejects a successful upload body with non-string keys' do
+    allow(transport).to receive(:upload_storage_object).and_return(response(201, name: 'file.bin'))
+
+    expect { bucket.upload('file.bin', 'bytes') }
+      .to raise_error(Volcano::Error::TransportError, 'invalid storage response key')
+  end
+
+  [nil, 42, Object.new].each do |value|
+    it "preserves the argument error for unsupported upload input #{value.inspect}" do
+      allow(transport).to receive(:upload_storage_object)
+      allow(transport).to receive(:upload_part)
+
+      expect { bucket.upload('file.bin', value) }
+        .to raise_error(ArgumentError, 'upload data must be a String or IO')
+      expect { bucket.upload_part('file.bin', session_id: 'upload', part_number: 1, data: value) }
+        .to raise_error(ArgumentError, 'upload data must be a String or IO')
+      expect(transport).not_to have_received(:upload_storage_object)
+      expect(transport).not_to have_received(:upload_part)
+    end
+  end
+
   it 'rejects malformed object lists' do
     allow(transport).to receive(:list_storage_objects).and_return(response(200, 'objects' => false))
 

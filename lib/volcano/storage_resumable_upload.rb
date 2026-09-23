@@ -64,12 +64,20 @@ module Volcano
     def remaining_upload_bytes(source)
       return unless source.respond_to?(:size) && source.respond_to?(:pos)
 
-      size = source.method(:size).call
-      return unless size.is_a?(Integer)
+      dimensions = upload_source_dimensions(source)
+      return unless dimensions
 
-      size - source.pos
+      dimensions.fetch(0) - dimensions.fetch(1)
     rescue IOError, SystemCallError
       nil
+    end
+
+    def upload_source_dimensions(source)
+      size = source.method(:size).call
+      position = source.method(:pos).call
+      return unless size.is_a?(Integer) && position.is_a?(Integer)
+
+      [size, position]
     end
 
     def with_spooled_upload_source(source)

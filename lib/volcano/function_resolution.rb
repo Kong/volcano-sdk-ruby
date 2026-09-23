@@ -16,11 +16,7 @@ module Volcano
     # A cached resolve result. A nil resolution is a remembered miss.
     Outcome = Data.define(:resolution, :failure)
 
-    Failure = Data.define(:message, :code, :retry_after) do
-      def exception
-        Error::NotFoundError.new(message.dup, status: 404, code: code&.dup, retry_after: retry_after)
-      end
-    end
+    Failure = Data.define(:message, :code, :retry_after)
     private_constant :Failure
 
     Entry = Data.define(:outcome, :expires_at)
@@ -51,21 +47,23 @@ module Volcano
       # when the API itself is plaintext, so a resolve response cannot
       # downgrade a credential that is otherwise protected in transit.
       def valid_invoke_url(value, api_url)
-        return nil unless nonempty_url?(value)
+        url = nonempty_url(value)
+        return nil unless url
 
-        uri = URI.parse(value)
+        uri = URI.parse(url)
         return nil unless usable_address?(uri)
 
-        usable_scheme?(uri.scheme, api_url) ? value : nil
+        usable_scheme?(uri.scheme, api_url) ? url : nil
       rescue URI::InvalidURIError
         nil
       end
 
       # Returns the cached Outcome for a name, or nil when it must be resolved.
       def lookup(api_url, authorization, name)
+        # @type var key: [String, String, String]
         key = [api_url, authorization, name]
         @lock.synchronize do
-          entry = @entries[key]
+          entry = @entries.fetch(key, nil)
           next nil if entry.nil?
 
           if entry.expires_at <= now
@@ -89,6 +87,11 @@ module Volcano
         write([api_url, authorization, name], Outcome.new(resolution: nil, failure: failure), NEGATIVE_TTL_SECONDS)
       end
 
+      def error_for(failure)
+        Error::NotFoundError.new(failure.message.dup, status: 404, code: failure.code&.dup,
+                                                      retry_after: failure.retry_after)
+      end
+
       # Drops one cached resolution that turned out to be stale.
       def forget(api_url, authorization, name)
         @lock.synchronize { @entries.delete([api_url, authorization, name]) }
@@ -106,8 +109,8 @@ module Volcano
 
       private
 
-      def nonempty_url?(value)
-        value.is_a?(String) && !value.empty?
+      def nonempty_url(value)
+        value if value.is_a?(String) && !value.empty?
       end
 
       def usable_address?(uri)
@@ -126,15 +129,15 @@ module Volcano
       def write(key, outcome, ttl_seconds)
         @lock.synchronize do
           @entries[key] = Entry.new(outcome: outcome, expires_at: now + ttl_seconds)
-          next if @entries.size <= MAX_ENTRIES
-
-          evict_expired_entries
+          evict_expired_entries if @entries.size > MAX_ENTRIES
         end
       end
 
       def evict_expired_entries
         @entries.delete_if { |_, entry| entry.expires_at <= now }
-        @entries.delete(@entries.min_by { |_, entry| entry.expires_at }.first) while @entries.size > MAX_ENTRIES
+        while @entries.size > MAX_ENTRIES
+          @entries.min_by(1) { |_, entry| entry.expires_at }.each { |pair| @entries.delete(pair.first) }
+        end
       end
     end
   end

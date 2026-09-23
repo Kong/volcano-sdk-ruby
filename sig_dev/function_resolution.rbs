@@ -1,0 +1,65 @@
+module Volcano
+  module FunctionResolution
+    interface _InvocationAddress
+      def host: () -> String?
+      def port: () -> Integer?
+    end
+
+    MAX_ENTRIES: Integer
+    NEGATIVE_TTL_SECONDS: Integer
+    LOCK_STRIPES: Integer
+
+    class Resolution < Data
+      attr_reader function_id: String
+      attr_reader invoke_url: String?
+
+      def self.new: (function_id: String, invoke_url: String?) -> Resolution
+      def initialize: (function_id: String, invoke_url: String?) -> void
+    end
+
+    class Outcome < Data
+      attr_reader resolution: Resolution?
+      attr_reader failure: Failure?
+
+      def self.new: (resolution: Resolution?, failure: Failure?) -> Outcome
+      def initialize: (resolution: Resolution?, failure: Failure?) -> void
+    end
+
+    class Failure < Data
+      attr_reader message: String
+      attr_reader code: String?
+      attr_reader retry_after: Integer?
+
+      def self.new: (message: String, code: String?, retry_after: Integer?) -> Failure
+      def initialize: (message: String, code: String?, retry_after: Integer?) -> void
+    end
+
+    class Entry < Data
+      attr_reader outcome: Outcome
+      attr_reader expires_at: Float
+
+      def self.new: (outcome: Outcome, expires_at: Float) -> Entry
+      def initialize: (outcome: Outcome, expires_at: Float) -> void
+    end
+
+    self.@lock: Mutex
+    self.@entries: Hash[[String, String, String], Entry]
+    self.@stripes: Array[Mutex]
+
+    def self.resolve_lock: (String api_url, String authorization, String name) -> Mutex
+    def self.valid_invoke_url: (Object value, String api_url) -> String?
+    def self.lookup: (String api_url, String authorization, String name) -> Outcome?
+    def self.store: (String api_url, String authorization, String name, Resolution resolution, Integer ttl_seconds) -> void
+    def self.store_missing: (String api_url, String authorization, String name, Error::NotFoundError error) -> void
+    def self.error_for: (Failure failure) -> Error::NotFoundError
+    def self.forget: (String api_url, String authorization, String name) -> void
+    def self.clear: () -> void
+    def self.now: () -> Float
+
+    private def self.nonempty_url: (Object value) -> String?
+    private def self.usable_address?: (_InvocationAddress uri) -> bool
+    private def self.usable_scheme?: (String? scheme, String api_url) -> bool
+    private def self.write: ([String, String, String] key, Outcome outcome, Integer ttl_seconds) -> void
+    private def self.evict_expired_entries: () -> void
+  end
+end

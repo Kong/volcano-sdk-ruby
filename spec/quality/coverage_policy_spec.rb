@@ -36,6 +36,29 @@ RSpec.describe CoveragePolicy do
     expect(status).to be_success, output + error
   end
 
+  it 'keeps thresholds active in the instrumented RSpec process' do
+    expect(described_class.check(root).last).to be_success
+    next unless ENV['VOLCANO_REQUIRE_FULL_SUITE'] == '1'
+
+    expect(SimpleCov.started_in_this_process?).to be(true)
+    expect(SimpleCov.minimum_coverage).to eq(line: 100, branch: 100)
+    expect(SimpleCov.maximum_missed).to eq(line: 0, branch: 0)
+  end
+
+  it 'keeps runtime discovery active in the instrumented RSpec process' do
+    expect(described_class.check(root).last).to be_success
+    next unless ENV['VOLCANO_REQUIRE_FULL_SUITE'] == '1'
+
+    expect(SimpleCov.root).to eq(root)
+    expect(SimpleCov.cover_filters.map(&:filter_argument)).to eq(['lib/**/*.rb'])
+    expect(SimpleCov.filters.map(&:filter_argument)).to eq(
+      ['/vendor/bundle/', /\A\..*/, SimpleCov.filters[2].filter_argument,
+       %r{\A(test|features|spec|autotest)/}, '/lib/volcano/generated/']
+    )
+    expect(SimpleCov.filters[2].filter_argument.source_location.first)
+      .to start_with(Gem.loaded_specs.fetch('simplecov').full_gem_path)
+  end
+
   it 'rejects a lowered coverage threshold' do
     Dir.mktmpdir('volcano-coverage-policy-') do |directory|
       original = File.read(File.join(root, '.simplecov'))

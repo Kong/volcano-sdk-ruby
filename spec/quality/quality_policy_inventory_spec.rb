@@ -30,6 +30,10 @@ class QualityPolicyInventory
     settings.keys & %w[inherit_from inherit_gem]
   end
 
+  def lint_options_locked?
+    File.binread(File.join(@root, '.rubocop')) == "--ignore-disable-comments\n--raise-cop-error\n"
+  end
+
   def maintained_ruby
     paths = files.select { |path| path.end_with?('.rb') || RUBY_ENTRYPOINTS.include?(path) || ruby_shebang?(path) }
     paths.reject! { |path| path.start_with?('lib/volcano/generated/') }
@@ -39,9 +43,7 @@ class QualityPolicyInventory
   def ruby_shebang?(path)
     return false unless File.file?(File.join(@root, path))
 
-    File.open(File.join(@root, path), &:readline).match?(/\A#!.*\bruby(?:\s|\z)/)
-  rescue EOFError
-    false
+    File.binread(File.join(@root, path), 128).split("\n", 2).first.match?(/\A#!.*\bruby(?:\s|\z)/n)
   end
 
   def missing_lint_targets(config: nil)
@@ -61,10 +63,15 @@ class QualityPolicyInventory
 
   def cop_limit(settings, name)
     cop = settings.fetch(name)
-    return unless cop.fetch('Enabled', true) == true && cop.fetch('Exclude', []).empty?
-    return unless cop.fetch('AllowedMethods', []).empty? && cop.fetch('AllowedPatterns', []).empty?
+    return unless unrestricted_cop?(cop)
 
     cop.fetch('Max')
+  end
+
+  def unrestricted_cop?(cop)
+    cop.fetch('Enabled', true) == true && cop.fetch('Exclude', []).empty? &&
+      cop.fetch('AllowedMethods', []).empty? && cop.fetch('AllowedPatterns', []).empty? &&
+      !cop.key?('Include')
   end
 end
 
@@ -75,6 +82,7 @@ RSpec.describe QualityPolicyInventory do
   it 'keeps RuboCop configuration at the repository root without debt files' do
     expect(inventory.nested_rubocop_configs).to be_empty
     expect(inventory.inherited_rubocop_configs).to be_empty
+    expect(inventory.lint_options_locked?).to be(true)
   end
 
   it 'includes every maintained Ruby file in native RuboCop discovery' do
@@ -141,6 +149,28 @@ RSpec.describe QualityPolicyInventory do
     end
   end
 
+  it 'rejects an options file that disables required cops' do
+    Dir.mktmpdir('volcano-policy-options-') do |directory|
+      File.write(File.join(directory, '.rubocop'), "--except Metrics/CyclomaticComplexity,Metrics/MethodLength\n")
+
+      expect(described_class.new(directory).lint_options_locked?).to be(false)
+    end
+  end
+
+  it 'detects cop-specific include narrowing' do
+    Dir.mktmpdir('volcano-policy-config-') do |directory|
+      config = File.join(directory, '.rubocop.yml')
+      File.write(config, <<~YAML)
+        inherit_from: #{root}/.rubocop.yml
+        Metrics/CyclomaticComplexity:
+          Include:
+            - no-such-source/**/*.rb
+      YAML
+
+      expect(inventory.lint_limits(config:)).not_to eq([5, 10, 'enable'])
+    end
+  end
+
   it 'detects an inherited nested policy file even without a conventional RuboCop name' do
     Dir.mktmpdir('volcano-policy-config-') do |directory|
       config = File.join(directory, '.rubocop.yml')
@@ -162,6 +192,15 @@ RSpec.describe QualityPolicyInventory do
       system('git', 'init', '--quiet', directory, exception: true)
 
       expect(described_class.new(directory).maintained_ruby).to include('bin/new-tool')
+    end
+  end
+
+  it 'ignores binary assets during Ruby shebang discovery' do
+    Dir.mktmpdir('volcano-policy-inventory-') do |directory|
+      File.binwrite(File.join(directory, 'asset.bin'), "\xFF\xFE".b)
+      system('git', 'init', '--quiet', directory, exception: true)
+
+      expect(described_class.new(directory).maintained_ruby).to be_empty
     end
   end
 end

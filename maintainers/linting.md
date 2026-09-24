@@ -18,7 +18,8 @@ See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_
 
 `spec/quality/quality_policy_inventory_spec.rb` compares tracked Ruby entrypoints
 with RuboCop's native `--list-target-files` output and reads RuboCop's effective
-configuration. RuboCop can list its targets but cannot require every tracked
+configuration. It also locks the `.rubocop` CLI options so a cop cannot be
+removed with `--except`. RuboCop can list its targets but cannot require every tracked
 file to appear there, forbid nested/inherited configurations, or pin a cop's
 activation and limit. The spec covers those gaps; negative fixtures verify
 excluded files, override configurations, and weakened metrics settings fail.

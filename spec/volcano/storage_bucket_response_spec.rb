@@ -89,6 +89,45 @@ RSpec.describe Volcano::StorageBucket do
     expect(object.is_public).to be(false)
   end
 
+  it 'rejects metadata that cannot be encoded as JSON' do
+    [Float::NAN, Float::INFINITY, -Float::INFINITY, "\xFF".b].each do |value|
+      allow(transport).to receive(:move_storage_object)
+        .and_return(response(200, object_payload.merge('metadata' => { 'nested' => [value] })))
+
+      expect { bucket.move('file.bin', 'moved.bin') }
+        .to raise_error(Volcano::Error::TransportError, 'invalid storage JSON value')
+    end
+  end
+
+  it 'rejects cyclic or excessively nested metadata without exhausting the Ruby stack' do
+    cyclic_hash = {}
+    cyclic_hash['self'] = cyclic_hash
+    cyclic_array = []
+    cyclic_array << cyclic_array
+    deeply_nested = 101.times.reduce('value') { |value, _| [value] }
+
+    [cyclic_hash, { 'array' => cyclic_array }, { 'deep' => deeply_nested }].each do |metadata|
+      allow(transport).to receive(:move_storage_object)
+        .and_return(response(200, object_payload.merge('metadata' => metadata)))
+
+      expect { bucket.move('file.bin', 'moved.bin') }
+        .to raise_error(Volcano::Error::TransportError, 'invalid storage JSON value')
+    end
+  end
+
+  it 'accepts repeated references to an acyclic JSON subtree and snapshots them' do
+    subtree = { 'values' => [1, true] }
+    metadata = { 'left' => subtree, 'right' => subtree }
+    allow(transport).to receive(:move_storage_object)
+      .and_return(response(200, object_payload.merge('metadata' => metadata)))
+
+    object = bucket.move('file.bin', 'moved.bin')
+    subtree['values'] << 2
+
+    expect(object.metadata).to eq('left' => { 'values' => [1, true] }, 'right' => { 'values' => [1, true] })
+    expect(object.metadata).to be_frozen
+  end
+
   it 'rejects a non-object session response' do
     allow(transport).to receive(:create_upload_session).and_return(response(201, []))
 

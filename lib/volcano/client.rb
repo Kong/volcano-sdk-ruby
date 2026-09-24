@@ -20,14 +20,14 @@ module Volcano
 
     # @dynamic auth, functions, durable, logs, storage, locks, realtime
 
-    def initialize(
+    def initialize( # rubocop:disable Metrics/ParameterLists -- Preserve typed constructor keywords.
       anon_key:,
       api_url: 'https://api.volcano.dev',
       service_key: nil,
       timeout: 60,
-      _transport: nil,
-      _realtime_socket_factory: nil,
-      _realtime_reconnect_delay: nil,
+      _transport: nil, # rubocop:disable Lint/UnderscorePrefixedVariableName -- Existing keyword API.
+      _realtime_socket_factory: nil, # rubocop:disable Lint/UnderscorePrefixedVariableName -- Existing keyword API.
+      _realtime_reconnect_delay: nil, # rubocop:disable Lint/UnderscorePrefixedVariableName -- Existing keyword API.
       **options
     )
       session = SessionCredentials.build(options.delete(:access_token), options.delete(:refresh_token))

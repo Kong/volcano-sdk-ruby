@@ -2,10 +2,19 @@
 
 `bundle exec rake quality:lint` runs RuboCop with the root `.rubocop.yml` and
 `.rubocop` options. Direct `bundle exec rubocop` commands use the same settings.
-The native `--ignore-disable-comments` option keeps violations visible even
-when source comments try to disable a cop. RuboCop's
-`Lint/RedundantCopDisableDirective` rejects unused suppressions, and
-`--raise-cop-error` makes internal cop failures fail the command.
+The native `Style/DisableCopsWithinSourceCodeDirective` rule rejects suppression
+directives except the two cops with reviewed constructor exceptions. This rule
+cannot suppress itself. `Lint/RedundantCopDisableDirective` rejects unused
+suppressions, and `--raise-cop-error` makes internal cop failures fail the command.
+
+RuboCop's `AllowedCops` option cannot restrict an exception to an exact source
+line. `spec/rubocop/directive_comment_spec.rb` uses RuboCop's parser and target
+inventory to require exactly the four approved inline directives. It also runs
+the native CLI with `--ignore-disable-comments` and requires exactly the four
+documented diagnostics. Added, broadened, and unused exceptions fail the gate.
+The [native directive rules](https://docs.rubocop.org/rubocop/1.90/usage/source_code_directives.html)
+keep the exception itself in the tool's standard format; the spec covers only
+the source-scope limitation.
 
 Native `AllCops/Include` configuration adds package smoke scripts under
 `.github/scripts` without replacing RuboCop's default file discovery.

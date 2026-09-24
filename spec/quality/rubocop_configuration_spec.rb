@@ -57,7 +57,7 @@ RSpec.describe RuboCop do
             "value=1 # rubocop:#{directive} Layout/SpaceAroundOperators\nString(value)", path
           )
           expect(status).to eq(1)
-          expect(offenses).to include(a_hash_including('cop_name' => 'Layout/SpaceAroundOperators'))
+          expect(offenses).to include(a_hash_including('cop_name' => 'Style/DisableCopsWithinSourceCodeDirective'))
         end
       end
 
@@ -76,7 +76,7 @@ RSpec.describe RuboCop do
         )
 
         expect(status).to eq(1)
-        expect(offenses).to include(a_hash_including('cop_name' => 'Volcano/CoverageSuppression'))
+        expect(offenses).to include(a_hash_including('cop_name' => 'Style/DisableCopsWithinSourceCodeDirective'))
       end
 
       it 'allows directive text inside strings and heredocs' do

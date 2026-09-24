@@ -69,7 +69,7 @@ module VolcanoContract
     private
 
     def build_observers
-      @channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) }
+      @channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) } # rubocop:disable Lint/NameTypo -- Inherited Class#new.
     end
 
     def initialize_row(world)

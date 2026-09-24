@@ -1211,4 +1211,68 @@ RSpec.describe Volcano::Client do
     expect(response).to have_attributes(status: 200)
     expect(apis.durable.calls.last.first).to eq(:stop)
   end
+
+  it 'rejects a non-string email-change acknowledgement' do
+    apis.authentication.email_change_body = 42
+
+    expect do
+      transport.auth_request_email_change(authorization: 'access-token', new_email: 'new@example.com')
+    end.to raise_error(TypeError, 'Expected a valid email-change acknowledgement')
+  end
+
+  it 'rejects a non-string function response' do
+    allow(apis.functions).to receive(:invoke_function_with_http_info).and_return([42, 200, {}])
+
+    expect do
+      transport.invoke_function(authorization: 'access-token', function_id: 'function-1', payload: {})
+    end.to raise_error(TypeError, 'Expected a string function response')
+  end
+
+  it 'rejects a non-string OAuth authorization URL' do
+    oauth_api = instance_double(generated_namespace.const_get(:OAuthAuthenticationApi))
+    allow(oauth_api).to receive(:auth_o_auth_authorize_with_http_info).and_return([42, 0, {}])
+    allow(transport).to receive(:oauth_authorization_api).and_return(oauth_api)
+
+    expect do
+      transport.auth_oauth_authorization_url(
+        anon_key: 'anon', provider: 'github', redirect_url: 'https://app.example', client_state: 'state'
+      )
+    end.to raise_error(TypeError, 'Expected OAuth authorization URL')
+  end
+
+  it 'rejects a non-string generated log body' do
+    allow(apis.logs).to receive(:search_project_logs_with_http_info).and_return([42, 200, {}])
+
+    expect do
+      transport.search_project_logs(
+        authorization: 'access-token', project_id: 'project-1', request: { 'resource' => { 'type' => 'function' } }
+      )
+    end.to raise_error(TypeError, 'Expected a string response body')
+  end
+
+  it 'rejects a download stream that does not return bytes' do
+    stream = Object.new
+    stream.define_singleton_method(:read) { 42 }
+    allow(apis.storage).to receive(:download_storage_object_with_http_info).and_return([stream, 200, {}])
+
+    expect do
+      transport.download_storage_object(authorization: 'access-token', bucket_name: 'assets', path: 'file')
+    end.to raise_error(TypeError, 'Expected a binary stream')
+  end
+
+  it 'rejects malformed storage header options' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    storage = transport_class::StorageApi.new(api_client)
+
+    expect do
+      storage.download_storage_object_with_http_info('assets', 'file', header_params: 42)
+    end.to raise_error(TypeError, 'Invalid storage headers')
+  end
+
+  it 'rejects an API URL without a host' do
+    invalid_transport = transport_class.new(api_url: 'https:/relative')
+
+    expect { invalid_transport.send(:generated_configuration, nil) }
+      .to raise_error(ArgumentError, 'API URL requires a host')
+  end
 end

@@ -6,7 +6,6 @@ require 'json'
 require 'spec_helper'
 
 RecoveryDispatchProtocol = Volcano::Realtime.const_get(:Protocol, false)
-ProtocolRecoveryDispatch = Volcano::Realtime.const_get(:ProtocolRecoveryDispatch, false)
 
 class RecoveryDispatchSocket
   attr_accessor :on_write
@@ -35,7 +34,11 @@ class RecoveryDispatchSocket
   end
 end
 
-RSpec.describe ProtocolRecoveryDispatch do
+module SpecSupport
+  ProtocolRecoveryDispatch = Volcano::Realtime.const_get(:ProtocolRecoveryDispatch, false)
+end
+
+RSpec.describe SpecSupport::ProtocolRecoveryDispatch do
   around do |example|
     Async { example.run }.wait
   end

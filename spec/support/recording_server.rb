@@ -68,7 +68,7 @@ class RecordingServer
   def read_request(socket)
     lines = []
     lines << socket.readline until lines.last == "\r\n"
-    length = header(lines, 'content-length').to_i
+    length = Integer(header(lines, 'content-length') || '0', 10)
     Request.new(
       lines.first.split[1],
       length.positive? ? socket.read(length) : nil,

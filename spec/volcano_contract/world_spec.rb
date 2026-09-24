@@ -41,7 +41,7 @@ RSpec.describe VolcanoContract::World do
     while (line = socket.gets)
       break if line == "\r\n"
 
-      content_length = line.split(':', 2).last.to_i if line.match?(/\Acontent-length:/i)
+      content_length = Integer(line.split(':', 2).last, 10) if line.match?(/\Acontent-length:/i)
     end
     socket.read(content_length) if content_length.positive?
   end

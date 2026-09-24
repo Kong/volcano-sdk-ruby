@@ -8,8 +8,6 @@ module Volcano
 
     # Immutable snapshot of a Postgres change publication.
     class PostgresChange
-      # @dynamic type, schema, table, record, old_record, columns, timestamp, id, mode
-      # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
       def initialize(type:, schema:, table:, timestamp:, **payload)
         type = Immutable.call(type.to_s)
         schema = Immutable.call(schema.to_s)

@@ -5,6 +5,8 @@ module Volcano
       attr_reader body: Object?
       attr_reader headers: Hash[String, String]
       attr_reader data: Object?
+
+      def self.new: (status: Integer, body: Object?, headers: Hash[String, String], data: Object?) -> Response
     end
 
     def self.invoke: [T] () { () -> T } -> T

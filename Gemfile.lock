@@ -96,6 +96,7 @@ GEM
     ffi (1.17.4)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-arm64-darwin)
+    ffi (1.17.4-x86_64-linux-gnu)
     fiber-annotation (0.2.0)
     fiber-local (1.1.0)
       fiber-storage
@@ -192,6 +193,10 @@ GEM
       regexp_parser (>= 2.0)
       rubocop (~> 1.86, >= 1.86.2)
     ruby-progressbar (1.13.0)
+    rubydex (0.4.1)
+    rubydex (0.4.1-aarch64-linux)
+    rubydex (0.4.1-arm64-darwin)
+    rubydex (0.4.1-x86_64-linux)
     securerandom (0.4.1)
     simplecov (1.2.0)
     steep (1.10.0)
@@ -233,6 +238,7 @@ PLATFORMS
   aarch64-linux
   arm64-darwin-25
   ruby
+  x86_64-linux
 
 DEPENDENCIES
   bundler-audit (= 0.9.3)
@@ -245,6 +251,7 @@ DEPENDENCIES
   rubocop-performance (~> 1.26)
   rubocop-rake (~> 0.7)
   rubocop-rspec (~> 3.7)
+  rubydex (= 0.4.1)
   simplecov (= 1.2.0)
   steep (= 1.10.0)
   volcano-sdk!

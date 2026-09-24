@@ -5,9 +5,6 @@ require 'async/queue'
 require 'json'
 require 'spec_helper'
 
-ProtocolRecovery = Volcano::Realtime.const_get(:ProtocolRecovery, false)
-RecoveryProtocol = Volcano::Realtime.const_get(:Protocol, false)
-
 class RecoverySocket
   attr_accessor :on_write
 
@@ -28,18 +25,23 @@ class RecoverySocket
   def close = @incoming.enqueue(nil)
 end
 
-RSpec.describe ProtocolRecovery do
+module SpecSupport
+  ProtocolRecovery = Volcano::Realtime.const_get(:ProtocolRecovery, false)
+end
+
+RSpec.describe SpecSupport::ProtocolRecovery do
   around do |example|
     Async { example.run }.wait
   end
 
+  let(:protocol_class) { Volcano::Realtime.const_get(:Protocol, false) }
   let(:socket) { RecoverySocket.new }
-  let(:protocol) { RecoveryProtocol.new(socket: socket, task: Async::Task.current) }
+  let(:protocol) { protocol_class.new(socket: socket, task: Async::Task.current) }
 
   after { protocol.close }
 
   it 'keeps an ordinary subscribe command exact' do
-    expect(RecoveryProtocol.subscribe(id: 7, channel: 'room')).to eq(
+    expect(protocol_class.subscribe(id: 7, channel: 'room')).to eq(
       'id' => 7,
       'subscribe' => { 'channel' => 'room' }
     )
@@ -47,7 +49,7 @@ RSpec.describe ProtocolRecovery do
 
   it 'builds a positioned recovery subscribe command' do
     expect(
-      RecoveryProtocol.subscribe(id: 7, channel: 'room', recovery: { epoch: 'e', offset: 4 })
+      protocol_class.subscribe(id: 7, channel: 'room', recovery: { epoch: 'e', offset: 4 })
     ).to eq(
       'id' => 7,
       'subscribe' => {
@@ -58,7 +60,7 @@ RSpec.describe ProtocolRecovery do
   end
 
   it 'builds an initial recoverable subscribe command from an empty recovery hash' do
-    expect(RecoveryProtocol.subscribe(id: 7, channel: 'room', recovery: {})).to eq(
+    expect(protocol_class.subscribe(id: 7, channel: 'room', recovery: {})).to eq(
       'id' => 7,
       'subscribe' => {
         'channel' => 'room', 'recover' => true, 'positioned' => true, 'recoverable' => true
@@ -68,7 +70,7 @@ RSpec.describe ProtocolRecovery do
 
   it 'preserves presence options in a recovery subscribe command' do
     expect(
-      RecoveryProtocol.subscribe(
+      protocol_class.subscribe(
         id: 7,
         channel: 'room',
         recovery: { epoch: 'e', offset: 4 },

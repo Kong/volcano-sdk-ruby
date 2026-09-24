@@ -19,6 +19,14 @@ RSpec.describe Volcano::Auth do
     expect(output).to include('Ruby::RequiredBlockMissing')
   end
 
+  it 'rejects an undeclared auth-state event' do
+    fixture = File.expand_path('../../tests/types_invalid/auth_state_event.rb', __dir__)
+    output, errors, status = SteepConsumer.check(File.read(fixture))
+
+    expect(status.exitstatus).to eq(1), output + errors
+    expect(output).to include('Ruby::IncompatibleAssignment', 'session_expired')
+  end
+
   it 'ships the credential facade signatures in the gem manifest' do
     files = Gem::Specification.load(File.expand_path('../../volcano-sdk.gemspec', __dir__)).files
 

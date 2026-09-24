@@ -18,19 +18,19 @@ module Volcano
   module AuthStateNotifications
     @mutex: Mutex
     @session: Session?
-    @callbacks: Hash[Integer, ^(Symbol, Session?) -> void]
+    @callbacks: Hash[Integer, ^(auth_state_event, Session?) -> void]
     @next_callback_id: Integer
-    @notifications: Array[[Array[Integer], Symbol, Session?]]
+    @notifications: Array[[Array[Integer], auth_state_event, Session?]]
     @dispatching_notifications: bool
 
     CALLBACK_FAILURE: singleton(Exception)
 
-    private def register: (^(Symbol, Session?) -> void callback) -> [Integer, Session?]
-    private def unsubscribe: (Integer callback_id) -> (^(Symbol, Session?) -> void)?
-    private def enqueue_notification: (Array[Integer] callbacks, Symbol? event, Session? session) -> bool
+    private def register: (^(auth_state_event, Session?) -> void callback) -> [Integer, Session?]
+    private def unsubscribe: (Integer callback_id) -> (^(auth_state_event, Session?) -> void)?
+    private def enqueue_notification: (Array[Integer] callbacks, auth_state_event? event, Session? session) -> bool
     private def drain_notifications: () -> void
-    private def next_notification: () -> [Array[Integer], Symbol, Session?]?
-    private def notify: (Array[Integer] callback_ids, Symbol event, Session? session) -> Exception?
+    private def next_notification: () -> [Array[Integer], auth_state_event, Session?]?
+    private def notify: (Array[Integer] callback_ids, auth_state_event event, Session? session) -> Exception?
   end
 
   class AuthState
@@ -41,24 +41,24 @@ module Volcano
     @lineage: SessionOperations
     @session: Session?
     @rejected_refresh: [Integer, SessionOperations]?
-    @callbacks: Hash[Integer, ^(Symbol, Session?) -> void]
+    @callbacks: Hash[Integer, ^(auth_state_event, Session?) -> void]
     @next_callback_id: Integer
-    @notifications: Array[[Array[Integer], Symbol, Session?]]
+    @notifications: Array[[Array[Integer], auth_state_event, Session?]]
     @dispatching_notifications: bool
 
     def initialize: (?session: Session?) -> void
     def current: () -> Session?
     def capture: () -> [Integer, Session?]
     def capture_binding: () -> [Integer, SessionOperations, Session?]
-    def store: (Session? session, ?event: Symbol) -> void
-    def store_if_current?: (Session? session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
+    def store: (Session? session, ?event: auth_state_event?) -> void
+    def store_if_current?: (Session? session, Integer generation, ?event: auth_state_event?, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
     def reject_refresh_if_current?: (Integer generation, ?notifications: Array[Method]?) -> bool
     def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
     def update_user_if_current?: (Hash[String, json_value] user, Integer generation) -> bool
-    def subscribe: () { (Symbol, Session?) -> void } -> AuthSubscription
+    def subscribe: () { (auth_state_event, Session?) -> void } -> AuthSubscription
 
     private def current_binding?: (Integer generation, SessionOperations? lineage) -> bool
     private def dispatch_notifications: (Array[Method]? queue) -> void
-    private def replace: (Session? session, Symbol event, ?verified_pair: Session?) -> Array[Integer]
+    private def replace: (Session? session, auth_state_event? event, ?verified_pair: Session?) -> Array[Integer]
   end
 end

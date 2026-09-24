@@ -8,7 +8,7 @@ RSpec.describe RuboCop do
 
   def inspect_source(source, path)
     output, error, status = Open3.capture3(
-      Gem.ruby, Gem.bin_path('rubocop', 'rubocop'), '--format', 'json', '--stdin', path,
+      Gem.ruby, Gem.bin_path('rubocop', 'rubocop'), '--format', 'json', '--force-exclusion', '--stdin', path,
       stdin_data: "# frozen_string_literal: true\n\n#{source}\n", chdir: root
     )
     expect([0, 1]).to include(status.exitstatus), error
@@ -23,6 +23,32 @@ RSpec.describe RuboCop do
         offenses, status = inspect_source("value = 1\nString(value)", path)
         expect(status).to eq(0)
         expect(offenses).to be_empty
+      end
+
+      it 'enforces complexity and method length on this source tree' do
+        source = <<~RUBY
+          def quality_probe(value)
+            if value == 1
+              true
+            elsif value == 2
+              true
+            elsif value == 3
+              true
+            elsif value == 4
+              true
+            elsif value == 5
+              true
+            else
+              false
+            end
+          end
+        RUBY
+        offenses, status = inspect_source(source, path)
+
+        expect(status).to eq(1)
+        expect(offenses.map { |offense| offense.fetch('cop_name') }).to include(
+          'Metrics/CyclomaticComplexity', 'Metrics/MethodLength'
+        )
       end
 
       directives.each do |directive|

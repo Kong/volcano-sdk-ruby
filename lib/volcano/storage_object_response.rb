@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Volcano
   # Validates object metadata and paginated storage responses.
   module StorageObjectResponse
@@ -69,20 +71,40 @@ module Volcano
     def storage_json_hash(value)
       raise Error::TransportError, 'invalid storage JSON object' unless value.is_a?(Hash)
 
+      # @type var active: Hash[Integer, bool]
+      active = {}
+      copy = storage_json_container(value, active) { storage_json_entries(value, active) }
+      JSON.generate(copy)
+      copy
+    rescue JSON::GeneratorError
+      raise Error::TransportError, 'invalid storage JSON value', cause: nil
+    end
+
+    def storage_json_entries(value, active)
       value.to_h do |key, item|
         raise Error::TransportError, 'invalid storage JSON key' unless key.is_a?(String)
 
-        [key, storage_json_value(item)]
+        [key, storage_json_value(item, active)]
       end
     end
 
-    def storage_json_value(value)
+    def storage_json_value(value, active)
       case value
       when NilClass, TrueClass, FalseClass, Integer, Float, String then value
-      when Array then value.map { |item| storage_json_value(item) }
-      when Hash then storage_json_hash(value)
+      when Array then storage_json_container(value, active) { value.map { |item| storage_json_value(item, active) } }
+      when Hash then storage_json_container(value, active) { storage_json_entries(value, active) }
       else raise Error::TransportError, 'invalid storage JSON value'
       end
+    end
+
+    def storage_json_container(value, active)
+      id = value.object_id
+      raise Error::TransportError, 'invalid storage JSON value' if active.key?(id) || active.size >= 100
+
+      active[id] = true
+      copy = yield
+      active.delete(id)
+      copy
     end
   end
 end

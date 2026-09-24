@@ -56,7 +56,9 @@ module Volcano
     private def storage_optional_time: (Object? value) -> Time?
     private def storage_optional_metadata: (Object? value) -> Hash[String, json_value]?
     private def storage_json_hash: (Object? value) -> Hash[String, json_value]
-    private def storage_json_value: (Object? value) -> json_value
+    private def storage_json_entries: (Hash[Object?, Object?] value, Hash[Integer, bool] active) -> Hash[String, json_value]
+    private def storage_json_value: (Object? value, Hash[Integer, bool] active) -> json_value
+    private def storage_json_container: [T] (Array[Object?] | Hash[Object?, Object?] value, Hash[Integer, bool] active) { () -> T } -> T
   end
 
   class Storage

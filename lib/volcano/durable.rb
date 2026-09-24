@@ -40,10 +40,10 @@ module Volcano
 
     # Reads an execution, including its result once it has succeeded.
     #
-    # Owner-scoped: an execution is addressed by its id alone and an anon key
-    # is held by everyone who loads the page, so this takes the project id and
-    # a platform token or service key. An auth-user session from sign-in is
-    # not enough. Poll it from a backend, not a browser.
+    # Owner-scoped: an execution is addressed by its id alone, so this takes
+    # the project id and the project owner's platform user token. Auth-user
+    # sessions, anon keys, service keys, and project access tokens are not
+    # accepted. Poll it from a backend, not a browser.
     def get(project_id, function_name, execution_id)
       project, function_id, execution = execution_path(project_id, function_name, execution_id)
       response = Transport.invoke do

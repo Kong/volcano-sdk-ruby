@@ -62,9 +62,31 @@ Network failures do not establish whether a function ran; do not blindly retry o
 
 Invalid invocation arguments and malformed successful resolution responses can raise `ArgumentError` or `TypeError`.
 
-## Read durable execution pages
+## Start and follow a durable execution
 
-`client.durable.list(project_id, function_id)` returns executions and pagination
-metadata. A successful response must include `data`, `page`, `limit`, `total`,
-and `has_more` with the API's declared types. Missing or malformed fields raise
-`TypeError`; a complete response with `data: []` returns an empty execution list.
+A durable execution can run for up to 366 days. Starting one returns a handle instead of waiting for its result:
+
+```ruby
+handle = client.durable.start(
+  "charge-order",
+  { order_id: "order-9" },
+  execution_name: "order-9"
+)
+
+owner_client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  api_url: ENV.fetch("VOLCANO_API_URL", "https://api.volcano.dev"),
+  access_token: ENV.fetch("VOLCANO_PLATFORM_TOKEN")
+)
+execution = owner_client.durable.get(project_id, "charge-order", handle.id)
+page = owner_client.durable.list(project_id, "charge-order", status: "running")
+owner_client.durable.stop(project_id, "charge-order", handle.id)
+```
+
+`start` accepts the same active session, service key, or anonymous key as `functions.invoke`. It is the only durable operation available to application credentials. An execution name makes a start idempotent.
+
+`get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token. Auth-user sessions, anonymous keys, service keys, and project access tokens are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
+
+`list` returns executions and pagination metadata. A successful response must include `data`, `page`, `limit`, `total`, and `has_more` with the API's declared types. Missing or malformed fields raise `TypeError`; a complete response with `data: []` returns an empty execution list.
+
+Ruby can start and manage durable functions written in JavaScript or Python. The Ruby SDK has no durable authoring API.

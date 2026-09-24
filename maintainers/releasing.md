@@ -1,5 +1,18 @@
 # Release evidence and recovery
 
+## Release flow
+
+Manually merge the Release Please version PR after its native checks pass.
+Release Please creates the version tag and GitHub release, which automatically
+triggers the existing registry publisher. The publisher runs its native checks,
+builds and verifies the distribution, then publishes through trusted publishing.
+
+Hosting independently runs SDK acceptance against each repository's latest `main`
+and records the tested commit. Acceptance does not block SDK publication. A green
+Hosting run covers its recorded revisions; a later SDK merge can publish before
+Hosting tests that commit. No production acceptance account or cross-repository
+release gate is required.
+
 The checked-in release and publish workflows own versioning and publication.
 This checklist does not authorize a release, a registry mutation or an environment approval.
 
@@ -7,7 +20,7 @@ This checklist does not authorize a release, a registry mutation or an environme
 
 1. Identify the release PR, exact source commit, version, tag and intended registry account. Inspect the generated changelog and package metadata.
 2. Require passing native checks: `bin/check-openapi`, `bundle exec rubocop`, `bundle exec rspec`, and the gem build and isolated install checks in CI. Verify the OpenAPI snapshot and generated output using the checked-in commands.
-3. Obtain clean code and security reviews. Record the approved shared-acceptance run and exact Hosting/SDK revisions for behavior changes; dry runs and synthetic HTTP tests are not live acceptance.
+3. Obtain clean code and security reviews. Use Hosting acceptance results when reviewing behavior changes. They are independent of publication; record the tested revisions without treating a dry run as live acceptance.
 4. Build the gem locally, install it in a clean environment, and run the exact public quickstart. Retain its digest and inventory as candidate package-content evidence; this is not proof of the bytes the release workflow will later build.
 5. Confirm explicit release authorization before any publication action. The existing automatic release path may publish after a release PR lands; a successful check or an unprotected environment is not itself release approval. Resolve authorization before merging a release PR rather than assuming `rubygems` has a human gate.
 

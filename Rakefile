@@ -7,7 +7,7 @@ require_relative 'maintainers/quality/native_gate'
 
 desc 'Run the same SDK checks locally and in CI'
 task quality: %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
-                 quality:contract quality:package]
+                 quality:package]
 
 desc 'Audit locked dependencies with current security advisories'
 task 'quality:audit' do
@@ -42,15 +42,6 @@ task 'quality:spec' do
        '--failure-exit-code', '1', '--error-exit-code', '1')
   end
   NativeGate.verify_coverage!(__dir__, run_id)
-end
-
-desc 'Validate contract feature bindings without provisioning resources'
-task 'quality:contract' do
-  fixture = File.expand_path('tests/fixtures/sdk-contract-dry-run.json', __dir__)
-  File.chmod(0o600, fixture)
-  sh({ 'CUCUMBER_PUBLISH_QUIET' => 'true', 'VOLCANO_SDK_CONTRACT_FIXTURE' => fixture },
-     Gem.ruby, Gem.bin_path('cucumber', 'cucumber'), 'features/contract',
-     '--dry-run', '--strict', '--format', 'progress')
 end
 
 desc 'Build and smoke test a fresh gem in an isolated install'

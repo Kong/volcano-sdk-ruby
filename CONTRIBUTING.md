@@ -33,7 +33,7 @@ Classify the impact in the PR before changing the contract:
 | Change                                    | Required updates                                                                                                                                                               |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Public facade or SDK-facing wire contract | Audit all three SDKs; update each affected facade, native tests, and public language examples. Regenerate internal clients when their wire snapshot changes.                   |
-| Shared behavior                           | Update the canonical requirement ID and Gherkin scenario in Hosting, every affected language binding, checked-in feature copies, native tests, and equivalent public examples. |
+| Shared behavior                           | Update the canonical requirement ID and Gherkin scenario in Hosting, every affected Hosting-owned language binding, native tests, and equivalent public examples. |
 | Native behavior                           | Add native regression coverage and document language-specific behavior. Update shared scenarios only if the shared behavior changes.                                           |
 | Public examples                           | Update equivalent examples in every affected language and verify their public API calls.                                                                                       |
 
@@ -46,30 +46,21 @@ PRs. Keep each PR focused and use Conventional Commits. Obtain clean code and
 security reviews and passing required checks on the final commit before merge.
 Hosting changes also require human approval.
 
-### Roll out shared scenarios
+### Roll out shared behavior
 
-Before merging SDK code, prove it remains compatible with the currently deployed
-Hosting contract. Staging Gherkin does not keep runtime code dormant, and the
-existing release automation can publish a main-derived package. If new server
-support is required, first land a backward-compatible Hosting prerequisite or
-keep the SDK PR in draft until an explicitly reviewed release/rollout plan is in
-place. Do not merge an incompatible implementation merely because its scenario
-is staged.
+Hosting owns the canonical scenarios and all language bindings under
+`tests/sdk-contract`. Its Staging Validation builds each SDK's latest `main`,
+installs the distribution in a fresh environment, and exercises public behavior.
+Do not copy features or acceptance runners into this repository.
 
-1. Change the canonical scenario in Hosting once. Copy its bytes into each SDK
-   and implement its native binding.
-2. Stage new scenarios under `features/staged` while Hosting main still uses the
-   older contract. Do not activate scenarios ahead of Hosting.
-3. Merge the required SDK changes before validating and merging the coordinated
-   Hosting PR. Record the Hosting and SDK revisions used by acceptance.
-4. After Hosting merges, promote those unchanged files into `features/contract`
-   and run the default binding-discovery checks. Do not keep duplicate active
-   and staged copies.
+Land compatible server support before an SDK version needs it in production.
+Then merge the SDK implementation and native tests. Update the Hosting scenarios
+and bindings in the coordinated PR, and validate those SDK main revisions in
+Staging Validation. Record the Hosting and SDK commits from that run.
 
-Hosting CI checks out each SDK's latest `main` and records the actual tested
-SHAs. Do not introduce a checked-in pin manifest or assume a rerun uses the same
-SDK revisions. Generate and verify each SDK against its own OpenAPI snapshot;
-compatibility with the server is established by integration tests.
+A maintainer manually merges the Release Please version PR; the existing release
+and trusted-publisher workflows publish automatically. Hosting acceptance is
+independent and does not gate SDK publication.
 
 When the wire contract changes, first build Hosting's public bundle with
 `scripts/ci/openapi-bundle.sh <output-directory>` and update the affected SDK's
@@ -78,20 +69,17 @@ check. The generator reads the vendored snapshot; it does not update that
 snapshot from Hosting. Do not use snapshot equality as a server compatibility
 gate.
 
-From a Hosting checkout, verify shared tooling and copies before review:
+From a Hosting checkout, verify shared tooling before review:
 
 ```shell
 npm ci --prefix tests/sdk-contract --ignore-scripts
 npm test --prefix tests/sdk-contract
-bash scripts/ci/run-sdk-contract-tests_test.sh
-bash scripts/ci/run-sdk-contract-tests.sh --validate-features-only \
-  /path/to/volcano-sdk-js /path/to/volcano-sdk-python /path/to/volcano-sdk-ruby
+go test ./scripts/ci
 ```
 
-Without `--validate-features-only`, the runner creates and deletes fixtures.
-Use an approved disposable environment for live runs; staging and production
-require explicit authorization. Ordinary Cloud E2E remains post-merge. Do not
-infer live acceptance from tooling checks or a nonblocking staging result.
+Use the installed-package runner's `inspect` mode to verify bindings without
+provisioning. Staging Validation runs the live suite and requires cleanup. Record
+actual live results separately from discovery or package checks.
 
 ### Documentation and release boundaries
 

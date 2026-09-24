@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.1...v0.32.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** reject cyclic request snapshots ([#298](https://github.com/Kong/volcano-sdk-ruby/issues/298)) ([3204447](https://github.com/Kong/volcano-sdk-ruby/commit/3204447b68e15f4707be32acd676464b4e600ce1))
+
 ## [0.32.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.0...v0.32.1) (2026-09-24)
 
 

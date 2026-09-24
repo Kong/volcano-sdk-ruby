@@ -50,8 +50,13 @@ module Async
   end
 
   module HTTP
+    module Protocol
+      module HTTP11
+      end
+    end
+
     class Endpoint
-      def self.parse: (String address) -> Endpoint
+      def self.parse: (String address, ?protocol: singleton(Protocol::HTTP11)) -> Endpoint
     end
   end
 

@@ -13,10 +13,12 @@ RSpec.describe Volcano::Realtime do
   around { |example| Async { example.run }.wait }
   after { client.realtime.disconnect }
 
-  it 'opens the default WebSocket endpoint and redacts connection failures' do
+  it 'uses HTTP/1.1 WebSocket upgrades and redacts connection failures' do
     addresses = []
+    protocols = []
     allow(Async::WebSocket::Client).to receive(:connect) do |endpoint|
       addresses << endpoint.to_url.to_s
+      protocols << endpoint.alpn_protocols
       raise IOError, 'connection refused for access-token'
     end
 
@@ -24,6 +26,7 @@ RSpec.describe Volcano::Realtime do
       expect(error.message).not_to include('access-token')
     end
     expect(addresses).to eq(['wss://api.test/base/realtime/v1/websocket?apikey=anon%20key'])
+    expect(protocols).to eq([['http/1.1']])
   end
 
   it 'delivers later error callbacks when an earlier callback raises' do

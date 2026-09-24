@@ -19,6 +19,7 @@ module Volcano
   interface _SandboxClient
     def current_session: () -> Session?
     def service_token: () -> String
+    def session_request: () { (String) -> Transport::Response } -> Transport::Response
   end
 
   class SandboxAccess
@@ -27,10 +28,12 @@ module Volcano
 
   class SandboxRequests
     UUID: Regexp
+    USER_OPERATIONS: Array[Symbol]
     @client: _SandboxClient
     @transport: _SandboxTransport
     def initialize: (_SandboxClient client, _SandboxTransport transport) -> void
     def call: (SandboxRequest request, ?status: Integer) -> Object?
+    private def dispatch: (SandboxRequest request, String token) -> Transport::Response
     def self.identifier: (Object? value) -> String
     def self.request_id: (Hash[Symbol, json_value] options) -> String
     def self.selector: (Hash[Symbol, json_value] options) -> Hash[Symbol, json_value]
@@ -58,6 +61,7 @@ module Volcano
   class SandboxSession
     @requests: SandboxRequests
     def initialize: (SandboxRequests requests, Object? value) -> void
+    private def cleanup: (Exception? original_error) -> (SandboxSession | nil)
     private def update: (Symbol operation, ?status: Integer) -> SandboxSession
     private def assign_state: (Hash[String, json_value] data) -> void
   end

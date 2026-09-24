@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'English'
+
 module Volcano
   # A session handle whose observed state changes only after validated responses.
   class SandboxSession
@@ -36,10 +38,16 @@ module Volcano
     def use
       yield self
     ensure
-      terminate unless @state == 'terminated'
+      cleanup($ERROR_INFO) unless @state == 'terminated'
     end
 
     private
+
+    def cleanup(original_error)
+      terminate
+    rescue StandardError
+      raise unless original_error
+    end
 
     def update(operation, status: 200)
       response = @requests.call(SandboxRequest.new(operation: operation, resource_id: @id), status: status)

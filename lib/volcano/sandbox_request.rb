@@ -21,7 +21,9 @@ module Volcano
   # Shared validation and credentials for Sandbox facade operations.
   class SandboxRequests
     UUID = /\A[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}\z/i
-    private_constant :UUID
+    USER_OPERATIONS = %i[get_sandbox_session execute_sandbox_session read_sandbox_session_file
+                         write_sandbox_session_file create_sandbox_session_access].freeze
+    private_constant :UUID, :USER_OPERATIONS
 
     def initialize(client, transport)
       @client = client
@@ -29,8 +31,11 @@ module Volcano
     end
 
     def call(request, status: 200)
-      token = @client.current_session&.access_token || @client.service_token
-      response = Transport.invoke { @transport.sandbox_request(authorization: token, request: request) }
+      response = if USER_OPERATIONS.include?(request.operation) && @client.current_session
+                   @client.session_request { |token| dispatch(request, token) }
+                 else
+                   dispatch(request, @client.service_token)
+                 end
       Transport.body(response, status)
     end
 
@@ -56,6 +61,12 @@ module Volcano
 
     def self.command(command, options)
       options.slice(:timeout_seconds, :environment).merge(command: command)
+    end
+
+    private
+
+    def dispatch(request, token)
+      Transport.invoke { @transport.sandbox_request(authorization: token, request: request) }
     end
   end
 end

@@ -24,7 +24,8 @@ puts result.stdout
 ```
 
 Keep the same `request_id` when retrying an uncertain create or execution. A new
-ID represents a new operation. The SDK does not automatically replay commands.
+ID represents a new operation. The SDK does not replay commands after transport failures. A rejected user token
+is refreshed once; the retry preserves the request ID.
 Nonzero exits and timeouts are result fields, not API exceptions. API failures
 raise typed `Volcano::Error` exceptions with `status`, `code`, and `retry_after`
 when supplied by the server.
@@ -50,7 +51,8 @@ end
 
 Creation, suspension, resumption, and termination are asynchronous. Use `refresh`
 to observe state. `use` requests termination when its block exits, including on
-exceptions; it does not wait for termination to complete. Use `get(session_id)`
+exceptions. If cleanup also fails, the original block exception is preserved.
+It does not wait for termination to complete. Use `get(session_id)`
 to reconnect, then `suspend`, `resume`, or `terminate` as needed. Files preserve
 binary `String` content. Writes accept at most 8 MiB.
 
@@ -79,3 +81,6 @@ Only trusted backend code should call
 `client.sandboxes.revoke(session_id, auth_user_id)`. Project users can access only
 sessions explicitly granted to them; they cannot create or manage sessions.
 Service keys stay on the backend. Anonymous keys alone cannot use this facade.
+
+When both credentials are configured, management operations use the service key.
+Granted session reads, commands, files, and HTTP access use the signed-in user.

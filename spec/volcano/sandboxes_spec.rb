@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'support/session_fixtures'
 
 RSpec.describe Volcano::Sandboxes do
+  include SessionFixtures
+
   def project = '00000000-0000-4000-8000-000000000001'
   def session_id = '00000000-0000-4000-8000-000000000002'
   def subject_id = '00000000-0000-4000-8000-000000000003'
@@ -189,5 +192,78 @@ RSpec.describe Volcano::Sandboxes do
     Typhoeus.stub(%r{\Ahttps://sandbox.test}).and_return(failure)
     expect { facade.exec(project, 'run', region: 'aws-us-east-1', preset: 'python3.12') }
       .to raise_error(Volcano::Error::TransportError)
+  end
+
+  it 'keeps service credentials for management after signing in' do
+    client.auth.current_session = Volcano::Session.new(access_token: 'user', refresh_token: 'refresh',
+                                                       user_id: subject_id)
+    reply(state, status: 201)
+    handle = facade.create(project, region: 'aws-us-east-1', preset: 'python3.12')
+    %i[suspend resume terminate].each do |operation|
+      reply(state, status: 202)
+      handle.public_send(operation)
+    end
+    reply(nil, status: 204)
+    facade.grant(session_id, subject_id, expires_at: 'tomorrow')
+    facade.revoke(session_id, subject_id)
+    reply(command.merge(session_id: session_id, region: 'aws-us-east-1', duration_ms: 1))
+    facade.exec(project, 'run', region: 'aws-us-east-1', preset: 'python3.12')
+    expect(requests.map { |request| request.options[:headers]['Authorization'] }).to all(eq('Bearer service'))
+  end
+
+  it 'refreshes a rejected user credential once while preserving the command identity' do
+    client.auth.current_session = Volcano::Session.new(access_token: access_token, refresh_token: 'refresh',
+                                                       user_id: subject_id)
+    reply(state)
+    handle = facade.get(session_id)
+    responses = [
+      Typhoeus::Response.new(code: 401, body: '{}', headers: {}),
+      Typhoeus::Response.new(code: 200, headers: {},
+                             body: JSON.generate(access_token: access_token('new'),
+                                                 refresh_token: 'new-refresh', token_type: 'bearer', expires_in: 3600,
+                                                 user: { id: subject_id, email: 'user@example.com', status: 'active' })),
+      Typhoeus::Response.new(code: 200, headers: {}, body: JSON.generate(command))
+    ]
+    Typhoeus.stub(%r{\Ahttps://sandbox.test}).and_return do |request|
+      requests << request
+      responses.shift
+    end
+    expect(handle.exec('run', request_id: request_id).stdout).to eq('hello')
+    expect(responses).to be_empty
+    expect(requests[-3].options[:headers][:'Idempotency-Key']).to eq(request_id)
+    expect(requests.last.options[:headers][:'Idempotency-Key']).to eq(request_id)
+    expect(requests.last.options[:headers]['Authorization']).to eq("Bearer #{access_token('new')}")
+  end
+
+  it 'preserves a block error when termination also fails' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ error: 'cleanup failed' }, status: 500)
+    expect { handle.use { raise ArgumentError, 'body failed' } }.to raise_error(ArgumentError, 'body failed')
+    expect(requests.last.url).to end_with("/sandbox-sessions/#{session_id}")
+    expect(requests.last.options[:method]).to eq(:delete)
+  end
+
+  it 'reports termination errors when the block succeeds' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ error: 'cleanup failed' }, status: 500)
+    expect { handle.use(&:id) }.to raise_error(Volcano::Error::VolcanoError)
+  end
+
+  it 'keeps user credentials for all granted session operations' do
+    client.auth.current_session = Volcano::Session.new(access_token: 'user', refresh_token: 'refresh',
+                                                       user_id: subject_id)
+    reply(state)
+    handle = facade.get(session_id)
+    reply(command)
+    handle.exec('run')
+    reply(nil, status: 204)
+    handle.files.write('/workspace/file', 'hello')
+    reply({ data: 'aGVsbG8=' })
+    expect(handle.files.read('/workspace/file')).to eq('hello')
+    reply({ url: 'https://access.test', token: 'secret', expires_at: 'tomorrow' })
+    handle.access(8080)
+    expect(requests.map { |request| request.options[:headers]['Authorization'] }).to all(eq('Bearer user'))
   end
 end

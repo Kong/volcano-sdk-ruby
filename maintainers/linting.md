@@ -48,6 +48,14 @@ forbid them. `Volcano/TypeSuppression` rejects those directives through RuboCop'
 parsed comments. Regression specs cover inline and block directives in runtime
 and test files while allowing fixture strings.
 
+Explicit `untyped` annotations also bypass checked dispatch, and `#:` assertions
+permit unchecked narrowing. The same cop uses Steep's
+[annotation parser](https://github.com/soutaro/steep/blob/v1.10.0/lib/steep/annotation_parser.rb)
+and RBS types to reject both, including nested untyped values, generic bounds,
+and `(?)` callable parameters. Checked annotations, typed generic applications,
+literal types, and fixture strings remain valid. The native all-error checker
+has no option to prohibit these type-erasing annotations.
+
 Native SimpleCov and RuboCop enforce their configured limits but do not reject
 a policy edit that lowers those limits. `spec/simple_cov_policy_spec.rb` and
 `spec/rubocop/config_store_policy_spec.rb` inspect the effective native settings
@@ -55,6 +63,14 @@ for runtime files. Temporary 99% coverage limits, an added runtime exclusion,
 and a higher complexity cap each made these specs fail. The native gate
 separately rejects nested RuboCop configuration. The tools still measure
 coverage and lint the code.
+
+## Canonical checks
+
+`spec/rake/application_spec.rb` inspects the canonical task with
+[Rake's native task API](https://ruby.github.io/rake/Rake/Task.html).
+Rake executes the configured prerequisites but cannot tell when a mandatory
+check was deleted. The regression spec requires all eight checks and rejects
+empty task actions. CI also requires the coverage report from the test task.
 
 ## Dynamic method declarations
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.0...v0.32.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **realtime:** validate callbacks and type event payloads ([#294](https://github.com/Kong/volcano-sdk-ruby/issues/294)) ([c023cc7](https://github.com/Kong/volcano-sdk-ruby/commit/c023cc70025cd91fb33fdf7c192f02cc3cd0e01f))
+
 ## [0.32.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.31.0...v0.32.0) (2026-09-23)
 
 

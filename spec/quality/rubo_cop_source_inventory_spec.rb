@@ -37,6 +37,13 @@ class RuboCopSourceInventory
     configuration.fetch('AllCops').fetch('NewCops') == 'enable'
   end
 
+  def no_explicitly_disabled_cops?(config: File.join(@root, '.rubocop.yml'))
+    configuration = RuboCop::ConfigLoader.load_yaml_configuration(config)
+    return false if configuration.fetch('AllCops', {}).fetch('DisabledByDefault', false)
+
+    configuration.none? { |_, options| options.is_a?(Hash) && options['Enabled'] == false }
+  end
+
   def metrics_apply_everywhere?(config: File.join(@root, '.rubocop.yml'))
     configuration = RuboCop::ConfigLoader.load_file(config)
     %w[Metrics Metrics/CyclomaticComplexity Metrics/MethodLength].all? do |name|
@@ -82,6 +89,7 @@ RSpec.describe RuboCopSourceInventory do
     expect(inventory.unexpected_configs).to be_empty
     expect(inventory.inherited_configs).to be_empty
     expect(inventory.new_cops_enabled?).to be(true)
+    expect(inventory.no_explicitly_disabled_cops?).to be(true)
     expect(inventory.metrics_apply_everywhere?).to be(true)
   end
 
@@ -110,6 +118,15 @@ RSpec.describe RuboCopSourceInventory do
       YAML
 
       expect(inventory.metrics_apply_everywhere?(config:)).to be(false)
+    end
+  end
+
+  it 'detects a cop disabled in the root configuration' do
+    Dir.mktmpdir('volcano-rubocop-config-') do |directory|
+      config = File.join(directory, '.rubocop.yml')
+      File.write(config, "Style/StringLiterals:\n  Enabled: false\n")
+
+      expect(inventory.no_explicitly_disabled_cops?(config:)).to be(false)
     end
   end
 

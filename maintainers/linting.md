@@ -17,7 +17,8 @@ The options file is pinned so a future `--except` cannot silently remove a cop.
 
 `spec/quality/rubo_cop_source_inventory_spec.rb` compares tracked Ruby files
 and extensionless Ruby entrypoints with RuboCop's native `--list-target-files`
-output. It rejects nested overrides, inherited configurations, and debt files.
+output. It rejects nested overrides, inherited configurations, disabled cops,
+and debt files.
 The generated client's sole nested configuration is verified by
 `quality:generated` against regenerated output. RuboCop can list inspected files
 but cannot require that every tracked source appears in that list.

@@ -3,8 +3,10 @@
 require 'simplecov'
 
 module CoveragePolicy
+  UUID = /\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
+
   def self.valid?(root)
-    thresholds? && runtime_scope?(root) && exclusions? && isolation?
+    thresholds? && runtime_scope?(root) && exclusions? && isolation? && run_identity?
   end
 
   def self.thresholds?
@@ -27,6 +29,17 @@ module CoveragePolicy
 
   def self.isolation?
     SimpleCov.coverage_dir == "reports/coverage/#{SimpleCov.run_id}" && SimpleCov.merging &&
-      SimpleCov.current_nocov_token == 'nocov' && SimpleCov::Deprecation.mode == :raise
+      SimpleCov.finalize_merge? && suppression_policy?
+  end
+
+  def self.suppression_policy?
+    SimpleCov.current_nocov_token == 'nocov' && SimpleCov::Deprecation.mode == :raise
+  end
+
+  def self.run_identity?
+    return true unless ENV['VOLCANO_REQUIRE_FULL_SUITE'] == '1'
+
+    run_id = ENV.fetch('SIMPLECOV_RUN_ID')
+    run_id == SimpleCov.run_id && run_id.match?(UUID)
   end
 end

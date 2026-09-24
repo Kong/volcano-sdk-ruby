@@ -7,7 +7,9 @@ loads. Only the generated client is excluded.
 
 `spec/quality/coverage_policy_spec.rb` verifies the effective SimpleCov settings
 in the test process. Negative fixtures prove that lower thresholds, new runtime
-exclusions, changed no-coverage tokens, and a shared result directory fail.
+exclusions, changed no-coverage tokens, disabled merge finalization, and a shared
+result directory fail. A Rake task probe verifies distinct run IDs on successive
+invocations.
 SimpleCov enforces coverage but cannot lock its own configuration.
 
 Ruby's Coverage library starts before Bundler evaluates the SDK gemspec;

@@ -59,14 +59,16 @@ RSpec.describe SpecFileInventory do
     end
   end
 
-  it 'rejects a test excluded by a nested RSpec pattern' do
+  it 'rejects a test hidden by an RSpec exclusion pattern' do
     Dir.mktmpdir('volcano-spec-inventory-') do |directory|
       FileUtils.mkdir_p(File.join(directory, 'spec/nested'))
       File.write(File.join(directory, 'spec/nested/hidden_spec.rb'), "RSpec.describe(String) { it('works') {} }")
       system('git', 'init', '--quiet', directory, exception: true)
       system('git', '-C', directory, 'add', 'spec/nested/hidden_spec.rb', exception: true)
 
-      probe = described_class.new(directory, pattern: 'spec/*_spec.rb', exclude_pattern: '')
+      probe = described_class.new(
+        directory, pattern: RSpec.configuration.pattern, exclude_pattern: '**/nested/*_spec.rb'
+      )
       expect(probe.missing).to eq(['spec/nested/hidden_spec.rb'])
     end
   end

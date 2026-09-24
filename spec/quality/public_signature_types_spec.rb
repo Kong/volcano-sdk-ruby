@@ -13,9 +13,8 @@ class PublicSignatureTypes < RBS::AST::Visitor
 
   def visit(node)
     inspect_node_type(node)
-    inspect_bounds(node.type_params) if node.respond_to?(:type_params)
+    inspect_generics(node)
     inspect_overloads(node) if node.respond_to?(:overloads)
-    inspect_superclass(node.super_class) if node.respond_to?(:super_class)
     super
   end
 
@@ -26,13 +25,23 @@ class PublicSignatureTypes < RBS::AST::Visitor
     inspect_types(node.args) if node.respond_to?(:args)
   end
 
+  def inspect_generics(node)
+    inspect_bounds(node.type_params) if node.respond_to?(:type_params)
+    inspect_superclass(node.super_class) if node.respond_to?(:super_class)
+    inspect_self_types(node.self_types) if node.respond_to?(:self_types)
+  end
+
   def inspect_types(types) = types.each { |type| inspect_type(type) }
 
-  def inspect_bounds(params) = inspect_types(params.filter_map(&:upper_bound))
+  def inspect_bounds(params)
+    inspect_types(params.flat_map { |param| [param.upper_bound, param.default_type].compact })
+  end
 
   def inspect_superclass(parent)
     inspect_types(parent.args) if parent
   end
+
+  def inspect_self_types(types) = types.each { |type| inspect_types(type.args) }
 
   def inspect_overloads(node)
     @unchecked << node.location if node.overloading
@@ -96,5 +105,27 @@ RSpec.describe PublicSignatureTypes do
 
     expect(result.untyped.map(&:start_line)).to eq([1, 3])
     expect(result.unchecked.map(&:start_line)).to eq([4])
+  end
+
+  it 'rejects untyped generic ancestors and module self types' do
+    source = <<~RBS
+      interface _Interface[T]
+      end
+      class Base[T]
+      end
+      class Child < Base[untyped]
+      end
+      module Provider : _Interface[untyped]
+      end
+    RBS
+    result = inspect_signature(source, 'probe.rbs')
+
+    expect(result.untyped.map(&:start_line)).to eq([5, 7])
+  end
+
+  it 'rejects untyped generic defaults' do
+    result = inspect_signature("class Probe[T = untyped]\nend\n", 'probe.rbs')
+
+    expect(result.untyped.map(&:start_line)).to eq([1])
   end
 end

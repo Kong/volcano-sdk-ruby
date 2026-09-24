@@ -12,13 +12,12 @@ bundle exec rake quality
 ```
 
 CI runs the same command. It checks dependencies, regeneration, lint, tests,
-coverage, injected defects, contract bindings, and the installed gem.
+coverage, injected defects, and the installed gem.
 See [runtime coverage](maintainers/coverage.md) for coverage reports and focused tests.
 
 After updating `openapi/openapi.yaml` from Hosting's public bundle, regenerate
-the internal client with `bin/generate-openapi`. The dry run checks active and
-staged phrase bindings without creating fixtures or exercising live behavior.
-Keep generated code inside `lib/volcano/generated` and the realtime protocol
+the internal client with `bin/generate-openapi` and check it with
+`bin/check-openapi`. Keep generated code inside `lib/volcano/generated` and the realtime protocol
 adapter behind the public facade.
 
 ## Coordinate SDK changes

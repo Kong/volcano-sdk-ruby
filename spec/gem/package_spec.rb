@@ -40,6 +40,25 @@ RSpec.describe Gem::Package do
     end
   end
 
+  it 'packages the facade and generated runtime without generator scaffolding' do
+    Dir.mktmpdir('volcano-ruby-gem') do |directory|
+      files = described_class.new(build_artifact(directory)).spec.files
+      expect(files).to include(
+        'LICENSE',
+        'README.md',
+        'lib/volcano.rb',
+        'lib/volcano/generated_transport_support.rb',
+        'lib/volcano/generated/lib/volcano-generated.rb',
+        'lib/volcano/generated/lib/volcano-generated/api_client.rb',
+        'lib/volcano/realtime/protocol_io.rb',
+        'sig/errors.rbs',
+        'sig/connection_string.rbs'
+      )
+      expect(files.grep(%r{\Alib/volcano/generated/(?!lib/)})).to be_empty
+      expect(files.grep(%r{\Asig_dev/})).to be_empty
+    end
+  end
+
   it 'packs every public signature without development signatures' do
     with_packed_consumer do |directory|
       signatures = Dir.glob(File.join(root, 'sig/**/*.rbs')).map { |path| path.delete_prefix("#{root}/") }

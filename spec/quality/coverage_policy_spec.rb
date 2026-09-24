@@ -39,7 +39,7 @@ RSpec.describe CoveragePolicy do
 
   it 'rejects a custom no-coverage token' do
     contents = File.read(File.join(root, '.simplecov')).sub('SimpleCov.configure do',
-                                                            "SimpleCov.configure do\n  current_nocov_token('hidden')")
+                                                            "SimpleCov.configure do\n  nocov_token 'hidden'")
     expect(check_config(contents)).to be(false)
   end
 

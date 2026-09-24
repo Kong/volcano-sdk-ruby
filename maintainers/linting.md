@@ -123,6 +123,12 @@ specs require every `Lint` cop and the project index to stay enabled. Test-only
 aliases live under `SpecSupport`; RSpec's native `CustomTransform` omits that
 prefix when checking filenames, preserving the runtime module's path.
 
+The lockfile includes native Rubydex and FFI variants for both Linux
+architectures. Install with `BUNDLE_FROZEN=true bundle install`; a missing
+platform can select Rubydex's source gem, which requires Rust. For another
+development platform, use [`bundle lock --add-platform`](https://bundler.io/man/bundle-lock.1.html)
+and review the native variants without changing the locked gem versions.
+
 References: [RuboCop configuration](https://docs.rubocop.org/rubocop/1.90/configuration.html),
 [project index](https://docs.rubocop.org/rubocop/1.90/usage/project_index.html),
 [optional style semantics](https://docs.rubocop.org/rubocop/1.90/cops_style.html).

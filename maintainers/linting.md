@@ -38,6 +38,11 @@ so a single catch-all target cannot safely replace their file lists.
 with Git's runtime inventory. A temporary runtime file outside every Steep
 target made that spec fail while the native type check still passed.
 
+Steep also permits diagnostic severity overrides. Its native project parser
+provides the effective settings used by `spec/steep/project_diagnostic_policy_spec.rb`;
+every target and nested group must retain `Steep::Diagnostic::Ruby.all_error`.
+This catches configuration downgrades while Steep remains the type checker.
+
 Native SimpleCov and RuboCop enforce their configured limits but do not reject
 a policy edit that lowers those limits. `spec/simple_cov_policy_spec.rb` and
 `spec/rubocop/config_store_policy_spec.rb` inspect the effective native settings

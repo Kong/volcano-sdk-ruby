@@ -3,6 +3,7 @@
 require 'bundler/gem_tasks'
 require 'securerandom'
 require 'tmpdir'
+require_relative 'maintainers/quality/native_gate'
 
 desc 'Run the same SDK checks locally and in CI'
 task quality: %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
@@ -20,6 +21,7 @@ end
 
 desc 'Lint all maintained Ruby code'
 task 'quality:lint' do
+  NativeGate.verify_lint_targets!(__dir__)
   ruby Gem.bin_path('rubocop', 'rubocop'), '--parallel'
 end
 
@@ -32,11 +34,13 @@ end
 desc 'Run the unit tests'
 task 'quality:spec' do
   rspec = Gem.bin_path('rspec-core', 'rspec')
-  environment = { 'VOLCANO_REQUIRE_FULL_SUITE' => '1', 'SIMPLECOV_RUN_ID' => SecureRandom.uuid }
+  run_id = SecureRandom.uuid
+  environment = { 'VOLCANO_REQUIRE_FULL_SUITE' => '1', 'SIMPLECOV_RUN_ID' => run_id }
   Bundler.with_unbundled_env do
     sh(environment, Gem.ruby, '-r./spec/support/coverage_start', rspec,
        '--failure-exit-code', '1', '--error-exit-code', '1')
   end
+  NativeGate.verify_coverage!(__dir__, run_id)
 end
 
 desc 'Validate contract feature bindings without provisioning resources'

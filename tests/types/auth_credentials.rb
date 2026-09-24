@@ -31,3 +31,12 @@ def credential_messages(auth)
   auth.reset_password_for_email(email: 'user@example.test')
   auth.reset_password(token: 'recovery', new_password: 'secret')
 end
+
+# @type method subscribe_to_auth_events: (Volcano::Auth) -> Volcano::AuthSubscription
+def subscribe_to_auth_events(auth)
+  auth.on_auth_state_change do |event, _session|
+    # @type var declared: Volcano::auth_state_event
+    declared = event
+    declared.to_s
+  end
+end

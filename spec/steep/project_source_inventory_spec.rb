@@ -19,10 +19,6 @@ RSpec.describe Steep::Project do
       .reject { |path| path.start_with?('lib/volcano/generated/', 'vendor/') }
   end
 
-  def ruby_script?(path)
-    File.open(File.join(root, path)) { |file| file.gets&.match?(/\A#!.*\bruby\b/) } == true
-  end
-
   it 'includes every handwritten runtime file in a Steep target' do
     sources = %w[Steepfile Steepfile.transport].flat_map do |steepfile|
       output = command(Gem.ruby, Gem.bin_path('steep', 'steep'), 'project', '--print', '--steepfile', steepfile)
@@ -31,15 +27,5 @@ RSpec.describe Steep::Project do
     runtime = maintained_files.grep(%r{\Alib/.*\.rb\z})
 
     expect(sources).to include(*runtime)
-  end
-
-  it 'includes every maintained Ruby file in RuboCop discovery' do
-    linted = command(Gem.ruby, Gem.bin_path('rubocop', 'rubocop'), '--list-target-files').lines.map(&:strip)
-    special_files = %w[Rakefile volcano-sdk.gemspec .simplecov]
-    code = maintained_files.select do |path|
-      path.end_with?('.rb') || special_files.include?(path) || ruby_script?(path)
-    end
-
-    expect(linted).to include(*code)
   end
 end

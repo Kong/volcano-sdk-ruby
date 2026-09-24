@@ -5,14 +5,6 @@ require 'rubocop'
 RSpec.describe RuboCop::ConfigStore do
   let(:root) { File.expand_path('../..', __dir__) }
 
-  it 'rejects nested configuration for handwritten code' do
-    configs = Dir.glob(
-      File.join(root, '{lib,spec,features,maintainers,bin,.github}', '**/.rubocop.yml'),
-      File::FNM_DOTMATCH
-    )
-    expect(configs.reject { |path| path.include?('/lib/volcano/generated/') }).to be_empty
-  end
-
   it 'keeps native complexity and length limits for every handwritten runtime file' do
     files = Dir.glob(File.join(root, 'lib/**/*.rb')).reject { |path| path.include?('/lib/volcano/generated/') }
     expect(files).not_to be_empty

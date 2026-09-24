@@ -24,23 +24,18 @@ See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_
 
 Steep's native `check` paths select files but do not fail when a new source
 file matches no target. The SDK needs separate targets with different signatures,
-so a single catch-all target cannot safely replace their file lists. RuboCop's
-native file discovery similarly has no check that every maintained Ruby file was
-selected. `steep project --print` and `rubocop --list-target-files` expose their
-resolved sets; `spec/steep/project_source_inventory_spec.rb` compares those sets
-with Git's maintained-file inventory. A temporary untracked runtime file outside
-the configured Steep targets made that spec fail while the native type check
-still passed. The spec adds only the missing inventory assertion; both tools
-continue to perform the actual checks.
+so a single catch-all target cannot safely replace their file lists.
+`spec/steep/project_source_inventory_spec.rb` compares `steep project --print`
+with Git's runtime inventory. A temporary runtime file outside every Steep
+target made that spec fail while the native type check still passed.
 
 Native SimpleCov and RuboCop enforce their configured limits but do not reject
 a policy edit that lowers those limits. `spec/simple_cov_policy_spec.rb` and
 `spec/rubocop/config_store_policy_spec.rb` inspect the effective native settings
 for runtime files. Temporary 99% coverage limits, an added runtime exclusion,
-and a higher complexity cap, including a nested RuboCop override, each made
-these specs fail. Nested RuboCop configuration is rejected for handwritten
-code; the generated client's copy is pinned by the regeneration check. The
-tools still measure coverage and lint the code.
+and a higher complexity cap each made these specs fail. The native gate
+separately rejects nested RuboCop configuration. The tools still measure
+coverage and lint the code.
 
 ## Coverage directives
 

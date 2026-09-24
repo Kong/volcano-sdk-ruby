@@ -36,14 +36,14 @@ module Volcano
     def session_request: (?binding: session_binding) { (String) -> Transport::Response } -> Transport::Response
     def service_token: () -> String
     def function_token: () -> String
-    def store_session: (Session session, ?event: Symbol?) -> void
+    def store_session: (Session session, ?event: auth_state_event?) -> void
     def capture_session: () -> [Integer, Session?]
     def capture_session_binding: () -> session_binding
-    def store_session_if_current?: (Session session, Integer generation, ?event: Symbol, ?notifications: Array[Method]?) -> bool
-    def clear_session_if_current?: (Integer generation, ?event: Symbol, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
+    def store_session_if_current?: (Session session, Integer generation, ?event: auth_state_event, ?notifications: Array[Method]?) -> bool
+    def clear_session_if_current?: (Integer generation, ?event: auth_state_event, ?notifications: Array[Method]?, ?lineage: SessionOperations?) -> bool
     def reject_refresh_if_current?: (Integer generation, ?notifications: Array[Method]?) -> bool
     def refresh_rejected?: (Integer generation, SessionOperations lineage) -> bool
-    def subscribe_auth_state_change: () { (Symbol, Session?) -> void } -> AuthSubscription
+    def subscribe_auth_state_change: () { (auth_state_event, Session?) -> void } -> AuthSubscription
     def update_session_user_if_current?: (Hash[String, json_value] user, Integer generation) -> bool
 
     private

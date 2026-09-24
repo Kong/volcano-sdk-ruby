@@ -52,6 +52,5 @@ module Volcano
 
   class DurableExecution
     private def immutable_value: (Object? value) -> Object?
-    private def immutable_value_hash: (Hash[Object?, Object?] value) -> Hash[Object?, Object?]
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'time'
+require_relative 'immutable_request_value'
 
 module Volcano
   DURABLE_EXECUTION_ATTRIBUTES = %i[
@@ -65,15 +66,9 @@ module Volcano
     # `result` is the function's own JSON, so it is frozen all the way down.
     def immutable_value(value)
       case value
-      when Hash then immutable_value_hash(value)
-      when Array then value.map { |item| immutable_value(item) }.freeze
-      when Time, String then value.dup.freeze
+      when Hash, Array, Time, String then ImmutableRequestValue.capture(value)
       else value
       end
-    end
-
-    def immutable_value_hash(value)
-      value.to_h { |key, item| [immutable_value(key), immutable_value(item)] }.freeze
     end
   end
 

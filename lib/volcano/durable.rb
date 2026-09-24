@@ -29,10 +29,11 @@ module Volcano
       # DNS-safe name pattern an invoke checks would reject half the input.
       function_id = identifier(function_name, 'function_name')
       name = execution_name.nil? ? nil : execution_name_argument(execution_name)
+      request_payload = ImmutableRequestValue.capture(payload)
       response = Transport.invoke do
         @transport.start_durable_execution_from_application(
           authorization: @client.function_token,
-          function_id: function_id, payload: payload.dup, execution_name: name
+          function_id: function_id, payload: request_payload, execution_name: name
         )
       end
       durable_execution(Transport.body(response, 202))
@@ -62,6 +63,7 @@ module Volcano
       project = identifier(project_id, 'project_id')
       function_id = identifier(function_name, 'function_name')
       validate_paging(page, limit)
+      status = status&.dup&.freeze
       response = Transport.invoke do
         @transport.list_durable_executions(
           authorization: @client.session_token, project_id: project, function_id: function_id,

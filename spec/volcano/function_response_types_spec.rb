@@ -42,15 +42,17 @@ RSpec.describe Volcano::FunctionResponse do
 
   it 'copies and freezes headers and version independently of the caller' do
     check_property(PropCheck::Generators.printable_string) do |text|
+      original = text.dup
       headers = { 'X-Test' => text }
       version = text.dup
       response = described_class.new(data: nil, status: 200, headers: headers, version: version)
+      text.replace('changed')
       headers['X-Test'] = 'changed'
       version.replace('changed')
 
-      expect(response.headers).to eq('X-Test' => text)
+      expect(response.headers).to eq('X-Test' => original)
       expect(response.headers.fetch('X-Test')).to be_frozen
-      expect(response.version).to eq(text)
+      expect(response.version).to eq(original)
       expect(response.version).to be_frozen
     end
   end

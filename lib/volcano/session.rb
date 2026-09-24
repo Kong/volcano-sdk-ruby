@@ -14,8 +14,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class Session
-    # @dynamic access_token, refresh_token, user_id, user, members, with, to_h
-    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(access_token:, refresh_token: nil, user_id: nil, user: nil)
       user = immutable_user(user)
       super

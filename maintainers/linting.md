@@ -56,6 +56,24 @@ and a higher complexity cap each made these specs fail. The native gate
 separately rejects nested RuboCop configuration. The tools still measure
 coverage and lint the code.
 
+## Dynamic method declarations
+
+Steep checks `@dynamic` names against RBS but does not reject declarations that
+are no longer needed. The exact namespace/method inventory in
+[steep-dynamic-methods.json](steep-dynamic-methods.json) is paired with the
+rationales in [quality-exceptions.md](quality-exceptions.md). RuboCop's parser
+checks their source scopes, and both native Steep targets run against a temporary
+copy with those annotations removed. The resulting missing-method set must
+match the inventory exactly. Added, missing, and unnecessary annotations fail.
+Steep exports structured diagnostics only inside the temporary directory; its
+pinned API and diagnostic format keep the comparison exact. No report is saved
+as a repository baseline.
+
+This check found 132 unnecessary names on classes reopened by multiple RBS
+signatures; their annotations were removed. The remaining 244 names each have
+a corresponding native diagnostic. Runtime method bodies and signatures stay
+checked in the ordinary all-error runs; no diagnostic baseline is used there.
+
 ## Coverage directives
 
 `Volcano/CoverageSuppression` rejects SimpleCov skip directives in Ruby comments,

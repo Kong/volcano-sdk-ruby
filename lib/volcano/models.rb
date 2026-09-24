@@ -11,10 +11,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class AuthSession
-    # @dynamic id, user_id, provider, expires_at, is_active, is_current, user_agent
-    # @dynamic ip_address, last_ip_address, last_activity_at, session_started_at
-    # @dynamic created_at, updated_at, members, with, to_h, deconstruct
-    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - AUTH_SESSION_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -51,8 +47,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class LinkedOAuthProvider
-    # @dynamic provider, linked_at, updated_at, members, with, to_h, deconstruct
-    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(provider:, linked_at:, updated_at:)
       provider = immutable_value(provider)
       linked_at = immutable_value(linked_at)

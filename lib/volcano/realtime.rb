@@ -189,8 +189,6 @@ module Volcano
 
       attr_reader :name
 
-      # @dynamic name
-
       def initialize(realtime, protocol_provider, name, type, batch_config:)
         @realtime = realtime
         @protocol_provider = protocol_provider

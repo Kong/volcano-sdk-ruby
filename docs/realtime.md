@@ -35,6 +35,7 @@ end.wait
 `subscribe` waits for the server acknowledgement.
 Channel names receive their type prefix, so `updates` becomes `broadcast:updates`.
 Run realtime operations inside the same Async reactor for that client.
+The SDK uses HTTP/1.1 WebSocket upgrades; network proxies must allow those upgrades.
 The following channel examples belong inside an `Async` block with an authenticated `client`.
 
 ## Pause or remove channels

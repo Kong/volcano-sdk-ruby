@@ -51,6 +51,13 @@ RSpec.describe NativeGate do
     expect { described_class.verify_lint_targets!(directory) }.to raise_error(/Nested RuboCop configuration/)
   end
 
+  it 'rejects a RuboCop debt baseline' do
+    File.write(File.join(directory, '.rubocop_todo.yml'), "Metrics/CyclomaticComplexity:\n  Max: 100\n")
+    system('git', '-C', directory, 'add', '.', exception: true)
+
+    expect { described_class.verify_lint_targets!(directory) }.to raise_error(/RuboCop debt baseline/)
+  end
+
   it 'accepts a fresh full-coverage report' do
     add_runtime_source('one')
     write_report(report)

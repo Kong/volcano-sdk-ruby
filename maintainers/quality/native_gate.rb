@@ -46,6 +46,9 @@ module NativeGate
   end
 
   def self.verify_root_configs!(paths)
+    baselines = paths.grep(%r{(?:\A|/)\.rubocop_todo\.ya?ml\z})
+    raise "RuboCop debt baseline: #{baselines.join(', ')}" unless baselines.empty?
+
     nested = paths.grep(%r{(?:\A|/)\.rubocop(?:\.yml)?\z}) - ROOT_CONFIGS - [GENERATED_CONFIG]
     raise "Nested RuboCop configuration: #{nested.join(', ')}" unless nested.empty?
   end

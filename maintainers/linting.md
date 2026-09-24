@@ -15,8 +15,13 @@ Before running RuboCop, `quality:lint` compares Git-tracked handwritten Ruby
 files with RuboCop's `--list-target-files` result. Source recognition uses the
 pinned RuboCop defaults, including Ruby executables, manifests, and task files.
 The gate also rejects nested configurations outside the generated client.
+It rejects `.rubocop_todo.yml` debt baselines anywhere in the repository.
 Cop-specific `Include` and `Exclude` still require policy review; target
 discovery cannot prove which cops ran on each file.
+
+`spec/quality/rubocop_guardrail_spec.rb` checks RuboCop's resolved settings for
+runtime and test files, including cyclomatic complexity at most five, ten-line
+method limit, enabled new cops, redundant-directive checks, and verifying doubles.
 
 See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_reference.html).
 

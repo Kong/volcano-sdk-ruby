@@ -14,6 +14,8 @@ After RSpec exits, `quality:spec` checks that the fresh JSON report includes
 every tracked handwritten runtime module and has zero missed lines or branches.
 This catches custom SimpleCov exit hooks that omit threshold failure or report
 processing.
+`spec/quality/simple_cov_configuration_spec.rb` resolves the native SimpleCov
+settings and rejects a lowered threshold or a broader runtime exclusion.
 
 The startup and clock probes run in child Ruby processes. Their shared
 `spec/support/subprocess_coverage.rb` configuration records each child's result;

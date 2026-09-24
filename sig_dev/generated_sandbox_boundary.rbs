@@ -1,0 +1,26 @@
+module Volcano
+  class GeneratedTransport
+    SANDBOX_OPERATIONS: Hash[Symbol, ^(Generated::SandboxesApi, SandboxRequest) -> Generated::api_result]
+    def sandbox_request: (authorization: String, request: SandboxRequest) -> Transport::Response
+    private def sandbox_api: (String authorization, Integer timeout) -> Generated::SandboxesApi
+  end
+
+  module Generated
+    class SandboxesApi
+      def initialize: (GeneratedTransport::ApiClient api_client) -> void
+      def list_sandbox_presets_with_http_info: (api_options options) -> api_result
+      def create_sandbox_session_with_http_info: (String?, String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def execute_sandbox_with_http_info: (String?, String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def get_sandbox_session_with_http_info: (String?, api_options options) -> api_result
+      def execute_sandbox_session_with_http_info: (String?, String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def suspend_sandbox_session_with_http_info: (String?, api_options options) -> api_result
+      def resume_sandbox_session_with_http_info: (String?, api_options options) -> api_result
+      def terminate_sandbox_session_with_http_info: (String?, api_options options) -> api_result
+      def create_sandbox_session_access_with_http_info: (String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def read_sandbox_session_file_with_http_info: (String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def write_sandbox_session_file_with_http_info: (String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def grant_sandbox_session_with_http_info: (String?, String?, Hash[Symbol, json_value]?, api_options options) -> api_result
+      def revoke_sandbox_session_with_http_info: (String?, String?, api_options options) -> api_result
+    end
+  end
+end

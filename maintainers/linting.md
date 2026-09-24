@@ -11,6 +11,11 @@ Native `AllCops/Include` configuration adds package smoke scripts under
 `.github/scripts` without replacing RuboCop's default file discovery.
 Configuration regression specs invoke the actual CLI and verify that it rejects
 suppressed offenses in runtime and test paths.
+The source inventory compares Git-tracked handwritten Ruby files with
+`rubocop --list-target-files`, so a new file hidden by `AllCops/Exclude` fails
+the gate. It also rejects nested RuboCop configurations outside the generated
+client. Cop-specific `Include` and `Exclude` still need review when policy
+changes; target discovery alone cannot prove which cops ran on a file.
 
 See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_reference.html).
 

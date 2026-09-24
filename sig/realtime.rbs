@@ -23,8 +23,14 @@ module Volcano
       def unsubscribe: () -> nil
       def send: (event: String | Symbol, **json_value payload) -> nil
 
-      def on: (String event, ^(Object?) -> void callback) -> self
-            | (String event) { (Object?) -> void } -> self
+      def on: ("message" event, ^(Hash[String, json_value]) -> void callback) -> self
+            | ("message" event) { (Hash[String, json_value]) -> void } -> self
+            | ("join" | "leave" event, ^(PresenceInfo) -> void callback) -> self
+            | ("join" | "leave" event) { (PresenceInfo) -> void } -> self
+            | ("presence_sync" event, ^(Hash[String, PresenceInfo]) -> void callback) -> self
+            | ("presence_sync" event) { (Hash[String, PresenceInfo]) -> void } -> self
+            | ("INSERT" | "UPDATE" | "DELETE" | "*" event, ^(PostgresChange) -> void callback) -> self
+            | ("INSERT" | "UPDATE" | "DELETE" | "*" event) { (PostgresChange) -> void } -> self
       def on_presence_sync: (^(Hash[String, PresenceInfo]) -> void callback) -> self
                           | () { (Hash[String, PresenceInfo]) -> void } -> self
       def on_postgres_changes: (String | Symbol event, schema: String, table: String, callback: ^(PostgresChange) -> void) -> self

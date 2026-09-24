@@ -17,6 +17,14 @@ RSpec.describe Volcano::Realtime do
     expect(output).to include('Ruby::ArgumentTypeMismatch')
   end
 
+  it 'rejects a misspelled realtime channel event' do
+    fixture = File.expand_path('../../tests/types_invalid/realtime_channel_events.rb', __dir__)
+    output, errors, status = SteepConsumer.check(File.read(fixture))
+
+    expect(status.exitstatus).to eq(1), output + errors
+    expect(output).to include('Ruby::UnresolvedOverloading', 'mesage')
+  end
+
   it 'ships the public realtime facade signature in the gem manifest' do
     files = Gem::Specification.load(File.expand_path('../../volcano-sdk.gemspec', __dir__)).files
 

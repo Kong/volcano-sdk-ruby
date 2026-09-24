@@ -72,7 +72,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'StorageBucket'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageBucketsApi.create_storage_bucket",
@@ -150,7 +150,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageBucketsApi.delete_storage_bucket",
@@ -230,7 +230,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'StorageBucket'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageBucketsApi.get_storage_bucket",
@@ -324,7 +324,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListStorageBuckets200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageBucketsApi.list_storage_buckets",
@@ -415,7 +415,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'StorageBucket'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageBucketsApi.update_storage_bucket",

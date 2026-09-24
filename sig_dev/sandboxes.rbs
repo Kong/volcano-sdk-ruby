@@ -1,0 +1,72 @@
+module Volcano
+  type sandbox_request_options = { operation: Symbol, ?resource_id: String, ?subject_id: String, ?body: Hash[Symbol, json_value], ?request_id: String, ?timeout: Integer }
+
+  class SandboxRequest
+    @options: sandbox_request_options
+    attr_reader operation: Symbol
+    attr_reader resource_id: String?
+    attr_reader subject_id: String?
+    attr_reader body: Hash[Symbol, json_value]?
+    attr_reader request_id: String?
+    attr_reader timeout: Integer
+    def initialize: (sandbox_request_options options) -> void
+  end
+
+  interface _SandboxTransport
+    def sandbox_request: (authorization: String, request: SandboxRequest) -> Transport::Response
+  end
+
+  interface _SandboxClient
+    def current_session: () -> Session?
+    def service_token: () -> String
+  end
+
+  class SandboxAccess
+    @values: Hash[Symbol, String]
+  end
+
+  class SandboxRequests
+    UUID: Regexp
+    @client: _SandboxClient
+    @transport: _SandboxTransport
+    def initialize: (_SandboxClient client, _SandboxTransport transport) -> void
+    def call: (SandboxRequest request, ?status: Integer) -> Object?
+    def self.identifier: (Object? value) -> String
+    def self.request_id: (Hash[Symbol, json_value] options) -> String
+    def self.selector: (Hash[Symbol, json_value] options) -> Hash[Symbol, json_value]
+    def self.command: (String command, Hash[Symbol, json_value] options) -> Hash[Symbol, json_value]
+  end
+
+  module SandboxResponse
+    STATES: Array[String]
+    def self.text: (Object? value) -> String
+    def self.integer: (Object? value) -> Integer
+    def self.flag: (Object? value) -> bool
+    def self.state: (Object? value) -> String
+    def self.command: (Object? value) -> SandboxCommandResult
+    def self.execution: (Object? value) -> SandboxExecutionResult
+    def self.access: (Object? value) -> SandboxAccess
+    def self.preset: (Object? value) -> SandboxPreset
+    def self.array: (Object? value) -> Array[Object?]
+  end
+
+  class Sandboxes
+    @requests: SandboxRequests
+    def initialize: (_SandboxClient client, _SandboxTransport transport) -> void
+  end
+
+  class SandboxSession
+    @requests: SandboxRequests
+    def initialize: (SandboxRequests requests, Object? value) -> void
+    private def update: (Symbol operation, ?status: Integer) -> SandboxSession
+    private def assign_state: (Hash[String, json_value] data) -> void
+  end
+
+  class SandboxFiles
+    FILE_LIMIT: Integer
+    @requests: SandboxRequests
+    @session_id: String
+    def initialize: (SandboxRequests requests, String session_id) -> void
+    private def request: (Symbol operation, Hash[Symbol, json_value] body) -> SandboxRequest
+  end
+end

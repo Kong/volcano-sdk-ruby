@@ -128,7 +128,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_function",
@@ -208,7 +208,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_function_scheduler",
@@ -286,7 +286,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'BatchFunctionDeployResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_functions_batch",
@@ -355,7 +355,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.delete_function",
@@ -428,7 +428,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.delete_function_scheduler",
@@ -495,7 +495,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.get_function",
@@ -568,7 +568,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.get_function_scheduler",
@@ -588,7 +588,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
+    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function's `invoke_url`. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -599,7 +599,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is &#x60;https://{functionId}.functions.&lt;domain&gt;/&#x60;. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
+    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function&#39;s &#x60;invoke_url&#x60;. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -727,7 +727,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFunctionDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_function_deployments",
@@ -908,7 +908,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionSchedulerListResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_function_schedulers",
@@ -1009,7 +1009,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFunctions'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_functions",
@@ -1110,7 +1110,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionSchedulerListResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_project_schedulers",
@@ -1130,7 +1130,7 @@ module Volcano::Generated
     end
 
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned `invoke_url` as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, `invoke_url` is omitted and callers invoke through `POST /functions/{functionId}/invoke`.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [ResolveFunctionResponse]
@@ -1140,7 +1140,7 @@ module Volcano::Generated
     end
 
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned &#x60;invoke_url&#x60; as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, &#x60;invoke_url&#x60; is omitted and callers invoke through &#x60;POST /functions/{functionId}/invoke&#x60;.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [Array<(ResolveFunctionResponse, Integer, Hash)>] ResolveFunctionResponse data, response status code and response headers
@@ -1261,7 +1261,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.update_function",
@@ -1345,7 +1345,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.update_function_scheduler",

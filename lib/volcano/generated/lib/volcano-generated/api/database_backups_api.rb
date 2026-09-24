@@ -89,7 +89,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBackup'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.create_database_backup",
@@ -178,7 +178,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseRestore'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.create_database_restore",
@@ -270,7 +270,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DeleteDatabaseBackup200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.delete_database_backup",
@@ -362,7 +362,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBackup'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.get_database_backup",
@@ -440,7 +440,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBackupSchedule'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.get_database_backup_schedule",
@@ -524,7 +524,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseRestore'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.get_database_restore",
@@ -602,7 +602,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBackupList'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.list_database_backups",
@@ -680,7 +680,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseRestoreList'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.list_database_restores",
@@ -769,7 +769,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseBackupSchedule'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabaseBackupsApi.update_database_backup_schedule",

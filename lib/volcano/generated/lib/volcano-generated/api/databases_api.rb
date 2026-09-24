@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.create_database",
@@ -152,7 +152,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DeleteDatabase202Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.delete_database",
@@ -228,7 +228,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_database",
@@ -319,7 +319,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseStats'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_database_stats",
@@ -408,7 +408,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseQueryPerformanceResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_project_database_queries",
@@ -573,7 +573,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedDatabases'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.list_databases",
@@ -708,7 +708,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ResetDatabasePassword200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.reset_database_password",
@@ -797,7 +797,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.update_database_type",

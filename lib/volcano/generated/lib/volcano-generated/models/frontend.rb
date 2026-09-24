@@ -15,6 +15,12 @@ require 'time'
 
 module Volcano::Generated
   class Frontend < ApiModelBase
+    # All preserves access to all project variables. Shared includes the project frontend shared-variable list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
+    attr_accessor :variable_scope
+
+    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
+    attr_accessor :declared_variables
+
     attr_accessor :id
 
     attr_accessor :project_id
@@ -79,6 +85,8 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'variable_scope' => :'variable_scope',
+        :'declared_variables' => :'declared_variables',
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'name' => :'name',
@@ -111,6 +119,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'variable_scope' => :'String',
+        :'declared_variables' => :'Array<String>',
         :'id' => :'String',
         :'project_id' => :'String',
         :'name' => :'String',
@@ -151,6 +161,16 @@ module Volcano::Generated
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'variable_scope')
+        self.variable_scope = attributes[:'variable_scope']
+      end
+
+      if attributes.key?(:'declared_variables')
+        if (value = attributes[:'declared_variables']).is_a?(Array)
+          self.declared_variables = value
+        end
+      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -292,6 +312,8 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      return false unless variable_scope_validator.valid?(@variable_scope)
       return false if @id.nil?
       return false if @project_id.nil?
       return false if @name.nil?
@@ -310,6 +332,26 @@ module Volcano::Generated
       return false if @created_at.nil?
       return false if @updated_at.nil?
       true
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] variable_scope Object to be assigned
+    def variable_scope=(variable_scope)
+      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      unless validator.valid?(variable_scope)
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+      end
+      @variable_scope = variable_scope
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] declared_variables Value to be assigned
+    def declared_variables=(declared_variables)
+      if declared_variables.nil?
+        fail ArgumentError, 'declared_variables cannot be nil'
+      end
+
+      @declared_variables = declared_variables
     end
 
     # Custom attribute writer method with validation
@@ -430,6 +472,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          variable_scope == o.variable_scope &&
+          declared_variables == o.declared_variables &&
           id == o.id &&
           project_id == o.project_id &&
           name == o.name &&
@@ -457,7 +501,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, last_invoked_at, created_at, updated_at].hash
+      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

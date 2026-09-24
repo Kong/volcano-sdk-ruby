@@ -16,15 +16,49 @@ require 'time'
 module Volcano::Generated
   # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. A declared frontend entry without `custom_domain` deletes an existing custom domain. 
   class ProjectConfigFrontend < ApiModelBase
+    # All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
+    attr_accessor :variable_scope
+
+    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
+    attr_accessor :variables
+
     attr_accessor :name
 
     attr_accessor :custom_domain
 
+    # Complete set of same-origin Function path mappings when declared. Omission preserves existing mappings; an empty list deletes all mappings.
+    attr_accessor :function_routes
+
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'variable_scope' => :'variable_scope',
+        :'variables' => :'variables',
         :'name' => :'name',
-        :'custom_domain' => :'custom_domain'
+        :'custom_domain' => :'custom_domain',
+        :'function_routes' => :'function_routes'
       }
     end
 
@@ -41,8 +75,11 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'variable_scope' => :'String',
+        :'variables' => :'Array<String>',
         :'name' => :'String',
-        :'custom_domain' => :'ProjectConfigCustomDomain'
+        :'custom_domain' => :'ProjectConfigCustomDomain',
+        :'function_routes' => :'Array<ProjectConfigFrontendFunctionRoute>'
       }
     end
 
@@ -68,6 +105,16 @@ module Volcano::Generated
         h[k.to_sym] = v
       }
 
+      if attributes.key?(:'variable_scope')
+        self.variable_scope = attributes[:'variable_scope']
+      end
+
+      if attributes.key?(:'variables')
+        if (value = attributes[:'variables']).is_a?(Array)
+          self.variables = value
+        end
+      end
+
       if attributes.key?(:'name')
         self.name = attributes[:'name']
       else
@@ -76,6 +123,12 @@ module Volcano::Generated
 
       if attributes.key?(:'custom_domain')
         self.custom_domain = attributes[:'custom_domain']
+      end
+
+      if attributes.key?(:'function_routes')
+        if (value = attributes[:'function_routes']).is_a?(Array)
+          self.function_routes = value
+        end
       end
     end
 
@@ -92,6 +145,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
       end
 
+      if !@function_routes.nil? && @function_routes.length > 64
+        invalid_properties.push('invalid value for "function_routes", number of items must be less than or equal to 64.')
+      end
+
       invalid_properties
     end
 
@@ -99,9 +156,32 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      return false unless variable_scope_validator.valid?(@variable_scope)
       return false if @name.nil?
       return false if @name.to_s.length < 1
+      return false if !@function_routes.nil? && @function_routes.length > 64
       true
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] variable_scope Object to be assigned
+    def variable_scope=(variable_scope)
+      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      unless validator.valid?(variable_scope)
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+      end
+      @variable_scope = variable_scope
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] variables Value to be assigned
+    def variables=(variables)
+      if variables.nil?
+        fail ArgumentError, 'variables cannot be nil'
+      end
+
+      @variables = variables
     end
 
     # Custom attribute writer method with validation
@@ -118,13 +198,30 @@ module Volcano::Generated
       @name = name
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] function_routes Value to be assigned
+    def function_routes=(function_routes)
+      if function_routes.nil?
+        fail ArgumentError, 'function_routes cannot be nil'
+      end
+
+      if function_routes.length > 64
+        fail ArgumentError, 'invalid value for "function_routes", number of items must be less than or equal to 64.'
+      end
+
+      @function_routes = function_routes
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          variable_scope == o.variable_scope &&
+          variables == o.variables &&
           name == o.name &&
-          custom_domain == o.custom_domain
+          custom_domain == o.custom_domain &&
+          function_routes == o.function_routes
     end
 
     # @see the `==` method
@@ -136,7 +233,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, custom_domain].hash
+      [variable_scope, variables, name, custom_domain, function_routes].hash
     end
 
     # Builds the object from hash

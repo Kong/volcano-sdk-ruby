@@ -79,4 +79,43 @@ RSpec.describe RuboCop do
     expect(status.exitstatus).to eq(0), error
     expect(output.lines.map(&:strip)).to include('.github/scripts/quickstart.rb')
   end
+
+  it 'enforces complexity and method length through the effective RuboCop CLI settings' do
+    source = <<~RUBY
+      def branchy(value)
+        return if value == 0
+        return if value == 1
+        return if value == 2
+        return if value == 3
+        return if value == 4
+        value
+      end
+
+      def long_method
+        value = 0
+        value += 1
+        value += 2
+        value += 3
+        value += 4
+        value += 5
+        value += 6
+        value += 7
+        value += 8
+        value += 9
+        value
+      end
+    RUBY
+    %w[lib/volcano/guardrails_probe.rb spec/guardrails_probe_spec.rb].each do |path|
+      offenses, status = inspect_source(source, path)
+
+      expect(status).to eq(1)
+      expect(offenses.map { |offense| offense.fetch('cop_name') })
+        .to include('Metrics/CyclomaticComplexity', 'Metrics/MethodLength')
+    end
+  end
+
+  it 'keeps the CLI options that reject source-level suppressions and cop errors' do
+    expect(File.binread(File.join(root, '.rubocop')))
+      .to eq("--ignore-disable-comments\n--raise-cop-error\n")
+  end
 end

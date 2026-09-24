@@ -10,7 +10,17 @@ when source comments try to disable a cop. RuboCop's
 Native `AllCops/Include` configuration adds package smoke scripts under
 `.github/scripts` without replacing RuboCop's default file discovery.
 Configuration regression specs invoke the actual CLI and verify that it rejects
-suppressed offenses in runtime and test paths.
+suppressed offenses in runtime and test paths. They also require the complexity
+and method-length cops to report deliberately invalid source through the
+effective CLI options and configuration.
+The options file is pinned so a future `--except` cannot silently remove a cop.
+
+`spec/quality/rubo_cop_source_inventory_spec.rb` compares tracked Ruby files
+and extensionless Ruby entrypoints with RuboCop's native `--list-target-files`
+output. It rejects nested overrides, inherited configurations, and debt files.
+The generated client's sole nested configuration is verified by
+`quality:generated` against regenerated output. RuboCop can list inspected files
+but cannot require that every tracked source appears in that list.
 
 See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_reference.html).
 

@@ -17,17 +17,18 @@ RSpec.describe RuboCopInventory do
   it 'rejects excluded Ruby files, including executables, and a nested override' do
     Dir.mktmpdir('volcano-rubocop-inventory-') do |directory|
       File.write(File.join(directory, '.rubocop.yml'),
-                 "AllCops:\n  Exclude:\n    - hidden.rb\n    - check\n    - Rakefile\n")
+                 "AllCops:\n  Exclude:\n    - hidden.rb\n    - check\n    - Rakefile\n    - hidden.rake\n")
       File.write(File.join(directory, 'hidden.rb'), "def hidden; true; end\n")
       File.write(File.join(directory, 'check'), "#!/usr/bin/env ruby\nputs 'hidden'\n")
       File.write(File.join(directory, 'Rakefile'), "task(:hidden) {}\n")
+      File.write(File.join(directory, 'hidden.rake'), "task(:hidden) {}\n")
       Dir.mkdir(File.join(directory, 'nested'))
       File.write(File.join(directory, 'nested/.rubocop.yml'), "AllCops:\n  NewCops: disable\n")
       system('git', 'init', '--quiet', directory, exception: true)
       system('git', '-C', directory, 'add', '.', exception: true)
 
       inventory = described_class.new(directory)
-      expect(inventory.missing_sources).to eq(%w[Rakefile check hidden.rb])
+      expect(inventory.missing_sources).to eq(%w[Rakefile check hidden.rake hidden.rb])
       expect(inventory.nested_configs).to eq(['nested/.rubocop.yml'])
     end
   end

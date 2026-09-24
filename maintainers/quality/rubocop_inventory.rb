@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
 require 'open3'
+require 'rubocop'
 
 # Compares Git's maintained Ruby files with RuboCop's own target discovery.
 class RuboCopInventory
-  RUBY_FILENAMES = %w[Gemfile Rakefile Steepfile .simplecov].freeze
+  DEFAULT_RUBY = RuboCop::ConfigLoader.default_configuration.for_all_cops
+  RUBY_GLOBS = DEFAULT_RUBY.fetch('Include').freeze
+  RUBY_INTERPRETERS = Regexp.union(DEFAULT_RUBY.fetch('RubyInterpreters')).freeze
+  RUBY_SHEBANG = /\A#!.*#{RUBY_INTERPRETERS}/
 
   def initialize(root)
     @root = root
@@ -40,10 +44,10 @@ class RuboCopInventory
   end
 
   def ruby_source?(path)
-    return true if path.end_with?('.rb', '.gemspec') || RUBY_FILENAMES.include?(File.basename(path))
+    return true if RUBY_GLOBS.any? { |glob| File.fnmatch?(glob, path, File::FNM_PATHNAME | File::FNM_DOTMATCH) }
     return false unless File.extname(path).empty?
 
-    File.open(File.join(@root, path), &:readline).match?(/\A#!.*\bruby\b/)
+    File.open(File.join(@root, path), &:readline).match?(RUBY_SHEBANG)
   rescue EOFError
     false
   end

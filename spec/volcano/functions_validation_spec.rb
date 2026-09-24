@@ -35,6 +35,15 @@ module Volcano
       expect { client.functions.invoke('echo') }.to raise_error(TypeError, 'Expected a complete function response')
     end
 
+    it 'rejects malformed names before requesting any credential-scoped resolution' do
+      allow(transport).to receive(:resolve_function_for_invocation)
+      check_property(PropCheck::Generators.printable_string) do |suffix|
+        expect { client.functions.invoke(".#{suffix}") }.to raise_error(ArgumentError)
+      end
+
+      expect(transport).not_to have_received(:resolve_function_for_invocation)
+    end
+
     private
 
     def response(body) = Volcano::Transport::Response.new(status: 200, body: body, headers: nil, data: nil)

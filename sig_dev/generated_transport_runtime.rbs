@@ -250,7 +250,7 @@ module Volcano
     class ApiClient < Generated::ApiClient
       def build_request: (Symbol http_method, String path, ?Generated::api_options options) -> Typhoeus::Request
 
-      def select_header_content_type: (Array[String] content_types) -> String
+      def select_header_content_type: (Array[String] content_types) -> String?
 
       def convert_to_type: (Object? data, String return_type) -> Object?
     end

@@ -20,7 +20,18 @@ module Volcano
                     | (Array[String] value) -> Array[String]
                     | (sdk_payload value) -> sdk_payload
                     | (sdk_json value) -> sdk_json
-    def self.capture_hash: (sdk_payload value) -> sdk_payload
+    def self.capture_value: (String value, Hash[Integer, bool] active) -> String
+                          | (Symbol value, Hash[Integer, bool] active) -> Symbol
+                          | (Time value, Hash[Integer, bool] active) -> Time
+                          | (String | Symbol value, Hash[Integer, bool] active) -> (String | Symbol)
+                          | (Array[String] value, Hash[Integer, bool] active) -> Array[String]
+                          | (sdk_payload value, Hash[Integer, bool] active) -> sdk_payload
+                          | (sdk_json value, Hash[Integer, bool] active) -> sdk_json
+                          | (sdk_json | Symbol value, Hash[Integer, bool] active) -> (sdk_json | Symbol)
+    def self.capture_container: (Array[sdk_json] value, Hash[Integer, bool] active) -> Array[sdk_json]
+                              | (sdk_payload value, Hash[Integer, bool] active) -> sdk_payload
+                              | (Array[sdk_json] | sdk_payload value, Hash[Integer, bool] active) -> (Array[sdk_json] | sdk_payload)
+    def self.capture_hash: (sdk_payload value, Hash[Integer, bool] active) -> sdk_payload
   end
 
   class QueryContext < Data

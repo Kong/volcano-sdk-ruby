@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.2...v0.32.3) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** snapshot durable request and result values ([#301](https://github.com/Kong/volcano-sdk-ruby/issues/301)) ([fe6583e](https://github.com/Kong/volcano-sdk-ruby/commit/fe6583e6cfcca3cfc9af4849e625065f013a7e01))
+
 ## [0.32.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.1...v0.32.2) (2026-09-24)
 
 

@@ -25,6 +25,8 @@ RSpec.describe SimpleCov do
           minimum: SimpleCov.minimum_coverage,
           maximum_missed: SimpleCov.maximum_missed,
           cover_globs: SimpleCov.cover_globs.uniq,
+          nocov_token: SimpleCov.current_nocov_token,
+          ignored_branches: SimpleCov.ignored_branches,
           filters: filters.uniq.sort_by(&:to_s)
         )
       RUBY
@@ -43,11 +45,13 @@ RSpec.describe SimpleCov do
 
   it 'keeps native line and branch thresholds at 100% with only the generated-client exclusion' do
     policy = resolved_policy(configuration)
-    expect(policy.slice('criteria', 'minimum', 'maximum_missed', 'cover_globs')).to eq(
+    guarded_settings = %w[criteria minimum maximum_missed cover_globs nocov_token ignored_branches]
+    expect(policy.slice(*guarded_settings)).to eq(
       'criteria' => %w[branch line],
       'minimum' => { 'line' => 100, 'branch' => 100 },
       'maximum_missed' => { 'line' => 0, 'branch' => 0 },
-      'cover_globs' => ['lib/**/*.rb']
+      'cover_globs' => ['lib/**/*.rb'],
+      'nocov_token' => 'nocov', 'ignored_branches' => []
     )
     expect(policy.fetch('filters')).to eq(expected_filters)
   end
@@ -55,6 +59,16 @@ RSpec.describe SimpleCov do
   it 'rejects a lowered coverage threshold' do
     weakened = configuration.sub('coverage :line, minimum: 100', 'coverage :line, minimum: 99')
     expect(resolved_policy(weakened).fetch('minimum')).to include('line' => 99)
+  end
+
+  it 'rejects a renamed no-coverage token' do
+    weakened = configuration.sub('  merging true', "  current_nocov_token 'skipcov'\n  merging true")
+    expect(resolved_policy(weakened).fetch('nocov_token')).to eq('skipcov')
+  end
+
+  it 'rejects ignored branch categories' do
+    weakened = configuration.sub('  merging true', "  ignore_branches :implicit_else\n  merging true")
+    expect(resolved_policy(weakened).fetch('ignored_branches')).to eq(['implicit_else'])
   end
 
   it 'rejects a broad runtime exclusion' do

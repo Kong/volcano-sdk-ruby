@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.5](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.4...v0.32.5) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** validate core JSON transport responses ([#305](https://github.com/Kong/volcano-sdk-ruby/issues/305)) ([167fdce](https://github.com/Kong/volcano-sdk-ruby/commit/167fdcec8204e9719cfb1952cc3c20f2bd33958d))
+
 ## [0.32.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.3...v0.32.4) (2026-09-24)
 
 

@@ -9,6 +9,10 @@ module Volcano
     def self.json_value: (Object? value) -> json_value
     def self.json_object: (Object? value, ?message: String) -> Hash[String, json_value]
     def self.json_rows: (Object? value) -> database_rows
+    private def self.json_copy: (Object? value, Hash[Integer, bool] active) -> json_value
+    private def self.json_hash: (Object? value, Hash[Integer, bool] active, message: String) -> Hash[String, json_value]
+    private def self.json_container: [T] (Array[Object?] | Hash[Object?, Object?] value, Hash[Integer, bool] active) { () -> T } -> T
+    private def self.validate_json_encoding: (json_value value) -> nil
     private def self.finite_float: (Float value) -> Float
     private def self.json_scalar: (Object? value) -> json_value
   end

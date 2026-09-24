@@ -52,45 +52,6 @@ module Volcano
       message.is_a?(String) ? message : 'Volcano request failed'
     end
 
-    def self.json_value(value)
-      case value
-      when Array then value.map { |entry| json_value(entry) }
-      when Hash then json_object(value)
-      else json_scalar(value)
-      end
-    end
-
-    def self.json_object(value, message: 'Expected a JSON object')
-      raise TypeError, message unless value.is_a?(Hash)
-
-      value.to_h do |key, item|
-        raise TypeError, message unless key.is_a?(String)
-
-        [key, json_value(item)]
-      end
-    end
-
-    def self.json_rows(value)
-      rows = json_object(value)['data']
-      raise TypeError, 'Expected database rows' unless rows.is_a?(Array)
-
-      rows.map { |row| json_object(row) }
-    end
-
-    def self.finite_float(value)
-      raise TypeError, 'Expected a finite JSON number' unless value.finite?
-
-      value
-    end
-
-    def self.json_scalar(value)
-      case value
-      when NilClass, TrueClass, FalseClass, Integer, String then value
-      when Float then finite_float(value)
-      else raise TypeError, 'Expected a JSON response'
-      end
-    end
-
     def self.error_type(status)
       ERROR_TYPES.fetch(status) do
         status.between?(500, 599) ? Error::ServerError : Error::VolcanoError
@@ -101,6 +62,8 @@ module Volcano
       value = headers&.find { |key, _| key.casecmp?(name) }&.last
       Integer(value, exception: false)
     end
-    private_class_method :error_type, :integer_header, :response_error, :finite_float, :json_scalar
+    private_class_method :error_type, :integer_header, :response_error
   end
 end
+
+require_relative 'transport_json'

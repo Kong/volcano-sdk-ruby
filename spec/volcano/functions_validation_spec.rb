@@ -28,6 +28,17 @@ module Volcano
       expect(client.functions.invoke('echo')).to have_attributes(data: 'result', status: 200, headers: {}, version: nil)
     end
 
+    it 'rejects a cyclic function response body as invalid JSON' do
+      body = []
+      body << body
+      allow(transport).to receive_messages(
+        resolve_function_for_invocation: response('function_id' => 'id', 'cache_ttl_seconds' => 60),
+        invoke_function: response(body)
+      )
+
+      expect { client.functions.invoke('echo') }.to raise_error(TypeError, 'Expected a JSON response')
+    end
+
     it 'rejects a resolution without a function ID' do
       allow(transport).to receive(:resolve_function_for_invocation)
         .and_return(response('cache_ttl_seconds' => 60))

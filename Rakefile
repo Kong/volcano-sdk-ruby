@@ -3,6 +3,7 @@
 require 'bundler/gem_tasks'
 require 'securerandom'
 require 'tmpdir'
+require_relative 'maintainers/quality/coverage_report'
 
 desc 'Run the same SDK checks locally and in CI'
 task quality: %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
@@ -38,8 +39,7 @@ task 'quality:spec' do
     sh(environment, Gem.ruby, '-r./spec/support/coverage_start', rspec,
        '--failure-exit-code', '1', '--error-exit-code', '1')
   end
-  report = File.join('reports', 'coverage', run_id, 'coverage.json')
-  abort "Missing SimpleCov report for this run: #{report}" unless File.file?(report)
+  CoverageReport.new(__dir__, run_id).verify!
 end
 
 desc 'Validate contract feature bindings without provisioning resources'

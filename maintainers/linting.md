@@ -33,6 +33,15 @@ the configured Steep targets made that spec fail while the native type check
 still passed. The spec adds only the missing inventory assertion; both tools
 continue to perform the actual checks.
 
+Native SimpleCov and RuboCop enforce their configured limits but do not reject
+a policy edit that lowers those limits. `spec/simple_cov_policy_spec.rb` and
+`spec/rubocop/config_store_policy_spec.rb` inspect the effective native settings
+for runtime files. Temporary 99% coverage limits, an added runtime exclusion,
+and a higher complexity cap, including a nested RuboCop override, each made
+these specs fail. Nested RuboCop configuration is rejected for handwritten
+code; the generated client's copy is pinned by the regeneration check. The
+tools still measure coverage and lint the code.
+
 ## Coverage directives
 
 `Volcano/CoverageSuppression` rejects SimpleCov skip directives in Ruby comments,

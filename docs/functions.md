@@ -73,14 +73,19 @@ handle = client.durable.start(
   execution_name: "order-9"
 )
 
-execution = client.durable.get(project_id, "charge-order", handle.id)
-page = client.durable.list(project_id, "charge-order", status: "running")
-client.durable.stop(project_id, "charge-order", handle.id)
+owner_client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  api_url: ENV.fetch("VOLCANO_API_URL", "https://api.volcano.dev"),
+  access_token: ENV.fetch("VOLCANO_PLATFORM_TOKEN")
+)
+execution = owner_client.durable.get(project_id, "charge-order", handle.id)
+page = owner_client.durable.list(project_id, "charge-order", status: "running")
+owner_client.durable.stop(project_id, "charge-order", handle.id)
 ```
 
 `start` accepts the same active session, service key, or anonymous key as `functions.invoke`. It is the only durable operation available to application credentials. An execution name makes a start idempotent.
 
-`get`, `list`, and `stop` are owner-scoped and require the project's platform user token. Configured service keys and auth-user sessions are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
+`get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token. Auth-user sessions, anonymous keys, service keys, and project access tokens are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
 
 `list` returns executions and pagination metadata. A successful response must include `data`, `page`, `limit`, `total`, and `has_more` with the API's declared types. Missing or malformed fields raise `TypeError`; a complete response with `data: []` returns an empty execution list.
 

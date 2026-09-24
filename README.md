@@ -505,13 +505,18 @@ handle = client.durable.start(
   execution_name: "order-9"
 )
 
-execution = client.durable.get(project_id, "charge-order", handle.id)
+owner_client = Volcano::Client.new(
+  api_url: "https://api.volcano.dev",
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_PLATFORM_TOKEN")
+)
+execution = owner_client.durable.get(project_id, "charge-order", handle.id)
 puts [execution.status, execution.terminal?, execution.result]
 
-page = client.durable.list(project_id, "charge-order", status: "running")
+page = owner_client.durable.list(project_id, "charge-order", status: "running")
 puts [page.total, page.has_more]
 
-client.durable.stop(project_id, "charge-order", handle.id)
+owner_client.durable.stop(project_id, "charge-order", handle.id)
 ```
 
 `start` takes a durable function's name or its id and returns a handle, never a
@@ -522,9 +527,10 @@ operation an application credential may perform. An `execution_name` makes the
 start idempotent: starting again under the same name returns the execution that
 already exists rather than beginning a second one.
 
-`get`, `list`, and `stop` are owner-scoped and require the project's platform
-user token, because an execution is addressed by its id alone. Neither a
-configured service key nor an auth-user session from sign-in is accepted. `get` carries the deeply
+`get`, `list`, and `stop` are owner-scoped and require the project owner's
+platform user token, because an execution is addressed by its id alone.
+Auth-user sessions, anonymous keys, service keys, and project access tokens are
+not accepted. `get` carries the deeply
 frozen `result` once the execution has succeeded, and `error` when it failed;
 `result_expired` separates a result the platform has discarded from a function
 that returned nothing. `terminal?` reports whether the execution has stopped

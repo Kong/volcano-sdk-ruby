@@ -10,7 +10,7 @@ module Volcano
           options = { content_type: content_type }.compact
           result = apis.storage.upload_storage_object_with_http_info(bucket_name, path, file, options)
           data_value, status, headers = result
-          return response(data_value, status, headers)
+          response(data_value, status, headers)
         end
       end
     end

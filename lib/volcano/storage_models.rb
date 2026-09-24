@@ -10,9 +10,6 @@ module Volcano
 
   # Validates and freezes object metadata returned by storage.
   class StorageObject
-    # @dynamic id, bucket_id, name, size, mime_type, is_public, owner_id, etag
-    # @dynamic metadata, created_at, updated_at, public_url
-    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - STORAGE_OBJECT_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?

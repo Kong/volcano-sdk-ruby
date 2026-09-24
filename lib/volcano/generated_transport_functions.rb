@@ -70,19 +70,26 @@ module Volcano
         function_id, request, follow_location: false, debug_return_type: 'String'
       )
     rescue Generated::ApiError => e
-      raise if e.code.to_i.zero?
+      status = error_status(e)
+      raise if status.zero?
 
-      [e.response_body, e.code.to_i, e.response_headers || {}]
+      [e.response_body, status, e.response_headers || {}]
     end
 
     def function_body(body, headers)
-      return nil if body.nil? || body.empty?
-
-      text = body.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
-      return nil if text.empty?
+      text = normalized_function_text(body)
+      return nil if text.nil? || text.empty?
       return text unless function_json?(text, headers)
 
       parse_function_json(text)
+    end
+
+    def normalized_function_text(body)
+      raise TypeError, 'Expected a string function response' unless body.nil? || body.is_a?(String)
+
+      return nil if body.nil? || body.empty?
+
+      body.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
     end
 
     def parse_function_json(text)

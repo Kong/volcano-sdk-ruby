@@ -14,9 +14,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class User
-    # @dynamic id, project_id, email, email_confirmed, user_metadata, app_metadata
-    # @dynamic avatar_url, status, banned_until, last_sign_in_at, created_at, updated_at
-    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(id:, email:, status:, **attributes)
       validate_optional_attributes(attributes)
       id = freeze_value(id)

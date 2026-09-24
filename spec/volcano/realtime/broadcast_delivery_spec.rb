@@ -7,7 +7,6 @@ require 'spec_helper'
 BroadcastDeliveryChannel = Volcano::Realtime.const_get(:Channel, false)
 BroadcastDeliveryBatchConfig = Volcano::Realtime.const_get(:PostgresBatchConfig, false)
 BroadcastPositionLedger = Volcano::Realtime.const_get(:ProtocolRecoveryPosition, false)
-BroadcastDelivery = Volcano::Realtime.const_get(:BroadcastDelivery, false)
 
 class BroadcastDeliveryProtocol
   include BroadcastPositionLedger
@@ -52,7 +51,11 @@ class BroadcastDeliveryRealtime
   def capture_protocol_session = [0, 0, nil]
 end
 
-RSpec.describe BroadcastDelivery do
+module SpecSupport
+  BroadcastDelivery = Volcano::Realtime.const_get(:BroadcastDelivery, false)
+end
+
+RSpec.describe SpecSupport::BroadcastDelivery do
   around do |example|
     Async { example.run }.wait
   end

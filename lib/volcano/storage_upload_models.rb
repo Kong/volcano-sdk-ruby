@@ -76,9 +76,6 @@ module Volcano
 
   # Freezes upload progress returned by storage.
   class UploadSessionStatus
-    # @dynamic session_id, status, path, content_type, total_size, part_size
-    # @dynamic total_parts, parts_uploaded, bytes_uploaded, parts, expires_at, created_at
-    # @dynamic members, with, to_h, deconstruct, deconstruct_keys, self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - UPLOAD_SESSION_STATUS_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?

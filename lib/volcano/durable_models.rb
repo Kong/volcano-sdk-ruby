@@ -39,9 +39,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class DurableExecution
-    # @dynamic id, function_id, name, status, region, created_at, result, result_expired
-    # @dynamic error, completed_at, members, with, to_h, deconstruct, deconstruct_keys
-    # @dynamic self.[], self.members
     def initialize(**attributes)
       unknown = attributes.keys - DURABLE_EXECUTION_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?

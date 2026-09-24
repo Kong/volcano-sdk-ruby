@@ -140,7 +140,7 @@ module Volcano
     def query_body
       # @type var body: sdk_payload
       body = { 'table' => @table }
-      body.tap do |body|
+      body.tap do
         add_query_selection(body)
         body['limit'] = @limit unless @limit.nil?
         body['offset'] = @offset unless @offset.nil?

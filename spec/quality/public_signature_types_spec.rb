@@ -34,7 +34,7 @@ class PublicSignatureTypes < RBS::AST::Visitor
   def inspect_types(types) = types.each { |type| inspect_type(type) }
 
   def inspect_bounds(params)
-    inspect_types(params.flat_map { |param| [param.upper_bound, param.default_type].compact })
+    inspect_types(params.flat_map { |param| [param.upper_bound_type, param.default_type].compact })
   end
 
   def inspect_superclass(parent)
@@ -46,15 +46,22 @@ class PublicSignatureTypes < RBS::AST::Visitor
   def inspect_overloads(node)
     @unchecked << node.location if node.overloading
     node.overloads.each do |overload|
+      inspect_callable(overload.method_type)
       overload.method_type.each_type { |type| inspect_type(type) }
       inspect_bounds(overload.method_type.type_params)
     end
+  end
+
+  def inspect_callable(type)
+    functions = [type.type, type.block&.type]
+    @untyped << type.location if functions.any?(RBS::Types::UntypedFunction)
   end
 
   def inspect_type(type)
     return unless type.respond_to?(:each_type)
 
     @untyped << type.location if type.is_a?(RBS::Types::Bases::Any)
+    inspect_callable(type) if type.is_a?(RBS::Types::Proc)
     type.each_type { |child| inspect_type(child) }
   end
 end
@@ -127,5 +134,24 @@ RSpec.describe PublicSignatureTypes do
     result = inspect_signature("class Probe[T = untyped]\nend\n", 'probe.rbs')
 
     expect(result.untyped.map(&:start_line)).to eq([1])
+  end
+
+  it 'rejects explicitly untyped generic bounds' do
+    result = inspect_signature("class Probe[T < untyped]\n  def call: [U < untyped] () -> String\nend\n", 'probe.rbs')
+
+    expect(result.untyped.map(&:start_line)).to eq([1, 2])
+  end
+
+  it 'rejects unchecked parameter lists on methods, procs, and blocks' do
+    source = <<~RBS
+      class Probe
+        def dynamic: (?) -> String
+        def with_proc: (^(?) -> String) -> String
+        def with_block: () { (?) -> String } -> String
+      end
+    RBS
+    result = inspect_signature(source, 'probe.rbs')
+
+    expect(result.untyped.map(&:start_line)).to eq([2, 3, 4])
   end
 end

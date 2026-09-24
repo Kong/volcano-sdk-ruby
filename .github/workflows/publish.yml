@@ -67,7 +67,6 @@ jobs:
           persist-credentials: false
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
-          ruby-version: '3.4'
           bundler-cache: true
       - run: gem build volcano-sdk.gemspec
       - name: Smoke test the gem
@@ -157,7 +156,6 @@ jobs:
           path: package
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
-          ruby-version: '3.4'
           bundler-cache: false
       - name: Verify and record the package
         env:
@@ -218,7 +216,7 @@ jobs:
           name: ${{ github.event_name == 'release' && 'release-package' || 'publish-package' }}
       - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
         with:
-          ruby-version: '3.4'
+          ruby-version: '3.4.10'
           bundler-cache: false
       - run: sha256sum --check SHA256SUMS
       - uses: rubygems/configure-rubygems-credentials@2a7221c7c44c30ebc68eda38fa25c60b918245c7

@@ -3,8 +3,8 @@
 - Research upstream tools before adding enforcement. Keep rules in native tool
   configuration and orchestration in standard tasks. Add custom checks only
   for requirements established tools cannot express; document that gap.
-- Fix failures rather than weakening rules, excluding code, or suppressing
-  findings. Never approve quality-policy changes on a human reviewer's behalf.
+- Use judgment for pragmatic exceptions justified by verified tool limitations
+  or compatibility constraints. Never grant review approval on a human's behalf.
 - Keep reviewer and repository-administration credentials outside ordinary
   automation.
 - Preserve shared behavioral scenarios and coordinate contract changes with

@@ -5,7 +5,7 @@ require 'time'
 
 module Volcano
   SESSION_USER_CODER = JSON::Coder.new(freeze: true, allow_duplicate_key: false) do |value|
-    value.instance_of?(Time) ? Time.at(value.to_r).utc.iso8601(9) : value
+    value.instance_of?(Time) ? Time.at(Rational(value)).utc.iso8601(9) : value
   end
   private_constant :SESSION_USER_CODER
 
@@ -14,8 +14,6 @@ module Volcano
 
   # Reopens the generated record for checked initialization.
   class Session
-    # @dynamic access_token, refresh_token, user_id, user, members, with, to_h
-    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(access_token:, refresh_token: nil, user_id: nil, user: nil)
       user = immutable_user(user)
       super

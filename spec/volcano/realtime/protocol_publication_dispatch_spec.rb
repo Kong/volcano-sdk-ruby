@@ -5,7 +5,6 @@ require 'async/queue'
 require 'spec_helper'
 
 PublicationDispatchProtocol = Volcano::Realtime.const_get(:Protocol, false)
-ProtocolPublicationDispatch = Volcano::Realtime.const_get(:ProtocolPublicationDispatch, false)
 
 class PublicationDispatchSocket
   attr_reader :close_count
@@ -23,7 +22,11 @@ class PublicationDispatchSocket
   end
 end
 
-RSpec.describe ProtocolPublicationDispatch do
+module SpecSupport
+  ProtocolPublicationDispatch = Volcano::Realtime.const_get(:ProtocolPublicationDispatch, false)
+end
+
+RSpec.describe SpecSupport::ProtocolPublicationDispatch do
   around do |example|
     Async { example.run }.wait
   end

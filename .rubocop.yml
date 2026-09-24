@@ -1,5 +1,6 @@
 require:
   - "./maintainers/rubocop/coverage_suppression.rb"
+  - "./maintainers/rubocop/type_suppression.rb"
 
 plugins:
   - rubocop-performance
@@ -7,6 +8,7 @@ plugins:
   - rubocop-rspec
 
 AllCops:
+  UseProjectIndex: true
   inherit_mode:
     merge:
       - Include
@@ -61,3 +63,34 @@ Style/Documentation:
 
 Volcano/CoverageSuppression:
   Enabled: true
+
+Volcano/TypeSuppression:
+  Enabled: true
+
+Style/DisableCopsWithinSourceCodeDirective:
+  Enabled: true
+  AllowedCops:
+    - Metrics/ParameterLists
+    - Lint/UnderscorePrefixedVariableName
+    - Lint/NameTypo
+    - Lint/UnusedPrivateMethod
+    - Lint/NumberConversion
+
+Lint/ConstantResolution:
+  Enabled: true
+
+Lint/HeredocMethodCallPosition:
+  Enabled: true
+
+Lint/NumberConversion:
+  Enabled: true
+
+Lint/ShadowingOuterLocalVariable:
+  Enabled: true
+
+Lint/UnusedPrivateMethod:
+  Enabled: true
+
+RSpec/SpecFilePathFormat:
+  CustomTransform:
+    SpecSupport: ""

@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Volcano
-  VERSION = '0.32.3'
+  VERSION = '0.32.4'
 end

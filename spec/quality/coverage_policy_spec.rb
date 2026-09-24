@@ -9,6 +9,7 @@ class CoveragePolicy
 
     abort 'coverage thresholds changed' unless SimpleCov.minimum_coverage == { line: 100, branch: 100 }
     abort 'missed-line allowance changed' unless SimpleCov.maximum_missed == { line: 0, branch: 0 }
+    abort 'coverage root changed' unless SimpleCov.root == Dir.pwd
     abort 'runtime file discovery changed' unless SimpleCov.cover_filters.map(&:filter_argument) == ['lib/**/*.rb']
 
     filters = SimpleCov.filters
@@ -61,6 +62,18 @@ RSpec.describe CoveragePolicy do
 
       expect(status).not_to be_success
       expect(error).to include('coverage exclusions changed')
+    end
+  end
+
+  it 'rejects a changed SimpleCov root that would hide unloaded runtime files' do
+    Dir.mktmpdir('volcano-coverage-policy-') do |directory|
+      original = File.read(File.join(root, '.simplecov'))
+      changed = original.sub('SimpleCov.configure do', "SimpleCov.configure do\n  root File.dirname(__dir__)")
+      File.write(File.join(directory, '.simplecov'), changed)
+      _, error, status = described_class.check(directory)
+
+      expect(status).not_to be_success
+      expect(error).to include('coverage root changed')
     end
   end
 end

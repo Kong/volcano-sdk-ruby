@@ -5,6 +5,11 @@ The root `.simplecov` requires 100% line and branch coverage with zero missed
 lines or branches. It includes every Ruby file under `lib/`, even files no test
 loads. Only the generated client is excluded.
 
+`spec/quality/coverage_policy_spec.rb` checks SimpleCov's loaded settings and
+proves that lower thresholds, a changed root, or a new runtime exclusion fail.
+SimpleCov enforces configured coverage but does not lock its own configuration;
+the policy spec guards that gap without a separate runner.
+
 Ruby's Coverage library starts before Bundler evaluates the SDK gemspec;
 SimpleCov then uses that measurement with the locked dependencies. Each run
 writes HTML and JSON reports under `reports/coverage/<run-id>/`; CI retains them and fails if the

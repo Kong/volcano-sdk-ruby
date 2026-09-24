@@ -14,6 +14,20 @@ suppressed offenses in runtime and test paths.
 
 See the [RuboCop CLI reference](https://docs.rubocop.org/rubocop/1.90/usage/cli_reference.html).
 
+## Policy inventory
+
+`spec/quality/quality_policy_inventory_spec.rb` compares tracked Ruby entrypoints
+with RuboCop's native `--list-target-files` output and reads RuboCop's effective
+configuration. RuboCop can list its targets but cannot require every tracked
+file to appear there, forbid nested/inherited configurations, or pin a cop's
+activation and limit. The spec covers those gaps; negative fixtures verify
+excluded files, override configurations, and weakened metrics settings fail.
+The generated client's `.rubocop.yml` is the sole allowed nested file because
+`quality:generated` compares that entire tree against fresh generator output.
+
+RuboCop [documents nested configuration lookup](https://docs.rubocop.org/rubocop/1.90/configuration.html)
+and its [target-list CLI option](https://docs.rubocop.org/rubocop/1.90/usage/cli_reference.html).
+
 ## Coverage directives
 
 `Volcano/CoverageSuppression` rejects SimpleCov skip directives in Ruby comments,

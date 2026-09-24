@@ -5,6 +5,8 @@ require 'rubocop'
 require 'tmpdir'
 
 class QualityPolicyInventory
+  RUBY_ENTRYPOINTS = %w[.simplecov Gemfile Rakefile Steepfile volcano-sdk.gemspec bin/check-defects].freeze
+
   def initialize(root)
     @root = root
   end
@@ -23,8 +25,23 @@ class QualityPolicyInventory
       %w[.rubocop .rubocop.yml lib/volcano/generated/.rubocop.yml]
   end
 
+  def inherited_rubocop_configs(config: File.join(@root, '.rubocop.yml'))
+    settings = RuboCop::ConfigLoader.load_yaml_configuration(config)
+    settings.keys & %w[inherit_from inherit_gem]
+  end
+
   def maintained_ruby
-    files.grep(/\.rb\z/).reject { |path| path.start_with?('lib/volcano/generated/') }
+    paths = files.select { |path| path.end_with?('.rb') || RUBY_ENTRYPOINTS.include?(path) || ruby_shebang?(path) }
+    paths.reject! { |path| path.start_with?('lib/volcano/generated/') }
+    paths
+  end
+
+  def ruby_shebang?(path)
+    return false unless File.file?(File.join(@root, path))
+
+    File.open(File.join(@root, path), &:readline).match?(/\A#!.*\bruby(?:\s|\z)/)
+  rescue EOFError
+    false
   end
 
   def missing_lint_targets(config: nil)
@@ -38,9 +55,16 @@ class QualityPolicyInventory
 
   def lint_limits(config: File.join(@root, '.rubocop.yml'))
     settings = RuboCop::ConfigLoader.load_file(config)
-    [settings.fetch('Metrics/CyclomaticComplexity').fetch('Max'),
-     settings.fetch('Metrics/MethodLength').fetch('Max'),
-     settings.fetch('AllCops').fetch('NewCops')]
+    [cop_limit(settings, 'Metrics/CyclomaticComplexity'),
+     cop_limit(settings, 'Metrics/MethodLength'), settings.fetch('AllCops').fetch('NewCops')]
+  end
+
+  def cop_limit(settings, name)
+    cop = settings.fetch(name)
+    return unless cop.fetch('Enabled', true) == true && cop.fetch('Exclude', []).empty?
+    return unless cop.fetch('AllowedMethods', []).empty? && cop.fetch('AllowedPatterns', []).empty?
+
+    cop.fetch('Max')
   end
 end
 
@@ -50,6 +74,7 @@ RSpec.describe QualityPolicyInventory do
 
   it 'keeps RuboCop configuration at the repository root without debt files' do
     expect(inventory.nested_rubocop_configs).to be_empty
+    expect(inventory.inherited_rubocop_configs).to be_empty
   end
 
   it 'includes every maintained Ruby file in native RuboCop discovery' do
@@ -96,6 +121,47 @@ RSpec.describe QualityPolicyInventory do
       YAML
 
       expect(inventory.lint_limits(config:)).not_to eq([5, 10, 'enable'])
+    end
+  end
+
+  it 'detects a disabled or file-excluded metrics cop' do
+    Dir.mktmpdir('volcano-policy-config-') do |directory|
+      disabled = File.join(directory, 'disabled.yml')
+      excluded = File.join(directory, 'excluded.yml')
+      File.write(disabled, "inherit_from: #{root}/.rubocop.yml\nMetrics/CyclomaticComplexity:\n  Enabled: false\n")
+      File.write(excluded, <<~YAML)
+        inherit_from: #{root}/.rubocop.yml
+        Metrics/MethodLength:
+          Exclude:
+            - #{root}/lib/volcano/transport.rb
+      YAML
+
+      expect(inventory.lint_limits(config: disabled)).not_to eq([5, 10, 'enable'])
+      expect(inventory.lint_limits(config: excluded)).not_to eq([5, 10, 'enable'])
+    end
+  end
+
+  it 'detects an inherited nested policy file even without a conventional RuboCop name' do
+    Dir.mktmpdir('volcano-policy-config-') do |directory|
+      config = File.join(directory, '.rubocop.yml')
+      File.write(config, "inherit_from: config/rubocop_todo.yml\n")
+
+      expect(inventory.inherited_rubocop_configs(config:)).to eq(['inherit_from'])
+    end
+  end
+
+  it 'keeps extensionless Ruby entrypoints in lint discovery' do
+    expect(inventory.maintained_ruby).to include(*described_class::RUBY_ENTRYPOINTS)
+    expect(inventory.missing_lint_targets).to be_empty
+  end
+
+  it 'detects a newly added extensionless Ruby script by its interpreter' do
+    Dir.mktmpdir('volcano-policy-inventory-') do |directory|
+      Dir.mkdir(File.join(directory, 'bin'))
+      File.write(File.join(directory, 'bin/new-tool'), "#!/usr/bin/env ruby\nputs 'hello'\n")
+      system('git', 'init', '--quiet', directory, exception: true)
+
+      expect(described_class.new(directory).maintained_ruby).to include('bin/new-tool')
     end
   end
 end

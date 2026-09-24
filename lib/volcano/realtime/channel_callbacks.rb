@@ -10,7 +10,10 @@ module Volcano
       def on(event, callback = nil, &block)
         raise ArgumentError, "unsupported realtime event: #{event}" unless allowed_event?(event)
 
-        @callbacks[event] << (callback || block || raise(ArgumentError, 'callback or block is required'))
+        handler = callback || block || raise(ArgumentError, 'callback or block is required')
+        raise ArgumentError, 'callback must respond to call' unless handler.respond_to?(:call)
+
+        @callbacks[event] << handler
         self
       end
 

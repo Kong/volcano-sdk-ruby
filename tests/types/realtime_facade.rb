@@ -7,7 +7,10 @@ realtime = client.realtime
 realtime.database_name = 'app'
 channel = realtime.channel('room')
 string_type_channel = realtime.channel('presence-room', type: 'presence')
-channel.on('message') { |_event| nil }
+channel.on('message') { |event| event.fetch('value', nil) }
+string_type_channel.on('join') { |event| raise if event.client.empty? }
+string_type_channel.on('presence_sync') { |state| state.each_value(&:client) }
+channel.on('message', ->(_event) {})
 unsubscribe = realtime.on_connect { |_context| nil }
 
 raise 'Wrong realtime database name' unless realtime.database_name == 'app'
@@ -26,6 +29,7 @@ realtime.disconnect
 def typed_realtime_callbacks(channel)
   channel.on_presence_sync { |state| state.each_value { |entry| raise if entry.client.empty? } }
   channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { |change| change.type == 'INSERT' }
+  channel.on('INSERT') { |change| raise if change.table.empty? }
   channel.track('online' => true)
   channel.send(event: 'message', text: 'hello')
 end

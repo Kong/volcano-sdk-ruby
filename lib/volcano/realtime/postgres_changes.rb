@@ -39,6 +39,8 @@ module Volcano
         ensure_postgres!
         event = postgres_event(event)
         handler = callback || block || raise(ArgumentError, 'callback or block is required')
+        raise ArgumentError, 'callback must respond to call' unless handler.respond_to?(:call)
+
         register_postgres_listener(event, schema.to_s, table.to_s, handler)
       end
 

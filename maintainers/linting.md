@@ -42,6 +42,11 @@ Steep also permits diagnostic severity overrides. Its native project parser
 provides the effective settings used by `spec/steep/project_diagnostic_policy_spec.rb`;
 every target and nested group must retain `Steep::Diagnostic::Ruby.all_error`.
 This catches configuration downgrades while Steep remains the type checker.
+Steep's [ignore comments](https://github.com/soutaro/steep/blob/v1.10.0/lib/steep/ast/ignore.rb)
+can suppress errors even in that mode, and the native checker has no setting to
+forbid them. `Volcano/TypeSuppression` rejects those directives through RuboCop's
+parsed comments. Regression specs cover inline and block directives in runtime
+and test files while allowing fixture strings.
 
 Native SimpleCov and RuboCop enforce their configured limits but do not reject
 a policy edit that lowers those limits. `spec/simple_cov_policy_spec.rb` and

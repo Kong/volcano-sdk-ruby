@@ -17,6 +17,7 @@ RSpec.describe RuboCop do
 
   directives = %w[disable todo].freeze
   coverage_directives = ['# simplecov:disable', '# simplecov : disable branch -- reason', '# :nocov:'].freeze
+  type_directives = ['# steep:ignore', '# steep:ignore NoMethod', '# steep:ignore:start', '# steep:ignore:end'].freeze
   %w[lib/volcano/quality_probe.rb spec/quality/quality_probe_spec.rb].each do |path|
     context "with #{path}" do
       it 'accepts valid Ruby through the project configuration' do
@@ -68,6 +69,23 @@ RSpec.describe RuboCop do
           expect(status).to eq(1)
           expect(offenses).to include(a_hash_including('cop_name' => 'Volcano/CoverageSuppression'))
         end
+      end
+
+      type_directives.each do |directive|
+        it "rejects the type-checking directive #{directive}" do
+          offenses, status = inspect_source("value = 1 #{directive}\nString(value)", path)
+
+          expect(status).to eq(1)
+          expect(offenses).to include(a_hash_including('cop_name' => 'Volcano/TypeSuppression'))
+        end
+      end
+
+      it 'allows type directive text in strings and heredocs' do
+        offenses, status = inspect_source("String('# steep:ignore')\nString(<<~TEXT)\n  # steep:ignore:start\nTEXT",
+                                          path)
+
+        expect(status).to eq(0)
+        expect(offenses).to be_empty
       end
 
       it 'rejects inline coverage suppression despite a RuboCop disable directive' do

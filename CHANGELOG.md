@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.3...v0.32.4) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** validate storage object metadata as JSON ([#303](https://github.com/Kong/volcano-sdk-ruby/issues/303)) ([553921b](https://github.com/Kong/volcano-sdk-ruby/commit/553921b9f2403b4fb909ce76bab12274f67bd909))
+
 ## [0.32.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.2...v0.32.3) (2026-09-24)
 
 

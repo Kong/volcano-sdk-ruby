@@ -36,38 +36,36 @@ RSpec.describe SimpleCov do
     end
   end
 
-  def strict_policy?(source)
-    policy = resolved_policy(source)
-    policy.fetch('criteria') == %w[branch line] &&
-      policy.fetch('minimum') == { 'line' => 100, 'branch' => 100 } &&
-      policy.fetch('maximum_missed') == { 'line' => 0, 'branch' => 0 } &&
-      policy.fetch('cover_globs') == ['lib/**/*.rb'] &&
-      policy.fetch('filters') == expected_filters
-  end
-
   def expected_filters
     generated = ['value', '"/lib/volcano/generated/"']
     (resolved_policy("SimpleCov.configure {}\n").fetch('filters') + [generated]).sort_by(&:to_s)
   end
 
   it 'keeps native line and branch thresholds at 100% with only the generated-client exclusion' do
-    expect(strict_policy?(configuration)).to be(true)
+    policy = resolved_policy(configuration)
+    expect(policy.slice('criteria', 'minimum', 'maximum_missed', 'cover_globs')).to eq(
+      'criteria' => %w[branch line],
+      'minimum' => { 'line' => 100, 'branch' => 100 },
+      'maximum_missed' => { 'line' => 0, 'branch' => 0 },
+      'cover_globs' => ['lib/**/*.rb']
+    )
+    expect(policy.fetch('filters')).to eq(expected_filters)
   end
 
   it 'rejects a lowered coverage threshold' do
     weakened = configuration.sub('coverage :line, minimum: 100', 'coverage :line, minimum: 99')
-    expect(strict_policy?(weakened)).to be(false)
+    expect(resolved_policy(weakened).fetch('minimum')).to include('line' => 99)
   end
 
   it 'rejects a broad runtime exclusion' do
     weakened = configuration.sub("skip '/lib/volcano/generated/'", "skip '/lib/volcano/'")
-    expect(strict_policy?(weakened)).to be(false)
+    expect(resolved_policy(weakened).fetch('filters')).not_to eq(expected_filters)
   end
 
   it 'rejects a block filter that hides runtime files' do
     weakened = configuration.sub(
       "skip '/lib/volcano/generated/'", "skip { |source| source.filename.include?('/lib/') }"
     )
-    expect(strict_policy?(weakened)).to be(false)
+    expect(resolved_policy(weakened).fetch('filters')).not_to eq(expected_filters)
   end
 end

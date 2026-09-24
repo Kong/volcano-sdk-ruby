@@ -14,7 +14,7 @@ module Volcano
     def initialize(lease, ttl:, started_at:)
       @lease = lease
       @ttl = ttl
-      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at)
+      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at) # rubocop:disable Lint/NameTypo -- Inherited Class#new.
       @mutex = Mutex.new
       @changed = ConditionVariable.new
       @failure = nil

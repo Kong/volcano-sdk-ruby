@@ -28,7 +28,7 @@ RSpec.describe Volcano::Durable do
   it 'snapshots nested payload values before reading the dispatch credential' do
     check_property(PropCheck::Generators.printable_string) do |text|
       value = "original:#{text}"
-      payload = { 'nested' => { 'value' => value } }
+      original_payload = { 'nested' => { 'value' => value } }
       sent = nil
       mutate_on_credential(value)
       allow(transport).to receive(:start_durable_execution_from_application) do |payload:, **|
@@ -36,7 +36,7 @@ RSpec.describe Volcano::Durable do
         response
       end
 
-      durable.start('function', payload)
+      durable.start('function', original_payload)
 
       expect(sent).to eq('nested' => { 'value' => "original:#{text}" })
       expect(sent.fetch('nested').fetch('value')).to be_frozen

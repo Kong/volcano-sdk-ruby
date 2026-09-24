@@ -2,9 +2,11 @@
 
 require 'spec_helper'
 
-BlockingCall = Volcano::Realtime.const_get(:BlockingCall, false)
+module SpecSupport
+  BlockingCall = Volcano::Realtime.const_get(:BlockingCall, false)
+end
 
-RSpec.describe BlockingCall do
+RSpec.describe SpecSupport::BlockingCall do
   it 'returns a value produced outside the caller thread' do
     caller = Thread.current
     worker = nil

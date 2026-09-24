@@ -39,7 +39,7 @@ RSpec.describe Volcano::StorageBucket do
     socket = server.accept
     headers = []
     headers << socket.readline until headers.last == "\r\n"
-    length = headers.find { |line| line.match?(/\Acontent-length:/i) }.split(':').last.to_i
+    length = Integer(headers.find { |line| line.match?(/\Acontent-length:/i) }.split(':').last, 10)
     body = socket.read(length)
     response = upload_response
     socket.write("HTTP/1.1 201 Created\r\nContent-Type: application/json\r\n" \

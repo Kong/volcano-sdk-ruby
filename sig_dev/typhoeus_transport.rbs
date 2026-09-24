@@ -1,0 +1,16 @@
+module Typhoeus
+  class Request
+    attr_reader options: Hash[Symbol, Object?]
+    attr_reader url: String
+
+    def initialize: (String url, **Object? options) -> void
+    def run: () -> Response
+  end
+
+  class Response
+    attr_reader body: String
+    attr_reader code: Integer
+    attr_reader headers: Hash[String, String]?
+    attr_reader return_message: String?
+  end
+end

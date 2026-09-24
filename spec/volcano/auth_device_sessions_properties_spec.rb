@@ -21,14 +21,14 @@ RSpec.describe Volcano::Auth do
     generator = PropCheck::Generators.tuple(positive, positive, positive)
     check_property(generator) do |page, limit, total|
       body = { 'sessions' => [], 'page' => page, 'limit' => limit,
-               'total' => total, 'total_pages' => (total.to_f / limit).ceil }
+               'total' => total, 'total_pages' => (Float(total) / limit).ceil }
       allow(transport).to receive(:auth_get_my_sessions).with(
         authorization: 'access', page: page, limit: limit
       ).and_return(response(200, body))
 
       result = client.auth.list_sessions(page: page, limit: limit)
       expect(result.to_h).to eq(sessions: [], total: total, page: page, limit: limit,
-                                total_pages: (total.to_f / limit).ceil)
+                                total_pages: (Float(total) / limit).ceil)
     end
   end
 

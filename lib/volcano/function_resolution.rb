@@ -115,7 +115,7 @@ module Volcano
 
       def usable_address?(uri)
         # URI accepts a port outside the range a connection can use.
-        !uri.host.to_s.empty? && uri.port.to_i.between?(1, 65_535)
+        !uri.host.to_s.empty? && (uri.port || 0).between?(1, 65_535)
       end
 
       def usable_scheme?(scheme, api_url)

@@ -7,7 +7,7 @@ module Volcano
     let(:apis) { instance_double(described_class::GeneratedApis, functions: functions, logs: logs) }
     let(:transport) { described_class.new(api_url: 'https://api.test', api_factory: ->(_token) { apis }) }
 
-    [nil, 0].each do |status|
+    [nil, 0, '', 'invalid', '0'].each do |status|
       context "with generated HTTP status #{status.inspect}" do
         let(:failure) { Generated::ApiError.new(code: status, message: 'connection lost') }
 
@@ -35,6 +35,32 @@ module Volcano
             expect(error.status).to be_nil
             expect(error.message).to include('connection lost')
           end)
+        end
+      end
+    end
+
+    [409, '409', '409 conflict'].each do |status|
+      context "with generated HTTP status #{status.inspect}" do
+        let(:failure) { Generated::ApiError.new(code: status, response_body: '{"error":"conflict"}') }
+
+        it 'preserves the invocation status and function-owned body' do
+          allow(functions).to receive(:invoke_function_with_http_info).and_raise(failure)
+
+          response = transport.invoke_function(authorization: 'access', function_id: 'function', payload: {})
+
+          expect(response.status).to eq(409)
+          expect(response.body).to eq('error' => 'conflict')
+        end
+
+        it 'preserves the status of an ordinary API error' do
+          allow(logs).to receive(:search_project_logs_with_http_info).and_raise(failure)
+
+          response = transport.search_project_logs(
+            authorization: 'access', project_id: 'project', request: { 'resource' => { 'type' => 'function' } }
+          )
+
+          expect(response.status).to eq(409)
+          expect(response.body).to eq('error' => 'conflict')
         end
       end
     end

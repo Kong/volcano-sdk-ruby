@@ -4,7 +4,6 @@ require 'async'
 require 'async/queue'
 require 'spec_helper'
 
-ProtocolRecoveryPosition = Volcano::Realtime.const_get(:ProtocolRecoveryPosition, false)
 RecoveryPositionProtocol = Volcano::Realtime.const_get(:Protocol, false)
 
 class RecoveryPositionSocket
@@ -17,7 +16,11 @@ class RecoveryPositionSocket
   def close = @incoming.enqueue(nil)
 end
 
-RSpec.describe ProtocolRecoveryPosition do
+module SpecSupport
+  ProtocolRecoveryPosition = Volcano::Realtime.const_get(:ProtocolRecoveryPosition, false)
+end
+
+RSpec.describe SpecSupport::ProtocolRecoveryPosition do
   around do |example|
     Async { example.run }.wait
   end

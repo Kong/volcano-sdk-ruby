@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.6](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.5...v0.32.6) (2026-09-25)
+
+
+### Bug Fixes
+
+* **realtime:** use HTTP/1.1 for WebSocket connections ([#318](https://github.com/Kong/volcano-sdk-ruby/issues/318)) ([c6aaa5c](https://github.com/Kong/volcano-sdk-ruby/commit/c6aaa5cb92385736ad1c2af681139422e3818b95))
+
 ## [0.32.5](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.4...v0.32.5) (2026-09-24)
 
 

@@ -24,7 +24,6 @@ AllCops:
 
 Metrics/BlockLength:
   Exclude:
-    - "features/step_definitions/**/*"
     - "spec/**/*"
 
 Metrics/MethodLength:
@@ -58,7 +57,6 @@ RSpec/MultipleExpectations:
 Style/Documentation:
   Enabled: true
   Exclude:
-    - "features/**/*"
     - "spec/**/*"
 
 Volcano/CoverageSuppression:

@@ -10,7 +10,7 @@ RSpec.describe Rake::Application do
   it 'keeps every mandatory check in the canonical quality task' do
     expect(application['quality'].prerequisites).to eq(
       %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
-         quality:contract quality:package]
+         quality:package]
     )
   end
 

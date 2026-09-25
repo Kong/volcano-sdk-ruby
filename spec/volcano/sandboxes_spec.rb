@@ -221,7 +221,7 @@ RSpec.describe Volcano::Sandboxes do
       Typhoeus::Response.new(code: 200, headers: {},
                              body: JSON.generate(access_token: access_token('new'),
                                                  refresh_token: 'new-refresh', token_type: 'bearer', expires_in: 3600,
-                                                 user: { id: subject_id, email: 'user@example.com', status: 'active' })),
+                                                 user: { id: subject_id, email: 'u@example.com', status: 'active' })),
       Typhoeus::Response.new(code: 200, headers: {}, body: JSON.generate(command))
     ]
     Typhoeus.stub(%r{\Ahttps://sandbox.test}).and_return do |request|

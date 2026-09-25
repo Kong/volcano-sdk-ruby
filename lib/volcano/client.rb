@@ -18,7 +18,7 @@ module Volcano
 
     attr_reader :sandboxes, :auth, :functions, :durable, :logs, :storage, :locks, :realtime
 
-    # @dynamic auth, functions, durable, logs, storage, locks, realtime
+    # @dynamic sandboxes, auth, functions, durable, logs, storage, locks, realtime
 
     def initialize( # rubocop:disable Metrics/ParameterLists -- Preserve typed constructor keywords.
       anon_key:,

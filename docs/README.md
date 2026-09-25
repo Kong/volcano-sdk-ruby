@@ -129,3 +129,5 @@ See [Authentication](./authentication.md) for account, session, email, and OAuth
 See [Functions](./functions.md) for standard invocation, durable execution clients, and error handling.
 
 See [Versions and compatibility](./versions.md) for runtime support, upgrades, and restoring a tested dependency set.
+
+- [Sandboxes](sandboxes.md): isolated commands, sessions, files, and HTTP access.

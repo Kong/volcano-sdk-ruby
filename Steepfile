@@ -169,3 +169,16 @@ target :consumers do
   library 'tempfile'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
+
+target :sandboxes do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/sandbox_models.rb'
+  check 'lib/volcano/sandbox_request.rb'
+  check 'lib/volcano/sandbox_response.rb'
+  check 'lib/volcano/sandboxes.rb'
+  check 'lib/volcano/sandbox_session.rb'
+  check 'lib/volcano/sandbox_files.rb'
+  library 'base64'
+  library 'securerandom'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end

@@ -1,5 +1,6 @@
 module Volcano
   class Client
+    attr_reader sandboxes: Sandboxes
     attr_reader auth: Auth
     attr_reader functions: Functions
     attr_reader durable: Durable

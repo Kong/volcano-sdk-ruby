@@ -21,6 +21,9 @@ module Volcano::Generated
     # Canonical function ID used for invocation routing
     attr_accessor :function_id
 
+    # Canonical HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development; invoke through POST /functions/{functionId}/invoke instead.
+    attr_accessor :invoke_url
+
     # Suggested SDK cache TTL for this name-to-ID mapping
     attr_accessor :cache_ttl_seconds
 
@@ -29,6 +32,7 @@ module Volcano::Generated
       {
         :'name' => :'name',
         :'function_id' => :'function_id',
+        :'invoke_url' => :'invoke_url',
         :'cache_ttl_seconds' => :'cache_ttl_seconds'
       }
     end
@@ -48,6 +52,7 @@ module Volcano::Generated
       {
         :'name' => :'String',
         :'function_id' => :'String',
+        :'invoke_url' => :'String',
         :'cache_ttl_seconds' => :'Integer'
       }
     end
@@ -84,6 +89,10 @@ module Volcano::Generated
         self.function_id = attributes[:'function_id']
       else
         self.function_id = nil
+      end
+
+      if attributes.key?(:'invoke_url')
+        self.invoke_url = attributes[:'invoke_url']
       end
 
       if attributes.key?(:'cache_ttl_seconds')
@@ -189,6 +198,7 @@ module Volcano::Generated
       self.class == o.class &&
           name == o.name &&
           function_id == o.function_id &&
+          invoke_url == o.invoke_url &&
           cache_ttl_seconds == o.cache_ttl_seconds
     end
 
@@ -201,7 +211,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, function_id, cache_ttl_seconds].hash
+      [name, function_id, invoke_url, cache_ttl_seconds].hash
     end
 
     # Builds the object from hash

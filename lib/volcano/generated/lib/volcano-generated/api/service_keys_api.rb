@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ServiceKey'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ServiceKeysApi.create_service_key",
@@ -141,7 +141,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ServiceKeysApi.delete_service_key",
@@ -210,7 +210,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ServiceKey'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ServiceKeysApi.get_service_key",
@@ -311,7 +311,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedServiceKeys'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ServiceKeysApi.list_service_keys",
@@ -331,7 +331,7 @@ module Volcano::Generated
     end
 
     # Regenerate service key
-    # Generate new JWT value for existing key. The old key is immediately invalidated. Update your backend services with the new key before regenerating in production. 
+    # Generate new JWT value for existing key. The old key stops working within a few seconds. Update your backend services with the new key before regenerating in production. 
     # @param id [String] Project ID
     # @param key_id [String] 
     # @param [Hash] opts the optional parameters
@@ -342,7 +342,7 @@ module Volcano::Generated
     end
 
     # Regenerate service key
-    # Generate new JWT value for existing key. The old key is immediately invalidated. Update your backend services with the new key before regenerating in production. 
+    # Generate new JWT value for existing key. The old key stops working within a few seconds. Update your backend services with the new key before regenerating in production. 
     # @param id [String] Project ID
     # @param key_id [String] 
     # @param [Hash] opts the optional parameters
@@ -380,7 +380,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ServiceKey'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ServiceKeysApi.regenerate_service_key",

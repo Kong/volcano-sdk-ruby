@@ -5,6 +5,7 @@ target :client_transport do
   ignore_signature 'sig/client.rbs'
   check 'lib/volcano/client.rb'
   check 'lib/volcano/generated_transport.rb'
+  check 'lib/volcano/generated_transport_sandbox.rb'
   check 'lib/volcano/generated_transport_anonymous.rb'
   check 'lib/volcano/generated_transport_auth.rb'
   check 'lib/volcano/generated_transport_confirmation.rb'

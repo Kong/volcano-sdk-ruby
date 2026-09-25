@@ -68,7 +68,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.configure_auth_methods",
@@ -142,7 +142,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.create_email_template",
@@ -209,7 +209,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_auth_page_layout",
@@ -270,7 +270,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_auth_page_theme",
@@ -344,7 +344,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_email_template",
@@ -405,7 +405,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_config",
@@ -474,7 +474,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthHostedPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_hosted_page",
@@ -537,7 +537,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'GetAuthMethods200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_methods",
@@ -598,7 +598,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthPageAppearanceResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_page_appearance",
@@ -793,7 +793,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_email_template",
@@ -1007,7 +1007,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListEmailTemplates200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.list_email_templates",
@@ -1085,7 +1085,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PreviewAuthPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.preview_auth_page",
@@ -1391,7 +1391,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'TestEmailResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.test_email_config",
@@ -1461,7 +1461,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_config",
@@ -1541,7 +1541,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthHostedPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_hosted_page",
@@ -1619,7 +1619,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'UpdateAuthPageLayoutRequest'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_page_layout",
@@ -1691,7 +1691,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'UpdateAuthPageThemeRequest'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_page_theme",
@@ -1776,7 +1776,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_email_template",

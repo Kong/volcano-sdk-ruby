@@ -7,7 +7,7 @@ require 'tmpdir'
 
 RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
-  let(:openapi_sha256) { 'b5a1dab08ba903ae65d590bcec3601e3b551318dd56637f0d1ed2bdb555e5457' }
+  let(:openapi_sha256) { '5d4106157fcb559d6fa948154365325b7cfeff2d3196602631b35259de01b6ca' }
 
   it 'preserves explicit null without turning omitted object fields into null' do
     Dir.mktmpdir('volcano-ruby-nullable') do |directory|
@@ -63,7 +63,9 @@ RSpec.describe Volcano do
         'search_project_logs',
         'get_project_log_activity',
         'acquire_project_lock',
-        'release_project_lock'
+        'release_project_lock',
+        'create_sandbox_session',
+        'execute_sandbox_session'
       )
       model_base = File.binread(
         File.join(output, 'lib/volcano-generated/api_model_base.rb')

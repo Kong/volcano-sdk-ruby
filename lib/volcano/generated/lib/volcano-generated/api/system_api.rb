@@ -19,6 +19,314 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
+    # Model Context Protocol endpoint
+    # Streamable-HTTP MCP endpoint: one JSON-RPC 2.0 object per request, one response per request. There is no server-to-client stream, so a `GET` returns `405`, and a batched array is rejected.  Authenticated with a **project access token**. The endpoint takes its project from the credential, so a platform token is refused with `403` — it names no project, and letting a tool argument choose one would hand an agent its own blast radius.  Scope carries over from the REST API. A `read_only` token is not offered mutating tools or credential-returning reads, and is refused if it calls one anyway. Revoking the token ends MCP access on the same path it ends API access.  Methods: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`. See the [MCP guide](https://docs.volcano.dev/platform/interfaces/mcp) for the tool surface and client configuration. 
+    # @param call_mcp_request [CallMCPRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [CallMCP200Response]
+    def call_mcp(call_mcp_request, opts = {})
+      data, _status_code, _headers = call_mcp_with_http_info(call_mcp_request, opts)
+      data
+    end
+
+    # Model Context Protocol endpoint
+    # Streamable-HTTP MCP endpoint: one JSON-RPC 2.0 object per request, one response per request. There is no server-to-client stream, so a &#x60;GET&#x60; returns &#x60;405&#x60;, and a batched array is rejected.  Authenticated with a **project access token**. The endpoint takes its project from the credential, so a platform token is refused with &#x60;403&#x60; — it names no project, and letting a tool argument choose one would hand an agent its own blast radius.  Scope carries over from the REST API. A &#x60;read_only&#x60; token is not offered mutating tools or credential-returning reads, and is refused if it calls one anyway. Revoking the token ends MCP access on the same path it ends API access.  Methods: &#x60;initialize&#x60;, &#x60;notifications/initialized&#x60;, &#x60;ping&#x60;, &#x60;tools/list&#x60;, &#x60;tools/call&#x60;. See the [MCP guide](https://docs.volcano.dev/platform/interfaces/mcp) for the tool surface and client configuration. 
+    # @param call_mcp_request [CallMCPRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(CallMCP200Response, Integer, Hash)>] CallMCP200Response data, response status code and response headers
+    def call_mcp_with_http_info(call_mcp_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.call_mcp ...'
+      end
+      # verify the required parameter 'call_mcp_request' is set
+      if @api_client.config.client_side_validation && call_mcp_request.nil?
+        fail ArgumentError, "Missing the required parameter 'call_mcp_request' when calling SystemApi.call_mcp"
+      end
+      # resource path
+      local_var_path = '/mcp'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(call_mcp_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'CallMCP200Response'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.call_mcp",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#call_mcp\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Fetch the OpenAPI specification as JSON
+    # Returns this specification as a self-contained JSON document, with every reference resolved. It is generated from the same document the server validates requests against, so a client generated from it cannot describe a different API than the one that answers.  No credential is required: a client generator fetches this by URL before its user has a token, and every path here is already published in the API reference.  The response carries a strong `ETag`; send it back as `If-None-Match` to get `304 Not Modified` instead of the whole document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Hash<String, Object>]
+    def get_open_api_spec_json(opts = {})
+      data, _status_code, _headers = get_open_api_spec_json_with_http_info(opts)
+      data
+    end
+
+    # Fetch the OpenAPI specification as JSON
+    # Returns this specification as a self-contained JSON document, with every reference resolved. It is generated from the same document the server validates requests against, so a client generated from it cannot describe a different API than the one that answers.  No credential is required: a client generator fetches this by URL before its user has a token, and every path here is already published in the API reference.  The response carries a strong &#x60;ETag&#x60;; send it back as &#x60;If-None-Match&#x60; to get &#x60;304 Not Modified&#x60; instead of the whole document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Array<(Hash<String, Object>, Integer, Hash)>] Hash<String, Object> data, response status code and response headers
+    def get_open_api_spec_json_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.get_open_api_spec_json ...'
+      end
+      # resource path
+      local_var_path = '/openapi.json'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'If-None-Match'] = opts[:'if_none_match'] if !opts[:'if_none_match'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'Hash<String, Object>'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.get_open_api_spec_json",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#get_open_api_spec_json\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Fetch the OpenAPI specification as YAML
+    # The same document as `/openapi.json`, serialized as YAML for tools that prefer it. See that operation for caching and authentication notes. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Hash<String, Object>]
+    def get_open_api_spec_yaml(opts = {})
+      data, _status_code, _headers = get_open_api_spec_yaml_with_http_info(opts)
+      data
+    end
+
+    # Fetch the OpenAPI specification as YAML
+    # The same document as &#x60;/openapi.json&#x60;, serialized as YAML for tools that prefer it. See that operation for caching and authentication notes. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Array<(Hash<String, Object>, Integer, Hash)>] Hash<String, Object> data, response status code and response headers
+    def get_open_api_spec_yaml_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.get_open_api_spec_yaml ...'
+      end
+      # resource path
+      local_var_path = '/openapi.yaml'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/yaml', 'application/json']) unless header_params['Accept']
+      header_params[:'If-None-Match'] = opts[:'if_none_match'] if !opts[:'if_none_match'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'Hash<String, Object>'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.get_open_api_spec_yaml",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#get_open_api_spec_yaml\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Check the JSON OpenAPI specification
+    # The headers `GET /openapi.json` would return, so a cache can pick up the current `ETag` without transferring the document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [nil]
+    def head_open_api_spec_json(opts = {})
+      head_open_api_spec_json_with_http_info(opts)
+      nil
+    end
+
+    # Check the JSON OpenAPI specification
+    # The headers &#x60;GET /openapi.json&#x60; would return, so a cache can pick up the current &#x60;ETag&#x60; without transferring the document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def head_open_api_spec_json_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.head_open_api_spec_json ...'
+      end
+      # resource path
+      local_var_path = '/openapi.json'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'If-None-Match'] = opts[:'if_none_match'] if !opts[:'if_none_match'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.head_open_api_spec_json",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:HEAD, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#head_open_api_spec_json\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Check the YAML OpenAPI specification
+    # The headers `GET /openapi.yaml` would return, so a cache can pick up the current `ETag` without transferring the document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [nil]
+    def head_open_api_spec_yaml(opts = {})
+      head_open_api_spec_yaml_with_http_info(opts)
+      nil
+    end
+
+    # Check the YAML OpenAPI specification
+    # The headers &#x60;GET /openapi.yaml&#x60; would return, so a cache can pick up the current &#x60;ETag&#x60; without transferring the document. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :if_none_match Entity tag from an earlier response, returning &#x60;304 Not Modified&#x60; while it still matches. Accepts the full condition: &#x60;*&#x60;, a comma-separated list, and weak tags of the form &#x60;W/\&quot;tag\&quot;&#x60;. 
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def head_open_api_spec_yaml_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.head_open_api_spec_yaml ...'
+      end
+      # resource path
+      local_var_path = '/openapi.yaml'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'If-None-Match'] = opts[:'if_none_match'] if !opts[:'if_none_match'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.head_open_api_spec_yaml",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:HEAD, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#head_open_api_spec_yaml\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Health check endpoint
     # Returns server health status. Used for load balancer and monitoring checks.
     # @param [Hash] opts the optional parameters

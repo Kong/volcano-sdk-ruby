@@ -63,7 +63,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'StorageStats'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageAdminApi.get_storage_stats",
@@ -167,7 +167,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListStorageObjectsAdmin200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"StorageAdminApi.list_storage_objects_admin",

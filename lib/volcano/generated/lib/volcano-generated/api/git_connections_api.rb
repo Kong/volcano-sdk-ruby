@@ -63,7 +63,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.cancel_project_source_export",
@@ -137,7 +137,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.connect_project_git",
@@ -259,7 +259,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.disconnect_project_git",
@@ -333,7 +333,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExport'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.export_project_source",
@@ -394,7 +394,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_git_connection",
@@ -455,7 +455,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_git_deploy_settings",
@@ -518,7 +518,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExportState'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.get_project_source_export",
@@ -849,7 +849,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.set_project_git_production_branch",
@@ -873,6 +873,7 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [String] :provider Git provider to connect. Defaults to github. (default to 'github')
     # @option opts [String] :redirect URL to redirect the browser to after the provider callback completes.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
     # @return [GitConnectStartResponse]
     def start_git_connect(opts = {})
       data, _status_code, _headers = start_git_connect_with_http_info(opts)
@@ -884,6 +885,7 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [String] :provider Git provider to connect. Defaults to github. (default to 'github')
     # @option opts [String] :redirect URL to redirect the browser to after the provider callback completes.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
     # @return [Array<(GitConnectStartResponse, Integer, Hash)>] GitConnectStartResponse data, response status code and response headers
     def start_git_connect_with_http_info(opts = {})
       if @api_client.config.debugging
@@ -893,6 +895,11 @@ module Volcano::Generated
       if @api_client.config.client_side_validation && opts[:'provider'] && !allowable_values.include?(opts[:'provider'])
         fail ArgumentError, "invalid value for \"provider\", must be one of #{allowable_values}"
       end
+      pattern = Regexp.new(/^https:\/\/[^\/?#]+\/[^?#]*$|^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?\/[^?#]*$/)
+      if @api_client.config.client_side_validation && !opts[:'callback_url'].nil? && opts[:'callback_url'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"callback_url\"]' when calling GitConnectionsApi.start_git_connect, must conform to the pattern #{pattern}."
+      end
+
       # resource path
       local_var_path = '/user/git/connect'
 
@@ -900,6 +907,7 @@ module Volcano::Generated
       query_params = opts[:query_params] || {}
       query_params[:'provider'] = opts[:'provider'] if !opts[:'provider'].nil?
       query_params[:'redirect'] = opts[:'redirect'] if !opts[:'redirect'].nil?
+      query_params[:'callback_url'] = opts[:'callback_url'] if !opts[:'callback_url'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -990,7 +998,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.update_project_git_deploy_settings",

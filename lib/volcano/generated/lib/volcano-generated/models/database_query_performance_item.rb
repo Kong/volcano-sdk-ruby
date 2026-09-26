@@ -18,12 +18,12 @@ module Volcano::Generated
     # pg_stat_statements query identifier.
     attr_accessor :query_id
 
-    # Normalized and obfuscated representative query text.
+    # Normalized representative query text with literal values replaced by `?`.
     attr_accessor :query
 
     attr_accessor :database
 
-    # Database role used for the query.
+    # Postgres role that ran the query, such as `anon` or `authenticated` for RLS-enforced connections, `service_role`, the database owner role for full-access connections, or a role you created. `unknown` when the role no longer exists.
     attr_accessor :role
 
     attr_accessor :calls

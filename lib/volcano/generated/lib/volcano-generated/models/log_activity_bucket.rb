@@ -14,12 +14,12 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Log-event counts for one activity time bucket.
+  # Log-event counts for one activity time bucket. The first and last buckets can extend past the requested window; they count only events inside it.
   class LogActivityBucket < ApiModelBase
-    # Bucket start time.
+    # Bucket start time, inclusive.
     attr_accessor :start_time
 
-    # Bucket end time.
+    # Bucket end time, exclusive.
     attr_accessor :end_time
 
     attr_accessor :counts

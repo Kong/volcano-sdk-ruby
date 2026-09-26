@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Variable'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"VariablesApi.create_variable",
@@ -96,7 +96,7 @@ module Volcano::Generated
     # Delete a variable
     # Deletes a project-level environment variable and triggers asynchronous propagation of the removal to deployed functions and frontends in the project's configured regions. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param [Hash] opts the optional parameters
     # @return [nil]
     def delete_variable(id, name, opts = {})
@@ -107,7 +107,7 @@ module Volcano::Generated
     # Delete a variable
     # Deletes a project-level environment variable and triggers asynchronous propagation of the removal to deployed functions and frontends in the project&#39;s configured regions. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param [Hash] opts the optional parameters
     # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
     def delete_variable_with_http_info(id, name, opts = {})
@@ -156,7 +156,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"VariablesApi.delete_variable",
@@ -178,7 +178,7 @@ module Volcano::Generated
     # Get variable by name
     # Returns a project-level environment variable used by deployed functions and frontends. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param [Hash] opts the optional parameters
     # @return [Variable]
     def get_variable(id, name, opts = {})
@@ -189,7 +189,7 @@ module Volcano::Generated
     # Get variable by name
     # Returns a project-level environment variable used by deployed functions and frontends. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param [Hash] opts the optional parameters
     # @return [Array<(Variable, Integer, Hash)>] Variable data, response status code and response headers
     def get_variable_with_http_info(id, name, opts = {})
@@ -238,7 +238,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Variable'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"VariablesApi.get_variable",
@@ -339,7 +339,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedVariables'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"VariablesApi.list_variables",
@@ -361,7 +361,7 @@ module Volcano::Generated
     # Update a variable
     # Updates a project-level environment variable and triggers asynchronous propagation to deployed functions and frontends in the project's configured regions. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param update_variable_request [UpdateVariableRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Variable]
@@ -373,7 +373,7 @@ module Volcano::Generated
     # Update a variable
     # Updates a project-level environment variable and triggers asynchronous propagation to deployed functions and frontends in the project&#39;s configured regions. 
     # @param id [String] Project ID
-    # @param name [String] Variable name
+    # @param name [String] Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
     # @param update_variable_request [UpdateVariableRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Array<(Variable, Integer, Hash)>] Variable data, response status code and response headers
@@ -432,7 +432,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Variable'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"VariablesApi.update_variable",

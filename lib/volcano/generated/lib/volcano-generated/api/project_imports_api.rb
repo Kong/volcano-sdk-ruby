@@ -439,6 +439,7 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [ImportProvider] :provider Import provider to connect. Defaults to Vercel. (default to 'vercel')
     # @option opts [String] :redirect Validated application URL used after the provider callback.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
     # @return [ImportConnectStartResponse]
     def start_import_connect(opts = {})
       data, _status_code, _headers = start_import_connect_with_http_info(opts)
@@ -450,6 +451,7 @@ module Volcano::Generated
     # @param [Hash] opts the optional parameters
     # @option opts [ImportProvider] :provider Import provider to connect. Defaults to Vercel. (default to 'vercel')
     # @option opts [String] :redirect Validated application URL used after the provider callback.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
     # @return [Array<(ImportConnectStartResponse, Integer, Hash)>] ImportConnectStartResponse data, response status code and response headers
     def start_import_connect_with_http_info(opts = {})
       if @api_client.config.debugging
@@ -460,6 +462,11 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for 'opts[:\"redirect\"]' when calling ProjectImportsApi.start_import_connect, must conform to the pattern #{pattern}."
       end
 
+      pattern = Regexp.new(/^https:\/\/[^\/?#]+\/[^?#]*$|^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?\/[^?#]*$/)
+      if @api_client.config.client_side_validation && !opts[:'callback_url'].nil? && opts[:'callback_url'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"callback_url\"]' when calling ProjectImportsApi.start_import_connect, must conform to the pattern #{pattern}."
+      end
+
       # resource path
       local_var_path = '/user/imports/connect'
 
@@ -467,6 +474,7 @@ module Volcano::Generated
       query_params = opts[:query_params] || {}
       query_params[:'provider'] = opts[:'provider'] if !opts[:'provider'].nil?
       query_params[:'redirect'] = opts[:'redirect'] if !opts[:'redirect'].nil?
+      query_params[:'callback_url'] = opts[:'callback_url'] if !opts[:'callback_url'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}

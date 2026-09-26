@@ -21,13 +21,13 @@ module Volcano::Generated
     # Optional activity query. Supports quoted text, implicit AND, AND/OR/NOT, parentheses, and fields such as `level`, `region`, `invocation.id`, `resource.id`, `resource.name`, `function`, `frontend`, `database`, and `body`.
     attr_accessor :q
 
-    # Start time.
+    # Start of the window, inclusive. Defaults to 24 hours before `end_time`.
     attr_accessor :start_time
 
-    # End time.
+    # End of the window, exclusive. Defaults to now.
     attr_accessor :end_time
 
-    # Number of activity buckets to return.
+    # Maximum number of buckets. Defaults to 24. Volcano picks the smallest bucket width from 1s, 2s, 5s, 10s, 15s, 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, 2h, 3h, 6h, 12h, 1d, or a whole number of days that covers the window in at most this many buckets. Bucket edges fall on UTC multiples of the width, so they stay fixed as the window moves, and the response can contain fewer buckets. `1` returns one bucket that spans exactly the window.
     attr_accessor :bucket_count
 
     # Attribute mapping from ruby-style variable name to JSON key.

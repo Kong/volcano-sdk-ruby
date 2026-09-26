@@ -15,6 +15,8 @@ servers:
   - url: http://localhost:8000
     description: Development API server (use VOLCANO_API_URL env var)
 tags:
+  - name: Sandboxes
+    description: Isolated Linux sessions and reusable templates.
   - name: Projects
     description: Project management operations
   - name: Logs
@@ -51,6 +53,8 @@ tags:
     description: Project-specific public keys for frontend auth
   - name: Service Keys
     description: Project-specific secret keys for admin operations (bypass RLS - backend only!)
+  - name: Project Access Tokens
+    description: Project-scoped credentials for calling the Volcano API from CI, scripts, and agents
   - name: OAuth Configuration
     description: OAuth provider configuration (Google, GitHub, Microsoft, Apple)
   - name: OAuth Authentication
@@ -80,6 +84,680 @@ tags:
       and polls for completion. Session completion is handled by volcano.dev
       via the Management API.
 paths:
+  /sandboxes/presets:
+    get:
+      tags:
+        - Sandboxes
+      summary: List available sandbox presets
+      operationId: listSandboxPresets
+      security: []
+      responses:
+        '200':
+          description: List available sandbox presets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxPresetList'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/sandboxes:
+    get:
+      tags:
+        - Sandboxes
+      summary: List sandbox templates
+      operationId: listSandboxes
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List sandbox templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxTemplatePage'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Sandboxes
+      summary: Create a sandbox template from a verified preset
+      operationId: createSandbox
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSandboxTemplateRequest'
+      responses:
+        '201':
+          description: Create a sandbox template from a verified preset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxTemplate'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/sandboxes/{sandboxId}:
+    get:
+      tags:
+        - Sandboxes
+      summary: Get a sandbox template
+      operationId: getSandbox
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sandboxId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Get a sandbox template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxTemplate'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Sandboxes
+      summary: Rename a sandbox template
+      operationId: updateSandbox
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sandboxId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSandboxTemplateRequest'
+      responses:
+        '200':
+          description: Rename a sandbox template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxTemplate'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Sandboxes
+      summary: Retire a template and terminate its sessions
+      operationId: deleteSandbox
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sandboxId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Retire a template and terminate its sessions
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/sandboxes/{sandboxId}/deployments:
+    get:
+      tags:
+        - Sandboxes
+      summary: List sandbox deployment history
+      operationId: listSandboxDeployments
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sandboxId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List sandbox deployment history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxDeploymentPage'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/sandbox-sessions:
+    get:
+      tags:
+        - Sandboxes
+      summary: List project sandbox sessions
+      operationId: listSandboxSessions
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List project sandbox sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSessionPage'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Sandboxes
+      summary: Start a sandbox session
+      operationId: createSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSandboxSessionRequest'
+      responses:
+        '201':
+          description: Start a sandbox session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSession'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/sandbox-executions:
+    post:
+      tags:
+        - Sandboxes
+      summary: Execute once and return after confirmed termination
+      operationId: executeSandbox
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxExecutionRequest'
+      responses:
+        '200':
+          description: Execute once and return after confirmed termination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxExecutionResult'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}:
+    get:
+      tags:
+        - Sandboxes
+      summary: Get a sandbox session
+      operationId: getSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Get a sandbox session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSession'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Sandboxes
+      summary: Request sandbox termination
+      operationId: terminateSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Request sandbox termination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSession'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/suspend:
+    post:
+      tags:
+        - Sandboxes
+      summary: Suspend a sandbox session
+      operationId: suspendSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Suspend a sandbox session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSession'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/resume:
+    post:
+      tags:
+        - Sandboxes
+      summary: Resume a sandbox session
+      operationId: resumeSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Resume a sandbox session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxSession'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/exec:
+    post:
+      tags:
+        - Sandboxes
+      summary: Execute a command within a session
+      operationId: executeSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxCommandRequest'
+      responses:
+        '200':
+          description: Execute a command within a session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxCommandResult'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/files/read:
+    post:
+      tags:
+        - Sandboxes
+      summary: Read a workspace file
+      operationId: readSandboxSessionFile
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxFileReadRequest'
+      responses:
+        '200':
+          description: Read a workspace file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxFileResult'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/files/write:
+    post:
+      tags:
+        - Sandboxes
+      summary: Write a workspace file
+      operationId: writeSandboxSessionFile
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxFileWriteRequest'
+      responses:
+        '204':
+          description: Write a workspace file
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/grants/{subjectId}:
+    put:
+      tags:
+        - Sandboxes
+      summary: Authorize an authenticated project user for this session
+      operationId: grantSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxSubjectGrantRequest'
+      responses:
+        '204':
+          description: Authorize an authenticated project user for this session
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Sandboxes
+      summary: Revoke a project user session grant
+      operationId: revokeSandboxSession
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Revoke a project user session grant
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sandbox-sessions/{sessionId}/access:
+    post:
+      tags:
+        - Sandboxes
+      summary: Issue a short-lived port-scoped access credential
+      operationId: createSandboxSessionAccess
+      security:
+        - UserToken: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxAccessRequest'
+      responses:
+        '200':
+          description: Issue a short-lived port-scoped access credential
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxAccess'
+        default:
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /user/imports/connect:
     post:
       tags:
@@ -108,6 +786,14 @@ paths:
             type: string
             format: uri
             pattern: ^https://[^/?#]+(?:[/?][^#]*)?$|^http://(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?(?:[/?][^#]*)?$
+        - name: callback_url
+          in: query
+          required: false
+          description: Same-origin browser callback used to relay provider parameters before completing the connection.
+          schema:
+            type: string
+            format: uri
+            pattern: ^https://[^/?#]+/[^?#]*$|^http://(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?/[^?#]*$
       responses:
         '200':
           description: Provider authorization URL
@@ -646,6 +1332,14 @@ paths:
           description: URL to redirect the browser to after the provider callback completes.
           schema:
             type: string
+        - name: callback_url
+          in: query
+          required: false
+          description: Same-origin browser callback used to relay provider parameters before completing the connection.
+          schema:
+            type: string
+            format: uri
+            pattern: ^https://[^/?#]+/[^?#]*$|^http://(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?/[^?#]*$
       responses:
         '200':
           description: Provider authorization URL
@@ -1041,6 +1735,7 @@ paths:
       operationId: getProject
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1063,6 +1758,7 @@ paths:
       operationId: updateProject
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1117,6 +1813,7 @@ paths:
       operationId: deleteProject
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1141,6 +1838,7 @@ paths:
       operationId: getProjectHealth
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1186,6 +1884,7 @@ paths:
       operationId: queryProjectMetrics
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1294,6 +1993,7 @@ paths:
       operationId: uploadProjectLogo
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1356,6 +2056,7 @@ paths:
       operationId: deleteProjectLogo
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1400,6 +2101,7 @@ paths:
       operationId: getProjectUsage
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1434,6 +2136,7 @@ paths:
       operationId: replaceSharedVariables
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1504,6 +2207,83 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/frontend-shared-variables:
+    put:
+      tags:
+        - Projects
+      summary: Replace frontend shared variable names
+      description: |
+        Atomically replaces the complete shared frontend-variable list without
+        changing values. Names must already exist. Validates final affected
+        frontend environments before membership or propagation side effects.
+        An empty list clears membership. Omitted names remain stored outside the frontend shared list.
+      operationId: replaceFrontendSharedVariables
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - frontend_shared_variables
+              not:
+                required:
+                  - expected_frontend_shared_variables
+                  - expected_frontend_shared_variables_digest
+              properties:
+                frontend_shared_variables:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    maxLength: 256
+                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                expected_frontend_shared_variables:
+                  type: array
+                  uniqueItems: true
+                  description: When present, replace only if the current complete frontend shared list matches this list.
+                  items:
+                    type: string
+                    maxLength: 256
+                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                expected_frontend_shared_variables_digest:
+                  type: string
+                  minLength: 64
+                  maxLength: 64
+                  pattern: ^[a-f0-9]{64}$
+                  description: SHA-256 of the sorted unique current shared names joined by a newline. Use instead of expected_frontend_shared_variables for a compact conditional replacement.
+      responses:
+        '204':
+          description: Frontend shared list replaced and affected frontend synchronization started.
+        '400':
+          description: Invalid names or final frontend environment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Project not found
+        '409':
+          description: Frontend shared list changed since it was read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body exceeds 4,194,304 bytes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Persistence or synchronization failed
   /projects/{id}/config:
     get:
       tags:
@@ -1516,11 +2296,12 @@ paths:
         `?format=yaml`; the YAML is returned verbatim as the raw response body
         (`Content-Type: application/yaml`) and is meant to be saved as-is.
         Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material)
-        are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment
+        are omitted from the export; shared_variables and frontend_shared_variables contain names only; the YAML rendering adds a header comment
         describing how to set them via CLI environment interpolation.
       operationId: getProjectConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: format
@@ -1589,6 +2370,7 @@ paths:
       operationId: applyProjectConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: dry_run
@@ -1676,6 +2458,7 @@ paths:
         deploy without changing a platform-managed project's source ownership.
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1745,6 +2528,7 @@ paths:
         reached the repository.
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1840,6 +2624,7 @@ paths:
         connected repository and any commit already pushed to it are unchanged.
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -1904,6 +2689,7 @@ paths:
       operationId: setProjectGitProductionBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -1969,6 +2755,7 @@ paths:
       operationId: getProjectGitConnection
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -2019,6 +2806,7 @@ paths:
       operationId: connectProjectGit
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -2094,6 +2882,7 @@ paths:
       operationId: disconnectProjectGit
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -2140,6 +2929,7 @@ paths:
       operationId: getProjectGitDeploySettings
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -2193,6 +2983,7 @@ paths:
       operationId: updateProjectGitDeploySettings
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -2253,13 +3044,16 @@ paths:
       summary: Get database queries
       description: |
         Returns the database's current top queries from pg_stat_statements
-        ranked by total execution time.
+        ranked by total execution time. Only data statements (SELECT, INSERT,
+        UPDATE, DELETE, MERGE) are listed; statements Volcano runs to operate
+        the database are left out.
 
         **PRO plan required.** This endpoint is only available to projects owned
         by users on the PRO billing plan.
       operationId: getProjectDatabaseQueries
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -2423,6 +3217,7 @@ paths:
       operationId: listProjectDeployments
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -2495,6 +3290,7 @@ paths:
       operationId: summarizeProjectDeployments
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: search
@@ -2563,6 +3359,7 @@ paths:
       operationId: listProjectCustomDomains
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -2616,6 +3413,7 @@ paths:
       operationId: listFunctions
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -2667,6 +3465,7 @@ paths:
       operationId: createFunction
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -2737,6 +3536,9 @@ paths:
                   enum:
                     - all
                     - scoped
+                  x-enum-varnames:
+                    - CreateFunctionMultipartBodyVariableScopeAll
+                    - CreateFunctionMultipartBodyVariableScopeScoped
                   description: |
                     Which project variables this function receives. `all` (the default) gives it only project variables marked `shared: true`; `scoped` gives it only the variables it selects. Omitting this leaves an existing function's scope unchanged.
                 variables:
@@ -2776,8 +3578,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            The owner's billing-cycle build-minutes allowance is spent. The
+            error names the allowance and carries a link to the usage page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error (function deployment failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Build usage could not be read, so the allowance could not be
+            checked. The same request succeeds once it can be.
           content:
             application/json:
               schema:
@@ -2790,6 +3608,7 @@ paths:
       operationId: getFunction
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -2813,6 +3632,7 @@ paths:
       operationId: updateFunction
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -2850,6 +3670,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Function settings conflict with attached Frontend Function routes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
         - Functions
@@ -2862,6 +3688,7 @@ paths:
       operationId: deleteFunction
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -2909,7 +3736,8 @@ paths:
         - This operation is the authenticated direct RPC endpoint and always uses the
           POST `{payload: ...}` contract, including for functions whose DNS ingress is
           configured in HTTP mode.
-        - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`.
+        - The geo-routed DNS ingress is the function's `invoke_url`. It is on a
+          different domain from this API, so it cannot be derived from the API host.
         - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,
           HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths.
         - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS
@@ -2967,6 +3795,21 @@ paths:
               description: Region the function ran in (for example `us-east-1`)
               schema:
                 type: string
+            X-Volcano-Proxy-Ms:
+              description: Milliseconds Volcano spent preparing the invocation, counted from the request arriving until the function was dispatched. Present only when the function was invoked. Does not include function execution.
+              schema:
+                type: integer
+                minimum: 0
+            X-Volcano-Proxy-Handler-Ms:
+              description: The part of `X-Volcano-Proxy-Ms` spent in the invoke endpoint itself. Subtract it from `X-Volcano-Proxy-Ms` to see what authentication and request validation cost. Present only when the function was invoked.
+              schema:
+                type: integer
+                minimum: 0
+            X-Volcano-Compute-Ms:
+              description: Milliseconds spent running the function, from dispatch until it returned. Present only when the function was invoked. Does not include proxy preparation.
+              schema:
+                type: integer
+                minimum: 0
           content:
             application/json:
               schema:
@@ -3027,6 +3870,21 @@ paths:
               description: Region the function ran in (for example `us-east-1`)
               schema:
                 type: string
+            X-Volcano-Proxy-Ms:
+              description: Milliseconds Volcano spent preparing the invocation, counted from the request arriving until the function was dispatched. Present only when the function was invoked. Does not include function execution.
+              schema:
+                type: integer
+                minimum: 0
+            X-Volcano-Proxy-Handler-Ms:
+              description: The part of `X-Volcano-Proxy-Ms` spent in the invoke endpoint itself. Subtract it from `X-Volcano-Proxy-Ms` to see what authentication and request validation cost. Present only when the function was invoked.
+              schema:
+                type: integer
+                minimum: 0
+            X-Volcano-Compute-Ms:
+              description: Milliseconds spent running the function, from dispatch until it returned. Present only when the function was invoked. Does not include proxy preparation.
+              schema:
+                type: integer
+                minimum: 0
           content:
             application/json:
               schema:
@@ -3164,10 +4022,9 @@ paths:
         '503':
           description: |
             Durable execution is not available in this environment, or the
-            usage limit service could not be reached to charge the start. The
-            first is returned by a deployment that has no durable execution
-            engine, such as a local one, and is not retryable there; the second
-            is transient.
+            plan terms for the start could not be read. The first means the
+            capability is paused or this deployment cannot serve it, so it is
+            not one to retry in a loop; the second is transient.
           content:
             application/json:
               schema:
@@ -3178,9 +4035,13 @@ paths:
         - Functions
       summary: Resolve function name for invocation
       description: |
-        Resolves a DNS-safe function name to its function ID within the caller's project.
+        Resolves a DNS-safe function name to its function ID and invocation URL within the caller's project.
 
         SDKs use this endpoint internally to invoke by function name while routing by function ID.
+        Invoke the returned `invoke_url` as-is. It does not share a domain with the API, so a host
+        built from the API URL will not reach the function. When the deployment serves no public
+        invocation domain, as in local development, `invoke_url` is omitted and callers invoke
+        through `POST /functions/{functionId}/invoke`.
 
         **With Service Key**:
         - Allowed
@@ -3254,10 +4115,13 @@ paths:
         databases. Database logs are a PRO-plan feature; `resource.type=database`
         from a FREE-plan project owner returns 403. The activity window is limited
         to the plan's retention window (FREE: 1 day, PRO: 30 days); older start
-        times are clamped to that window.
+        times are clamped to that window. Buckets are aligned to UTC clock
+        intervals and count events in the half-open window
+        `[start_time, end_time)`.
       operationId: getProjectLogActivity
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -3316,6 +4180,7 @@ paths:
       operationId: searchProjectLogs
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -3383,6 +4248,7 @@ paths:
       operationId: streamProjectLogs
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: Last-Event-ID
@@ -3469,6 +4335,7 @@ paths:
       operationId: createFunctionsBatch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -3524,10 +4391,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            The owner's billing-cycle build-minutes allowance is spent. The
+            error names the allowance and carries a link to the usage page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '503':
           description: |
-            The batch carries a durable function and durable deploys are paused
-            platform-wide. The same request succeeds once they are re-enabled.
+            Build usage could not be read, so the allowance could not be
+            checked. The same request succeeds once it can be.
           content:
             application/json:
               schema:
@@ -3545,6 +4420,7 @@ paths:
       operationId: listProjectSchedulers
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -3568,6 +4444,7 @@ paths:
       operationId: listFunctionSchedulers
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3592,6 +4469,7 @@ paths:
       operationId: createFunctionScheduler
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3639,6 +4517,7 @@ paths:
       operationId: getFunctionScheduler
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3663,6 +4542,7 @@ paths:
       operationId: updateFunctionScheduler
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3701,6 +4581,7 @@ paths:
       operationId: deleteFunctionScheduler
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3722,6 +4603,7 @@ paths:
       operationId: listFunctionDeployments
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FunctionId'
@@ -3858,6 +4740,9 @@ paths:
                   enum:
                     - all
                     - scoped
+                  x-enum-varnames:
+                    - CreateDurableFunctionMultipartBodyVariableScopeAll
+                    - CreateDurableFunctionMultipartBodyVariableScopeScoped
                   description: |
                     Which project variables this function receives. `all` (the default) gives it every project variable; `scoped` gives it only the variables it selects. Omitting this leaves an existing function's scope unchanged.
                 variables:
@@ -3942,10 +4827,14 @@ paths:
       summary: Delete a durable function
       description: |
         Accepted for asynchronous teardown; the work continues after the
-        response. The function's executions go with it: history stops being
-        readable whatever `retention_days` had left, and the executions still
-        running stop counting against the project's concurrency cap. Stop an
-        execution first if you need it to end before the function does.
+        response. The function's executions go with it: executions still in
+        flight are stopped, and history stops being readable whatever
+        `retention_days` had left.
+
+        Stopping is asynchronous at the platform, and it does not interrupt a
+        step already running -- that step runs to its next checkpoint. So a
+        delete ends an execution rather than halting it mid-step; stop the
+        execution yourself first if you need to observe it ending.
       operationId: deleteDurableFunction
       security:
         - UserToken: []
@@ -4251,10 +5140,9 @@ paths:
         '503':
           description: |
             Durable execution is not available in this environment, or the
-            usage limit service could not be reached to charge the start. The
-            first is returned by a deployment that has no durable execution
-            engine, such as a local one, and is not retryable there; the second
-            is transient.
+            plan terms for the start could not be read. The first means the
+            capability is paused or this deployment cannot serve it, so it is
+            not one to retry in a loop; the second is transient.
           content:
             application/json:
               schema:
@@ -4329,9 +5217,9 @@ paths:
                 $ref: '#/components/schemas/Error'
         '503':
           description: |
-            Durable execution is not available in this environment. Returned by
-            a deployment that has no durable execution engine, such as a local
-            one; the request is not retryable there.
+            Durable execution is not available in this environment. Either the
+            capability is paused or this deployment cannot serve it, so the
+            request is not one to retry in a loop.
           content:
             application/json:
               schema:
@@ -4383,9 +5271,9 @@ paths:
                 $ref: '#/components/schemas/Error'
         '503':
           description: |
-            Durable execution is not available in this environment. Returned by
-            a deployment that has no durable execution engine, such as a local
-            one; the request is not retryable there.
+            Durable execution is not available in this environment. Either the
+            capability is paused or this deployment cannot serve it, so the
+            request is not one to retry in a loop.
           content:
             application/json:
               schema:
@@ -4404,6 +5292,7 @@ paths:
       operationId: listFrontends
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -4474,7 +5363,7 @@ paths:
         22.x or 24.x. The Node.js runtime is inferred from
         `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x.
         The selected Node.js family must also satisfy the installed Next.js package's
-        `engines.node` constraint. Volcano tests Next 15.5.25 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.5 (`>=20.9.0`).
+        `engines.node` constraint. Volcano tests Next 15.5.26 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.6 (`>=20.9.0`).
         Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI
         does not apply its own source archive size limit. After the final container images are
         built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing.
@@ -4483,6 +5372,7 @@ paths:
       operationId: createFrontend
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -4511,6 +5401,18 @@ paths:
                   maxLength: 1024
                   description: Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example `apps/web`.
                   example: apps/web
+                variable_scope:
+                  type: string
+                  enum:
+                    - all
+                    - scoped
+                  description: Variable selection for this deployment. New frontends default to `scoped`; omitting this field for an existing frontend preserves its current selection.
+                variables:
+                  type: array
+                  items:
+                    type: string
+                    pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+                  description: Project variable names selected when `variable_scope` is `scoped`. Submit each name as a repeated multipart field.
                 archive:
                   type: string
                   format: binary
@@ -4578,6 +5480,7 @@ paths:
       operationId: getFrontend
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4630,6 +5533,7 @@ paths:
       operationId: deleteFrontend
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4688,6 +5592,7 @@ paths:
       operationId: redeployFrontend
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4748,6 +5653,7 @@ paths:
       operationId: getFrontendCustomDomain
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4803,6 +5709,7 @@ paths:
       operationId: createFrontendCustomDomain
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4874,6 +5781,7 @@ paths:
       operationId: deleteFrontendCustomDomain
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4918,6 +5826,7 @@ paths:
       operationId: listFrontendDeployments
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -4978,6 +5887,7 @@ paths:
       operationId: getFrontendUsageHistory
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/FrontendId'
@@ -5027,6 +5937,198 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/frontends/{frontendId}/function-routes:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/FrontendId'
+    get:
+      tags:
+        - Frontends
+      summary: List a Frontend's Function routes
+      operationId: listFrontendFunctionRoutes
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      responses:
+        '200':
+          description: Function routes ordered from most to least specific
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrontendFunctionRouteList'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to list Function routes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Frontends
+      summary: Route a Frontend path to an HTTP Function
+      operationId: createFrontendFunctionRoute
+      description: The Frontend and Function must belong to this Project. The Function may be private but must use HTTP invocation mode. The route applies to every hostname that resolves to the Frontend, including generated, custom-domain, preview, and local hostnames.
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFrontendFunctionRouteRequest'
+      responses:
+        '201':
+          description: Function route created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrontendFunctionRoute'
+        '400':
+          description: Invalid path or non-HTTP Function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Frontend or Function not found in the Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Path is already routed or the Frontend has reached its 64-route limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to create Function route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/frontends/{frontendId}/function-routes/{routeId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/FrontendId'
+      - $ref: '#/components/parameters/FrontendFunctionRouteId'
+    put:
+      tags:
+        - Frontends
+      summary: Replace a Frontend Function route
+      operationId: updateFrontendFunctionRoute
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFrontendFunctionRouteRequest'
+      responses:
+        '200':
+          description: Function route replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrontendFunctionRoute'
+        '400':
+          description: Invalid path or non-HTTP Function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Function route, Frontend, or Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Path is already routed or the Frontend has reached its 64-route limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to replace Function route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Frontends
+      summary: Delete a Frontend Function route
+      operationId: deleteFrontendFunctionRoute
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      responses:
+        '204':
+          description: Function route deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Function route not found on the Frontend
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to delete Function route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/variables:
     get:
       tags:
@@ -5037,6 +6139,7 @@ paths:
       operationId: listVariables
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -5068,6 +6171,7 @@ paths:
       operationId: createVariable
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -5109,6 +6213,7 @@ paths:
       operationId: listDatabases
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -5147,6 +6252,7 @@ paths:
       operationId: createDatabase
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -5176,6 +6282,7 @@ paths:
       operationId: getDatabase
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5202,6 +6309,7 @@ paths:
       operationId: deleteDatabase
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5261,6 +6369,7 @@ paths:
       operationId: listDatabaseBranches
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5301,6 +6410,7 @@ paths:
       operationId: createDatabaseBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5363,6 +6473,7 @@ paths:
       operationId: getDatabaseBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5397,6 +6508,7 @@ paths:
       operationId: updateDatabaseBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5454,6 +6566,7 @@ paths:
       operationId: deleteDatabaseBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5507,6 +6620,7 @@ paths:
       operationId: resetDatabaseBranch
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5556,6 +6670,7 @@ paths:
       operationId: resetDatabaseBranchPassword
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5600,6 +6715,7 @@ paths:
       operationId: listDatabaseBackups
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5649,6 +6765,7 @@ paths:
       operationId: createDatabaseBackup
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5708,6 +6825,7 @@ paths:
       operationId: getDatabaseBackup
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5757,6 +6875,7 @@ paths:
       operationId: deleteDatabaseBackup
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5816,6 +6935,7 @@ paths:
       operationId: getDatabaseBackupSchedule
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5865,6 +6985,7 @@ paths:
       operationId: updateDatabaseBackupSchedule
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5929,6 +7050,7 @@ paths:
       operationId: listDatabaseRestores
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -5978,6 +7100,7 @@ paths:
       operationId: createDatabaseRestore
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -6042,6 +7165,7 @@ paths:
       operationId: getDatabaseRestore
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -6088,6 +7212,7 @@ paths:
       operationId: resetDatabasePassword
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -6157,6 +7282,7 @@ paths:
       operationId: updateDatabaseType
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -6206,6 +7332,7 @@ paths:
       operationId: getDatabaseStats
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/DatabaseName'
@@ -6282,6 +7409,13 @@ paths:
       responses:
         '200':
           description: Database is reachable
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6342,6 +7476,13 @@ paths:
       responses:
         '200':
           description: Query successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6409,6 +7550,13 @@ paths:
       responses:
         '200':
           description: Insert successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6477,6 +7625,13 @@ paths:
       responses:
         '200':
           description: Update successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6541,6 +7696,13 @@ paths:
       responses:
         '200':
           description: Delete successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6604,6 +7766,13 @@ paths:
       responses:
         '200':
           description: Database is reachable
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6671,6 +7840,13 @@ paths:
       responses:
         '200':
           description: Query successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6745,6 +7921,13 @@ paths:
       responses:
         '200':
           description: Insert successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6820,6 +8003,13 @@ paths:
       responses:
         '200':
           description: Update successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -6891,6 +8081,13 @@ paths:
       responses:
         '200':
           description: Delete successful
+          headers:
+            X-Volcano-Proxy-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyMs'
+            X-Volcano-Proxy-Handler-Ms:
+              $ref: '#/components/headers/DatabaseQueryProxyHandlerMs'
+            X-Volcano-Compute-Ms:
+              $ref: '#/components/headers/DatabaseQueryComputeMs'
           content:
             application/json:
               schema:
@@ -7038,6 +8235,7 @@ paths:
       operationId: getVariable
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/VariableName'
@@ -7064,6 +8262,7 @@ paths:
       operationId: updateVariable
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/VariableName'
@@ -7080,6 +8279,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Variable'
+        '400':
+          description: Invalid or reserved variable name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Variable not found
           content:
@@ -7102,6 +8307,7 @@ paths:
       operationId: deleteVariable
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/VariableName'
@@ -7226,7 +8432,9 @@ paths:
         Set `session_mode` to `cookie` to request HttpOnly refresh-token
         storage. Cookie mode is honored only for an exact, credentialed CORS
         origin on the same schemeful site as this API. Otherwise the response
-        retains the refresh token in its body.
+        retains the refresh token in its body. A frontend on its default
+        Volcano URL is cross-site with this API and so always gets the body
+        token.
       operationId: authSignin
       security:
         - AnonKey: []
@@ -8225,6 +9433,7 @@ paths:
       operationId: getAuthInsights
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: from
@@ -8305,6 +9514,7 @@ paths:
       operationId: listAuthUsers
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -8343,6 +9553,7 @@ paths:
       operationId: getAuthUser
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8366,6 +9577,7 @@ paths:
       operationId: deleteAuthUser
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8396,6 +9608,7 @@ paths:
       operationId: listUserSessions
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8523,6 +9736,7 @@ paths:
       operationId: deleteAllUserSessions
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8547,6 +9761,7 @@ paths:
       operationId: deleteUserSession
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8580,6 +9795,7 @@ paths:
       operationId: banAuthUser
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8623,6 +9839,7 @@ paths:
       operationId: unbanAuthUser
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: userId
@@ -8653,6 +9870,7 @@ paths:
       operationId: listEmailTemplates
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -8682,6 +9900,7 @@ paths:
       operationId: createEmailTemplate
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -8723,6 +9942,7 @@ paths:
       operationId: getEmailTemplate
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: type
@@ -8756,6 +9976,7 @@ paths:
       operationId: updateEmailTemplate
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: type
@@ -8800,6 +10021,7 @@ paths:
       operationId: deleteEmailTemplate
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: type
@@ -8876,6 +10098,7 @@ paths:
       operationId: getAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -8895,6 +10118,7 @@ paths:
       operationId: updateAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -8942,6 +10166,7 @@ paths:
       operationId: testEmailConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -8980,6 +10205,7 @@ paths:
       operationId: getAuthHostedPage
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: pageType
@@ -9005,6 +10231,7 @@ paths:
       operationId: updateAuthHostedPage
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: pageType
@@ -9041,6 +10268,7 @@ paths:
       operationId: getAuthPageAppearance
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -9082,6 +10310,7 @@ paths:
       operationId: updateAuthPageTheme
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -9134,6 +10363,7 @@ paths:
       operationId: deleteAuthPageTheme
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -9178,6 +10408,7 @@ paths:
       operationId: updateAuthPageLayout
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       requestBody:
         required: true
         content:
@@ -9228,6 +10459,7 @@ paths:
       operationId: deleteAuthPageLayout
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       responses:
         '204':
           description: Layout cleared
@@ -9313,6 +10545,7 @@ paths:
       operationId: previewAuthPage
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: pageType
@@ -9533,6 +10766,7 @@ paths:
       operationId: getAuthMethods
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -9598,6 +10832,7 @@ paths:
       operationId: configureAuthMethods
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -9633,6 +10868,7 @@ paths:
       operationId: listOAuthConfigs
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -9655,6 +10891,7 @@ paths:
       operationId: createOAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -9680,6 +10917,7 @@ paths:
       operationId: getOAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: provider
@@ -9713,6 +10951,7 @@ paths:
       operationId: updateOAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: provider
@@ -9751,6 +10990,7 @@ paths:
       operationId: deleteOAuthConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: provider
@@ -9782,6 +11022,7 @@ paths:
       operationId: listAvailableOAuthProviders
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -10584,6 +11825,7 @@ paths:
       operationId: listAnonKeys
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -10623,6 +11865,7 @@ paths:
       operationId: createAnonKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -10688,6 +11931,7 @@ paths:
       operationId: getAnonKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10713,6 +11957,7 @@ paths:
       operationId: revokeAnonKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10751,6 +11996,7 @@ paths:
       operationId: regenerateAnonKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10775,6 +12021,7 @@ paths:
       operationId: setDefaultAnonKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10802,6 +12049,354 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/access-tokens:
+    get:
+      tags:
+        - Project Access Tokens
+      summary: List a project's access tokens
+      description: |
+        Lists the project's access tokens, newest first. Secrets are never
+        returned: only a hash is stored, so a token's value exists solely in the
+        response to the create call.
+
+        Only tokens that can still authenticate are returned by default, so
+        revoked and expired ones are hidden. Pass `include_revoked=true` to see
+        them, which is how you find out what a key did before it stopped working.
+
+        Requires a platform token. A project access token cannot manage project
+        access tokens, so a leaked credential cannot enumerate or replace itself.
+      operationId: listProjectAccessTokens
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Search'
+        - name: include_revoked
+          in: query
+          required: false
+          description: |
+            Include tokens that can no longer authenticate — both revoked and
+            expired ones.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectAccessTokens'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner, or a project access token was used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Project Access Tokens
+      summary: Create a project access token
+      description: |
+        Creates a project access token and returns its secret.
+
+        The secret is in this response and nowhere else. Only its hash is
+        stored, so it cannot be retrieved, displayed, or recovered later — save
+        it when you create it.
+
+        The name must be unique within the project, so a retry cannot mint a
+        second credential. It cannot recover the first one either. A retry that
+        returns `409` with code `access_token_name_exists` means the original
+        create committed and its secret is unrecoverable: list the project's
+        tokens, revoke the one holding that name, and create it again.
+
+        Requires a platform token.
+      operationId: createProjectAccessToken
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectAccessTokenRequest'
+      responses:
+        '201':
+          description: Token created - save the secret now, it cannot be retrieved again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedProjectAccessToken'
+        '400':
+          description: Bad request - invalid name, scope, or expiry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner, or a project access token was used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            Duplicate name, token limit reached, or the project is being
+            deleted. Tell them apart with `code`, which is one of
+            `access_token_name_exists`, `access_token_limit_reached`, or
+            `project_deleting` — the message text is not a contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/access-tokens/usage:
+    get:
+      tags:
+        - Project Access Tokens
+      summary: Per-day request counts for every access token in a project
+      description: |
+        Returns a zero-filled daily series of request counts for each of the
+        project's access tokens, oldest first. Every day in the window is
+        present, so a gap reads as zero rather than missing.
+
+        Revoked tokens are included, because the traffic they made before
+        revocation is usually the reason you are looking.
+
+        `days` defaults to 30 and is capped at 60, which is also how long per-day
+        counts are retained — a longer window cannot be answered.
+
+        A platform token sees every token in the project. A project access token
+        sees only its own row, so it can watch its own traffic without being
+        able to enumerate the project's other credentials by name.
+      operationId: listProjectAccessTokensUsage
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: days
+          in: query
+          required: false
+          description: Number of trailing days to return (1-60, default 30).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 60
+            default: 30
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectAccessTokenUsage'
+        '400':
+          description: Bad request - invalid window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/access-tokens/{tokenId}:
+    get:
+      tags:
+        - Project Access Tokens
+      summary: Get a project access token
+      description: |
+        Returns one token's metadata. Never its secret, which is not stored in a
+        recoverable form.
+
+        Requires a platform token.
+      operationId: getProjectAccessToken
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TokenId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectAccessToken'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner, or a project access token was used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Project Access Tokens
+      summary: Revoke a project access token
+      description: |
+        Revokes the token. It stops authenticating immediately in the region
+        handling this call and within seconds across Volcano's other regions.
+
+        The record is kept rather than deleted, so the token's name, prefix, last
+        use, and request history stay available — which is what you need if you
+        are revoking because a secret leaked. Revoking an already-revoked token
+        succeeds.
+
+        Revoking does not undo anything the token already did. Treat whatever it
+        could reach as exposed and rotate accordingly.
+
+        Requires a platform token.
+      operationId: revokeProjectAccessToken
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TokenId'
+      responses:
+        '204':
+          description: Token revoked
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner, or a project access token was used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - the project is being deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/access-tokens/{tokenId}/usage:
+    get:
+      tags:
+        - Project Access Tokens
+      summary: Per-day request counts for one access token
+      description: |
+        Returns a zero-filled daily series of request counts for a single token,
+        oldest first, so the response always has exactly `days` entries.
+
+        `days` defaults to 30 and is capped at 60, matching how long per-day
+        counts are retained.
+
+        A project access token may read only its own usage; asking for another
+        token's returns `403`. A platform token may read any token in the
+        project.
+      operationId: getProjectAccessTokenUsage
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/TokenId'
+        - name: days
+          in: query
+          required: false
+          description: Number of trailing days to return (1-60, default 30).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 60
+            default: 30
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectAccessTokenUsage'
+        '400':
+          description: Bad request - invalid window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the project owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/service-keys:
     get:
       tags:
@@ -10814,6 +12409,7 @@ paths:
       operationId: listServiceKeys
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Page'
@@ -10841,6 +12437,7 @@ paths:
       operationId: createServiceKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -10893,6 +12490,7 @@ paths:
       operationId: getServiceKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10920,6 +12518,7 @@ paths:
       operationId: deleteServiceKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10938,11 +12537,12 @@ paths:
       summary: Regenerate service key
       description: |
         Generate new JWT value for existing key.
-        The old key is immediately invalidated.
+        The old key stops working within a few seconds.
         Update your backend services with the new key before regenerating in production.
       operationId: regenerateServiceKey
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: keyId
@@ -10971,6 +12571,7 @@ paths:
       operationId: listStorageBuckets
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/Limit'
@@ -10998,6 +12599,7 @@ paths:
       operationId: createStorageBucket
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -11023,6 +12625,7 @@ paths:
       operationId: getStorageBucket
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11042,6 +12645,7 @@ paths:
       operationId: updateStorageBucket
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11065,6 +12669,7 @@ paths:
       operationId: deleteStorageBucket
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11079,6 +12684,7 @@ paths:
       operationId: listStoragePolicies
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11098,6 +12704,7 @@ paths:
       operationId: createStoragePolicy
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11122,6 +12729,7 @@ paths:
       operationId: deleteStoragePolicy
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - $ref: '#/components/parameters/BucketName'
@@ -11145,6 +12753,7 @@ paths:
       operationId: listStorageObjectsAdmin
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
         - name: owner_id
@@ -11207,6 +12816,7 @@ paths:
       operationId: getStorageStats
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -11225,6 +12835,7 @@ paths:
       operationId: getRealtimeConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -11254,6 +12865,7 @@ paths:
       operationId: updateRealtimeConfig
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       requestBody:
@@ -11290,6 +12902,7 @@ paths:
       operationId: getRealtimeStats
       security:
         - UserToken: []
+        - ProjectAccessToken: []
       parameters:
         - $ref: '#/components/parameters/ProjectId'
       responses:
@@ -11812,7 +13425,9 @@ paths:
           description: |
             File size exceeds plan-based limits. This occurs when:
             - File exceeds the plan-based maximum file size (FREE or PRO tier)
-            - Upload would exceed the project's total storage quota
+            - The account on the FREE plan holds its file-storage allowance.
+              Enforcement is eventual: uploads are accepted until Volcano's
+              next allowance check sees the account at its allowance
         '429':
           $ref: '#/components/responses/BandwidthCapExceeded'
     put:
@@ -12105,7 +13720,245 @@ paths:
               schema:
                 type: string
                 example: OK
+  /openapi.json:
+    get:
+      tags:
+        - System
+      summary: Fetch the OpenAPI specification as JSON
+      description: |
+        Returns this specification as a self-contained JSON document, with every
+        reference resolved. It is generated from the same document the server
+        validates requests against, so a client generated from it cannot
+        describe a different API than the one that answers.
+
+        No credential is required: a client generator fetches this by URL before
+        its user has a token, and every path here is already published in the
+        API reference.
+
+        The response carries a strong `ETag`; send it back as `If-None-Match` to
+        get `304 Not Modified` instead of the whole document.
+      operationId: getOpenAPISpecJSON
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The OpenAPI specification
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAPISpecDocument'
+        '304':
+          $ref: '#/components/responses/OpenAPISpecNotModified'
+        '429':
+          $ref: '#/components/responses/OpenAPISpecThrottled'
+    head:
+      tags:
+        - System
+      summary: Check the JSON OpenAPI specification
+      description: |
+        The headers `GET /openapi.json` would return, so a cache can pick up the
+        current `ETag` without transferring the document.
+      operationId: headOpenAPISpecJSON
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/OpenAPISpecHeaders'
+        '304':
+          $ref: '#/components/responses/OpenAPISpecNotModified'
+        '429':
+          $ref: '#/components/responses/OpenAPISpecThrottled'
+  /openapi.yaml:
+    get:
+      tags:
+        - System
+      summary: Fetch the OpenAPI specification as YAML
+      description: |
+        The same document as `/openapi.json`, serialized as YAML for tools that
+        prefer it. See that operation for caching and authentication notes.
+      operationId: getOpenAPISpecYAML
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The OpenAPI specification
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/OpenAPISpecDocument'
+        '304':
+          $ref: '#/components/responses/OpenAPISpecNotModified'
+        '429':
+          $ref: '#/components/responses/OpenAPISpecThrottled'
+    head:
+      tags:
+        - System
+      summary: Check the YAML OpenAPI specification
+      description: |
+        The headers `GET /openapi.yaml` would return, so a cache can pick up the
+        current `ETag` without transferring the document.
+      operationId: headOpenAPISpecYAML
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/OpenAPISpecHeaders'
+        '304':
+          $ref: '#/components/responses/OpenAPISpecNotModified'
+        '429':
+          $ref: '#/components/responses/OpenAPISpecThrottled'
+  /mcp:
+    post:
+      tags:
+        - System
+      summary: Model Context Protocol endpoint
+      description: |
+        Streamable-HTTP MCP endpoint: one JSON-RPC 2.0 object per request, one
+        response per request. There is no server-to-client stream, so a `GET`
+        returns `405`, and a batched array is rejected.
+
+        Authenticated with a **project access token**. The endpoint takes its
+        project from the credential, so a platform token is refused with `403` —
+        it names no project, and letting a tool argument choose one would hand an
+        agent its own blast radius.
+
+        Scope carries over from the REST API. A `read_only` token is not offered
+        mutating tools or credential-returning reads, and is refused if it calls
+        one anyway. Revoking the token ends MCP access on the same path it ends
+        API access.
+
+        Methods: `initialize`, `notifications/initialized`, `ping`,
+        `tools/list`, `tools/call`. See the
+        [MCP guide](https://docs.volcano.dev/platform/interfaces/mcp) for the
+        tool surface and client configuration.
+      operationId: callMCP
+      security:
+        - ProjectAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: A JSON-RPC 2.0 request object.
+              required:
+                - jsonrpc
+                - method
+              properties:
+                jsonrpc:
+                  type: string
+                  enum:
+                    - '2.0'
+                method:
+                  type: string
+                  description: The MCP method to call.
+                id:
+                  description: |
+                    Request identifier, echoed verbatim. Omit it to send a
+                    notification, which is answered with `202` and no body.
+                  oneOf:
+                    - type: string
+                    - type: integer
+                params:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: A JSON-RPC response object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - jsonrpc
+                  - id
+                properties:
+                  jsonrpc:
+                    type: string
+                    enum:
+                      - '2.0'
+                  id:
+                    description: Echoes the request's id. Null when the request could not be read well enough to determine one.
+                    nullable: true
+                    oneOf:
+                      - type: string
+                      - type: integer
+                  result:
+                    type: object
+                    additionalProperties: true
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                    properties:
+                      code:
+                        type: integer
+                      message:
+                        type: string
+        '202':
+          description: A notification was accepted; there is no body
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The credential is valid but may not use this endpoint — most often a
+            platform token, which names no project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: The JSON-RPC frame exceeds the 1 MiB limit
 components:
+  headers:
+    ETag:
+      description: |
+        Strong validator for the returned document. Send it back as `If-None-Match`
+        to revalidate without transferring the document again.
+      required: true
+      schema:
+        type: string
+      example: '"9f2c1e0b5a"'
+    DatabaseQueryProxyMs:
+      description: |
+        Milliseconds Volcano spent before running the query, counted from the
+        request arriving: authenticating the caller, validating the request,
+        resolving the database, and building the SQL. Does not include query
+        execution. Also present when the query itself failed.
+      schema:
+        type: integer
+        minimum: 0
+    DatabaseQueryProxyHandlerMs:
+      description: |
+        The part of `X-Volcano-Proxy-Ms` spent in the query endpoint itself.
+        Subtract it from `X-Volcano-Proxy-Ms` to see what authentication and
+        request validation cost. Also present when the query itself failed.
+      schema:
+        type: integer
+        minimum: 0
+    DatabaseQueryComputeMs:
+      description: |
+        Milliseconds the database took to run the query and return its rows.
+        Does not include Volcano's preparation. Also present when the query
+        itself failed.
+      schema:
+        type: integer
+        minimum: 0
   securitySchemes:
     AnonKey:
       type: http
@@ -12137,11 +13990,30 @@ components:
     UserToken:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: opaque
       description: |
-        Platform user token from the Management API.
-        Required for project management operations.
-        Obtain via POST /tokens in Management API (port 8001).
+        Platform token, which acts on every project in your account.
+        Obtain one by running `volcano login`, or from the dashboard.
+
+        For CI, scripts, and agents, prefer a project access token
+        (`pt-`) instead: it reaches only the project it was created in,
+        so a leak does not expose the rest of your account. See the
+        ProjectAccessToken scheme.
+    ProjectAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        Project access token, scoped to a single project. Starts with `pt-`.
+
+        Accepted on that project's control-plane routes and refused
+        everywhere else, including account-wide endpoints and any other
+        project. A `read_only` token additionally refuses mutations.
+
+        Create one with POST /projects/{id}/access-tokens using a platform
+        token. The secret is returned once and is not recoverable, so a
+        project access token cannot create, list, read, or revoke project
+        access tokens.
   parameters:
     BackupName:
       name: backupName
@@ -12225,6 +14097,14 @@ components:
         type: string
         format: uuid
       description: Frontend ID
+    FrontendFunctionRouteId:
+      name: routeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Frontend Function route ID
     FunctionId:
       name: functionId
       in: path
@@ -12387,6 +14267,14 @@ components:
         type: string
         format: uuid
       description: Project ID
+    TokenId:
+      name: tokenId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Project access token ID
     Search:
       name: search
       in: query
@@ -12422,8 +14310,33 @@ components:
         minLength: 1
         maxLength: 256
         pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
-      description: Variable name
+      description: Variable name. Function runtime names such as AWS_REGION are reserved and cannot be updated.
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: |
+        Entity tag from an earlier response, returning `304 Not Modified` while it
+        still matches. Accepts the full condition: `*`, a comma-separated list, and
+        weak tags of the form `W/"tag"`.
+      schema:
+        type: string
+      example: '"9f2c1e0b5a"'
   responses:
+    OpenAPISpecThrottled:
+      description: |
+        Too many requests for the specification from one address. The document
+        carries an `ETag`; revalidate with `If-None-Match` rather than
+        re-fetching it.
+      headers:
+        Retry-After:
+          description: Seconds to wait before requesting the specification again.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     BandwidthCapExceeded:
       description: |
         The platform user exceeded their billing-cycle bandwidth allowance (aggregate
@@ -12454,7 +14367,534 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    OpenAPISpecNotModified:
+      description: |
+        The specification still matches the supplied `If-None-Match`, so no body
+        is returned.
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+    OpenAPISpecHeaders:
+      description: |
+        The headers a `GET` would return, without the document. The declared
+        `ETag` is the one to revalidate against.
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
   schemas:
+    SandboxPreset:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        runtime:
+          type: string
+        version:
+          type: string
+        memory_mb:
+          type: integer
+          enum:
+            - 1024
+            - 2048
+        regions:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - runtime
+        - version
+        - memory_mb
+        - regions
+    SandboxTemplate:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,62}$
+        preset:
+          type: string
+        memory_mb:
+          type: integer
+        status:
+          type: string
+          enum:
+            - ready
+            - unavailable
+            - deleting
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - name
+        - status
+        - created_at
+    CreateSandboxTemplateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,62}$
+        preset:
+          type: string
+          enum:
+            - python3.12
+            - node22
+        memory_mb:
+          type: integer
+          enum:
+            - 1024
+            - 2048
+          default: 1024
+      required:
+        - name
+        - preset
+    UpdateSandboxTemplateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,62}$
+      required:
+        - name
+    SandboxSession:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sandbox_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+            - starting
+            - running
+            - suspending
+            - suspended
+            - resuming
+            - terminating
+            - terminated
+            - unknown
+        desired_state:
+          type: string
+          enum:
+            - running
+            - suspended
+            - terminated
+        region:
+          type: string
+        memory_mb:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - sandbox_id
+        - state
+        - desired_state
+        - region
+        - memory_mb
+        - created_at
+        - expires_at
+    CreateSandboxSessionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        preset:
+          type: string
+          enum:
+            - python3.12
+            - node22
+        sandbox_id:
+          type: string
+          format: uuid
+        memory_mb:
+          type: integer
+          enum:
+            - 1024
+            - 2048
+        region:
+          type: string
+          pattern: ^aws-[a-z0-9-]+$
+        max_duration_seconds:
+          type: integer
+          minimum: 30
+          maximum: 28800
+          default: 3600
+        idle_timeout_seconds:
+          type: integer
+          minimum: 0
+          maximum: 28800
+          default: 0
+      required:
+        - region
+      oneOf:
+        - required:
+            - preset
+          not:
+            required:
+              - sandbox_id
+        - required:
+            - sandbox_id
+          not:
+            required:
+              - preset
+    SandboxCommandRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        command:
+          type: string
+          minLength: 1
+          maxLength: 65536
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+          default: 60
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+          maxProperties: 64
+      required:
+        - command
+    SandboxExecutionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        preset:
+          type: string
+          enum:
+            - python3.12
+            - node22
+        sandbox_id:
+          type: string
+          format: uuid
+        memory_mb:
+          type: integer
+          enum:
+            - 1024
+            - 2048
+        region:
+          type: string
+          pattern: ^aws-[a-z0-9-]+$
+        command:
+          type: string
+          minLength: 1
+          maxLength: 65536
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 60
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+          maxProperties: 64
+      required:
+        - region
+        - command
+      oneOf:
+        - required:
+            - preset
+          not:
+            required:
+              - sandbox_id
+        - required:
+            - sandbox_id
+          not:
+            required:
+              - preset
+    SandboxCommandResult:
+      type: object
+      additionalProperties: false
+      properties:
+        stdout:
+          type: string
+        stderr:
+          type: string
+        exit_code:
+          type: integer
+        stdout_truncated:
+          type: boolean
+        stderr_truncated:
+          type: boolean
+        timed_out:
+          type: boolean
+      required:
+        - stdout
+        - stderr
+        - exit_code
+        - stdout_truncated
+        - stderr_truncated
+        - timed_out
+    SandboxExecutionResult:
+      type: object
+      additionalProperties: false
+      properties:
+        stdout:
+          type: string
+        stderr:
+          type: string
+        exit_code:
+          type: integer
+        stdout_truncated:
+          type: boolean
+        stderr_truncated:
+          type: boolean
+        timed_out:
+          type: boolean
+        session_id:
+          type: string
+          format: uuid
+        region:
+          type: string
+        duration_ms:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - stdout
+        - stderr
+        - exit_code
+        - stdout_truncated
+        - stderr_truncated
+        - timed_out
+        - session_id
+        - region
+        - duration_ms
+    SandboxFileWriteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        data:
+          type: string
+          format: byte
+          maxLength: 11184812
+      required:
+        - path
+        - data
+    SandboxFileReadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required:
+        - path
+    SandboxFileResult:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: string
+          format: byte
+      required:
+        - data
+    SandboxSubjectGrantRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - expires_at
+    SandboxAccessRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65532
+        expires_in_seconds:
+          type: integer
+          minimum: 1
+          maximum: 300
+          default: 300
+      required:
+        - port
+    SandboxAccess:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          format: uri
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - url
+        - token
+        - expires_at
+    SandboxDeployment:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - status
+        - created_at
+        - updated_at
+    SandboxPagination:
+      type: object
+      additionalProperties: false
+      properties:
+        limit:
+          type: integer
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+      required:
+        - limit
+        - has_more
+    SandboxTemplatePage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SandboxTemplate'
+        pagination:
+          $ref: '#/components/schemas/SandboxPagination'
+      required:
+        - data
+        - pagination
+    SandboxSessionPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SandboxSession'
+        pagination:
+          $ref: '#/components/schemas/SandboxPagination'
+      required:
+        - data
+        - pagination
+    SandboxDeploymentPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SandboxDeployment'
+        pagination:
+          $ref: '#/components/schemas/SandboxPagination'
+      required:
+        - data
+        - pagination
+    SandboxPresetList:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SandboxPreset'
+      required:
+        - data
+    SandboxCapacity:
+      type: object
+      additionalProperties: false
+      properties:
+        region:
+          type: string
+        allocated_memory_mb:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - region
+        - allocated_memory_mb
+    SandboxCapacityList:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SandboxCapacity'
+      required:
+        - data
+    PublishSandboxPresetRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        preset:
+          type: string
+          enum:
+            - python3.12
+            - node22
+        memory_mb:
+          type: integer
+          enum:
+            - 1024
+            - 2048
+        deployment_id:
+          type: string
+          format: uuid
+      required:
+        - id
+        - preset
+        - memory_mb
+        - deployment_id
     AnonKey:
       type: object
       properties:
@@ -13619,6 +16059,7 @@ components:
           description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         name:
           type: string
+          description: Project variable name. Function runtime names such as AWS_REGION are reserved and return 400; see the environment variables guide for the full list.
           minLength: 1
           maxLength: 256
           pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
@@ -15146,6 +17587,20 @@ components:
     Frontend:
       type: object
       properties:
+        variable_scope:
+          type: string
+          enum:
+            - all
+            - shared
+            - scoped
+          description: All preserves access to all project variables. Shared includes the project frontend shared-variable list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
+        declared_variables:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+          description: Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
         id:
           type: string
           format: uuid
@@ -15229,6 +17684,72 @@ components:
         - deployed_regions
         - created_at
         - updated_at
+    FrontendFunctionRoute:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        frontend_id:
+          type: string
+          format: uuid
+        function_id:
+          type: string
+          format: uuid
+        path_prefix:
+          type: string
+          minLength: 2
+          maxLength: 512
+          pattern: ^/[^?#\\]*[^/?#\\]$
+        strip_prefix:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - frontend_id
+        - function_id
+        - path_prefix
+        - strip_prefix
+        - created_at
+        - updated_at
+    FrontendFunctionRouteList:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrontendFunctionRoute'
+      required:
+        - data
+    CreateFrontendFunctionRouteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        function_id:
+          type: string
+          format: uuid
+        path_prefix:
+          type: string
+          minLength: 2
+          maxLength: 512
+          pattern: ^/[^?#\\]*[^/?#\\]$
+        strip_prefix:
+          type: boolean
+          default: false
+      required:
+        - function_id
+        - path_prefix
     FrontendCustomDomainResponse:
       type: object
       properties:
@@ -15488,6 +18009,217 @@ components:
         - total_requests
         - total_errors
         - total_page_views
+    ProjectAccessToken:
+      type: object
+      description: |
+        A project access token: a control-plane credential bound to a single
+        project. Unlike a platform token, which acts on every project its owner
+        has, this one is limited to the project it was created in.
+
+        The secret itself is never returned here. Only its hash is stored, so
+        the plaintext exists solely in the response to the create call.
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Unique per project.
+        token_prefix:
+          type: string
+          description: First 12 characters of the secret, for recognising a token in a list.
+        scope:
+          $ref: '#/components/schemas/ProjectAccessTokenScope'
+        status:
+          type: string
+          enum:
+            - active
+            - revoked
+            - expired
+          description: |
+            `revoked` means the token was deliberately revoked, by you or by the
+            deletion of its project. `expired` means it simply reached
+            `expires_at`; nothing was taken away. Both are refused, and both keep
+            their record so a token's name, prefix, last use, and request history
+            remain available after a leak.
+
+            A token revoked before its expiry passed stays `revoked`, because
+            that is the fact worth keeping.
+        token_source:
+          type: string
+          enum:
+            - api
+            - cli
+            - dashboard
+          description: What created the token.
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Absent for a token that does not expire.
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Updated at most once every few minutes, so it may lag slightly.
+        created_at:
+          type: string
+          format: date-time
+        all_time_requests:
+          type: integer
+          format: int64
+          description: Requests authenticated with this token since it was created.
+      required:
+        - id
+        - project_id
+        - name
+        - token_prefix
+        - scope
+        - status
+        - token_source
+        - created_at
+        - all_time_requests
+    ProjectAccessTokenScope:
+      type: string
+      description: |
+        What a project access token may do within its project.
+
+        `full` is everything you can do to that one project, up to and including
+        deleting it. It cannot manage access tokens, so a leaked token cannot
+        mint a replacement or erase the record of its own use, but for a CI or
+        agent credential that only deploys, prefer `read_only` where the job
+        allows it.
+
+        `read_only` refuses mutations. It is enforced by route classification
+        rather than HTTP method, so the log and metrics query endpoints remain
+        available even though they are POST requests that carry body filters.
+
+        `read_only` also refuses the reads that return a credential — service
+        keys, anon keys, variable values, and database connection strings. Those
+        grant write access over the project's data and keep working after the
+        token that fetched them is revoked, so returning one to a read-only
+        credential would make the scope a formality. An anon key is included
+        because its permissions are chosen per key and may include uploading,
+        deleting, and publishing.
+      enum:
+        - full
+        - read_only
+      x-enum-varnames:
+        - ProjectAccessTokenScopeFull
+        - ProjectAccessTokenScopeReadOnly
+    CreateProjectAccessTokenRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            Held by any of the project's tokens you have not revoked, including
+            one that has expired. Creating a duplicate returns 409 with code
+            `access_token_name_exists`; revoking the holder frees the name, so a
+            rotation can keep the name its caller already references.
+        scope:
+          $ref: '#/components/schemas/ProjectAccessTokenScope'
+        expires_at:
+          type: string
+          format: date-time
+          description: Omit for a token that does not expire.
+      required:
+        - name
+        - scope
+    CreatedProjectAccessToken:
+      allOf:
+        - $ref: '#/components/schemas/ProjectAccessToken'
+        - type: object
+          properties:
+            token:
+              type: string
+              description: |
+                The secret. Returned only here, and not recoverable afterwards:
+                the server stores a hash rather than the value. Save it now.
+          required:
+            - token
+    PaginatedProjectAccessTokens:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectAccessToken'
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+        next:
+          type: string
+      required:
+        - data
+        - page
+        - limit
+        - total
+        - has_more
+    ProjectAccessTokenUsage:
+      type: object
+      description: |
+        Zero-filled daily request counts for a single token, oldest first. Every
+        day in the window is present, so a gap reads as zero rather than missing.
+
+        Counts every request the token authenticated, including ones then
+        refused — a read-only token attempting a write, or a token presented on
+        another project's route. That is deliberate: after a leak, the probing
+        is the part you want to see, and a counter that hid it would make a
+        token look idle while it was being tried.
+      properties:
+        token_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        token_prefix:
+          type: string
+          description: |
+            The token's display prefix, which identifies the credential when its
+            name does not. Revoking frees a name, so a project that rotated
+            `ci-deploy` has two entries here both called `ci-deploy`. Not usable
+            as a credential.
+        days:
+          type: integer
+          description: Number of daily entries returned, always equal to the requested window.
+        daily:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectAccessTokenUsageDailyEntry'
+        total_requests:
+          type: integer
+          format: int64
+      required:
+        - token_id
+        - name
+        - token_prefix
+        - days
+        - daily
+        - total_requests
+    ProjectAccessTokenUsageDailyEntry:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+          description: UTC day.
+        requests:
+          type: integer
+          format: int64
+      required:
+        - day
+        - requests
     Function:
       type: object
       properties:
@@ -15534,7 +18266,7 @@ components:
           type: string
         invoke_url:
           type: string
-          description: Canonical GeoDNS endpoint URL for invoking this function (always HTTPS)
+          description: 'Canonical geo-routed HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development, so a client testing for an empty string never matches.'
         deployed_regions:
           type: array
           items:
@@ -15761,12 +18493,18 @@ components:
         `succeeded`, `failed`, `timed_out`, `stopped` and `unknown` are
         terminal.
 
-        `unknown` means the platform lost track of the execution's outcome: it
-        was never seen to finish and is no longer reported, so no result or
-        error can be given for it. It is terminal because nothing can settle it
-        later, and it is rare — treat it as an outcome to retry under a new
-        name rather than a state to wait on. `completed_at` on an `unknown`
-        execution is when the platform gave up, not when the work ended.
+        `unknown` means the execution's outcome cannot be established, so no
+        result or error can be given for it. Either it was under way and was
+        never seen to finish, or its start failed with a `500` without the
+        platform establishing whether the execution began — which is why a
+        name whose start returned an error can later read as `unknown` rather
+        than not being found. It is terminal because nothing can settle it
+        later, and it is rare — treat it as an outcome to retry rather than a
+        state to wait on. A retry under the same name picks this execution back
+        up instead of starting a second one, and needs a free concurrency slot
+        because an `unknown` execution has given its own up. `completed_at` on
+        an `unknown` execution is when the platform gave up, not when the work
+        ended.
     DurableExecutionError:
       type: object
       description: Why a failed or timed-out execution ended.
@@ -15900,16 +18638,16 @@ components:
       additionalProperties: true
     LogActivityBucket:
       type: object
-      description: Log-event counts for one activity time bucket.
+      description: Log-event counts for one activity time bucket. The first and last buckets can extend past the requested window; they count only events inside it.
       properties:
         start_time:
           type: string
           format: date-time
-          description: Bucket start time.
+          description: Bucket start time, inclusive.
         end_time:
           type: string
           format: date-time
-          description: Bucket end time.
+          description: Bucket end time, exclusive.
         counts:
           type: object
           description: Counts grouped by activity dimension.
@@ -15955,16 +18693,16 @@ components:
         start_time:
           type: string
           format: date-time
-          description: Start time.
+          description: Start of the window, inclusive. Defaults to 24 hours before `end_time`.
         end_time:
           type: string
           format: date-time
-          description: End time.
+          description: End of the window, exclusive. Defaults to now.
         bucket_count:
           type: integer
           minimum: 1
           maximum: 96
-          description: Number of activity buckets to return.
+          description: Maximum number of buckets. Defaults to 24. Volcano picks the smallest bucket width from 1s, 2s, 5s, 10s, 15s, 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, 2h, 3h, 6h, 12h, 1d, or a whole number of days that covers the window in at most this many buckets. Bucket edges fall on UTC multiples of the width, so they stay fixed as the window moves, and the response can contain fewer buckets. `1` returns one bucket that spans exactly the window.
       required:
         - resource
     LogActivityResponse:
@@ -16062,10 +18800,10 @@ components:
           description: Number of items requested per page.
         has_more:
           type: boolean
-          description: Whether there are more log events available.
+          description: Whether the search may have more matching log events. A page can hold fewer than `limit` events, or none, while this is true; keep paging until it is false.
         next_cursor:
           type: string
-          description: Opaque cursor for the next page. Send this value as `cursor` on the next request.
+          description: Opaque cursor for the next page, present while `has_more` is true. Send this value as `cursor` on the next request, even when `data` is empty.
       required:
         - data
         - limit
@@ -16967,6 +19705,14 @@ components:
           items:
             type: string
             pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+        frontend_shared_variables:
+          type: array
+          uniqueItems: true
+          description: Replace the complete shared frontend-variable list with existing names. Frontends with variable_scope shared receive this list. Omission keeps membership unchanged; an empty list clears it.
+          items:
+            type: string
+            pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+            maxLength: 256
         variables:
           type: array
           description: Fully synced when declared - variables absent from this list are deleted.
@@ -17455,11 +20201,31 @@ components:
         created or deleted through the manifest. A declared frontend entry
         without `custom_domain` deletes an existing custom domain.
       properties:
+        variable_scope:
+          type: string
+          enum:
+            - all
+            - shared
+            - scoped
+          description: All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
+        variables:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+          description: Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
         name:
           type: string
           minLength: 1
         custom_domain:
           $ref: '#/components/schemas/ProjectConfigCustomDomain'
+        function_routes:
+          type: array
+          maxItems: 64
+          description: Complete set of same-origin Function path mappings when declared. Omission preserves existing mappings; an empty list deletes all mappings.
+          items:
+            $ref: '#/components/schemas/ProjectConfigFrontendFunctionRoute'
       required:
         - name
     ProjectConfigFunction:
@@ -17486,6 +20252,9 @@ components:
           enum:
             - all
             - scoped
+          x-enum-varnames:
+            - ProjectConfigFunctionVariableScopeAll
+            - ProjectConfigFunctionVariableScopeScoped
           description: |
             Which project variables this function receives. `all` (the default)
             gives it the project variables marked `shared: true`. `scoped` gives it only the variables
@@ -17730,6 +20499,7 @@ components:
           description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         name:
           type: string
+          description: Project variable name. Function runtime names such as AWS_REGION are reserved and fail validation; see the environment variables guide for the full list.
           minLength: 1
         value:
           type: string
@@ -18297,6 +21067,9 @@ components:
           type: string
           format: uuid
           description: Canonical function ID used for invocation routing
+        invoke_url:
+          type: string
+          description: 'Canonical HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development; invoke through POST /functions/{functionId}/invoke instead.'
         cache_ttl_seconds:
           type: integer
           minimum: 1
@@ -19077,6 +21850,9 @@ components:
         shared:
           type: boolean
           description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
+        frontend_shared:
+          type: boolean
+          description: Whether this name is in the project's shared frontend-variable list.
         id:
           type: string
           format: uuid
@@ -19126,6 +21902,12 @@ components:
         - value
         - created_at
         - updated_at
+    OpenAPISpecDocument:
+      type: object
+      additionalProperties: true
+      description: |
+        This OpenAPI document, with every reference resolved. Shared by the JSON
+        and YAML operations, which differ only in serialization.
     ProjectGitConnectionSummary:
       type: object
       properties:
@@ -19219,6 +22001,25 @@ components:
           $ref: '#/components/schemas/AuthPageTheme'
         layouts:
           $ref: '#/components/schemas/ProjectConfigAuthPageLayouts'
+    ProjectConfigFrontendFunctionRoute:
+      type: object
+      additionalProperties: false
+      properties:
+        function:
+          type: string
+          minLength: 1
+          description: Name of an existing standard Function configured for HTTP invocation.
+        path_prefix:
+          type: string
+          minLength: 2
+          maxLength: 512
+          pattern: ^/[^?#\\]*[^/?#\\]$
+        strip_prefix:
+          type: boolean
+          default: false
+      required:
+        - function
+        - path_prefix
     DatabaseQueryPerformanceDatabase:
       type: object
       properties:
@@ -19239,12 +22040,12 @@ components:
         query:
           type: string
           maxLength: 8192
-          description: Normalized and obfuscated representative query text.
+          description: Normalized representative query text with literal values replaced by `?`.
         database:
           $ref: '#/components/schemas/DatabaseQueryPerformanceDatabase'
         role:
           type: string
-          description: Database role used for the query.
+          description: Postgres role that ran the query, such as `anon` or `authenticated` for RLS-enforced connections, `service_role`, the database owner role for full-access connections, or a role you created. `unknown` when the role no longer exists.
         calls:
           type: integer
           format: int64

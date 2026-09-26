@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; `resource.type=database` from a FREE-plan project owner returns 403. The activity window is limited to the plan's retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. 
+    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; `resource.type=database` from a FREE-plan project owner returns 403. The activity window is limited to the plan's retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window `[start_time, end_time)`. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -31,7 +31,7 @@ module Volcano::Generated
     end
 
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; &#x60;resource.type&#x3D;database&#x60; from a FREE-plan project owner returns 403. The activity window is limited to the plan&#39;s retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. 
+    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; &#x60;resource.type&#x3D;database&#x60; from a FREE-plan project owner returns 403. The activity window is limited to the plan&#39;s retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window &#x60;[start_time, end_time)&#x60;. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'LogActivityResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.get_project_log_activity",
@@ -148,7 +148,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'LogSearchResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.search_project_logs",
@@ -228,7 +228,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'String'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.stream_project_logs",

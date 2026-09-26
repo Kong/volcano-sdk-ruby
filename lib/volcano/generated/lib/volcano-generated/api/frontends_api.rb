@@ -20,13 +20,15 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Create a new frontend deployment
-    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns `status: provisioning`, then transitions to `active`, `degraded`, or `failed`. If another deployment is running, the response preserves the frontend's current status and exposes the queued deployment through `pending_deployment_id`. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build's assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend `active` on the previous deployment, and records the attempted deployment as failed. `degraded` means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide `app_root` as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package's `engines.node` constraint. Volcano tests Next 15.5.25 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.5 (`>=20.9.0`). Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. This operation is limited by plan-based frontend deployment quotas (`FREE_FRONTEND_DEPLOYMENTS`, `PRO_FRONTEND_DEPLOYMENTS`). Each project can contain up to 10,000 frontends regardless of plan. 
+    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns `status: provisioning`, then transitions to `active`, `degraded`, or `failed`. If another deployment is running, the response preserves the frontend's current status and exposes the queued deployment through `pending_deployment_id`. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build's assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend `active` on the previous deployment, and records the attempted deployment as failed. `degraded` means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide `app_root` as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package's `engines.node` constraint. Volcano tests Next 15.5.26 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.6 (`>=20.9.0`). Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. This operation is limited by plan-based frontend deployment quotas (`FREE_FRONTEND_DEPLOYMENTS`, `PRO_FRONTEND_DEPLOYMENTS`). Each project can contain up to 10,000 frontends regardless of plan. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe frontend name
     # @param archive [File] ZIP or tar.gz archive of the frontend project directory or monorepo workspace root. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz archive.
     # @param [Hash] opts the optional parameters
     # @option opts [String] :framework Next.js frontend. Supported Next.js majors are 15.x and 16.x. (default to 'nextjs')
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
+    # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
+    # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
     # @return [Frontend]
     def create_frontend(id, name, archive, opts = {})
       data, _status_code, _headers = create_frontend_with_http_info(id, name, archive, opts)
@@ -34,13 +36,15 @@ module Volcano::Generated
     end
 
     # Create a new frontend deployment
-    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60;, &#x60;degraded&#x60;, or &#x60;failed&#x60;. If another deployment is running, the response preserves the frontend&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build&#39;s assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend &#x60;active&#x60; on the previous deployment, and records the attempted deployment as failed. &#x60;degraded&#x60; means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide &#x60;app_root&#x60; as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from &#x60;package.json&#x60; &#x60;engines.node&#x60;; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package&#39;s &#x60;engines.node&#x60; constraint. Volcano tests Next 15.5.25 (&#x60;^18.18.0 || ^19.8.0 || &gt;&#x3D;20.0.0&#x60;) and Next 16.3.5 (&#x60;&gt;&#x3D;20.9.0&#x60;). Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. This operation is limited by plan-based frontend deployment quotas (&#x60;FREE_FRONTEND_DEPLOYMENTS&#x60;, &#x60;PRO_FRONTEND_DEPLOYMENTS&#x60;). Each project can contain up to 10,000 frontends regardless of plan. 
+    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60;, &#x60;degraded&#x60;, or &#x60;failed&#x60;. If another deployment is running, the response preserves the frontend&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build&#39;s assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend &#x60;active&#x60; on the previous deployment, and records the attempted deployment as failed. &#x60;degraded&#x60; means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide &#x60;app_root&#x60; as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from &#x60;package.json&#x60; &#x60;engines.node&#x60;; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package&#39;s &#x60;engines.node&#x60; constraint. Volcano tests Next 15.5.26 (&#x60;^18.18.0 || ^19.8.0 || &gt;&#x3D;20.0.0&#x60;) and Next 16.3.6 (&#x60;&gt;&#x3D;20.9.0&#x60;). Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. This operation is limited by plan-based frontend deployment quotas (&#x60;FREE_FRONTEND_DEPLOYMENTS&#x60;, &#x60;PRO_FRONTEND_DEPLOYMENTS&#x60;). Each project can contain up to 10,000 frontends regardless of plan. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe frontend name
     # @param archive [File] ZIP or tar.gz archive of the frontend project directory or monorepo workspace root. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz archive.
     # @param [Hash] opts the optional parameters
     # @option opts [String] :framework Next.js frontend. Supported Next.js majors are 15.x and 16.x. (default to 'nextjs')
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
+    # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
+    # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
     # @return [Array<(Frontend, Integer, Hash)>] Frontend data, response status code and response headers
     def create_frontend_with_http_info(id, name, archive, opts = {})
       if @api_client.config.debugging
@@ -75,6 +79,10 @@ module Volcano::Generated
         fail ArgumentError, 'invalid value for "opts[:"app_root"]" when calling FrontendsApi.create_frontend, the character length must be smaller than or equal to 1024.'
       end
 
+      allowable_values = ["all", "scoped"]
+      if @api_client.config.client_side_validation && opts[:'variable_scope'] && !allowable_values.include?(opts[:'variable_scope'])
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{allowable_values}"
+      end
       # resource path
       local_var_path = '/projects/{id}/frontends'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
 
@@ -97,6 +105,8 @@ module Volcano::Generated
       form_params['archive'] = archive
       form_params['framework'] = opts[:'framework'] if !opts[:'framework'].nil?
       form_params['app_root'] = opts[:'app_root'] if !opts[:'app_root'].nil?
+      form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
+      form_params['variables'] = @api_client.build_collection_param(opts[:'variables'], :csv) if !opts[:'variables'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -105,7 +115,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.create_frontend",
@@ -185,7 +195,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.create_frontend_custom_domain",
@@ -200,6 +210,86 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Route a Frontend path to an HTTP Function
+    # The Frontend and Function must belong to this Project. The Function may be private but must use HTTP invocation mode. The route applies to every hostname that resolves to the Frontend, including generated, custom-domain, preview, and local hostnames.
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_function_route_request [CreateFrontendFunctionRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendFunctionRoute]
+    def create_frontend_function_route(id, frontend_id, create_frontend_function_route_request, opts = {})
+      data, _status_code, _headers = create_frontend_function_route_with_http_info(id, frontend_id, create_frontend_function_route_request, opts)
+      data
+    end
+
+    # Route a Frontend path to an HTTP Function
+    # The Frontend and Function must belong to this Project. The Function may be private but must use HTTP invocation mode. The route applies to every hostname that resolves to the Frontend, including generated, custom-domain, preview, and local hostnames.
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_function_route_request [CreateFrontendFunctionRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendFunctionRoute, Integer, Hash)>] FrontendFunctionRoute data, response status code and response headers
+    def create_frontend_function_route_with_http_info(id, frontend_id, create_frontend_function_route_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.create_frontend_function_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.create_frontend_function_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.create_frontend_function_route"
+      end
+      # verify the required parameter 'create_frontend_function_route_request' is set
+      if @api_client.config.client_side_validation && create_frontend_function_route_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_function_route_request' when calling FrontendsApi.create_frontend_function_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/function-routes'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_function_route_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendFunctionRoute'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.create_frontend_function_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_function_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -254,7 +344,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.delete_frontend",
@@ -321,7 +411,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.delete_frontend_custom_domain",
@@ -336,6 +426,79 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Delete a Frontend Function route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend Function route ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_frontend_function_route(id, frontend_id, route_id, opts = {})
+      delete_frontend_function_route_with_http_info(id, frontend_id, route_id, opts)
+      nil
+    end
+
+    # Delete a Frontend Function route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend Function route ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_frontend_function_route_with_http_info(id, frontend_id, route_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.delete_frontend_function_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.delete_frontend_function_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.delete_frontend_function_route"
+      end
+      # verify the required parameter 'route_id' is set
+      if @api_client.config.client_side_validation && route_id.nil?
+        fail ArgumentError, "Missing the required parameter 'route_id' when calling FrontendsApi.delete_frontend_function_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/function-routes/{routeId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'routeId' + '}', CGI.escape(route_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.delete_frontend_function_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_function_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -388,7 +551,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend",
@@ -455,7 +618,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend_custom_domain",
@@ -535,7 +698,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FrontendUsageHistoryResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.get_frontend_usage_history",
@@ -620,7 +783,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFrontendDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_frontend_deployments",
@@ -635,6 +798,73 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_deployments\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a Frontend's Function routes
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendFunctionRouteList]
+    def list_frontend_function_routes(id, frontend_id, opts = {})
+      data, _status_code, _headers = list_frontend_function_routes_with_http_info(id, frontend_id, opts)
+      data
+    end
+
+    # List a Frontend&#39;s Function routes
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendFunctionRouteList, Integer, Hash)>] FrontendFunctionRouteList data, response status code and response headers
+    def list_frontend_function_routes_with_http_info(id, frontend_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.list_frontend_function_routes ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.list_frontend_function_routes"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.list_frontend_function_routes"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/function-routes'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendFunctionRouteList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.list_frontend_function_routes",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_function_routes\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -721,7 +951,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFrontends'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_frontends",
@@ -822,7 +1052,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedProjectCustomDomains'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.list_project_custom_domains",
@@ -891,7 +1121,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Frontend'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FrontendsApi.redeploy_frontend",
@@ -906,6 +1136,90 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#redeploy_frontend\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Replace a Frontend Function route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend Function route ID
+    # @param create_frontend_function_route_request [CreateFrontendFunctionRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendFunctionRoute]
+    def update_frontend_function_route(id, frontend_id, route_id, create_frontend_function_route_request, opts = {})
+      data, _status_code, _headers = update_frontend_function_route_with_http_info(id, frontend_id, route_id, create_frontend_function_route_request, opts)
+      data
+    end
+
+    # Replace a Frontend Function route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend Function route ID
+    # @param create_frontend_function_route_request [CreateFrontendFunctionRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendFunctionRoute, Integer, Hash)>] FrontendFunctionRoute data, response status code and response headers
+    def update_frontend_function_route_with_http_info(id, frontend_id, route_id, create_frontend_function_route_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.update_frontend_function_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.update_frontend_function_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.update_frontend_function_route"
+      end
+      # verify the required parameter 'route_id' is set
+      if @api_client.config.client_side_validation && route_id.nil?
+        fail ArgumentError, "Missing the required parameter 'route_id' when calling FrontendsApi.update_frontend_function_route"
+      end
+      # verify the required parameter 'create_frontend_function_route_request' is set
+      if @api_client.config.client_side_validation && create_frontend_function_route_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_function_route_request' when calling FrontendsApi.update_frontend_function_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/function-routes/{routeId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'routeId' + '}', CGI.escape(route_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_function_route_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendFunctionRoute'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.update_frontend_function_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#update_frontend_function_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

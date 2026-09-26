@@ -18,6 +18,7 @@ module Volcano::Generated
     # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
     attr_accessor :shared
 
+    # Project variable name. Function runtime names such as AWS_REGION are reserved and fail validation; see the environment variables guide for the full list.
     attr_accessor :name
 
     attr_accessor :value

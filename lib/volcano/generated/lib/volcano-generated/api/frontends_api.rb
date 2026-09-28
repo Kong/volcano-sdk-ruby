@@ -124,7 +124,7 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
-    # Configure frontend custom domain (PRO)
+    # Configure frontend custom domain (SUPERAGENT)
     # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
@@ -136,7 +136,7 @@ module Volcano::Generated
       data
     end
 
-    # Configure frontend custom domain (PRO)
+    # Configure frontend custom domain (SUPERAGENT)
     # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID

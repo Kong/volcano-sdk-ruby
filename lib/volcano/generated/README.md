@@ -202,7 +202,7 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**update_durable_function_scheduler**](docs/DurableFunctionsApi.md#update_durable_function_scheduler) | **PATCH** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Update a durable function scheduler
 *Volcano::Generated::FrontendsApi* | [**create_frontend**](docs/FrontendsApi.md#create_frontend) | **POST** /projects/{id}/frontends | Create a new frontend deployment
-*Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain (PRO)
+*Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain (SUPERAGENT)
 *Volcano::Generated::FrontendsApi* | [**delete_frontend**](docs/FrontendsApi.md#delete_frontend) | **DELETE** /projects/{id}/frontends/{frontendId} | Delete a frontend
 *Volcano::Generated::FrontendsApi* | [**delete_frontend_custom_domain**](docs/FrontendsApi.md#delete_frontend_custom_domain) | **DELETE** /projects/{id}/frontends/{frontendId}/domain | Delete frontend custom domain
 *Volcano::Generated::FrontendsApi* | [**get_frontend**](docs/FrontendsApi.md#get_frontend) | **GET** /projects/{id}/frontends/{frontendId} | Get frontend details

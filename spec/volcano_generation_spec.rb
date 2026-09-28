@@ -7,7 +7,17 @@ require 'tmpdir'
 
 RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
-  let(:openapi_sha256) { 'b5a1dab08ba903ae65d590bcec3601e3b551318dd56637f0d1ed2bdb555e5457' }
+  let(:openapi_sha256) { '0469c1c2a90a6a21bfa463b03cf250cdc12f2ae02075bfc3d53ff7dedb6089fa' }
+
+  it 'accepts rollout plan names in project responses' do
+    project = described_class.const_get(:Generated).const_get(:Project)
+    %w[HOBBY SUPERAGENT FREE PRO].each do |plan|
+      response = project.new(id: '12345678-1234-1234-1234-123456789012', name: 'example',
+                             status: 'active', plan: plan, all_regions: true, selected_regions: [],
+                             created_at: Time.utc(2026, 1, 1), updated_at: Time.utc(2026, 1, 1))
+      expect(response.plan).to eq(plan)
+    end
+  end
 
   it 'preserves explicit null without turning omitted object fields into null' do
     Dir.mktmpdir('volcano-ruby-nullable') do |directory|

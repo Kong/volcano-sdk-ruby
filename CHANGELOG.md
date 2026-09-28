@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.7](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.6...v0.32.7) (2026-09-28)
+
+
+### Bug Fixes
+
+* **api:** accept public project plan names ([#320](https://github.com/Kong/volcano-sdk-ruby/issues/320)) ([224ae70](https://github.com/Kong/volcano-sdk-ruby/commit/224ae70930a2bbd453aef27c269ff363514eb25d))
+
 ## [0.32.6](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.5...v0.32.6) (2026-09-25)
 
 

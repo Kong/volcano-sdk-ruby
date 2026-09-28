@@ -16,7 +16,7 @@ require 'time'
 module Volcano::Generated
   # Plan-based limits for realtime features
   class RealtimePlanLimits < ApiModelBase
-    # Plan name (FREE or PRO)
+    # Stored plan key (`FREE` for HOBBY; `PRO` for SUPERAGENT)
     attr_accessor :plan
 
     # Maximum concurrent connections allowed

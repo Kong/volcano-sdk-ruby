@@ -16886,7 +16886,9 @@ components:
           enum:
             - HOBBY
             - SUPERAGENT
-          description: Platform plan applied to the project when available
+            - FREE
+            - PRO
+          description: Public plan name; FREE and PRO are accepted from older Hosting responses.
         all_regions:
           type: boolean
           description: |

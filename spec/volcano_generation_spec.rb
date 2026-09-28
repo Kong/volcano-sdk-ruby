@@ -7,11 +7,11 @@ require 'tmpdir'
 
 RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
-  let(:openapi_sha256) { '18d1e15fea91bd8c3970afb589fbc5dafb189726778fc8bf736b98adeafbf576' }
+  let(:openapi_sha256) { '0469c1c2a90a6a21bfa463b03cf250cdc12f2ae02075bfc3d53ff7dedb6089fa' }
 
-  it 'accepts public plan names in project responses' do
+  it 'accepts rollout plan names in project responses' do
     project = described_class.const_get(:Generated).const_get(:Project)
-    %w[HOBBY SUPERAGENT].each do |plan|
+    %w[HOBBY SUPERAGENT FREE PRO].each do |plan|
       response = project.new(id: '12345678-1234-1234-1234-123456789012', name: 'example',
                              status: 'active', plan: plan, all_regions: true, selected_regions: [],
                              created_at: Time.utc(2026, 1, 1), updated_at: Time.utc(2026, 1, 1))

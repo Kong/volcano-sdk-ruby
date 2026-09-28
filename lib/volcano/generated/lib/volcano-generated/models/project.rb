@@ -21,7 +21,7 @@ module Volcano::Generated
 
     attr_accessor :status
 
-    # Platform plan applied to the project when available
+    # Public plan name; FREE and PRO are accepted from older Hosting responses.
     attr_accessor :plan
 
     # Region policy for function deployment. - `true`: deploy functions to all configured platform regions - `false`: deploy only to `selected_regions` 
@@ -254,7 +254,7 @@ module Volcano::Generated
       return false if @status.nil?
       status_validator = EnumAttributeValidator.new('String', ["active", "deleting", "failed"])
       return false unless status_validator.valid?(@status)
-      plan_validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT"])
+      plan_validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT", "FREE", "PRO"])
       return false unless plan_validator.valid?(@plan)
       return false if @all_regions.nil?
       return false if @selected_regions.nil?
@@ -296,7 +296,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] plan Object to be assigned
     def plan=(plan)
-      validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT"])
+      validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT", "FREE", "PRO"])
       unless validator.valid?(plan)
         fail ArgumentError, "invalid value for \"plan\", must be one of #{validator.allowable_values}."
       end

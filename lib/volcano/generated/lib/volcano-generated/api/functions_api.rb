@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Create or update function code
-    # Upload a serverless function source bundle. Direct API clients may send the function code as a ZIP or tar.gz archive via multipart/form-data. The API stores a normalized tar.gz source archive. Cloud deploys should include source files and dependency manifests/lockfiles, not installed dependency directories. Volcano installs Node.js, Python, and Ruby dependencies during the function compile build. Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container image is built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. Uploaded source archives cannot contain symlink entries. Safe symlinks created during the cloud build are materialized before publish. Volcano builds and deploys the function asynchronously after upload. A deployment that starts immediately returns a Function resource with `status: provisioning`, then transitions to `active` or `failed`. If another deployment is running, the response preserves the resource's current status and exposes the queued deployment through `pending_deployment_id`. Existing function traffic continues to use the last known-good runtime during an update. A failed update keeps that runtime available and records the attempted deployment as failed. Only one deployment runs for a given function. A newer request supersedes any queued request and starts after the running deployment. Different functions and projects deploy concurrently. If a function with the same name already exists in the project, this operation updates that function's runtime, handler, and source bundle and returns `200 OK`. Each project can contain up to 10,000 functions. Creating a new function over this cap returns 403. 
+    # Upload a function source bundle. Direct API clients may send the function code as a ZIP or tar.gz archive via multipart/form-data. The API stores a normalized tar.gz source archive. Cloud deploys should include source files and dependency manifests/lockfiles, not installed dependency directories. Volcano installs Node.js, Python, and Ruby dependencies during the function compile build. Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container image is built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. Uploaded source archives cannot contain symlink entries. Safe symlinks created during the cloud build are materialized before publish. Volcano builds and deploys the function asynchronously after upload. A deployment that starts immediately returns a Function resource with `status: provisioning`, then transitions to `active` or `failed`. If another deployment is running, the response preserves the resource's current status and exposes the queued deployment through `pending_deployment_id`. Existing function traffic continues to use the last known-good runtime during an update. A failed update keeps that runtime available and records the attempted deployment as failed. Only one deployment runs for a given function. A newer request supersedes any queued request and starts after the running deployment. Different functions and projects deploy concurrently. If a function with the same name already exists in the project, this operation updates that function's runtime, handler, and source bundle and returns `200 OK`. Each project can contain up to 10,000 functions. Creating a new function over this cap returns 403. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz source archive.
@@ -40,7 +40,7 @@ module Volcano::Generated
     end
 
     # Create or update function code
-    # Upload a serverless function source bundle. Direct API clients may send the function code as a ZIP or tar.gz archive via multipart/form-data. The API stores a normalized tar.gz source archive. Cloud deploys should include source files and dependency manifests/lockfiles, not installed dependency directories. Volcano installs Node.js, Python, and Ruby dependencies during the function compile build. Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container image is built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. Uploaded source archives cannot contain symlink entries. Safe symlinks created during the cloud build are materialized before publish. Volcano builds and deploys the function asynchronously after upload. A deployment that starts immediately returns a Function resource with &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60; or &#x60;failed&#x60;. If another deployment is running, the response preserves the resource&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing function traffic continues to use the last known-good runtime during an update. A failed update keeps that runtime available and records the attempted deployment as failed. Only one deployment runs for a given function. A newer request supersedes any queued request and starts after the running deployment. Different functions and projects deploy concurrently. If a function with the same name already exists in the project, this operation updates that function&#39;s runtime, handler, and source bundle and returns &#x60;200 OK&#x60;. Each project can contain up to 10,000 functions. Creating a new function over this cap returns 403. 
+    # Upload a function source bundle. Direct API clients may send the function code as a ZIP or tar.gz archive via multipart/form-data. The API stores a normalized tar.gz source archive. Cloud deploys should include source files and dependency manifests/lockfiles, not installed dependency directories. Volcano installs Node.js, Python, and Ruby dependencies during the function compile build. Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container image is built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. Uploaded source archives cannot contain symlink entries. Safe symlinks created during the cloud build are materialized before publish. Volcano builds and deploys the function asynchronously after upload. A deployment that starts immediately returns a Function resource with &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60; or &#x60;failed&#x60;. If another deployment is running, the response preserves the resource&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing function traffic continues to use the last known-good runtime during an update. A failed update keeps that runtime available and records the attempted deployment as failed. Only one deployment runs for a given function. A newer request supersedes any queued request and starts after the running deployment. Different functions and projects deploy concurrently. If a function with the same name already exists in the project, this operation updates that function&#39;s runtime, handler, and source bundle and returns &#x60;200 OK&#x60;. Each project can contain up to 10,000 functions. Creating a new function over this cap returns 403. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz source archive.
@@ -128,7 +128,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_function",
@@ -208,7 +208,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_function_scheduler",
@@ -286,7 +286,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'BatchFunctionDeployResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.create_functions_batch",
@@ -355,7 +355,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.delete_function",
@@ -428,7 +428,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.delete_function_scheduler",
@@ -495,7 +495,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.get_function",
@@ -568,7 +568,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.get_function_scheduler",
@@ -588,7 +588,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
+    # Invoke a function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function's `invoke_url`. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -599,7 +599,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a serverless function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is &#x60;https://{functionId}.functions.&lt;domain&gt;/&#x60;. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
+    # Invoke a function.  **With Service Key** (admin/background operations): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing): - Use for user-initiated actions - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (public function only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function&#39;s &#x60;invoke_url&#x60;. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -727,7 +727,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFunctionDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_function_deployments",
@@ -804,7 +804,7 @@ module Volcano::Generated
     end
 
     # List supported function runtimes
-    # Returns the public function runtime catalog used by CLI clients to select supported runtimes, language defaults, and local source packaging metadata for deployments. This is a public endpoint that doesn't require authentication. 
+    # Returns the public function runtime catalog: every runtime a deploy accepts, its display label for runtime pickers, language defaults, durable capability, and local source packaging metadata for deployments. This is a public endpoint that doesn't require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [FunctionRuntimesResponse]
     def list_function_runtimes(opts = {})
@@ -813,7 +813,7 @@ module Volcano::Generated
     end
 
     # List supported function runtimes
-    # Returns the public function runtime catalog used by CLI clients to select supported runtimes, language defaults, and local source packaging metadata for deployments. This is a public endpoint that doesn&#39;t require authentication. 
+    # Returns the public function runtime catalog: every runtime a deploy accepts, its display label for runtime pickers, language defaults, durable capability, and local source packaging metadata for deployments. This is a public endpoint that doesn&#39;t require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<(FunctionRuntimesResponse, Integer, Hash)>] FunctionRuntimesResponse data, response status code and response headers
     def list_function_runtimes_with_http_info(opts = {})
@@ -908,7 +908,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionSchedulerListResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_function_schedulers",
@@ -1009,7 +1009,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFunctions'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_functions",
@@ -1029,7 +1029,7 @@ module Volcano::Generated
     end
 
     # List every function scheduler in a project
-    # Project-scoped counterpart to `/projects/{id}/functions/{functionId}/schedulers`. Returns schedulers across all functions in the project, ordered by creation time descending, with standard page/limit pagination so clients don't have to fan out one request per function. 
+    # Project-scoped counterpart to `/projects/{id}/functions/{functionId}/schedulers`. Returns schedulers across all functions in the project, ordered by creation time descending, with standard page/limit pagination so clients don't have to fan out one request per function.  Schedulers of standard and durable functions are listed together, and each carries `function_kind`. Pass `function_kind` to list one kind only. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
@@ -1038,6 +1038,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @return [FunctionSchedulerListResponse]
     def list_project_schedulers(id, opts = {})
       data, _status_code, _headers = list_project_schedulers_with_http_info(id, opts)
@@ -1045,7 +1046,7 @@ module Volcano::Generated
     end
 
     # List every function scheduler in a project
-    # Project-scoped counterpart to &#x60;/projects/{id}/functions/{functionId}/schedulers&#x60;. Returns schedulers across all functions in the project, ordered by creation time descending, with standard page/limit pagination so clients don&#39;t have to fan out one request per function. 
+    # Project-scoped counterpart to &#x60;/projects/{id}/functions/{functionId}/schedulers&#x60;. Returns schedulers across all functions in the project, ordered by creation time descending, with standard page/limit pagination so clients don&#39;t have to fan out one request per function.  Schedulers of standard and durable functions are listed together, and each carries &#x60;function_kind&#x60;. Pass &#x60;function_kind&#x60; to list one kind only. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
@@ -1054,6 +1055,7 @@ module Volcano::Generated
     # @option opts [String] :ending_before Opaque keyset pagination cursor from a previous response&#39;s &#x60;prev_cursor&#x60; — pages backward (the page immediately preceding this cursor). Mutually exclusive with &#x60;page&#x60; and &#x60;cursor&#x60;; combining them returns 400. &#x60;search&#x60; and &#x60;limit&#x60; must match the values bound to the cursor or the request returns 400. 
     # @option opts [Integer] :offset Bounded row offset past the keyset anchor named by &#x60;cursor&#x60; (forward) or &#x60;ending_before&#x60; (backward) — the hybrid jump. Seek to the anchor, then skip this many rows within. Used for numbered jump-to-page: from the current page, seek to its next/prev cursor and offset the remaining pages. Only honored on the cursor pagination path; ignored otherwise.  (default to 0)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @return [Array<(FunctionSchedulerListResponse, Integer, Hash)>] FunctionSchedulerListResponse data, response status code and response headers
     def list_project_schedulers_with_http_info(id, opts = {})
       if @api_client.config.debugging
@@ -1094,6 +1096,7 @@ module Volcano::Generated
       query_params[:'ending_before'] = opts[:'ending_before'] if !opts[:'ending_before'].nil?
       query_params[:'offset'] = opts[:'offset'] if !opts[:'offset'].nil?
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
+      query_params[:'function_kind'] = opts[:'function_kind'] if !opts[:'function_kind'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -1110,7 +1113,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionSchedulerListResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.list_project_schedulers",
@@ -1130,7 +1133,7 @@ module Volcano::Generated
     end
 
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned `invoke_url` as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, `invoke_url` is omitted and callers invoke through `POST /functions/{functionId}/invoke`.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `is_public: true` 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [ResolveFunctionResponse]
@@ -1140,7 +1143,7 @@ module Volcano::Generated
     end
 
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned &#x60;invoke_url&#x60; as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, &#x60;invoke_url&#x60; is omitted and callers invoke through &#x60;POST /functions/{functionId}/invoke&#x60;.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;is_public: true&#x60; 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [Array<(ResolveFunctionResponse, Integer, Hash)>] ResolveFunctionResponse data, response status code and response headers
@@ -1261,7 +1264,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Function'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.update_function",
@@ -1345,7 +1348,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"FunctionsApi.update_function_scheduler",

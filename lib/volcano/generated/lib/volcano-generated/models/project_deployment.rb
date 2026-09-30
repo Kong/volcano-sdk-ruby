@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -28,8 +28,6 @@ module Volcano::Generated
 
     # What initiated this deployment.
     attr_accessor :deploy_source
-
-    attr_accessor :artifact_version
 
     attr_accessor :error_message
 
@@ -72,7 +70,6 @@ module Volcano::Generated
         :'operation' => :'operation',
         :'status' => :'status',
         :'deploy_source' => :'deploy_source',
-        :'artifact_version' => :'artifact_version',
         :'error_message' => :'error_message',
         :'completed_at' => :'completed_at',
         :'progress' => :'progress',
@@ -100,7 +97,6 @@ module Volcano::Generated
         :'operation' => :'String',
         :'status' => :'String',
         :'deploy_source' => :'String',
-        :'artifact_version' => :'String',
         :'error_message' => :'String',
         :'completed_at' => :'Time',
         :'progress' => :'DeploymentProgress',
@@ -165,10 +161,6 @@ module Volcano::Generated
         self.deploy_source = attributes[:'deploy_source']
       else
         self.deploy_source = nil
-      end
-
-      if attributes.key?(:'artifact_version')
-        self.artifact_version = attributes[:'artifact_version']
       end
 
       if attributes.key?(:'error_message')
@@ -348,7 +340,6 @@ module Volcano::Generated
           operation == o.operation &&
           status == o.status &&
           deploy_source == o.deploy_source &&
-          artifact_version == o.artifact_version &&
           error_message == o.error_message &&
           completed_at == o.completed_at &&
           progress == o.progress &&
@@ -365,7 +356,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, resource, operation, status, deploy_source, artifact_version, error_message, completed_at, progress, created_at, updated_at].hash
+      [id, project_id, resource, operation, status, deploy_source, error_message, completed_at, progress, created_at, updated_at].hash
     end
 
     # Builds the object from hash

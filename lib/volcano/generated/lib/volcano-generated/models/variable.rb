@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -17,6 +17,9 @@ module Volcano::Generated
   class Variable < ApiModelBase
     # Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
     attr_accessor :shared
+
+    # Whether this name is in the project's shared frontend-variable list.
+    attr_accessor :frontend_shared
 
     attr_accessor :id
 
@@ -68,6 +71,7 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'shared' => :'shared',
+        :'frontend_shared' => :'frontend_shared',
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'name' => :'name',
@@ -95,6 +99,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'shared' => :'Boolean',
+        :'frontend_shared' => :'Boolean',
         :'id' => :'String',
         :'project_id' => :'String',
         :'name' => :'String',
@@ -132,6 +137,10 @@ module Volcano::Generated
 
       if attributes.key?(:'shared')
         self.shared = attributes[:'shared']
+      end
+
+      if attributes.key?(:'frontend_shared')
+        self.frontend_shared = attributes[:'frontend_shared']
       end
 
       if attributes.key?(:'id')
@@ -331,6 +340,7 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           shared == o.shared &&
+          frontend_shared == o.frontend_shared &&
           id == o.id &&
           project_id == o.project_id &&
           name == o.name &&
@@ -352,7 +362,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [shared, id, project_id, name, value, status, current_sync_id, provisioning_started_at, deploy_source, created_at, updated_at].hash
+      [shared, frontend_shared, id, project_id, name, value, status, current_sync_id, provisioning_started_at, deploy_source, created_at, updated_at].hash
     end
 
     # Builds the object from hash

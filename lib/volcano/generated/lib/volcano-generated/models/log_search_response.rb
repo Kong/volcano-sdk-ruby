@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -22,10 +22,10 @@ module Volcano::Generated
     # Number of items requested per page.
     attr_accessor :limit
 
-    # Whether there are more log events available.
+    # Whether the search may have more matching log events. A page can hold fewer than `limit` events, or none, while this is true; keep paging until it is false.
     attr_accessor :has_more
 
-    # Opaque cursor for the next page. Send this value as `cursor` on the next request.
+    # Opaque cursor for the next page, present while `has_more` is true. Send this value as `cursor` on the next request, even when `data` is empty.
     attr_accessor :next_cursor
 
     # Attribute mapping from ruby-style variable name to JSON key.

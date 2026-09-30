@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -219,7 +219,7 @@ module Volcano::Generated
     end
 
     # Delete a durable function
-    # Accepted for asynchronous teardown; the work continues after the response. The function's executions go with it: history stops being readable whatever `retention_days` had left, and the executions still running stop counting against the project's concurrency cap. Stop an execution first if you need it to end before the function does. 
+    # Accepted for asynchronous teardown; the work continues after the response. The function's executions go with it: executions still in flight are stopped, and history stops being readable whatever `retention_days` had left.  Stopping is asynchronous at the platform, and it does not interrupt a step already running -- that step runs to its next checkpoint. So a delete ends an execution rather than halting it mid-step; stop the execution yourself first if you need to observe it ending. 
     # @param id [String] Project ID
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
@@ -230,7 +230,7 @@ module Volcano::Generated
     end
 
     # Delete a durable function
-    # Accepted for asynchronous teardown; the work continues after the response. The function&#39;s executions go with it: history stops being readable whatever &#x60;retention_days&#x60; had left, and the executions still running stop counting against the project&#39;s concurrency cap. Stop an execution first if you need it to end before the function does. 
+    # Accepted for asynchronous teardown; the work continues after the response. The function&#39;s executions go with it: executions still in flight are stopped, and history stops being readable whatever &#x60;retention_days&#x60; had left.  Stopping is asynchronous at the platform, and it does not interrupt a step already running -- that step runs to its next checkpoint. So a delete ends an execution rather than halting it mid-step; stop the execution yourself first if you need to observe it ending. 
     # @param id [String] Project ID
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
@@ -571,6 +571,81 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_function_scheduler\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a durable execution's operations
+    # Returns the execution's trace: every operation it began — each step, wait, poll, child context, map item and parallel branch — with when it started and ended, how it ended, and each attempt of a retried step. `invocations` are the windows the function's code was actually running; the gaps between them are time the execution spent suspended, which is not charged.  A finished execution's trace is final and `complete` is `true`. A running one is refreshed when it is read, and can be up to about ten seconds behind; `synced_at` says when it was last refreshed. Inputs, results and other payloads are never included.  The list is not paginated: an execution is limited to 3,000 operations, and a trace is read whole. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [DurableExecutionOperationList]
+    def list_durable_execution_operations(id, function_id, execution_id, opts = {})
+      data, _status_code, _headers = list_durable_execution_operations_with_http_info(id, function_id, execution_id, opts)
+      data
+    end
+
+    # List a durable execution&#39;s operations
+    # Returns the execution&#39;s trace: every operation it began — each step, wait, poll, child context, map item and parallel branch — with when it started and ended, how it ended, and each attempt of a retried step. &#x60;invocations&#x60; are the windows the function&#39;s code was actually running; the gaps between them are time the execution spent suspended, which is not charged.  A finished execution&#39;s trace is final and &#x60;complete&#x60; is &#x60;true&#x60;. A running one is refreshed when it is read, and can be up to about ten seconds behind; &#x60;synced_at&#x60; says when it was last refreshed. Inputs, results and other payloads are never included.  The list is not paginated: an execution is limited to 3,000 operations, and a trace is read whole. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableExecutionOperationList, Integer, Hash)>] DurableExecutionOperationList data, response status code and response headers
+    def list_durable_execution_operations_with_http_info(id, function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_execution_operations ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-functions/{functionId}/executions/{executionId}/operations'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableExecutionOperationList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_execution_operations",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_execution_operations\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

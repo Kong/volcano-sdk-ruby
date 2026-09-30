@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,16 +19,46 @@ module Volcano::Generated
     # Project name (must be unique). Can only contain letters, numbers, underscores, and hyphens. 
     attr_accessor :name
 
+    # Optional trusted starter template identifier. The server resolves immutable source and database initialization artifacts. Callers cannot supply artifact locations or database credentials. Creation accepts an asynchronous installation; poll the individual project until template_installation.status is ready before using the app. Use pixel-board, trellini, or collab-pad for the configured starter bundles. The official-starter legacy identifier has environment-specific availability. Cannot be combined with initialPrompt.
+    attr_accessor :template_id
+
+    # Optional initial builder prompt. Cannot be combined with template_id.
+    attr_accessor :initial_prompt
+
     # Optional region policy. - `true` (default): project functions deploy to all configured regions - `false`: project deploys only to `selected_regions` 
     attr_accessor :all_regions
 
     # Optional region subset. Requires `all_regions=false`. Region names must be a subset of platform `AWS_REGIONS`. 
     attr_accessor :selected_regions
 
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'name' => :'name',
+        :'template_id' => :'template_id',
+        :'initial_prompt' => :'initialPrompt',
         :'all_regions' => :'all_regions',
         :'selected_regions' => :'selected_regions'
       }
@@ -48,6 +78,8 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'name' => :'String',
+        :'template_id' => :'String',
+        :'initial_prompt' => :'String',
         :'all_regions' => :'Boolean',
         :'selected_regions' => :'Array<String>'
       }
@@ -79,6 +111,14 @@ module Volcano::Generated
         self.name = attributes[:'name']
       else
         self.name = nil
+      end
+
+      if attributes.key?(:'template_id')
+        self.template_id = attributes[:'template_id']
+      end
+
+      if attributes.key?(:'initial_prompt')
+        self.initial_prompt = attributes[:'initial_prompt']
       end
 
       if attributes.key?(:'all_regions')
@@ -127,6 +167,8 @@ module Volcano::Generated
       return false if @name.to_s.length > 255
       return false if @name.to_s.length < 1
       return false if @name !~ Regexp.new(/^[A-Za-z0-9_-]+$/)
+      template_id_validator = EnumAttributeValidator.new('String', ["pixel-board", "trellini", "collab-pad", "official-starter"])
+      return false unless template_id_validator.valid?(@template_id)
       true
     end
 
@@ -153,12 +195,24 @@ module Volcano::Generated
       @name = name
     end
 
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] template_id Object to be assigned
+    def template_id=(template_id)
+      validator = EnumAttributeValidator.new('String', ["pixel-board", "trellini", "collab-pad", "official-starter"])
+      unless validator.valid?(template_id)
+        fail ArgumentError, "invalid value for \"template_id\", must be one of #{validator.allowable_values}."
+      end
+      @template_id = template_id
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
           name == o.name &&
+          template_id == o.template_id &&
+          initial_prompt == o.initial_prompt &&
           all_regions == o.all_regions &&
           selected_regions == o.selected_regions
     end
@@ -172,7 +226,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, all_regions, selected_regions].hash
+      [name, template_id, initial_prompt, all_regions, selected_regions].hash
     end
 
     # Builds the object from hash

@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -26,6 +26,9 @@ module Volcano::Generated
     attr_accessor :verification_records
 
     attr_accessor :required_routing_record
+
+    # DNS routing target hostname for this frontend. The DNS record type depends on whether the custom domain is a zone apex.
+    attr_accessor :routing_target_hostname
 
     attr_accessor :effective_urls
 
@@ -64,6 +67,7 @@ module Volcano::Generated
         :'verification_status' => :'verification_status',
         :'verification_records' => :'verification_records',
         :'required_routing_record' => :'required_routing_record',
+        :'routing_target_hostname' => :'routing_target_hostname',
         :'effective_urls' => :'effective_urls',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
@@ -89,6 +93,7 @@ module Volcano::Generated
         :'verification_status' => :'String',
         :'verification_records' => :'Array<FrontendDomainVerificationRecord>',
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
+        :'routing_target_hostname' => :'String',
         :'effective_urls' => :'Array<String>',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
@@ -149,6 +154,10 @@ module Volcano::Generated
 
       if attributes.key?(:'required_routing_record')
         self.required_routing_record = attributes[:'required_routing_record']
+      end
+
+      if attributes.key?(:'routing_target_hostname')
+        self.routing_target_hostname = attributes[:'routing_target_hostname']
       end
 
       if attributes.key?(:'effective_urls')
@@ -309,6 +318,7 @@ module Volcano::Generated
           verification_status == o.verification_status &&
           verification_records == o.verification_records &&
           required_routing_record == o.required_routing_record &&
+          routing_target_hostname == o.routing_target_hostname &&
           effective_urls == o.effective_urls &&
           created_at == o.created_at &&
           updated_at == o.updated_at
@@ -323,7 +333,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, effective_urls, created_at, updated_at].hash
+      [domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, routing_target_hostname, effective_urls, created_at, updated_at].hash
     end
 
     # Builds the object from hash

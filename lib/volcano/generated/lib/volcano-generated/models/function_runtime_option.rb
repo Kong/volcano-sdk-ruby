@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -18,6 +18,9 @@ module Volcano::Generated
     # Runtime identifier accepted by function APIs.
     attr_accessor :name
 
+    # Human-readable runtime label suitable for display in pickers.
+    attr_accessor :label
+
     # Runtime language family used by the CLI to choose defaults from source files.
     attr_accessor :language
 
@@ -33,6 +36,7 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'name' => :'name',
+        :'label' => :'label',
         :'language' => :'language',
         :'default' => :'default',
         :'durable_capable' => :'durable_capable',
@@ -54,6 +58,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'name' => :'String',
+        :'label' => :'String',
         :'language' => :'String',
         :'default' => :'Boolean',
         :'durable_capable' => :'Boolean',
@@ -87,6 +92,12 @@ module Volcano::Generated
         self.name = attributes[:'name']
       else
         self.name = nil
+      end
+
+      if attributes.key?(:'label')
+        self.label = attributes[:'label']
+      else
+        self.label = nil
       end
 
       if attributes.key?(:'language')
@@ -123,6 +134,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
+      if @label.nil?
+        invalid_properties.push('invalid value for "label", label cannot be nil.')
+      end
+
       if @language.nil?
         invalid_properties.push('invalid value for "language", language cannot be nil.')
       end
@@ -147,6 +162,7 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @name.nil?
+      return false if @label.nil?
       return false if @language.nil?
       return false if @default.nil?
       return false if @durable_capable.nil?
@@ -162,6 +178,16 @@ module Volcano::Generated
       end
 
       @name = name
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] label Value to be assigned
+    def label=(label)
+      if label.nil?
+        fail ArgumentError, 'label cannot be nil'
+      end
+
+      @label = label
     end
 
     # Custom attribute writer method with validation
@@ -210,6 +236,7 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           name == o.name &&
+          label == o.label &&
           language == o.language &&
           default == o.default &&
           durable_capable == o.durable_capable &&
@@ -225,7 +252,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, language, default, durable_capable, deployment].hash
+      [name, label, language, default, durable_capable, deployment].hash
     end
 
     # Builds the object from hash

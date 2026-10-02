@@ -64,10 +64,17 @@ require_relative 'volcano/lock_response'
 require_relative 'volcano/locks'
 require_relative 'volcano/realtime/protocol'
 require_relative 'volcano/realtime'
+require_relative 'volcano/sandbox_models'
+require_relative 'volcano/sandbox_request'
+require_relative 'volcano/sandbox_response'
+require_relative 'volcano/sandbox_files'
+require_relative 'volcano/sandbox_session'
+require_relative 'volcano/sandboxes'
 require_relative 'volcano/client'
 
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
+  private_constant :SandboxRequest, :SandboxRequests, :SandboxResponse
   private_constant :AuthRefresh, :AuthSignOut, :AuthProfile, :AuthProfileFields, :AuthUpdateUser, :AuthEmailChange,
                    :AuthSessions, :AuthSessionConstruction,
                    :GeneratedTransport, :LockAutoRenewal, :LockLeaseClock, :LockRenewer,

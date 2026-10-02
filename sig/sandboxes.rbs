@@ -1,0 +1,80 @@
+module Volcano
+  type sandbox_selector = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer }
+  type sandbox_create_options = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer, ?max_duration_seconds: Integer, ?idle_timeout_seconds: Integer, ?request_id: String }
+  type sandbox_exec_options = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer, ?timeout_seconds: Integer, ?environment: Hash[String, String], ?request_id: String }
+  type sandbox_command_options = { ?timeout_seconds: Integer, ?environment: Hash[String, String], ?request_id: String }
+
+  class SandboxCommandResult < Data
+    attr_reader stdout: String
+    attr_reader stderr: String
+    attr_reader exit_code: Integer
+    attr_reader timed_out: bool
+    attr_reader stdout_truncated: bool
+    attr_reader stderr_truncated: bool
+    def self.new: (stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool) -> SandboxCommandResult
+    def initialize: (stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool) -> void
+    def to_h: () -> { stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool }
+  end
+
+  class SandboxExecutionResult < Data
+    attr_reader stdout: String
+    attr_reader stderr: String
+    attr_reader exit_code: Integer
+    attr_reader timed_out: bool
+    attr_reader stdout_truncated: bool
+    attr_reader stderr_truncated: bool
+    attr_reader session_id: String
+    attr_reader region: String
+    attr_reader duration_ms: Integer
+    def self.new: (stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool, session_id: String, region: String, duration_ms: Integer) -> SandboxExecutionResult
+    def initialize: (stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool, session_id: String, region: String, duration_ms: Integer) -> void
+    def to_h: () -> { stdout: String, stderr: String, exit_code: Integer, timed_out: bool, stdout_truncated: bool, stderr_truncated: bool, session_id: String, region: String, duration_ms: Integer }
+  end
+
+  class SandboxPreset < Data
+    attr_reader id: String
+    attr_reader memory_mb: Integer
+    attr_reader regions: Array[String]
+    def self.new: (id: String, memory_mb: Integer, regions: Array[String]) -> SandboxPreset
+    def initialize: (id: String, memory_mb: Integer, regions: Array[String]) -> void
+    def to_h: () -> { id: String, memory_mb: Integer, regions: Array[String] }
+  end
+
+  class SandboxAccess
+    attr_reader url: String
+    attr_reader token: String
+    attr_reader expires_at: String
+    def initialize: (url: String, token: String, expires_at: String) -> void
+    def inspect: () -> String
+  end
+
+  class Sandboxes
+    def presets: () -> Array[SandboxPreset]
+    def create: (String project_id, sandbox_create_options options) -> SandboxSession
+    def get: (String session_id) -> SandboxSession
+    def exec: (String project_id, String command, sandbox_exec_options options) -> SandboxExecutionResult
+    def grant: (String session_id, String auth_user_id, expires_at: String) -> nil
+    def revoke: (String session_id, String auth_user_id) -> nil
+  end
+
+  class SandboxSession
+    attr_reader id: String
+    attr_reader project_id: String
+    attr_reader region: String
+    attr_reader state: String
+    attr_reader expires_at: String
+    attr_reader files: SandboxFiles
+    def refresh: () -> SandboxSession
+    def suspend: () -> SandboxSession
+    def resume: () -> SandboxSession
+    def terminate: () -> SandboxSession
+    def exec: (String command, ?sandbox_command_options options) -> SandboxCommandResult
+    def access: (Integer port) -> SandboxAccess
+    def use: [T] () { (SandboxSession) -> T } -> T
+  end
+
+  class SandboxFiles
+    def read: (String path) -> String
+    def write: (String path, String data) -> nil
+  end
+end

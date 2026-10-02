@@ -22,10 +22,6 @@ RSpec.describe RuboCop::DirectiveComment do
       'lib/volcano/lock_guard.rb' => [
         '@lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at) ' \
         '# rubocop:disable Lint/NameTypo -- Inherited Class#new.'
-      ],
-      'features/support/postgres_changes.rb' => [
-        "@channels.map { |channel| ChangeObserver.new(channel, @table_name, @row.fetch('id')) } " \
-        '# rubocop:disable Lint/NameTypo -- Inherited Class#new.'
       ]
     }
   end
@@ -74,7 +70,7 @@ RSpec.describe RuboCop::DirectiveComment do
     cops = files.flat_map { |file| file.fetch('offenses').map { |offense| offense.fetch('cop_name') } }
     expect(cops.tally).to eq(
       'Metrics/ParameterLists' => 1, 'Lint/UnderscorePrefixedVariableName' => 3,
-      'Lint/UnusedPrivateMethod' => 1, 'Lint/NumberConversion' => 1, 'Lint/NameTypo' => 2
+      'Lint/UnusedPrivateMethod' => 1, 'Lint/NumberConversion' => 1, 'Lint/NameTypo' => 1
     )
   end
 end

@@ -21,6 +21,7 @@ module Volcano::Generated
 
     attr_accessor :memory_mb
 
+    # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
     attr_accessor :region
 
     attr_accessor :command
@@ -133,7 +134,7 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "region", region cannot be nil.')
       end
 
-      pattern = Regexp.new(/^aws-[a-z0-9-]+$/)
+      pattern = Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
       if @region !~ pattern
         invalid_properties.push("invalid value for \"region\", must conform to the pattern #{pattern}.")
       end
@@ -174,7 +175,7 @@ module Volcano::Generated
       memory_mb_validator = EnumAttributeValidator.new('Integer', [1024, 2048])
       return false unless memory_mb_validator.valid?(@memory_mb)
       return false if @region.nil?
-      return false if @region !~ Regexp.new(/^aws-[a-z0-9-]+$/)
+      return false if @region !~ Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
       return false if @command.nil?
       return false if @command.to_s.length > 65536
       return false if @command.to_s.length < 1
@@ -211,7 +212,7 @@ module Volcano::Generated
         fail ArgumentError, 'region cannot be nil'
       end
 
-      pattern = Regexp.new(/^aws-[a-z0-9-]+$/)
+      pattern = Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
       if region !~ pattern
         fail ArgumentError, "invalid value for \"region\", must conform to the pattern #{pattern}."
       end

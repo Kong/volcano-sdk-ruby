@@ -68,7 +68,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.configure_auth_methods",
@@ -88,7 +88,7 @@ module Volcano::Generated
     end
 
     # Create email template
-    # Creates a custom email template for the project. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403, and FREE projects always send the built-in default templates regardless of any previously saved custom rows. Every project is created with one template per type, so customizing one is usually a PUT; creating a type the project already has returns 409. Valid template types: welcome, confirmation, password_reset, password_changed 
+    # Creates a custom email template for the project. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403, and HOBBY projects always send the built-in default templates regardless of any previously saved custom rows. Every project is created with one template per type, so customizing one is usually a PUT; creating a type the project already has returns 409. Valid template types: welcome, confirmation, password_reset, password_changed 
     # @param id [String] Project ID
     # @param create_email_template_request [CreateEmailTemplateRequest] 
     # @param [Hash] opts the optional parameters
@@ -99,7 +99,7 @@ module Volcano::Generated
     end
 
     # Create email template
-    # Creates a custom email template for the project. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403, and FREE projects always send the built-in default templates regardless of any previously saved custom rows. Every project is created with one template per type, so customizing one is usually a PUT; creating a type the project already has returns 409. Valid template types: welcome, confirmation, password_reset, password_changed 
+    # Creates a custom email template for the project. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403, and HOBBY projects always send the built-in default templates regardless of any previously saved custom rows. Every project is created with one template per type, so customizing one is usually a PUT; creating a type the project already has returns 409. Valid template types: welcome, confirmation, password_reset, password_changed 
     # @param id [String] Project ID
     # @param create_email_template_request [CreateEmailTemplateRequest] 
     # @param [Hash] opts the optional parameters
@@ -142,7 +142,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.create_email_template",
@@ -209,7 +209,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_auth_page_layout",
@@ -270,7 +270,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_auth_page_theme",
@@ -290,7 +290,7 @@ module Volcano::Generated
     end
 
     # Delete email template
-    # Deletes a custom template, reverting to the default. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403. 
+    # Deletes a custom template, reverting to the default. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403. 
     # @param id [String] Project ID
     # @param type [String] 
     # @param [Hash] opts the optional parameters
@@ -301,7 +301,7 @@ module Volcano::Generated
     end
 
     # Delete email template
-    # Deletes a custom template, reverting to the default. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403. 
+    # Deletes a custom template, reverting to the default. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403. 
     # @param id [String] Project ID
     # @param type [String] 
     # @param [Hash] opts the optional parameters
@@ -344,7 +344,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.delete_email_template",
@@ -405,7 +405,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_config",
@@ -474,7 +474,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthHostedPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_hosted_page",
@@ -537,7 +537,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'GetAuthMethods200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_methods",
@@ -598,7 +598,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthPageAppearanceResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_auth_page_appearance",
@@ -793,7 +793,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.get_email_template",
@@ -1007,7 +1007,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ListEmailTemplates200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.list_email_templates",
@@ -1085,7 +1085,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PreviewAuthPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.preview_auth_page",
@@ -1391,7 +1391,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'TestEmailResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.test_email_config",
@@ -1461,7 +1461,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_config",
@@ -1541,7 +1541,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthHostedPageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_hosted_page",
@@ -1619,7 +1619,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'UpdateAuthPageLayoutRequest'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_page_layout",
@@ -1691,7 +1691,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'UpdateAuthPageThemeRequest'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_auth_page_theme",
@@ -1711,7 +1711,7 @@ module Volcano::Generated
     end
 
     # Update email template
-    # Updates a custom email template. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403 (including after a PRO→FREE downgrade), so a FREE project cannot modify templates and always sends the built-in defaults. 
+    # Updates a custom email template. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403 (including after a SUPERAGENT→HOBBY downgrade), so a HOBBY project cannot modify templates and always sends the built-in defaults. 
     # @param id [String] Project ID
     # @param type [String] 
     # @param update_email_template_request [UpdateEmailTemplateRequest] 
@@ -1723,7 +1723,7 @@ module Volcano::Generated
     end
 
     # Update email template
-    # Updates a custom email template. Custom email templates are a PRO-plan feature: requests from a FREE-plan project owner are rejected with 403 (including after a PRO→FREE downgrade), so a FREE project cannot modify templates and always sends the built-in defaults. 
+    # Updates a custom email template. Custom email templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are rejected with 403 (including after a SUPERAGENT→HOBBY downgrade), so a HOBBY project cannot modify templates and always sends the built-in defaults. 
     # @param id [String] Project ID
     # @param type [String] 
     # @param update_email_template_request [UpdateEmailTemplateRequest] 
@@ -1776,7 +1776,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'EmailTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"AuthConfigurationApi.update_email_template",

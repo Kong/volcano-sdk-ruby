@@ -18,7 +18,7 @@ module Volcano::Generated
   class ProjectConfigProject < ApiModelBase
     attr_accessor :name
 
-    # Region policy. `false` requires `selected_regions` (PRO plan).
+    # Region policy. `false` requires `selected_regions` (SUPERAGENT plan).
     attr_accessor :all_regions
 
     # Region subset (bare region names). Requires `all_regions=false`.

@@ -63,7 +63,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'RealtimeConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"RealtimeApi.get_realtime_config",
@@ -126,7 +126,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'RealtimeStats'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"RealtimeApi.get_realtime_stats",
@@ -200,7 +200,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'RealtimeConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"RealtimeApi.update_realtime_config",

@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with BYOC TLS (PRO plan). `tls` is required when the domain is first created and optional afterwards: providing new TLS material for the same domain rotates the certificate in place (zero downtime); omitting `tls` keeps the stored certificate. TLS material is write-only and omitted from config export. 
+  # Custom domain with BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards: providing new TLS material for the same domain rotates the certificate in place (zero downtime); omitting `tls` keeps the stored certificate. TLS material is write-only and omitted from config export. 
   class ProjectConfigCustomDomain < ApiModelBase
     # Fully-qualified domain name (hostname only, no scheme/path)
     attr_accessor :domain

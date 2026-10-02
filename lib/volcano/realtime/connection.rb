@@ -99,7 +99,9 @@ module Volcano
       def open_socket(address)
         require 'async/http/endpoint'
         require 'async/websocket/client'
-        Async::WebSocket::Client.connect(Async::HTTP::Endpoint.parse(address))
+        # Use the HTTP/1.1 upgrade supported by the public API.
+        endpoint = Async::HTTP::Endpoint.parse(address, protocol: Async::HTTP::Protocol::HTTP11)
+        Async::WebSocket::Client.connect(endpoint)
       end
 
       def realtime_secrets = [@client.anon_token, @client.current_session&.access_token]

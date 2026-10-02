@@ -17,10 +17,10 @@ module Volcano::Generated
   class ProjectConfigEmailTemplate < ApiModelBase
     attr_accessor :subject
 
-    # HTML body. Max 256 KiB. PRO plan required for custom bodies.
+    # HTML body. Max 256 KiB. SUPERAGENT plan required for custom bodies.
     attr_accessor :html_body
 
-    # Plain-text body. Max 256 KiB. PRO plan required for custom bodies.
+    # Plain-text body. Max 256 KiB. SUPERAGENT plan required for custom bodies.
     attr_accessor :text_body
 
     # Attribute mapping from ruby-style variable name to JSON key.

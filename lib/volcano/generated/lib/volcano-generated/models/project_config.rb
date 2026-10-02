@@ -26,9 +26,6 @@ module Volcano::Generated
     # Replace the complete shared function-variable list with existing names, without changing variable values. Omission keeps membership unchanged; an empty list clears it.
     attr_accessor :shared_variables
 
-    # Replace the complete shared frontend-variable list with existing names. Frontends with variable_scope shared receive this list. Omission keeps membership unchanged; an empty list clears it.
-    attr_accessor :frontend_shared_variables
-
     # Fully synced when declared - variables absent from this list are deleted.
     attr_accessor :variables
 
@@ -71,7 +68,6 @@ module Volcano::Generated
         :'project' => :'project',
         :'databases' => :'databases',
         :'shared_variables' => :'shared_variables',
-        :'frontend_shared_variables' => :'frontend_shared_variables',
         :'variables' => :'variables',
         :'buckets' => :'buckets',
         :'realtime' => :'realtime',
@@ -98,7 +94,6 @@ module Volcano::Generated
         :'project' => :'ProjectConfigProject',
         :'databases' => :'Array<ProjectConfigDatabase>',
         :'shared_variables' => :'Array<String>',
-        :'frontend_shared_variables' => :'Array<String>',
         :'variables' => :'Array<ProjectConfigVariable>',
         :'buckets' => :'Array<ProjectConfigBucket>',
         :'realtime' => :'ProjectConfigRealtime',
@@ -149,12 +144,6 @@ module Volcano::Generated
       if attributes.key?(:'shared_variables')
         if (value = attributes[:'shared_variables']).is_a?(Array)
           self.shared_variables = value
-        end
-      end
-
-      if attributes.key?(:'frontend_shared_variables')
-        if (value = attributes[:'frontend_shared_variables']).is_a?(Array)
-          self.frontend_shared_variables = value
         end
       end
 
@@ -233,16 +222,6 @@ module Volcano::Generated
       @shared_variables = shared_variables
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] frontend_shared_variables Value to be assigned
-    def frontend_shared_variables=(frontend_shared_variables)
-      if frontend_shared_variables.nil?
-        fail ArgumentError, 'frontend_shared_variables cannot be nil'
-      end
-
-      @frontend_shared_variables = frontend_shared_variables
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -252,7 +231,6 @@ module Volcano::Generated
           project == o.project &&
           databases == o.databases &&
           shared_variables == o.shared_variables &&
-          frontend_shared_variables == o.frontend_shared_variables &&
           variables == o.variables &&
           buckets == o.buckets &&
           realtime == o.realtime &&
@@ -270,7 +248,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [version, project, databases, shared_variables, frontend_shared_variables, variables, buckets, realtime, auth, functions, frontends].hash
+      [version, project, databases, shared_variables, variables, buckets, realtime, auth, functions, frontends].hash
     end
 
     # Builds the object from hash

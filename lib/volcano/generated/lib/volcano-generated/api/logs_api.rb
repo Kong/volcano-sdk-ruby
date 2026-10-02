@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; `resource.type=database` from a FREE-plan project owner returns 403. The activity window is limited to the plan's retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. 
+    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; `resource.type=database` from a HOBBY-plan project owner returns 403. The activity window is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -31,7 +31,7 @@ module Volcano::Generated
     end
 
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; &#x60;resource.type&#x3D;database&#x60; from a FREE-plan project owner returns 403. The activity window is limited to the plan&#39;s retention window (FREE: 1 day, PRO: 30 days); older start times are clamped to that window. 
+    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; &#x60;resource.type&#x3D;database&#x60; from a HOBBY-plan project owner returns 403. The activity window is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'LogActivityResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.get_project_log_activity",
@@ -94,7 +94,7 @@ module Volcano::Generated
     end
 
     # Search project logs
-    # Search or filter logs for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; requests for `resource.type=database` from a FREE-plan project owner return 403. Log history (runtime and deployment) is limited to the plan's retention window (FREE: 1 day, PRO: 30 days); older time ranges are clamped to that window. 
+    # Search or filter logs for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; requests for `resource.type=database` from a HOBBY-plan project owner return 403. Log history (runtime and deployment) is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
     # @param id [String] Project ID
     # @param log_search_request [LogSearchRequest] 
     # @param [Hash] opts the optional parameters
@@ -105,7 +105,7 @@ module Volcano::Generated
     end
 
     # Search project logs
-    # Search or filter logs for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; requests for &#x60;resource.type&#x3D;database&#x60; from a FREE-plan project owner return 403. Log history (runtime and deployment) is limited to the plan&#39;s retention window (FREE: 1 day, PRO: 30 days); older time ranges are clamped to that window. 
+    # Search or filter logs for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; requests for &#x60;resource.type&#x3D;database&#x60; from a HOBBY-plan project owner return 403. Log history (runtime and deployment) is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
     # @param id [String] Project ID
     # @param log_search_request [LogSearchRequest] 
     # @param [Hash] opts the optional parameters
@@ -148,7 +148,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'LogSearchResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.search_project_logs",
@@ -168,7 +168,7 @@ module Volcano::Generated
     end
 
     # Stream project logs
-    # Live-tail project logs as Server-Sent Events. The request body uses the resource selector plus `q`, `start_time`, and `limit`, including runtime logs and function/frontend deployment logs selected with `resource.deployments`. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; `resource.type=database` from a FREE-plan project owner returns 403. The `q` field uses the same syntax as search and activity requests. Do not send `cursor` or `end_time`; use `/logs/search` for range backfills. Explicit historical `start_time` values are limited to the plan's retention window (FREE: 1 day, PRO: 30 days). Resume with `Last-Event-ID` or the `last_event_id` query parameter. The cursor is bound to the request body: the resource selector and every filter must match the original request when reconnecting, otherwise the request is rejected with `400`.  This is a live tail, not a gap-free backfill. On connect or reconnect the server delivers at most `limit` of the most recent matching events from the cursor position and then follows new events; events older than that window are not replayed. Use `/logs/search` to backfill a time range. 
+    # Live-tail project logs as Server-Sent Events. The request body uses the resource selector plus `q`, `start_time`, and `limit`, including runtime logs and function/frontend deployment logs selected with `resource.deployments`. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; `resource.type=database` from a HOBBY-plan project owner returns 403. The `q` field uses the same syntax as search and activity requests. Do not send `cursor` or `end_time`; use `/logs/search` for range backfills. Explicit historical `start_time` values are limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days). Resume with `Last-Event-ID` or the `last_event_id` query parameter. The cursor is bound to the request body: the resource selector and every filter must match the original request when reconnecting, otherwise the request is rejected with `400`.  This is a live tail, not a gap-free backfill. On connect or reconnect the server delivers at most `limit` of the most recent matching events from the cursor position and then follows new events; events older than that window are not replayed. Use `/logs/search` to backfill a time range. 
     # @param id [String] Project ID
     # @param log_stream_request [LogStreamRequest] 
     # @param [Hash] opts the optional parameters
@@ -181,7 +181,7 @@ module Volcano::Generated
     end
 
     # Stream project logs
-    # Live-tail project logs as Server-Sent Events. The request body uses the resource selector plus &#x60;q&#x60;, &#x60;start_time&#x60;, and &#x60;limit&#x60;, including runtime logs and function/frontend deployment logs selected with &#x60;resource.deployments&#x60;. Deployment logs are not supported for databases. Database logs are a PRO-plan feature; &#x60;resource.type&#x3D;database&#x60; from a FREE-plan project owner returns 403. The &#x60;q&#x60; field uses the same syntax as search and activity requests. Do not send &#x60;cursor&#x60; or &#x60;end_time&#x60;; use &#x60;/logs/search&#x60; for range backfills. Explicit historical &#x60;start_time&#x60; values are limited to the plan&#39;s retention window (FREE: 1 day, PRO: 30 days). Resume with &#x60;Last-Event-ID&#x60; or the &#x60;last_event_id&#x60; query parameter. The cursor is bound to the request body: the resource selector and every filter must match the original request when reconnecting, otherwise the request is rejected with &#x60;400&#x60;.  This is a live tail, not a gap-free backfill. On connect or reconnect the server delivers at most &#x60;limit&#x60; of the most recent matching events from the cursor position and then follows new events; events older than that window are not replayed. Use &#x60;/logs/search&#x60; to backfill a time range. 
+    # Live-tail project logs as Server-Sent Events. The request body uses the resource selector plus &#x60;q&#x60;, &#x60;start_time&#x60;, and &#x60;limit&#x60;, including runtime logs and function/frontend deployment logs selected with &#x60;resource.deployments&#x60;. Deployment logs are not supported for databases. Database logs are a SUPERAGENT-plan feature; &#x60;resource.type&#x3D;database&#x60; from a HOBBY-plan project owner returns 403. The &#x60;q&#x60; field uses the same syntax as search and activity requests. Do not send &#x60;cursor&#x60; or &#x60;end_time&#x60;; use &#x60;/logs/search&#x60; for range backfills. Explicit historical &#x60;start_time&#x60; values are limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days). Resume with &#x60;Last-Event-ID&#x60; or the &#x60;last_event_id&#x60; query parameter. The cursor is bound to the request body: the resource selector and every filter must match the original request when reconnecting, otherwise the request is rejected with &#x60;400&#x60;.  This is a live tail, not a gap-free backfill. On connect or reconnect the server delivers at most &#x60;limit&#x60; of the most recent matching events from the cursor position and then follows new events; events older than that window are not replayed. Use &#x60;/logs/search&#x60; to backfill a time range. 
     # @param id [String] Project ID
     # @param log_stream_request [LogStreamRequest] 
     # @param [Hash] opts the optional parameters
@@ -228,7 +228,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'String'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"LogsApi.stream_project_logs",

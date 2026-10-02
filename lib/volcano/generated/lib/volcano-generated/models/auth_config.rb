@@ -64,7 +64,7 @@ module Volcano::Generated
     # Allow creating users without email/password
     attr_accessor :enable_anonymous_signins
 
-    # Email domains allowed to create users in this project. Applies to email/password signup, OAuth/SSO signup, anonymous conversion, and email changes. Empty (the default) allows every domain.  Entries are stored normalized (lowercase, no `@` prefix) and match the domain part exactly: `domain1.com` does not cover `mail.domain1.com`. Signups from other domains are rejected with 403, and `allowed_email_domains_mode` decides whether sign-in is covered as well.  The allowlist is a PRO feature to configure and to enforce. A downgrade parks it: the domains are still returned here and stop being applied until the project is back on PRO. 
+    # Email domains allowed to create users in this project. Applies to email/password signup, OAuth/SSO signup, anonymous conversion, and email changes. Empty (the default) allows every domain.  Entries are stored normalized (lowercase, no `@` prefix) and match the domain part exactly: `domain1.com` does not cover `mail.domain1.com`. Signups from other domains are rejected with 403, and `allowed_email_domains_mode` decides whether sign-in is covered as well.  The allowlist is a SUPERAGENT feature to configure and to enforce. A downgrade parks it: the domains are still returned here and stop being applied until the project is back on SUPERAGENT. 
     attr_accessor :allowed_email_domains
 
     # How far `allowed_email_domains` reaches. `signup` only gates account creation, so accounts that predate the list keep signing in. `signup_and_signin` also refuses to issue a session to an account whose domain is not listed. `disabled` keeps the list without enforcing it. 

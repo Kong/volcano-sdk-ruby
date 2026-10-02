@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Hosted auth pages keyed by page type (PRO plan). Upsert-only: omitted pages are left untouched (there is no delete for hosted pages). 
+  # Hosted auth pages keyed by page type (SUPERAGENT plan). Upsert-only: omitted pages are left untouched (there is no delete for hosted pages). 
   class ProjectConfigHostedPages < ApiModelBase
     attr_accessor :login
 

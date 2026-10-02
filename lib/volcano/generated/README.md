@@ -61,12 +61,7 @@ require 'volcano-generated'
 
 # Setup authorization
 Volcano::Generated.configure do |config|
-  # Configure Bearer authorization (opaque): UserToken
-  config.access_token = 'YOUR_BEARER_TOKEN'
-  # Configure a proc to get access tokens in lieu of the static access_token configuration
-  config.access_token_getter = -> { 'YOUR TOKEN GETTER PROC' } 
-
-  # Configure Bearer authorization (opaque): ProjectAccessToken
+  # Configure Bearer authorization (JWT): UserToken
   config.access_token = 'YOUR_BEARER_TOKEN'
   # Configure a proc to get access tokens in lieu of the static access_token configuration
   config.access_token_getter = -> { 'YOUR TOKEN GETTER PROC' } 
@@ -207,20 +202,16 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**update_durable_function_scheduler**](docs/DurableFunctionsApi.md#update_durable_function_scheduler) | **PATCH** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Update a durable function scheduler
 *Volcano::Generated::FrontendsApi* | [**create_frontend**](docs/FrontendsApi.md#create_frontend) | **POST** /projects/{id}/frontends | Create a new frontend deployment
-*Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain (PRO)
-*Volcano::Generated::FrontendsApi* | [**create_frontend_function_route**](docs/FrontendsApi.md#create_frontend_function_route) | **POST** /projects/{id}/frontends/{frontendId}/function-routes | Route a Frontend path to an HTTP Function
+*Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain (SUPERAGENT)
 *Volcano::Generated::FrontendsApi* | [**delete_frontend**](docs/FrontendsApi.md#delete_frontend) | **DELETE** /projects/{id}/frontends/{frontendId} | Delete a frontend
 *Volcano::Generated::FrontendsApi* | [**delete_frontend_custom_domain**](docs/FrontendsApi.md#delete_frontend_custom_domain) | **DELETE** /projects/{id}/frontends/{frontendId}/domain | Delete frontend custom domain
-*Volcano::Generated::FrontendsApi* | [**delete_frontend_function_route**](docs/FrontendsApi.md#delete_frontend_function_route) | **DELETE** /projects/{id}/frontends/{frontendId}/function-routes/{routeId} | Delete a Frontend Function route
 *Volcano::Generated::FrontendsApi* | [**get_frontend**](docs/FrontendsApi.md#get_frontend) | **GET** /projects/{id}/frontends/{frontendId} | Get frontend details
 *Volcano::Generated::FrontendsApi* | [**get_frontend_custom_domain**](docs/FrontendsApi.md#get_frontend_custom_domain) | **GET** /projects/{id}/frontends/{frontendId}/domain | Get frontend custom domain status
 *Volcano::Generated::FrontendsApi* | [**get_frontend_usage_history**](docs/FrontendsApi.md#get_frontend_usage_history) | **GET** /projects/{id}/frontends/{frontendId}/usage | Per-day request and error counts for a single frontend
 *Volcano::Generated::FrontendsApi* | [**list_frontend_deployments**](docs/FrontendsApi.md#list_frontend_deployments) | **GET** /projects/{id}/frontends/{frontendId}/deployments | List frontend deployments
-*Volcano::Generated::FrontendsApi* | [**list_frontend_function_routes**](docs/FrontendsApi.md#list_frontend_function_routes) | **GET** /projects/{id}/frontends/{frontendId}/function-routes | List a Frontend's Function routes
 *Volcano::Generated::FrontendsApi* | [**list_frontends**](docs/FrontendsApi.md#list_frontends) | **GET** /projects/{id}/frontends | List all frontends in a project
 *Volcano::Generated::FrontendsApi* | [**list_project_custom_domains**](docs/FrontendsApi.md#list_project_custom_domains) | **GET** /projects/{id}/domains | List all custom domains in a project
 *Volcano::Generated::FrontendsApi* | [**redeploy_frontend**](docs/FrontendsApi.md#redeploy_frontend) | **POST** /projects/{id}/frontends/{frontendId}/redeploy | Redeploy frontend using latest uploaded artifact
-*Volcano::Generated::FrontendsApi* | [**update_frontend_function_route**](docs/FrontendsApi.md#update_frontend_function_route) | **PUT** /projects/{id}/frontends/{frontendId}/function-routes/{routeId} | Replace a Frontend Function route
 *Volcano::Generated::FunctionsApi* | [**create_function**](docs/FunctionsApi.md#create_function) | **POST** /projects/{id}/functions | Create or update function code
 *Volcano::Generated::FunctionsApi* | [**create_function_scheduler**](docs/FunctionsApi.md#create_function_scheduler) | **POST** /projects/{id}/functions/{functionId}/schedulers | Create a scheduler for a function
 *Volcano::Generated::FunctionsApi* | [**create_functions_batch**](docs/FunctionsApi.md#create_functions_batch) | **POST** /projects/{id}/functions/batch | Deploy multiple functions in one request
@@ -280,12 +271,6 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::OAuthConfigurationApi* | [**list_available_o_auth_providers**](docs/OAuthConfigurationApi.md#list_available_o_auth_providers) | **GET** /projects/{id}/oauth/providers | List available OAuth providers
 *Volcano::Generated::OAuthConfigurationApi* | [**list_o_auth_configs**](docs/OAuthConfigurationApi.md#list_o_auth_configs) | **GET** /projects/{id}/oauth/configs | List OAuth configurations
 *Volcano::Generated::OAuthConfigurationApi* | [**update_o_auth_config**](docs/OAuthConfigurationApi.md#update_o_auth_config) | **PUT** /projects/{id}/oauth/configs/{provider} | Update OAuth configuration
-*Volcano::Generated::ProjectAccessTokensApi* | [**create_project_access_token**](docs/ProjectAccessTokensApi.md#create_project_access_token) | **POST** /projects/{id}/access-tokens | Create a project access token
-*Volcano::Generated::ProjectAccessTokensApi* | [**get_project_access_token**](docs/ProjectAccessTokensApi.md#get_project_access_token) | **GET** /projects/{id}/access-tokens/{tokenId} | Get a project access token
-*Volcano::Generated::ProjectAccessTokensApi* | [**get_project_access_token_usage**](docs/ProjectAccessTokensApi.md#get_project_access_token_usage) | **GET** /projects/{id}/access-tokens/{tokenId}/usage | Per-day request counts for one access token
-*Volcano::Generated::ProjectAccessTokensApi* | [**list_project_access_tokens**](docs/ProjectAccessTokensApi.md#list_project_access_tokens) | **GET** /projects/{id}/access-tokens | List a project's access tokens
-*Volcano::Generated::ProjectAccessTokensApi* | [**list_project_access_tokens_usage**](docs/ProjectAccessTokensApi.md#list_project_access_tokens_usage) | **GET** /projects/{id}/access-tokens/usage | Per-day request counts for every access token in a project
-*Volcano::Generated::ProjectAccessTokensApi* | [**revoke_project_access_token**](docs/ProjectAccessTokensApi.md#revoke_project_access_token) | **DELETE** /projects/{id}/access-tokens/{tokenId} | Revoke a project access token
 *Volcano::Generated::ProjectImportsApi* | [**complete_import_connect**](docs/ProjectImportsApi.md#complete_import_connect) | **GET** /imports/{provider}/callback | Complete a project import provider connection
 *Volcano::Generated::ProjectImportsApi* | [**delete_import_connection**](docs/ProjectImportsApi.md#delete_import_connection) | **DELETE** /user/imports/connections/{connectionId} | Delete a project import provider connection
 *Volcano::Generated::ProjectImportsApi* | [**get_project_import_run**](docs/ProjectImportsApi.md#get_project_import_run) | **GET** /imports/{provider}/runs/{runId} | Get a project import run
@@ -314,7 +299,6 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::ProjectsApi* | [**list_project_deployments**](docs/ProjectsApi.md#list_project_deployments) | **GET** /projects/{id}/deployments | List deployments in a project
 *Volcano::Generated::ProjectsApi* | [**list_projects**](docs/ProjectsApi.md#list_projects) | **GET** /projects | List all projects for authenticated user
 *Volcano::Generated::ProjectsApi* | [**query_project_metrics**](docs/ProjectsApi.md#query_project_metrics) | **POST** /projects/{id}/metrics/query | Query project runtime metrics
-*Volcano::Generated::ProjectsApi* | [**replace_frontend_shared_variables**](docs/ProjectsApi.md#replace_frontend_shared_variables) | **PUT** /projects/{id}/frontend-shared-variables | Replace frontend shared variable names
 *Volcano::Generated::ProjectsApi* | [**replace_shared_variables**](docs/ProjectsApi.md#replace_shared_variables) | **PUT** /projects/{id}/shared-variables | Replace shared variable names
 *Volcano::Generated::ProjectsApi* | [**set_project_git_production_branch**](docs/ProjectsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
 *Volcano::Generated::ProjectsApi* | [**summarize_project_deployments**](docs/ProjectsApi.md#summarize_project_deployments) | **GET** /projects/{id}/deployments/summary | Summarize deployments in a project
@@ -368,11 +352,6 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::StoragePoliciesApi* | [**create_storage_policy**](docs/StoragePoliciesApi.md#create_storage_policy) | **POST** /projects/{id}/storage/buckets/{bucketName}/policies | Create a storage policy
 *Volcano::Generated::StoragePoliciesApi* | [**delete_storage_policy**](docs/StoragePoliciesApi.md#delete_storage_policy) | **DELETE** /projects/{id}/storage/buckets/{bucketName}/policies/{policyId} | Delete a storage policy
 *Volcano::Generated::StoragePoliciesApi* | [**list_storage_policies**](docs/StoragePoliciesApi.md#list_storage_policies) | **GET** /projects/{id}/storage/buckets/{bucketName}/policies | List storage policies for a bucket
-*Volcano::Generated::SystemApi* | [**call_mcp**](docs/SystemApi.md#call_mcp) | **POST** /mcp | Model Context Protocol endpoint
-*Volcano::Generated::SystemApi* | [**get_open_api_spec_json**](docs/SystemApi.md#get_open_api_spec_json) | **GET** /openapi.json | Fetch the OpenAPI specification as JSON
-*Volcano::Generated::SystemApi* | [**get_open_api_spec_yaml**](docs/SystemApi.md#get_open_api_spec_yaml) | **GET** /openapi.yaml | Fetch the OpenAPI specification as YAML
-*Volcano::Generated::SystemApi* | [**head_open_api_spec_json**](docs/SystemApi.md#head_open_api_spec_json) | **HEAD** /openapi.json | Check the JSON OpenAPI specification
-*Volcano::Generated::SystemApi* | [**head_open_api_spec_yaml**](docs/SystemApi.md#head_open_api_spec_yaml) | **HEAD** /openapi.yaml | Check the YAML OpenAPI specification
 *Volcano::Generated::SystemApi* | [**health_check**](docs/SystemApi.md#health_check) | **GET** /health | Health check endpoint
 *Volcano::Generated::VariablesApi* | [**create_variable**](docs/VariablesApi.md#create_variable) | **POST** /projects/{id}/variables | Create or update a variable
 *Volcano::Generated::VariablesApi* | [**delete_variable**](docs/VariablesApi.md#delete_variable) | **DELETE** /projects/{id}/variables/{name} | Delete a variable
@@ -443,11 +422,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::BanUserResponse](docs/BanUserResponse.md)
  - [Volcano::Generated::BatchFunctionDeployFailure](docs/BatchFunctionDeployFailure.md)
  - [Volcano::Generated::BatchFunctionDeployResponse](docs/BatchFunctionDeployResponse.md)
- - [Volcano::Generated::CallMCP200Response](docs/CallMCP200Response.md)
- - [Volcano::Generated::CallMCP200ResponseError](docs/CallMCP200ResponseError.md)
- - [Volcano::Generated::CallMCP200ResponseId](docs/CallMCP200ResponseId.md)
- - [Volcano::Generated::CallMCPRequest](docs/CallMCPRequest.md)
- - [Volcano::Generated::CallMCPRequestId](docs/CallMCPRequestId.md)
  - [Volcano::Generated::CallOAuthProviderAPI200Response](docs/CallOAuthProviderAPI200Response.md)
  - [Volcano::Generated::CallOAuthProviderAPIRequest](docs/CallOAuthProviderAPIRequest.md)
  - [Volcano::Generated::CompleteUploadSessionResponse](docs/CompleteUploadSessionResponse.md)
@@ -461,10 +435,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateDatabaseRestoreRequest](docs/CreateDatabaseRestoreRequest.md)
  - [Volcano::Generated::CreateEmailTemplateRequest](docs/CreateEmailTemplateRequest.md)
  - [Volcano::Generated::CreateFrontendCustomDomainRequest](docs/CreateFrontendCustomDomainRequest.md)
- - [Volcano::Generated::CreateFrontendFunctionRouteRequest](docs/CreateFrontendFunctionRouteRequest.md)
  - [Volcano::Generated::CreateFunctionSchedulerRequest](docs/CreateFunctionSchedulerRequest.md)
  - [Volcano::Generated::CreateOAuthConfigRequest](docs/CreateOAuthConfigRequest.md)
- - [Volcano::Generated::CreateProjectAccessTokenRequest](docs/CreateProjectAccessTokenRequest.md)
  - [Volcano::Generated::CreateProjectRequest](docs/CreateProjectRequest.md)
  - [Volcano::Generated::CreateSandboxSessionRequest](docs/CreateSandboxSessionRequest.md)
  - [Volcano::Generated::CreateSandboxTemplateRequest](docs/CreateSandboxTemplateRequest.md)
@@ -474,7 +446,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateUploadSessionRequest](docs/CreateUploadSessionRequest.md)
  - [Volcano::Generated::CreateUploadSessionResponse](docs/CreateUploadSessionResponse.md)
  - [Volcano::Generated::CreateVariableRequest](docs/CreateVariableRequest.md)
- - [Volcano::Generated::CreatedProjectAccessToken](docs/CreatedProjectAccessToken.md)
  - [Volcano::Generated::Database](docs/Database.md)
  - [Volcano::Generated::DatabaseBackup](docs/DatabaseBackup.md)
  - [Volcano::Generated::DatabaseBackupList](docs/DatabaseBackupList.md)
@@ -520,8 +491,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::FrontendDeployment](docs/FrontendDeployment.md)
  - [Volcano::Generated::FrontendDomainRoutingRecord](docs/FrontendDomainRoutingRecord.md)
  - [Volcano::Generated::FrontendDomainVerificationRecord](docs/FrontendDomainVerificationRecord.md)
- - [Volcano::Generated::FrontendFunctionRoute](docs/FrontendFunctionRoute.md)
- - [Volcano::Generated::FrontendFunctionRouteList](docs/FrontendFunctionRouteList.md)
  - [Volcano::Generated::FrontendUsageDailyEntry](docs/FrontendUsageDailyEntry.md)
  - [Volcano::Generated::FrontendUsageData](docs/FrontendUsageData.md)
  - [Volcano::Generated::FrontendUsageHistoryResponse](docs/FrontendUsageHistoryResponse.md)
@@ -596,7 +565,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::PaginatedFrontends](docs/PaginatedFrontends.md)
  - [Volcano::Generated::PaginatedFunctionDeployments](docs/PaginatedFunctionDeployments.md)
  - [Volcano::Generated::PaginatedFunctions](docs/PaginatedFunctions.md)
- - [Volcano::Generated::PaginatedProjectAccessTokens](docs/PaginatedProjectAccessTokens.md)
  - [Volcano::Generated::PaginatedProjectCustomDomains](docs/PaginatedProjectCustomDomains.md)
  - [Volcano::Generated::PaginatedProjectDeployments](docs/PaginatedProjectDeployments.md)
  - [Volcano::Generated::PaginatedProjects](docs/PaginatedProjects.md)
@@ -607,10 +575,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::PreviewAuthPageRequest](docs/PreviewAuthPageRequest.md)
  - [Volcano::Generated::PreviewAuthPageResponse](docs/PreviewAuthPageResponse.md)
  - [Volcano::Generated::Project](docs/Project.md)
- - [Volcano::Generated::ProjectAccessToken](docs/ProjectAccessToken.md)
- - [Volcano::Generated::ProjectAccessTokenScope](docs/ProjectAccessTokenScope.md)
- - [Volcano::Generated::ProjectAccessTokenUsage](docs/ProjectAccessTokenUsage.md)
- - [Volcano::Generated::ProjectAccessTokenUsageDailyEntry](docs/ProjectAccessTokenUsageDailyEntry.md)
  - [Volcano::Generated::ProjectConfig](docs/ProjectConfig.md)
  - [Volcano::Generated::ProjectConfigApplyResult](docs/ProjectConfigApplyResult.md)
  - [Volcano::Generated::ProjectConfigApplyResultEntry](docs/ProjectConfigApplyResultEntry.md)
@@ -640,7 +604,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectConfigEmailTemplate](docs/ProjectConfigEmailTemplate.md)
  - [Volcano::Generated::ProjectConfigEmailTemplates](docs/ProjectConfigEmailTemplates.md)
  - [Volcano::Generated::ProjectConfigFrontend](docs/ProjectConfigFrontend.md)
- - [Volcano::Generated::ProjectConfigFrontendFunctionRoute](docs/ProjectConfigFrontendFunctionRoute.md)
  - [Volcano::Generated::ProjectConfigFunction](docs/ProjectConfigFunction.md)
  - [Volcano::Generated::ProjectConfigHostedPage](docs/ProjectConfigHostedPage.md)
  - [Volcano::Generated::ProjectConfigHostedPages](docs/ProjectConfigHostedPages.md)
@@ -712,7 +675,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
- - [Volcano::Generated::ReplaceFrontendSharedVariablesRequest](docs/ReplaceFrontendSharedVariablesRequest.md)
  - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
@@ -794,9 +756,5 @@ Authentication schemes defined for the API:
 
 ### UserToken
 
-- **Type**: Bearer authentication (opaque)
-
-### ProjectAccessToken
-
-- **Type**: Bearer authentication (opaque)
+- **Type**: Bearer authentication (JWT)
 

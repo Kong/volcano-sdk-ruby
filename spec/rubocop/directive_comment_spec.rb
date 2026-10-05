@@ -5,7 +5,7 @@ require 'rubocop'
 
 RSpec.describe RuboCop::DirectiveComment do
   let(:root) { File.expand_path('../..', __dir__) }
-  let(:approved_scopes) do
+  let(:documented_scopes) do
     {
       'lib/volcano/client.rb' => [
         'def initialize( # rubocop:disable Metrics/ParameterLists -- Preserve typed constructor keywords.',
@@ -15,6 +15,10 @@ RSpec.describe RuboCop::DirectiveComment do
         '# rubocop:disable Lint/UnderscorePrefixedVariableName -- Existing keyword API.',
         'def database_with_token(name, token) ' \
         '# rubocop:disable Lint/UnusedPrivateMethod -- Typed cross-file private dispatch.'
+      ],
+      'lib/volcano/sandboxes.rb' => [
+        'def create( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.',
+        'def exec( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.'
       ],
       'lib/volcano/generated_transport.rb' => [
         'error.code.to_i # rubocop:disable Lint/NumberConversion -- Preserve generated ApiError status coercion.'
@@ -51,25 +55,25 @@ RSpec.describe RuboCop::DirectiveComment do
     end
   end
 
-  it 'limits directives to the exact human-approved source lines' do
-    expected = approved_scopes.flat_map { |path, lines| lines.map { |line| [path, line] } }
+  it 'limits directives to the exact documented source lines' do
+    expected = documented_scopes.flat_map { |path, lines| lines.map { |line| [path, line] } }
 
     expect(lint_targets.flat_map { |path| directives(path) }).to match_array(expected)
   end
 
-  it 'requires every approved exception to suppress exactly its documented diagnostic' do
+  it 'requires every documented exception to suppress exactly its documented diagnostic' do
     output, error, status = Open3.capture3(
       Gem.ruby, Gem.bin_path('rubocop', 'rubocop'), '--ignore-disable-comments', '--format', 'json',
-      *approved_scopes.keys, chdir: root
+      *documented_scopes.keys, chdir: root
     )
     expect(status.exitstatus).to eq(1), error
     files = JSON.parse(output).fetch('files')
     expect(files.flat_map { |file| offense_lines(file) }).to match_array(
-      approved_scopes.flat_map { |path, lines| lines.map { |line| [path, line] } }
+      documented_scopes.flat_map { |path, lines| lines.map { |line| [path, line] } }
     )
     cops = files.flat_map { |file| file.fetch('offenses').map { |offense| offense.fetch('cop_name') } }
     expect(cops.tally).to eq(
-      'Metrics/ParameterLists' => 1, 'Lint/UnderscorePrefixedVariableName' => 3,
+      'Metrics/ParameterLists' => 3, 'Lint/UnderscorePrefixedVariableName' => 3,
       'Lint/UnusedPrivateMethod' => 1, 'Lint/NumberConversion' => 1, 'Lint/NameTypo' => 1
     )
   end

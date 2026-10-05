@@ -308,6 +308,26 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::RealtimeApi* | [**get_realtime_config**](docs/RealtimeApi.md#get_realtime_config) | **GET** /projects/{id}/realtime/config | Get realtime configuration for a project
 *Volcano::Generated::RealtimeApi* | [**get_realtime_stats**](docs/RealtimeApi.md#get_realtime_stats) | **GET** /projects/{id}/realtime/stats | Get realtime statistics for a project
 *Volcano::Generated::RealtimeApi* | [**update_realtime_config**](docs/RealtimeApi.md#update_realtime_config) | **PUT** /projects/{id}/realtime/config | Update realtime configuration for a project
+*Volcano::Generated::SandboxesApi* | [**create_sandbox**](docs/SandboxesApi.md#create_sandbox) | **POST** /projects/{id}/sandboxes | Create a sandbox template from a verified preset
+*Volcano::Generated::SandboxesApi* | [**create_sandbox_session**](docs/SandboxesApi.md#create_sandbox_session) | **POST** /projects/{id}/sandbox-sessions | Start a sandbox session
+*Volcano::Generated::SandboxesApi* | [**create_sandbox_session_access**](docs/SandboxesApi.md#create_sandbox_session_access) | **POST** /sandbox-sessions/{sessionId}/access | Issue a short-lived port-scoped access credential
+*Volcano::Generated::SandboxesApi* | [**delete_sandbox**](docs/SandboxesApi.md#delete_sandbox) | **DELETE** /projects/{id}/sandboxes/{sandboxId} | Retire a template and terminate its sessions
+*Volcano::Generated::SandboxesApi* | [**execute_sandbox**](docs/SandboxesApi.md#execute_sandbox) | **POST** /projects/{id}/sandbox-executions | Execute once and return after confirmed termination
+*Volcano::Generated::SandboxesApi* | [**execute_sandbox_session**](docs/SandboxesApi.md#execute_sandbox_session) | **POST** /sandbox-sessions/{sessionId}/exec | Execute a command within a session
+*Volcano::Generated::SandboxesApi* | [**get_sandbox**](docs/SandboxesApi.md#get_sandbox) | **GET** /projects/{id}/sandboxes/{sandboxId} | Get a sandbox template
+*Volcano::Generated::SandboxesApi* | [**get_sandbox_session**](docs/SandboxesApi.md#get_sandbox_session) | **GET** /sandbox-sessions/{sessionId} | Get a sandbox session
+*Volcano::Generated::SandboxesApi* | [**grant_sandbox_session**](docs/SandboxesApi.md#grant_sandbox_session) | **PUT** /sandbox-sessions/{sessionId}/grants/{subjectId} | Authorize an authenticated project user for this session
+*Volcano::Generated::SandboxesApi* | [**list_sandbox_deployments**](docs/SandboxesApi.md#list_sandbox_deployments) | **GET** /projects/{id}/sandboxes/{sandboxId}/deployments | List sandbox deployment history
+*Volcano::Generated::SandboxesApi* | [**list_sandbox_presets**](docs/SandboxesApi.md#list_sandbox_presets) | **GET** /sandboxes/presets | List available sandbox presets
+*Volcano::Generated::SandboxesApi* | [**list_sandbox_sessions**](docs/SandboxesApi.md#list_sandbox_sessions) | **GET** /projects/{id}/sandbox-sessions | List project sandbox sessions
+*Volcano::Generated::SandboxesApi* | [**list_sandboxes**](docs/SandboxesApi.md#list_sandboxes) | **GET** /projects/{id}/sandboxes | List sandbox templates
+*Volcano::Generated::SandboxesApi* | [**read_sandbox_session_file**](docs/SandboxesApi.md#read_sandbox_session_file) | **POST** /sandbox-sessions/{sessionId}/files/read | Read a workspace file
+*Volcano::Generated::SandboxesApi* | [**resume_sandbox_session**](docs/SandboxesApi.md#resume_sandbox_session) | **POST** /sandbox-sessions/{sessionId}/resume | Resume a sandbox session
+*Volcano::Generated::SandboxesApi* | [**revoke_sandbox_session**](docs/SandboxesApi.md#revoke_sandbox_session) | **DELETE** /sandbox-sessions/{sessionId}/grants/{subjectId} | Revoke a project user session grant
+*Volcano::Generated::SandboxesApi* | [**suspend_sandbox_session**](docs/SandboxesApi.md#suspend_sandbox_session) | **POST** /sandbox-sessions/{sessionId}/suspend | Suspend a sandbox session
+*Volcano::Generated::SandboxesApi* | [**terminate_sandbox_session**](docs/SandboxesApi.md#terminate_sandbox_session) | **DELETE** /sandbox-sessions/{sessionId} | Request sandbox termination
+*Volcano::Generated::SandboxesApi* | [**update_sandbox**](docs/SandboxesApi.md#update_sandbox) | **PATCH** /projects/{id}/sandboxes/{sandboxId} | Rename a sandbox template
+*Volcano::Generated::SandboxesApi* | [**write_sandbox_session_file**](docs/SandboxesApi.md#write_sandbox_session_file) | **POST** /sandbox-sessions/{sessionId}/files/write | Write a workspace file
 *Volcano::Generated::ServiceKeysApi* | [**create_service_key**](docs/ServiceKeysApi.md#create_service_key) | **POST** /projects/{id}/service-keys | Create service key
 *Volcano::Generated::ServiceKeysApi* | [**delete_service_key**](docs/ServiceKeysApi.md#delete_service_key) | **DELETE** /projects/{id}/service-keys/{keyId} | Delete service key
 *Volcano::Generated::ServiceKeysApi* | [**get_service_key**](docs/ServiceKeysApi.md#get_service_key) | **GET** /projects/{id}/service-keys/{keyId} | Get service key
@@ -420,6 +440,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateFunctionSchedulerRequest](docs/CreateFunctionSchedulerRequest.md)
  - [Volcano::Generated::CreateOAuthConfigRequest](docs/CreateOAuthConfigRequest.md)
  - [Volcano::Generated::CreateProjectRequest](docs/CreateProjectRequest.md)
+ - [Volcano::Generated::CreateSandboxSessionRequest](docs/CreateSandboxSessionRequest.md)
+ - [Volcano::Generated::CreateSandboxTemplateRequest](docs/CreateSandboxTemplateRequest.md)
  - [Volcano::Generated::CreateServiceKeyRequest](docs/CreateServiceKeyRequest.md)
  - [Volcano::Generated::CreateStorageBucketRequest](docs/CreateStorageBucketRequest.md)
  - [Volcano::Generated::CreateStoragePolicyRequest](docs/CreateStoragePolicyRequest.md)
@@ -655,6 +677,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectSourceExportSkip](docs/ProjectSourceExportSkip.md)
  - [Volcano::Generated::ProjectSourceExportState](docs/ProjectSourceExportState.md)
  - [Volcano::Generated::ProjectUsageResponse](docs/ProjectUsageResponse.md)
+ - [Volcano::Generated::PublishSandboxPresetRequest](docs/PublishSandboxPresetRequest.md)
  - [Volcano::Generated::RealtimeConfig](docs/RealtimeConfig.md)
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
@@ -663,6 +686,27 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
  - [Volcano::Generated::ResourceReference](docs/ResourceReference.md)
+ - [Volcano::Generated::SandboxAccess](docs/SandboxAccess.md)
+ - [Volcano::Generated::SandboxAccessRequest](docs/SandboxAccessRequest.md)
+ - [Volcano::Generated::SandboxCapacity](docs/SandboxCapacity.md)
+ - [Volcano::Generated::SandboxCapacityList](docs/SandboxCapacityList.md)
+ - [Volcano::Generated::SandboxCommandRequest](docs/SandboxCommandRequest.md)
+ - [Volcano::Generated::SandboxCommandResult](docs/SandboxCommandResult.md)
+ - [Volcano::Generated::SandboxDeployment](docs/SandboxDeployment.md)
+ - [Volcano::Generated::SandboxDeploymentPage](docs/SandboxDeploymentPage.md)
+ - [Volcano::Generated::SandboxExecutionRequest](docs/SandboxExecutionRequest.md)
+ - [Volcano::Generated::SandboxExecutionResult](docs/SandboxExecutionResult.md)
+ - [Volcano::Generated::SandboxFileReadRequest](docs/SandboxFileReadRequest.md)
+ - [Volcano::Generated::SandboxFileResult](docs/SandboxFileResult.md)
+ - [Volcano::Generated::SandboxFileWriteRequest](docs/SandboxFileWriteRequest.md)
+ - [Volcano::Generated::SandboxPagination](docs/SandboxPagination.md)
+ - [Volcano::Generated::SandboxPreset](docs/SandboxPreset.md)
+ - [Volcano::Generated::SandboxPresetList](docs/SandboxPresetList.md)
+ - [Volcano::Generated::SandboxSession](docs/SandboxSession.md)
+ - [Volcano::Generated::SandboxSessionPage](docs/SandboxSessionPage.md)
+ - [Volcano::Generated::SandboxSubjectGrantRequest](docs/SandboxSubjectGrantRequest.md)
+ - [Volcano::Generated::SandboxTemplate](docs/SandboxTemplate.md)
+ - [Volcano::Generated::SandboxTemplatePage](docs/SandboxTemplatePage.md)
  - [Volcano::Generated::ScheduleRequest](docs/ScheduleRequest.md)
  - [Volcano::Generated::ServiceKey](docs/ServiceKey.md)
  - [Volcano::Generated::SetProjectGitProductionBranchRequest](docs/SetProjectGitProductionBranchRequest.md)
@@ -691,6 +735,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UpdateProjectGitDeploySettingsRequest](docs/UpdateProjectGitDeploySettingsRequest.md)
  - [Volcano::Generated::UpdateProjectRequest](docs/UpdateProjectRequest.md)
  - [Volcano::Generated::UpdateRealtimeConfigRequest](docs/UpdateRealtimeConfigRequest.md)
+ - [Volcano::Generated::UpdateSandboxTemplateRequest](docs/UpdateSandboxTemplateRequest.md)
  - [Volcano::Generated::UpdateStorageBucketRequest](docs/UpdateStorageBucketRequest.md)
  - [Volcano::Generated::UpdateVariableRequest](docs/UpdateVariableRequest.md)
  - [Volcano::Generated::UploadSessionPart](docs/UploadSessionPart.md)

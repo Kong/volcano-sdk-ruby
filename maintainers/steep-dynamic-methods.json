@@ -16,6 +16,7 @@
       "locks",
       "logs",
       "realtime",
+      "sandboxes",
       "storage"
     ]
   },

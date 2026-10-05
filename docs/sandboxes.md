@@ -52,8 +52,9 @@ end
 ```
 
 Creation, suspension, resumption, and termination are asynchronous. Use `refresh`
-to observe state. `use` requests termination when its block exits, including on
-exceptions. If cleanup also fails, the original block exception is preserved.
+to observe state; `state` is an immutable snapshot. `use` requests termination
+when its block exits, including on exceptions. If cleanup also fails, the original
+block exception is preserved.
 Cleanup treats an already terminating, terminated, or missing session as complete.
 It does not wait for termination to complete. Use `get(session_id)`
 to reconnect, then `suspend`, `resume`, or `terminate` as needed. Files preserve

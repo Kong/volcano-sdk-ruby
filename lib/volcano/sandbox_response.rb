@@ -32,7 +32,7 @@ module Volcano
 
     def self.state(value)
       result = text(value)
-      return result if STATES.include?(result)
+      return result.dup.freeze if STATES.include?(result)
 
       raise TypeError, 'Invalid Sandbox state'
     end

@@ -28,7 +28,8 @@ module Volcano
     def exec(project_id, command, options)
       body = SandboxRequests.selector(options).merge(SandboxRequests.command(command, options))
       request = SandboxRequest.new(operation: :execute_sandbox, resource_id: SandboxRequests.identifier(project_id),
-                                   body: body, request_id: SandboxRequests.request_id(options))
+                                   body: body, request_id: SandboxRequests.request_id(options),
+                                   timeout: SandboxResponse.integer(options.fetch(:timeout_seconds, 60)) + 120)
       SandboxResponse.execution(@requests.call(request))
     end
 

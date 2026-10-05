@@ -6,7 +6,10 @@ module Volcano
   # Immutable addressing and payload for a generated Sandbox operation.
   class SandboxRequest
     def initialize(options)
-      @options = options.dup.freeze
+      @options = options.dup
+      body = options[:body]
+      @options[:body] = ImmutableRequestValue.capture(body) if body
+      @options.freeze
       freeze
     end
 
@@ -15,7 +18,7 @@ module Volcano
     def subject_id = @options[:subject_id]
     def body = @options[:body]
     def request_id = @options[:request_id]
-    def timeout = @options.fetch(:timeout, 180)
+    def timeout = @options.fetch(:timeout, 0)
   end
 
   # Shared validation and credentials for Sandbox facade operations.
@@ -31,7 +34,9 @@ module Volcano
     end
 
     def call(request, status: 200)
-      response = if USER_OPERATIONS.include?(request.operation) && @client.current_session
+      response = if request.operation == :list_sandbox_presets
+                   dispatch(request, '')
+                 elsif USER_OPERATIONS.include?(request.operation) && @client.current_session
                    @client.session_request { |token| dispatch(request, token) }
                  else
                    dispatch(request, @client.service_token)
@@ -40,7 +45,7 @@ module Volcano
     end
 
     def self.identifier(value)
-      return value if value.is_a?(String) && UUID.match?(value)
+      return value.dup.freeze if value.is_a?(String) && UUID.match?(value)
 
       raise Error::ValidationError, 'Sandbox resource and request IDs must be UUIDs'
     end

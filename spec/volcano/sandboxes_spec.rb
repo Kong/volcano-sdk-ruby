@@ -10,7 +10,7 @@ RSpec.describe Volcano::Sandboxes do
   def session_id = '00000000-0000-4000-8000-000000000002'
   def subject_id = '00000000-0000-4000-8000-000000000003'
   def request_id = '00000000-0000-4000-8000-000000000004'
-  let(:client) { Volcano::Client.new(anon_key: 'anon', service_key: 'service', api_url: 'https://sandbox.test') }
+  let(:client) { Volcano::Client.new(anon_key: 'anon', service_key: 'service', api_url: 'https://sandbox.test', timeout: 5) }
   let(:facade) { client.sandboxes }
   let(:requests) { [] }
   let(:command) do
@@ -29,6 +29,13 @@ RSpec.describe Volcano::Sandboxes do
       requests << request
       response
     end
+  end
+
+  def mutated_command_response(request, input, environment, responses)
+    requests << request
+    input.replace('changed')
+    environment['KEY'].replace('changed')
+    responses.shift
   end
 
   after { Typhoeus::Expectation.clear }
@@ -106,6 +113,13 @@ RSpec.describe Volcano::Sandboxes do
     reply({ data: [{ id: 'python3.12', memory_mb: 2048, regions: ['aws-us-east-1'] }] })
     expect(facade.presets.first).to eq(Volcano::SandboxPreset.new(id: 'python3.12', memory_mb: 2048,
                                                                   regions: ['aws-us-east-1']))
+  end
+
+  it 'lists public presets without service or user credentials' do
+    anonymous = Volcano::Client.new(anon_key: 'anon', api_url: 'https://sandbox.test')
+    reply({ data: [] })
+    expect(anonymous.sandboxes.presets).to eq([])
+    expect(requests.last.options[:headers]).not_to have_key('Authorization')
   end
 
   [{}, { preset: 'python3.12', sandbox_id: 'invalid' }, { sandbox_id: 'invalid' }].each do |options|
@@ -187,6 +201,40 @@ RSpec.describe Volcano::Sandboxes do
     expect(requests.last.options[:timeout]).to eq(3_720_000)
   end
 
+  [nil, 3600].each do |timeout|
+    it "extends the one-shot HTTP timeout for #{timeout || 'default'} command completion" do
+      reply(command.merge(session_id: session_id, region: 'aws-us-east-1', duration_ms: 42))
+      options = { region: 'aws-us-east-1', preset: 'python3.12' }
+      options[:timeout_seconds] = timeout if timeout
+      facade.exec(project, 'run', options)
+      expect(requests.last.options[:timeout]).to eq(((timeout || 60) + 120) * 1000)
+    end
+  end
+
+  it 'preserves the configured timeout for short requests' do
+    reply({ data: [] })
+    facade.presets
+    reply(state)
+    handle = facade.get(session_id)
+    reply(state('suspending'), status: 202)
+    handle.suspend
+    reply({ url: 'https://access.test', token: 'secret', expires_at: 'tomorrow' })
+    handle.access(8080)
+    reply({ data: 'aGVsbG8=' })
+    handle.files.read('/workspace/file')
+    expect(requests.map { |request| request.options[:timeout] }).to all(eq(5000))
+  end
+
+  it 'owns frozen session and project identifiers' do
+    reply(state)
+    handle = facade.get(session_id)
+    expect { handle.id.replace(subject_id) }.to raise_error(FrozenError)
+    expect { handle.project_id.replace(subject_id) }.to raise_error(FrozenError)
+    reply(command)
+    handle.exec('run')
+    expect(requests.last.url).to end_with("/sandbox-sessions/#{session_id}/exec")
+  end
+
   it 'does not replay a command after a lost transport response' do
     failure = Typhoeus::Response.new(code: 0, return_code: :operation_timedout)
     Typhoeus.stub(%r{\Ahttps://sandbox.test}).and_return(failure)
@@ -216,6 +264,8 @@ RSpec.describe Volcano::Sandboxes do
                                                        user_id: subject_id)
     reply(state)
     handle = facade.get(session_id)
+    input = +'run'
+    environment = { 'KEY' => +'original' }
     responses = [
       Typhoeus::Response.new(code: 401, body: '{}', headers: {}),
       Typhoeus::Response.new(code: 200, headers: {},
@@ -225,14 +275,15 @@ RSpec.describe Volcano::Sandboxes do
       Typhoeus::Response.new(code: 200, headers: {}, body: JSON.generate(command))
     ]
     Typhoeus.stub(%r{\Ahttps://sandbox.test}).and_return do |request|
-      requests << request
-      responses.shift
+      mutated_command_response(request, input, environment, responses)
     end
-    expect(handle.exec('run', request_id: request_id).stdout).to eq('hello')
+    expect(handle.exec(input, request_id: request_id, environment: environment).stdout).to eq('hello')
     expect(responses).to be_empty
-    expect(requests[-3].options[:headers][:'Idempotency-Key']).to eq(request_id)
-    expect(requests.last.options[:headers][:'Idempotency-Key']).to eq(request_id)
+    expect([requests[-3], requests.last].map { |request| request.options[:headers][:'Idempotency-Key'] })
+      .to eq([request_id, request_id])
     expect(requests.last.options[:headers]['Authorization']).to eq("Bearer #{access_token('new')}")
+    expect([requests[-3], requests.last].map { |request| JSON.parse(request.options[:body]) })
+      .to all(eq('command' => 'run', 'environment' => { 'KEY' => 'original' }))
   end
 
   it 'preserves a block error when termination also fails' do

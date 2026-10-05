@@ -40,6 +40,7 @@ module Volcano
     end
 
     def use
+      # @type var unwinding: bool
       unwinding = true
       result = yield self
       unwinding = false

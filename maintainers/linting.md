@@ -9,8 +9,8 @@ suppressions, and `--raise-cop-error` makes internal cop failures fail the comma
 
 RuboCop's `AllowedCops` option cannot restrict an exception to an exact source
 line. `spec/rubocop/directive_comment_spec.rb` uses RuboCop's parser and target
-inventory to require exactly the eight approved inline directives. It also runs
-the native CLI with `--ignore-disable-comments` and requires exactly the eight
+inventory to require exactly the documented inline directives. It also runs
+the native CLI with `--ignore-disable-comments` and requires exactly the
 documented diagnostics. Added, broadened, and unused exceptions fail the gate.
 The [native directive rules](https://docs.rubocop.org/rubocop/1.90/usage/source_code_directives.html)
 keep the exception itself in the tool's standard format; the spec covers only

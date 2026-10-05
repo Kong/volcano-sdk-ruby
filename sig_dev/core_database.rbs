@@ -18,6 +18,7 @@ module Volcano
                     | (Time value) -> Time
                     | (String | Symbol value) -> (String | Symbol)
                     | (Array[String] value) -> Array[String]
+                    | (Hash[Symbol, json_value] value) -> Hash[Symbol, json_value]
                     | (sdk_payload value) -> sdk_payload
                     | (sdk_json value) -> sdk_json
     def self.capture_value: (String value, Hash[Integer, bool] active) -> String

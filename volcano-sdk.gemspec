@@ -16,13 +16,16 @@ Gem::Specification.new do |spec|
     'lib/volcano/*.rb',
     'lib/volcano/realtime/**/*.rb',
     'lib/volcano/generated/lib/**/*.rb',
+    'sig/**/*.rbs',
     'LICENSE',
     'README.md'
   ]
   spec.require_paths = ['lib']
   spec.add_dependency 'async', '2.20.0'
   spec.add_dependency 'async-http', '0.94.2'
-  spec.add_dependency 'async-websocket', '0.27.0'
+  spec.add_dependency 'async-websocket', '0.30.0'
+  spec.add_dependency 'base64', '~> 0.2'
+  spec.add_dependency 'json', '~> 2.17'
   spec.add_dependency 'logger', '~> 1.7'
   spec.add_dependency 'protocol-rack', '0.21.1'
   spec.add_dependency 'typhoeus', '~> 1.4'

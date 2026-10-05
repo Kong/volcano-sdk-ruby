@@ -14,20 +14,63 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) function. Functions are never created or deleted through the manifest. When `schedulers` is declared it is fully synced (schedulers absent from the list are deleted); omitting `schedulers` leaves the function's schedulers untouched. 
+  # Configuration for an existing (deployed) function. Functions are never created or deleted through the manifest. When `schedulers` is declared it is fully synced (schedulers absent from the list are deleted); omitting `schedulers` leaves the function's schedulers untouched. The same applies to `variables`: declaring it replaces the function's declared variable names, and omitting it leaves them untouched. 
   class ProjectConfigFunction < ApiModelBase
     attr_accessor :name
+
+    attr_accessor :kind
 
     # Function visibility for anon-key invocation
     attr_accessor :public
 
+    # Which project variables this function receives. `all` (the default) gives it the project variables marked `shared: true`. `scoped` gives it only the variables it selects: every name declared in `variables`, plus the names Volcano detects in its source that the project defines. 
+    attr_accessor :variable_scope
+
+    # Project variable names this function requires, on top of the ones detected in its source. Declare a name here when the function reads it through a computed key, which detection cannot see, or when the function must not deploy without it: a declared name the project does not define fails the apply, while a detected name it does not define is ignored. Only used when `variable_scope` is `scoped`. 
+    attr_accessor :variables
+
+    attr_accessor :invocation_mode
+
+    attr_accessor :http_auth_mode
+
+    # OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function
+    attr_accessor :openapi_spec
+
     attr_accessor :schedulers
+
+    class EnumAttributeValidator
+      attr_reader :datatype
+      attr_reader :allowable_values
+
+      def initialize(datatype, allowable_values)
+        @allowable_values = allowable_values.map do |value|
+          case datatype.to_s
+          when /Integer/i
+            value.to_i
+          when /Float/i
+            value.to_f
+          else
+            value
+          end
+        end
+      end
+
+      def valid?(value)
+        !value || allowable_values.include?(value)
+      end
+    end
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'name' => :'name',
+        :'kind' => :'kind',
         :'public' => :'public',
+        :'variable_scope' => :'variable_scope',
+        :'variables' => :'variables',
+        :'invocation_mode' => :'invocation_mode',
+        :'http_auth_mode' => :'http_auth_mode',
+        :'openapi_spec' => :'openapi_spec',
         :'schedulers' => :'schedulers'
       }
     end
@@ -46,7 +89,13 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'name' => :'String',
+        :'kind' => :'FunctionKind',
         :'public' => :'Boolean',
+        :'variable_scope' => :'String',
+        :'variables' => :'Array<String>',
+        :'invocation_mode' => :'FunctionInvocationMode',
+        :'http_auth_mode' => :'FunctionHTTPAuthMode',
+        :'openapi_spec' => :'Hash<String, Object>',
         :'schedulers' => :'Array<ProjectConfigScheduler>'
       }
     end
@@ -54,6 +103,7 @@ module Volcano::Generated
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'openapi_spec',
       ])
     end
 
@@ -79,8 +129,38 @@ module Volcano::Generated
         self.name = nil
       end
 
+      if attributes.key?(:'kind')
+        self.kind = attributes[:'kind']
+      else
+        self.kind = 'standard'
+      end
+
       if attributes.key?(:'public')
         self.public = attributes[:'public']
+      end
+
+      if attributes.key?(:'variable_scope')
+        self.variable_scope = attributes[:'variable_scope']
+      end
+
+      if attributes.key?(:'variables')
+        if (value = attributes[:'variables']).is_a?(Array)
+          self.variables = value
+        end
+      end
+
+      if attributes.key?(:'invocation_mode')
+        self.invocation_mode = attributes[:'invocation_mode']
+      end
+
+      if attributes.key?(:'http_auth_mode')
+        self.http_auth_mode = attributes[:'http_auth_mode']
+      end
+
+      if attributes.key?(:'openapi_spec')
+        if (value = attributes[:'openapi_spec']).is_a?(Hash) || value.nil?
+          self.openapi_spec = value
+        end
       end
 
       if attributes.key?(:'schedulers')
@@ -112,6 +192,8 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @name.nil?
       return false if @name.to_s.length < 1
+      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "scoped"])
+      return false unless variable_scope_validator.valid?(@variable_scope)
       true
     end
 
@@ -129,13 +211,29 @@ module Volcano::Generated
       @name = name
     end
 
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] variable_scope Object to be assigned
+    def variable_scope=(variable_scope)
+      validator = EnumAttributeValidator.new('String', ["all", "scoped"])
+      unless validator.valid?(variable_scope)
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+      end
+      @variable_scope = variable_scope
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
           name == o.name &&
+          kind == o.kind &&
           public == o.public &&
+          variable_scope == o.variable_scope &&
+          variables == o.variables &&
+          invocation_mode == o.invocation_mode &&
+          http_auth_mode == o.http_auth_mode &&
+          openapi_spec == o.openapi_spec &&
           schedulers == o.schedulers
     end
 
@@ -148,7 +246,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, public, schedulers].hash
+      [name, kind, public, variable_scope, variables, invocation_mode, http_auth_mode, openapi_spec, schedulers].hash
     end
 
     # Builds the object from hash

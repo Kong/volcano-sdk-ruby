@@ -20,41 +20,50 @@ module Volcano
 
     NETWORK_ERRORS = [IOError, SystemCallError, SocketError, Timeout::Error].freeze
 
-    module_function
-
-    def invoke
+    def self.invoke
       yield
-    rescue *NETWORK_ERRORS => e
+    rescue IOError, SystemCallError, SocketError, Timeout::Error => e
       raise Error::TransportError, e.message, cause: e
     end
 
-    def body(response, expected_status)
+    def self.body(response, expected_status)
       return response.body if response.status == expected_status
 
       raise response_error(response)
     end
 
-    def response_error(response)
+    def self.response_error(response)
+      # @type var payload: Hash[String, Object?]
       payload = response.body.is_a?(Hash) ? response.body : {}
       retry_after = integer_header(response.headers, 'Retry-After') if response.status == 429
       error_type(response.status).new(
-        payload['error'] || payload['message'] || 'Volcano request failed',
+        error_message(payload),
         status: response.status,
         code: payload['code']&.to_s,
         retry_after: retry_after
       )
     end
 
-    def error_type(status)
+    def self.error_message(payload)
+      error = payload['error']
+      return error if error.is_a?(String)
+
+      message = payload['message']
+      message.is_a?(String) ? message : 'Volcano request failed'
+    end
+
+    def self.error_type(status)
       ERROR_TYPES.fetch(status) do
         status.between?(500, 599) ? Error::ServerError : Error::VolcanoError
       end
     end
 
-    def integer_header(headers, name)
+    def self.integer_header(headers, name)
       value = headers&.find { |key, _| key.casecmp?(name) }&.last
       Integer(value, exception: false)
     end
     private_class_method :error_type, :integer_header, :response_error
   end
 end
+
+require_relative 'transport_json'

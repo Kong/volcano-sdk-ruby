@@ -22,6 +22,9 @@ module Volcano::Generated
 
     attr_accessor :name
 
+    # Which kind of function this deployment belongs to. Both kinds appear in this feed under `type: function`, because a deployment means the same thing for either, so this is what tells them apart. Absent when `type` is `frontend`. 
+    attr_accessor :kind
+
     class EnumAttributeValidator
       attr_reader :datatype
       attr_reader :allowable_values
@@ -49,7 +52,8 @@ module Volcano::Generated
       {
         :'type' => :'type',
         :'id' => :'id',
-        :'name' => :'name'
+        :'name' => :'name',
+        :'kind' => :'kind'
       }
     end
 
@@ -68,7 +72,8 @@ module Volcano::Generated
       {
         :'type' => :'String',
         :'id' => :'String',
-        :'name' => :'String'
+        :'name' => :'String',
+        :'kind' => :'FunctionKind'
       }
     end
 
@@ -110,6 +115,10 @@ module Volcano::Generated
         self.name = attributes[:'name']
       else
         self.name = nil
+      end
+
+      if attributes.key?(:'kind')
+        self.kind = attributes[:'kind']
       end
     end
 
@@ -182,7 +191,8 @@ module Volcano::Generated
       self.class == o.class &&
           type == o.type &&
           id == o.id &&
-          name == o.name
+          name == o.name &&
+          kind == o.kind
     end
 
     # @see the `==` method
@@ -194,7 +204,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [type, id, name].hash
+      [type, id, name, kind].hash
     end
 
     # Builds the object from hash

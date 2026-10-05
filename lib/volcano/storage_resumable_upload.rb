@@ -30,7 +30,7 @@ module Volcano
     def upload_session_parts(path, source, session, total_size, on_progress)
       uploaded = 0
       session.total_parts.times do |part_index|
-        part = source.read(session.part_size)
+        part = source.read(session.part_size) || raise(IOError, 'upload source ended before completion')
         upload_part(
           path,
           session_id: session.session_id,
@@ -64,9 +64,20 @@ module Volcano
     def remaining_upload_bytes(source)
       return unless source.respond_to?(:size) && source.respond_to?(:pos)
 
-      source.size - source.pos
+      dimensions = upload_source_dimensions(source)
+      return unless dimensions
+
+      dimensions.fetch(0) - dimensions.fetch(1)
     rescue IOError, SystemCallError
       nil
+    end
+
+    def upload_source_dimensions(source)
+      size = source.method(:size).call
+      position = source.method(:pos).call
+      return unless size.is_a?(Integer) && position.is_a?(Integer)
+
+      [size, position]
     end
 
     def with_spooled_upload_source(source)

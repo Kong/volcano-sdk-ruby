@@ -1,0 +1,475 @@
+# Changelog
+
+## [0.32.7](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.6...v0.32.7) (2026-09-28)
+
+
+### Bug Fixes
+
+* **api:** accept public project plan names ([#320](https://github.com/Kong/volcano-sdk-ruby/issues/320)) ([224ae70](https://github.com/Kong/volcano-sdk-ruby/commit/224ae70930a2bbd453aef27c269ff363514eb25d))
+
+## [0.32.6](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.5...v0.32.6) (2026-09-25)
+
+
+### Bug Fixes
+
+* **realtime:** use HTTP/1.1 for WebSocket connections ([#318](https://github.com/Kong/volcano-sdk-ruby/issues/318)) ([c6aaa5c](https://github.com/Kong/volcano-sdk-ruby/commit/c6aaa5cb92385736ad1c2af681139422e3818b95))
+
+## [0.32.5](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.4...v0.32.5) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** validate core JSON transport responses ([#305](https://github.com/Kong/volcano-sdk-ruby/issues/305)) ([167fdce](https://github.com/Kong/volcano-sdk-ruby/commit/167fdcec8204e9719cfb1952cc3c20f2bd33958d))
+
+## [0.32.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.3...v0.32.4) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** validate storage object metadata as JSON ([#303](https://github.com/Kong/volcano-sdk-ruby/issues/303)) ([553921b](https://github.com/Kong/volcano-sdk-ruby/commit/553921b9f2403b4fb909ce76bab12274f67bd909))
+
+## [0.32.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.2...v0.32.3) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** snapshot durable request and result values ([#301](https://github.com/Kong/volcano-sdk-ruby/issues/301)) ([fe6583e](https://github.com/Kong/volcano-sdk-ruby/commit/fe6583e6cfcca3cfc9af4849e625065f013a7e01))
+
+## [0.32.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.1...v0.32.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ruby:** reject cyclic request snapshots ([#298](https://github.com/Kong/volcano-sdk-ruby/issues/298)) ([3204447](https://github.com/Kong/volcano-sdk-ruby/commit/3204447b68e15f4707be32acd676464b4e600ce1))
+
+## [0.32.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.0...v0.32.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **realtime:** validate callbacks and type event payloads ([#294](https://github.com/Kong/volcano-sdk-ruby/issues/294)) ([c023cc7](https://github.com/Kong/volcano-sdk-ruby/commit/c023cc70025cd91fb33fdf7c192f02cc3cd0e01f))
+
+## [0.32.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.31.0...v0.32.0) (2026-09-23)
+
+
+### Features
+
+* **realtime:** type and validate the realtime subsystem ([#287](https://github.com/Kong/volcano-sdk-ruby/issues/287)) ([05737e2](https://github.com/Kong/volcano-sdk-ruby/commit/05737e2b2827d1c50ea247adf74d42603043c07d))
+
+## [0.31.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.30.0...v0.31.0) (2026-09-23)
+
+
+### Features
+
+* **auth:** type credential and recovery flows ([#284](https://github.com/Kong/volcano-sdk-ruby/issues/284)) ([ad71460](https://github.com/Kong/volcano-sdk-ruby/commit/ad71460ea245c8e6acc2c0931ba182c956755cb3))
+* **storage:** type and validate storage subsystem ([#286](https://github.com/Kong/volcano-sdk-ruby/issues/286)) ([6efd1d3](https://github.com/Kong/volcano-sdk-ruby/commit/6efd1d313b0c7dec7bf7747809fd5f87d9d99360))
+
+## [0.30.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.29.0...v0.30.0) (2026-09-23)
+
+
+### Features
+
+* **auth:** type OAuth and hosted sign-in facade ([#282](https://github.com/Kong/volcano-sdk-ruby/issues/282)) ([ba85565](https://github.com/Kong/volcano-sdk-ruby/commit/ba85565e9873dd014ee6020759655792d7215385))
+
+## [0.29.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.28.0...v0.29.0) (2026-09-23)
+
+
+### Features
+
+* **locks:** type facade and validate responses ([#275](https://github.com/Kong/volcano-sdk-ruby/issues/275)) ([854bc1f](https://github.com/Kong/volcano-sdk-ruby/commit/854bc1f945a99ba4353146081460a975bde1ac82))
+
+## [0.28.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.27.0...v0.28.0) (2026-09-23)
+
+
+### Features
+
+* **functions:** type credential-scoped resolution cache ([#273](https://github.com/Kong/volcano-sdk-ruby/issues/273)) ([fab932c](https://github.com/Kong/volcano-sdk-ruby/commit/fab932c8eaa1c436e5f23f4f269130369028b22f))
+* **locks:** type guarded lease lifecycle ([#272](https://github.com/Kong/volcano-sdk-ruby/issues/272)) ([d82d464](https://github.com/Kong/volcano-sdk-ruby/commit/d82d464c432d50793403a2baa8c089cad9deebe8))
+
+## [0.27.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.26.0...v0.27.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish storage public URL signature ([#261](https://github.com/Kong/volcano-sdk-ruby/issues/261)) ([7d82506](https://github.com/Kong/volcano-sdk-ruby/commit/7d82506b63e0e3949c84970780e3fde782ce27f2))
+
+## [0.26.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.25.0...v0.26.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish realtime Postgres change signature ([#258](https://github.com/Kong/volcano-sdk-ruby/issues/258)) ([0c2fe39](https://github.com/Kong/volcano-sdk-ruby/commit/0c2fe393c64dfb5329dbac7deb8bd58874f0f236))
+
+## [0.25.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.24.0...v0.25.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish realtime context RBS records ([#256](https://github.com/Kong/volcano-sdk-ruby/issues/256)) ([880e1be](https://github.com/Kong/volcano-sdk-ruby/commit/880e1bec41aea858bebebbb4f5c680d7e78f0490))
+
+## [0.24.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.23.0...v0.24.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish durable execution RBS records ([#254](https://github.com/Kong/volcano-sdk-ruby/issues/254)) ([f7f3166](https://github.com/Kong/volcano-sdk-ruby/commit/f7f3166f92d57db22a9f2bb86971890b95c2fa99))
+
+## [0.23.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.22.0...v0.23.0) (2026-09-23)
+
+
+### Features
+
+* **types:** publish User RBS signature ([#252](https://github.com/Kong/volcano-sdk-ruby/issues/252)) ([251ce38](https://github.com/Kong/volcano-sdk-ruby/commit/251ce381053c4215c9d1058f03e2d3ffb45ba011))
+
+## [0.22.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.21.0...v0.22.0) (2026-09-23)
+
+
+### Features
+
+* **types:** describe auth session records in RBS ([#250](https://github.com/Kong/volcano-sdk-ruby/issues/250)) ([7a00be7](https://github.com/Kong/volcano-sdk-ruby/commit/7a00be75388cdae4309acaa9a435568d86fe9b9f))
+
+## [0.21.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.20.0...v0.21.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe storage records in RBS ([#248](https://github.com/Kong/volcano-sdk-ruby/issues/248)) ([d2b9c38](https://github.com/Kong/volcano-sdk-ruby/commit/d2b9c38f6d8d581b34dd53a4d19ff8b41f2caf82))
+
+## [0.20.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.19.0...v0.20.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe upload session status in RBS ([#246](https://github.com/Kong/volcano-sdk-ruby/issues/246)) ([51ef7fb](https://github.com/Kong/volcano-sdk-ruby/commit/51ef7fbc2c3836986e08da67d9ccc689e619c614))
+
+## [0.19.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.18.0...v0.19.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe OAuth response records in RBS ([#243](https://github.com/Kong/volcano-sdk-ruby/issues/243)) ([5514fe3](https://github.com/Kong/volcano-sdk-ruby/commit/5514fe301ab2d08a1da620b914287ab3a08d5bab))
+* **types:** describe upload session records in RBS ([#245](https://github.com/Kong/volcano-sdk-ruby/issues/245)) ([7bfdbec](https://github.com/Kong/volcano-sdk-ruby/commit/7bfdbec62587254c9263e26ce72d9bde27c1d55f))
+
+## [0.18.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.17.0...v0.18.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe log response records in RBS ([#241](https://github.com/Kong/volcano-sdk-ruby/issues/241)) ([697cd73](https://github.com/Kong/volcano-sdk-ruby/commit/697cd73b7843efb3d11230b4283bdfe07e1f4d93))
+
+## [0.17.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.16.0...v0.17.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe function response records in RBS ([#239](https://github.com/Kong/volcano-sdk-ruby/issues/239)) ([875aaec](https://github.com/Kong/volcano-sdk-ruby/commit/875aaec62c32035d02f7ec94a60455bc473d3b6e))
+
+## [0.16.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.15.0...v0.16.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe lock lease and state records ([#237](https://github.com/Kong/volcano-sdk-ruby/issues/237)) ([7a27a64](https://github.com/Kong/volcano-sdk-ruby/commit/7a27a646484f49d2c29e2e4eb9d65a94e1cd1044))
+
+## [0.15.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.14.0...v0.15.0) (2026-09-22)
+
+
+### Features
+
+* **types:** describe email change result record ([#235](https://github.com/Kong/volcano-sdk-ruby/issues/235)) ([22e6b98](https://github.com/Kong/volcano-sdk-ruby/commit/22e6b98224180dc1a7d8597dc8374e69cfcdfe2d))
+
+## [0.14.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.13.0...v0.14.0) (2026-09-22)
+
+
+### Features
+
+* **ruby:** type complete Data record surface ([#233](https://github.com/Kong/volcano-sdk-ruby/issues/233)) ([41b0ae0](https://github.com/Kong/volcano-sdk-ruby/commit/41b0ae0d9a8503f1779d5eecab4fd80b2fbaf980))
+
+## [0.13.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.12.0...v0.13.0) (2026-09-22)
+
+
+### Features
+
+* type Ruby database connection strings ([#229](https://github.com/Kong/volcano-sdk-ruby/issues/229)) ([f0103dc](https://github.com/Kong/volcano-sdk-ruby/commit/f0103dcd4b118c1c02aa59278f6238c34bcf8108))
+
+## [0.12.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.11.0...v0.12.0) (2026-09-22)
+
+
+### Features
+
+* check Ruby error signatures with Steep ([#227](https://github.com/Kong/volcano-sdk-ruby/issues/227)) ([8a3664d](https://github.com/Kong/volcano-sdk-ruby/commit/8a3664dee144fc4a630daeecd669fa76e2d12fb2))
+
+## [0.11.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.4...v0.11.0) (2026-09-22)
+
+
+### Features
+
+* ship validated RBS signatures for SDK errors ([#225](https://github.com/Kong/volcano-sdk-ruby/issues/225)) ([fe8a4ff](https://github.com/Kong/volcano-sdk-ruby/commit/fe8a4ff729af6e2b0373d3635a39316bc782ced6))
+
+## [0.10.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.3...v0.10.4) (2026-09-22)
+
+
+### Bug Fixes
+
+* reject incomplete durable execution pages ([#218](https://github.com/Kong/volcano-sdk-ruby/issues/218)) ([3cf8515](https://github.com/Kong/volcano-sdk-ruby/commit/3cf85157d5d1ff32e05e5eba756665618d519071))
+
+## [0.10.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.2...v0.10.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* **openapi:** preserve nested unions in the private generated namespace ([#188](https://github.com/Kong/volcano-sdk-ruby/issues/188)) ([bd9d8ef](https://github.com/Kong/volcano-sdk-ruby/commit/bd9d8ef65b7ff325080a6cc5651a3f2deceb1417))
+
+## [0.10.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.1...v0.10.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* **auth:** atomically record rejected refresh transitions ([#185](https://github.com/Kong/volcano-sdk-ruby/issues/185)) ([3a4144d](https://github.com/Kong/volcano-sdk-ruby/commit/3a4144dbabf5ca9eb6398a1da87931e4b3b1cdab))
+
+## [0.10.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.10.0...v0.10.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **realtime:** unwrap typed command replies in Ruby ([#159](https://github.com/Kong/volcano-sdk-ruby/issues/159)) ([15a880e](https://github.com/Kong/volcano-sdk-ruby/commit/15a880eff409368ddb01873d7c321ce2d5a03903))
+
+## [0.10.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.4...v0.10.0) (2026-09-19)
+
+
+### Features
+
+* **durable:** start and follow durable executions ([#118](https://github.com/Kong/volcano-sdk-ruby/issues/118)) ([a47c78d](https://github.com/Kong/volcano-sdk-ruby/commit/a47c78d5986a574e720d0d6f391d0dc1cfa0cdf0))
+
+## [0.9.4](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.3...v0.9.4) (2026-09-18)
+
+
+### Bug Fixes
+
+* **functions:** preserve cached resolution error metadata ([#156](https://github.com/Kong/volcano-sdk-ruby/issues/156)) ([d69fa62](https://github.com/Kong/volcano-sdk-ruby/commit/d69fa62e24966481aa6c982f7c0720f9c5f00c87))
+
+## [0.9.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.2...v0.9.3) (2026-09-18)
+
+
+### Bug Fixes
+
+* **functions:** recover rejected user sessions before dispatch ([#153](https://github.com/Kong/volcano-sdk-ruby/issues/153)) ([ac19960](https://github.com/Kong/volcano-sdk-ruby/commit/ac19960aedf137b8efe815d1f90b84c21f99c86a))
+
+## [0.9.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.1...v0.9.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* **auth:** recover rejected authenticated facade requests ([754f5a8](https://github.com/Kong/volcano-sdk-ruby/commit/754f5a8cb18300e79467a3c80310dd30272585fc))
+* **auth:** recover rejected authenticated facade requests ([d5488e8](https://github.com/Kong/volcano-sdk-ruby/commit/d5488e818b444b90d007a4549fbcae665f324966))
+* **auth:** validate ownership after response conversion ([38e61c5](https://github.com/Kong/volcano-sdk-ruby/commit/38e61c52e3abc053d240441d175b269cc5f2b28d))
+
+## [0.9.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.9.0...v0.9.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* **auth:** coordinate revocation per captured session ([#141](https://github.com/Kong/volcano-sdk-ruby/issues/141)) ([bf4847d](https://github.com/Kong/volcano-sdk-ruby/commit/bf4847d63f16ecd05c2030e3fc2482f15742853c))
+
+## [0.9.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.8.0...v0.9.0) (2026-09-18)
+
+
+### Features
+
+* **locks:** add recoverable acquisition with caller-owned tokens ([#140](https://github.com/Kong/volcano-sdk-ruby/issues/140)) ([794ac9b](https://github.com/Kong/volcano-sdk-ruby/commit/794ac9bddda42fe94e0b10cbc57d54d919a31cdd))
+
+## [0.8.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.2...v0.8.0) (2026-09-18)
+
+
+### Features
+
+* **auth:** add token bootstrap with server session continuity ([#138](https://github.com/Kong/volcano-sdk-ruby/issues/138)) ([6fb69b5](https://github.com/Kong/volcano-sdk-ruby/commit/6fb69b5f54f09444c4a520663f27c16ab5603752))
+
+## [0.7.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.1...v0.7.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **auth:** refresh rejected profile requests within their session ([#136](https://github.com/Kong/volcano-sdk-ruby/issues/136)) ([cccd14e](https://github.com/Kong/volcano-sdk-ruby/commit/cccd14eda37478ddffd3b8b8cbb21d41347ed430))
+
+## [0.7.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.7.0...v0.7.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **storage:** refresh rejected sessions and replay bounded requests ([#133](https://github.com/Kong/volcano-sdk-ruby/issues/133)) ([94b02a1](https://github.com/Kong/volcano-sdk-ruby/commit/94b02a114498f83e147a06eff2e3e86ebaca4f7f))
+
+## [0.7.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.6.0...v0.7.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** synchronize session user after profile operations ([#131](https://github.com/Kong/volcano-sdk-ruby/issues/131)) ([88b1f50](https://github.com/Kong/volcano-sdk-ruby/commit/88b1f5087ae6f49ea49a42e5f23ad632bbb9ea79))
+
+## [0.6.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.3...v0.6.0) (2026-09-17)
+
+
+### Features
+
+* **auth:** retain a local user snapshot in sessions ([#114](https://github.com/Kong/volcano-sdk-ruby/issues/114)) ([d8d02c5](https://github.com/Kong/volcano-sdk-ruby/commit/d8d02c58ea98516f1a56960ed4eff20a7e3be1e8))
+
+## [0.5.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.2...v0.5.3) (2026-09-17)
+
+
+### Bug Fixes
+
+* declare base64 runtime dependency ([#128](https://github.com/Kong/volcano-sdk-ruby/issues/128)) ([9516bdd](https://github.com/Kong/volcano-sdk-ruby/commit/9516bdd49b1d93bc6c797ccb39839b80cd3d2e2d))
+
+## [0.5.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.1...v0.5.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **functions:** retry a stale mapping on the dispatch signal ([#121](https://github.com/Kong/volcano-sdk-ruby/issues/121)) ([ae923ff](https://github.com/Kong/volcano-sdk-ruby/commit/ae923ff391966bd992057e5da6715940d1989a24))
+
+## [0.5.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.5.0...v0.5.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **realtime:** flush commands before waiting for replies ([#123](https://github.com/Kong/volcano-sdk-ruby/issues/123)) ([8797d18](https://github.com/Kong/volcano-sdk-ruby/commit/8797d18afb9c5614292b2d23f3dbdf9caed0c77e))
+
+## [0.5.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.4.0...v0.5.0) (2026-09-15)
+
+
+### Features
+
+* **functions:** cache name resolution and invoke the resolved endpoint ([#117](https://github.com/Kong/volcano-sdk-ruby/issues/117)) ([ed3f786](https://github.com/Kong/volcano-sdk-ruby/commit/ed3f786a4bcee902d1a3b6a4a9423dfa4524e6d4))
+
+## [0.4.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.3...v0.4.0) (2026-09-14)
+
+
+### Features
+
+* **projects:** add list metadata expansions ([#60](https://github.com/Kong/volcano-sdk-ruby/issues/60)) ([b5148f5](https://github.com/Kong/volcano-sdk-ruby/commit/b5148f561b80b9c6522c6eea5f28d0d3ac37a9c2))
+
+## [0.3.3](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.2...v0.3.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* **functions:** preserve JSON values and text responses ([#113](https://github.com/Kong/volcano-sdk-ruby/issues/113)) ([0b41f40](https://github.com/Kong/volcano-sdk-ruby/commit/0b41f40d658ca4c2b319e15d58e966c6d8f73041))
+
+## [0.3.2](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.1...v0.3.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **logs:** refresh rejected session credentials once ([#111](https://github.com/Kong/volcano-sdk-ruby/issues/111)) ([ed9a5a5](https://github.com/Kong/volcano-sdk-ruby/commit/ed9a5a51b93a100e1da199e59acd773b998922e1))
+
+## [0.3.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.3.0...v0.3.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* **database:** refresh rejected mutation credentials once ([#108](https://github.com/Kong/volcano-sdk-ruby/issues/108)) ([55c581c](https://github.com/Kong/volcano-sdk-ruby/commit/55c581cc01fac952ec020f42655340ed5ed5b0b0))
+
+## [0.3.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.2.0...v0.3.0) (2026-09-11)
+
+
+### Features
+
+* **auth:** optionally sign in after signup ([#107](https://github.com/Kong/volcano-sdk-ruby/issues/107)) ([ea42295](https://github.com/Kong/volcano-sdk-ruby/commit/ea4229504fb09a10511f85b32fa45bf0406d111d))
+
+## [0.2.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.1.0...v0.2.0) (2026-09-11)
+
+
+### Features
+
+* **database:** refresh expired sessions for select queries ([#96](https://github.com/Kong/volcano-sdk-ruby/issues/96)) ([2c5d6ea](https://github.com/Kong/volcano-sdk-ruby/commit/2c5d6ea4354027629b69c3cd984a7e4deb3d6c09))
+
+## 0.1.0 (2026-09-09)
+
+
+### Features
+
+* **auth:** add auth state subscriptions ([#33](https://github.com/Kong/volcano-sdk-ruby/issues/33)) ([14b96c4](https://github.com/Kong/volcano-sdk-ruby/commit/14b96c464aa7a9bd3373ec24da44d767df52f2f0))
+* **auth:** add hosted auth URL builder ([#36](https://github.com/Kong/volcano-sdk-ruby/issues/36)) ([ea7953d](https://github.com/Kong/volcano-sdk-ruby/commit/ea7953d35b70ae2b06a95eef9a00915436a51195))
+* **auth:** add server-validated current user ([#10](https://github.com/Kong/volcano-sdk-ruby/issues/10)) ([c2ebf48](https://github.com/Kong/volcano-sdk-ruby/commit/c2ebf48aed3193116831432ad0b977aad703e01b))
+* **auth:** add session-less sign-up ([#9](https://github.com/Kong/volcano-sdk-ruby/issues/9)) ([a667003](https://github.com/Kong/volcano-sdk-ruby/commit/a667003d7598be5dfd87827b3d4e33ce129794bb))
+* **auth:** adopt sessions locally ([#4](https://github.com/Kong/volcano-sdk-ruby/issues/4)) ([436e1bb](https://github.com/Kong/volcano-sdk-ruby/commit/436e1bbc975b6a304603446030eb6d7a5c4d3e7a))
+* **auth:** call OAuth provider APIs ([#31](https://github.com/Kong/volcano-sdk-ruby/issues/31)) ([426fc5f](https://github.com/Kong/volcano-sdk-ruby/commit/426fc5f8a04564595a6b2c5c56e11c2531a6616c))
+* **auth:** cancel email changes ([#21](https://github.com/Kong/volcano-sdk-ruby/issues/21)) ([98b9785](https://github.com/Kong/volcano-sdk-ruby/commit/98b97855965c33dd19b2126b65d8c78fe46334b0))
+* **auth:** confirm email changes ([#22](https://github.com/Kong/volcano-sdk-ruby/issues/22)) ([9832720](https://github.com/Kong/volcano-sdk-ruby/commit/98327200cbeb1004c2841464ce9ee18c7d5f8f1d))
+* **auth:** confirm email tokens ([#16](https://github.com/Kong/volcano-sdk-ruby/issues/16)) ([23f2a82](https://github.com/Kong/volcano-sdk-ruby/commit/23f2a827cb0fba3fb30f3a96fdef85cfeb2f1638))
+* **auth:** convert anonymous accounts ([#19](https://github.com/Kong/volcano-sdk-ruby/issues/19)) ([7e190fd](https://github.com/Kong/volcano-sdk-ruby/commit/7e190fd056c5becf8e6ce07e83429dc198d9be86))
+* **auth:** delete one session ([#24](https://github.com/Kong/volcano-sdk-ruby/issues/24)) ([62039e7](https://github.com/Kong/volcano-sdk-ruby/commit/62039e7deb13fbb21d4285d6972ba7aa48d1422c))
+* **auth:** delete other sessions ([#23](https://github.com/Kong/volcano-sdk-ruby/issues/23)) ([79fa74c](https://github.com/Kong/volcano-sdk-ruby/commit/79fa74c6b742779f1f1e312597933e8311593dcf))
+* **auth:** expose current session ([#3](https://github.com/Kong/volcano-sdk-ruby/issues/3)) ([980ac3f](https://github.com/Kong/volcano-sdk-ruby/commit/980ac3fd51540c43dad6e2931471215dd761fda9))
+* **auth:** expose OAuth token status ([#29](https://github.com/Kong/volcano-sdk-ruby/issues/29)) ([ced74b2](https://github.com/Kong/volcano-sdk-ruby/commit/ced74b214b063ceac0ec56cc6b56f2c3e0e10a73))
+* **auth:** link OAuth providers ([#27](https://github.com/Kong/volcano-sdk-ruby/issues/27)) ([8d35363](https://github.com/Kong/volcano-sdk-ruby/commit/8d35363a090708fc08eaa105e51f551cbf76fa70))
+* **auth:** list linked OAuth providers ([#26](https://github.com/Kong/volcano-sdk-ruby/issues/26)) ([1a50663](https://github.com/Kong/volcano-sdk-ruby/commit/1a50663332e6f915dfdacbe16d56fd84108ca094))
+* **auth:** list sessions with offset pagination ([#25](https://github.com/Kong/volcano-sdk-ruby/issues/25)) ([3a548fa](https://github.com/Kong/volcano-sdk-ruby/commit/3a548fae63c99e7cc1588a20a561035105bbf327))
+* **auth:** refresh current sessions ([#6](https://github.com/Kong/volcano-sdk-ruby/issues/6)) ([dec8f58](https://github.com/Kong/volcano-sdk-ruby/commit/dec8f58b2c5ea062345decd2e171315b35d40b2d))
+* **auth:** refresh OAuth provider tokens ([#30](https://github.com/Kong/volcano-sdk-ruby/issues/30)) ([1007ee4](https://github.com/Kong/volcano-sdk-ruby/commit/1007ee467c20dc647398e43ca5bf9e1edb3733df))
+* **auth:** request email changes ([#20](https://github.com/Kong/volcano-sdk-ruby/issues/20)) ([eb35d20](https://github.com/Kong/volcano-sdk-ruby/commit/eb35d20c76c1d086e6f8e81dd93f0a19491009a7))
+* **auth:** request password reset emails ([#14](https://github.com/Kong/volcano-sdk-ruby/issues/14)) ([9d9b558](https://github.com/Kong/volcano-sdk-ruby/commit/9d9b55805df66d37968b9b1e5a8f1518eabb46c4))
+* **auth:** resend confirmation emails ([#17](https://github.com/Kong/volcano-sdk-ruby/issues/17)) ([201a5b9](https://github.com/Kong/volcano-sdk-ruby/commit/201a5b9e9c98fd47db6f591c6b81efd8b6a9fe23))
+* **auth:** reset passwords with recovery tokens ([#15](https://github.com/Kong/volcano-sdk-ruby/issues/15)) ([9ada2bb](https://github.com/Kong/volcano-sdk-ruby/commit/9ada2bb4f9ed25a33f2d36e3da74c931f1f30526))
+* **auth:** sign in anonymously ([#18](https://github.com/Kong/volcano-sdk-ruby/issues/18)) ([b7d2ed1](https://github.com/Kong/volcano-sdk-ruby/commit/b7d2ed1165e393fdb5562520073c49ff8b0d19af))
+* **auth:** sign out current sessions ([#7](https://github.com/Kong/volcano-sdk-ruby/issues/7)) ([2007296](https://github.com/Kong/volcano-sdk-ruby/commit/2007296af3bba82d779a22e2a35949f72f15a15d))
+* **auth:** start OAuth sign-in ([#32](https://github.com/Kong/volcano-sdk-ruby/issues/32)) ([e0fff74](https://github.com/Kong/volcano-sdk-ruby/commit/e0fff745e7a59a1a5443b20d6b1e14040f7c8ded))
+* **auth:** unlink OAuth providers ([#28](https://github.com/Kong/volcano-sdk-ruby/issues/28)) ([9316242](https://github.com/Kong/volcano-sdk-ruby/commit/9316242b207a1cc89742e55b427be2e21d1963a5))
+* **auth:** update the current user ([#13](https://github.com/Kong/volcano-sdk-ruby/issues/13)) ([2088d62](https://github.com/Kong/volcano-sdk-ruby/commit/2088d624cc7ca95b2345289c64f64c15c899f80f))
+* **auth:** validate hosted session adoption ([#37](https://github.com/Kong/volcano-sdk-ruby/issues/37)) ([c9ec799](https://github.com/Kong/volcano-sdk-ruby/commit/c9ec7990e1b4064db23e996899d56066f004590b))
+* **database:** add comparison filters ([#38](https://github.com/Kong/volcano-sdk-ruby/issues/38)) ([60828ba](https://github.com/Kong/volcano-sdk-ruby/commit/60828bab1a628b9ed592f463019c12d59259e786))
+* **database:** add connection string helper ([#76](https://github.com/Kong/volcano-sdk-ruby/issues/76)) ([c53ea5f](https://github.com/Kong/volcano-sdk-ruby/commit/c53ea5f7dd21bda42e7b15f80b218203cd201593))
+* **database:** add filtered deletes ([#44](https://github.com/Kong/volcano-sdk-ruby/issues/44)) ([76ea6d1](https://github.com/Kong/volcano-sdk-ruby/commit/76ea6d1c802d444be66e62f3e95326402308ebec))
+* **database:** add filtered updates ([#42](https://github.com/Kong/volcano-sdk-ruby/issues/42)) ([327e76b](https://github.com/Kong/volcano-sdk-ruby/commit/327e76bbce3c117395d136784e9a1a32fe693382))
+* **database:** add pattern and membership filters ([#40](https://github.com/Kong/volcano-sdk-ruby/issues/40)) ([4d71069](https://github.com/Kong/volcano-sdk-ruby/commit/4d71069e9b8bd37ef010663397f8937c7fc34b88))
+* **database:** add query modifiers ([#39](https://github.com/Kong/volcano-sdk-ruby/issues/39)) ([25f0793](https://github.com/Kong/volcano-sdk-ruby/commit/25f0793891d1707e3976ff85a55edc4093913f00))
+* **database:** add row inserts ([#41](https://github.com/Kong/volcano-sdk-ruby/issues/41)) ([f4bdc94](https://github.com/Kong/volcano-sdk-ruby/commit/f4bdc94083e88338099cb4376288c8584bdceed9))
+* force release distributed locks ([#63](https://github.com/Kong/volcano-sdk-ruby/issues/63)) ([b0c8e92](https://github.com/Kong/volcano-sdk-ruby/commit/b0c8e92e12ba6cd75c795a8e9ce4d433d4b2462d))
+* **functions:** invoke functions by name ([#65](https://github.com/Kong/volcano-sdk-ruby/issues/65)) ([b7e9f62](https://github.com/Kong/volcano-sdk-ruby/commit/b7e9f62e4a952056f081cc1eba17d8617cbb6646))
+* inspect distributed lock state ([#61](https://github.com/Kong/volcano-sdk-ruby/issues/61)) ([87dc101](https://github.com/Kong/volcano-sdk-ruby/commit/87dc101323484e4427805b3781e69a58afd7d825))
+* **locks:** add block-scoped auto renewal ([#71](https://github.com/Kong/volcano-sdk-ruby/issues/71)) ([df218a2](https://github.com/Kong/volcano-sdk-ruby/commit/df218a220cc919fd2c6775593de142d3e721e456))
+* **logs:** read project logs ([#66](https://github.com/Kong/volcano-sdk-ruby/issues/66)) ([f8e58c7](https://github.com/Kong/volcano-sdk-ruby/commit/f8e58c7d4b4f8aabbf77f601aae0e70000df2cce))
+* **openapi:** generate managed auth page clients ([#52](https://github.com/Kong/volcano-sdk-ruby/issues/52)) ([731fd2f](https://github.com/Kong/volcano-sdk-ruby/commit/731fd2fa83eeb7f332295580eac2c9a9b0880f09))
+* **realtime:** add connection callbacks ([#69](https://github.com/Kong/volcano-sdk-ruby/issues/69)) ([c829077](https://github.com/Kong/volcano-sdk-ruby/commit/c829077f1b088fb631ed470c707e8db37b3501aa))
+* **realtime:** add presence channels ([#70](https://github.com/Kong/volcano-sdk-ruby/issues/70)) ([0598bb8](https://github.com/Kong/volcano-sdk-ruby/commit/0598bb82add56e8bd5225b1a04fd04f8face0ee3))
+* **realtime:** batch lightweight row fetches ([#74](https://github.com/Kong/volcano-sdk-ruby/issues/74)) ([d4790f9](https://github.com/Kong/volcano-sdk-ruby/commit/d4790f9af3dc6e38c0954a3617927bae78466810))
+* **realtime:** configure row fetch batching ([#75](https://github.com/Kong/volcano-sdk-ruby/issues/75)) ([5425a8b](https://github.com/Kong/volcano-sdk-ruby/commit/5425a8b8de672f684407048c1cddca218d5f2af1))
+* **realtime:** expand lightweight Postgres changes ([#73](https://github.com/Kong/volcano-sdk-ruby/issues/73)) ([ee0d853](https://github.com/Kong/volcano-sdk-ruby/commit/ee0d853c82ef309979cf06862d0ba6c80bb22d3d))
+* **realtime:** expose channel name ([#68](https://github.com/Kong/volcano-sdk-ruby/issues/68)) ([83a64bf](https://github.com/Kong/volcano-sdk-ruby/commit/83a64bf934ee56ef2efab1352db8b3953d645dad))
+* **realtime:** isolate broadcast generations ([#86](https://github.com/Kong/volcano-sdk-ruby/issues/86)) ([4064529](https://github.com/Kong/volcano-sdk-ruby/commit/4064529cedc231bccf2662fee9c3dff33d7a56e3))
+* **realtime:** manage channel lifecycle ([#67](https://github.com/Kong/volcano-sdk-ruby/issues/67)) ([f6d089d](https://github.com/Kong/volcano-sdk-ruby/commit/f6d089d7e53cb2271b7773cb89c6cb5dfdb013f3))
+* **realtime:** order recovered publications ([#85](https://github.com/Kong/volcano-sdk-ruby/issues/85)) ([7dedc37](https://github.com/Kong/volcano-sdk-ruby/commit/7dedc3796cb6bb78bebac746f9ab94ae2d118c6a))
+* **realtime:** prepare recovery subscriptions ([#84](https://github.com/Kong/volcano-sdk-ruby/issues/84)) ([21bef80](https://github.com/Kong/volcano-sdk-ruby/commit/21bef806898cb6dfc7f65f7cb1412d9d6ea3e754))
+* **realtime:** reconnect active subscriptions ([#79](https://github.com/Kong/volcano-sdk-ruby/issues/79)) ([33a2700](https://github.com/Kong/volcano-sdk-ruby/commit/33a27002af12b1830c7db71f2cfb2c429b90daa8))
+* **realtime:** recover missed broadcasts ([#87](https://github.com/Kong/volcano-sdk-ruby/issues/87)) ([b82fb78](https://github.com/Kong/volcano-sdk-ruby/commit/b82fb7810f189c10a96fcae6d9099e3a41d6a22b))
+* **realtime:** track recoverable stream positions ([#83](https://github.com/Kong/volcano-sdk-ruby/issues/83)) ([2a78152](https://github.com/Kong/volcano-sdk-ruby/commit/2a78152f563faf5c4ee079e4514c249fc095fd8a))
+* renew distributed lock leases ([#62](https://github.com/Kong/volcano-sdk-ruby/issues/62)) ([2a80e4a](https://github.com/Kong/volcano-sdk-ruby/commit/2a80e4aac295f72370050b697377bc7175ae9c56))
+* **sdk:** validate Ruby contract facade ([#1](https://github.com/Kong/volcano-sdk-ruby/issues/1)) ([b63700c](https://github.com/Kong/volcano-sdk-ruby/commit/b63700c8ec2ec63ab712c2dc16dee65ebf0db375))
+* **storage:** abort resumable uploads ([#58](https://github.com/Kong/volcano-sdk-ruby/issues/58)) ([6969d6e](https://github.com/Kong/volcano-sdk-ruby/commit/6969d6e9f776562d33d8a59129dc528308c498c6))
+* **storage:** complete resumable uploads ([#56](https://github.com/Kong/volcano-sdk-ruby/issues/56)) ([6d9a245](https://github.com/Kong/volcano-sdk-ruby/commit/6d9a245ae570c421aae18e7edb3c86eae388abcc))
+* **storage:** construct public object URLs ([#51](https://github.com/Kong/volcano-sdk-ruby/issues/51)) ([4e47047](https://github.com/Kong/volcano-sdk-ruby/commit/4e470479013593a6b8f6c9d50aae5ccd8dc1511a))
+* **storage:** copy bucket objects ([#49](https://github.com/Kong/volcano-sdk-ruby/issues/49)) ([646b9f4](https://github.com/Kong/volcano-sdk-ruby/commit/646b9f497f3335f8864b295c3e5eb0ccd01722aa))
+* **storage:** create resumable upload sessions ([#54](https://github.com/Kong/volcano-sdk-ruby/issues/54)) ([ffa118c](https://github.com/Kong/volcano-sdk-ruby/commit/ffa118c6c256352b45149243460fb0c0438c6ff8))
+* **storage:** inspect resumable upload status ([#57](https://github.com/Kong/volcano-sdk-ruby/issues/57)) ([650d39b](https://github.com/Kong/volcano-sdk-ruby/commit/650d39b27203f247c93f5ad452e5d79b044e3e23))
+* **storage:** list bucket objects ([#46](https://github.com/Kong/volcano-sdk-ruby/issues/46)) ([e4d0920](https://github.com/Kong/volcano-sdk-ruby/commit/e4d092015beff1a5f070c39743637b18c3e68a9e))
+* **storage:** move bucket objects ([#48](https://github.com/Kong/volcano-sdk-ruby/issues/48)) ([4e2ac2b](https://github.com/Kong/volcano-sdk-ruby/commit/4e2ac2bb652d1e81960ac60d764bd8d698cb5eb0))
+* **storage:** orchestrate resumable uploads ([#59](https://github.com/Kong/volcano-sdk-ruby/issues/59)) ([3e76d61](https://github.com/Kong/volcano-sdk-ruby/commit/3e76d61cf7b9bf0046b5b30a878f8c557e8f98e7))
+* **storage:** remove bucket objects ([#47](https://github.com/Kong/volcano-sdk-ruby/issues/47)) ([76286bb](https://github.com/Kong/volcano-sdk-ruby/commit/76286bbeff6793216678436c06259a63003426d3))
+* **storage:** report resumable upload progress ([#64](https://github.com/Kong/volcano-sdk-ruby/issues/64)) ([c92fd78](https://github.com/Kong/volcano-sdk-ruby/commit/c92fd78eb891b5ad1fb3ac2afde315ebabb701bc))
+* **storage:** support partial downloads ([#53](https://github.com/Kong/volcano-sdk-ruby/issues/53)) ([f3f4fac](https://github.com/Kong/volcano-sdk-ruby/commit/f3f4faccf287f68f27b610ecd490498a1614577d))
+* **storage:** support simple-upload content types ([#95](https://github.com/Kong/volcano-sdk-ruby/issues/95)) ([8607f03](https://github.com/Kong/volcano-sdk-ruby/commit/8607f033026add26bd0fea8b65181742b956f47e))
+* **storage:** update object visibility ([#50](https://github.com/Kong/volcano-sdk-ruby/issues/50)) ([8d6c800](https://github.com/Kong/volcano-sdk-ruby/commit/8d6c8005912724f506a4e87b7a725053bbaf14c0))
+* **storage:** upload resumable parts ([#55](https://github.com/Kong/volcano-sdk-ruby/issues/55)) ([85552d6](https://github.com/Kong/volcano-sdk-ruby/commit/85552d6ce1fc6fe93ae9feae5cda94919a5b321d))
+* subscribe to Postgres changes ([#72](https://github.com/Kong/volcano-sdk-ruby/issues/72)) ([5112eaa](https://github.com/Kong/volcano-sdk-ruby/commit/5112eaabf01d2c5d49d096a43c872b5982f34d80))
+
+
+### Bug Fixes
+
+* **auth:** adopt supplied sessions without notifications ([#93](https://github.com/Kong/volcano-sdk-ruby/issues/93)) ([708abbf](https://github.com/Kong/volcano-sdk-ruby/commit/708abbfeccda17ed2c56bd80115e19a6f577adb1))
+* **auth:** harden queued notifications ([#34](https://github.com/Kong/volcano-sdk-ruby/issues/34)) ([b98a03d](https://github.com/Kong/volcano-sdk-ruby/commit/b98a03d01d906295f62531cfdb210aeb30c8066c))
+* **auth:** reject stale password sign-in results ([#94](https://github.com/Kong/volcano-sdk-ruby/issues/94)) ([4fc6be0](https://github.com/Kong/volcano-sdk-ruby/commit/4fc6be03c0ee9016e1171ca6d7b1009e8322b151))
+* **auth:** require offsets on user timestamps ([#11](https://github.com/Kong/volcano-sdk-ruby/issues/11)) ([8568ebf](https://github.com/Kong/volcano-sdk-ruby/commit/8568ebf515ecd9e8efffc76ab20df06442390980))
+* **codegen:** preserve explicit null in nullable object fields ([#91](https://github.com/Kong/volcano-sdk-ruby/issues/91)) ([65dce4a](https://github.com/Kong/volcano-sdk-ruby/commit/65dce4a9765abcb8ff6bb6c2f763acf79282c261))
+* **database:** preserve libpq connection syntax ([#77](https://github.com/Kong/volcano-sdk-ruby/issues/77)) ([1719669](https://github.com/Kong/volcano-sdk-ruby/commit/1719669574448d380af1727a26be90cb995ebabc))
+* **database:** preserve update filters ([#43](https://github.com/Kong/volcano-sdk-ruby/issues/43)) ([c97fa3f](https://github.com/Kong/volcano-sdk-ruby/commit/c97fa3f7cf43e8eb8665944989d070cc12fca666))
+* **openapi:** accept null OAuth provider data ([#88](https://github.com/Kong/volcano-sdk-ruby/issues/88)) ([daf3874](https://github.com/Kong/volcano-sdk-ruby/commit/daf3874cf577174b6bea0a5cb9b7e044de0ae7e3))

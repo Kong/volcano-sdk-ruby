@@ -1,0 +1,498 @@
+[
+  {
+    "path": "lib/volcano/client.rb",
+    "scope": "Volcano::Client::SessionToken",
+    "methods": [
+      "value"
+    ]
+  },
+  {
+    "path": "lib/volcano/client.rb",
+    "scope": "Volcano::Client",
+    "methods": [
+      "auth",
+      "durable",
+      "functions",
+      "locks",
+      "logs",
+      "realtime",
+      "storage"
+    ]
+  },
+  {
+    "path": "lib/volcano/database.rb",
+    "scope": "Volcano::FilterMethods",
+    "methods": [
+      "copy"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_models.rb",
+    "scope": "Volcano::DurableExecutionError",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "message",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "type",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_models.rb",
+    "scope": "Volcano::DurableExecutionPage",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "executions",
+      "has_more",
+      "limit",
+      "members",
+      "page",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "total",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/errors.rb",
+    "scope": "Volcano::Error::VolcanoError",
+    "methods": [
+      "code",
+      "retry_after",
+      "status"
+    ]
+  },
+  {
+    "path": "lib/volcano/models.rb",
+    "scope": "Volcano::SessionPage",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "limit",
+      "members",
+      "page",
+      "self.[]",
+      "self.members",
+      "sessions",
+      "to_h",
+      "total",
+      "total_pages",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/models.rb",
+    "scope": "Volcano::OAuthProviderTokenStatus",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "expires_in",
+      "members",
+      "message",
+      "provider",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/models.rb",
+    "scope": "Volcano::LockLease",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "expires_at",
+      "fencing_token",
+      "key",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "token",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/models.rb",
+    "scope": "Volcano::LockState",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "expires_at",
+      "fencing_token",
+      "held",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/broadcast_delivery.rb",
+    "scope": "Volcano::Realtime::BroadcastDelivery",
+    "methods": [
+      "broadcast?",
+      "emit",
+      "with_lifecycle_lock"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/broadcast_delivery.rb",
+    "scope": "Volcano::Realtime::BroadcastDelivery::PublicationContext",
+    "methods": [
+      "generation",
+      "protocol",
+      "publication",
+      "recovered"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/channel_callbacks.rb",
+    "scope": "Volcano::Realtime::ChannelCallbacks",
+    "methods": [
+      "broadcast?",
+      "deliver_broadcast",
+      "detach_presence_handler",
+      "dispatch_postgres_change",
+      "postgres?",
+      "presence?",
+      "publication_context",
+      "publication_rejection",
+      "register_presence_handler",
+      "reject_broadcast"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/channel_lifecycle.rb",
+    "scope": "Volcano::Realtime::ChannelLifecycle",
+    "methods": [
+      "begin_postgres_delivery",
+      "broadcast?",
+      "clear_presence",
+      "detach_publication_handler",
+      "end_postgres_delivery",
+      "ensure_open!",
+      "invalidate_presence_subscription",
+      "next_presence_epoch",
+      "presence?",
+      "register_handlers",
+      "reset_presence"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/connection.rb",
+    "scope": "Volcano::Realtime::Connection",
+    "methods": [
+      "protocol_closed",
+      "protocol_connected",
+      "protocol_error",
+      "protocol_error_started",
+      "protocol_failed",
+      "stop_reconnect"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/connection_callbacks.rb",
+    "scope": "Volcano::Realtime::ConnectionCallbacks",
+    "methods": [
+      "start_reconnect"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/lifecycle.rb",
+    "scope": "Volcano::Realtime::Lifecycle",
+    "methods": [
+      "channel_lock",
+      "normalize_channel_type"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_batch.rb",
+    "scope": "Volcano::Realtime::PostgresBatchConfig",
+    "methods": [
+      "auto_fetch",
+      "batch_window_ms",
+      "max_batch_size"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_batch.rb",
+    "scope": "Volcano::Realtime::PostgresBatch",
+    "methods": [
+      "current_postgres_request?",
+      "emit",
+      "expanded_postgres_changes",
+      "postgres_stop?"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_changes.rb",
+    "scope": "Volcano::Realtime::PostgresChanges",
+    "methods": [
+      "enqueue_postgres_delivery",
+      "on"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_database.rb",
+    "scope": "Volcano::Realtime::PostgresDatabase",
+    "methods": [
+      "database_name"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_delivery.rb",
+    "scope": "Volcano::Realtime::PostgresDelivery",
+    "methods": [
+      "collect_postgres_batch",
+      "deliver_postgres_batch",
+      "postgres?"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/postgres_expansion.rb",
+    "scope": "Volcano::Realtime::PostgresExpansion",
+    "methods": [
+      "current_postgres_request?",
+      "postgres_batch_key"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/presence.rb",
+    "scope": "Volcano::Realtime::Presence",
+    "methods": [
+      "apply_presence_event",
+      "emit",
+      "ensure_open!",
+      "get_presence_state",
+      "on",
+      "replace_presence",
+      "with_lifecycle_lock"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/presence_state.rb",
+    "scope": "Volcano::Realtime::PresenceState",
+    "methods": [
+      "active_presence_epoch?",
+      "presence?",
+      "presence_lock"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol.rb",
+    "scope": "Volcano::Realtime::ServerError",
+    "methods": [
+      "code"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_dispatch.rb",
+    "scope": "Volcano::Realtime::ProtocolDispatch",
+    "methods": [
+      "close_with",
+      "closed_error",
+      "dispatch_publication",
+      "dispatch_queued_callback",
+      "write_frame"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_io.rb",
+    "scope": "Volcano::Realtime::Protocol::IO",
+    "methods": [
+      "close_with",
+      "ensure_open!",
+      "process"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_lifecycle.rb",
+    "scope": "Volcano::Realtime::Protocol::Lifecycle",
+    "methods": [
+      "dispatch_callbacks",
+      "dispatch_publication_batches",
+      "ensure_open!",
+      "initialize_publication_producer",
+      "initialize_recovery_positions",
+      "read_loop"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_publication_dispatch.rb",
+    "scope": "Volcano::Realtime::ProtocolPublicationDispatch",
+    "methods": [
+      "dispatch_callback_delivery",
+      "drop_publication",
+      "enqueue_live_publication",
+      "mark_unknown_gap",
+      "matching_channel"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_recovery.rb",
+    "scope": "Volcano::Realtime::ProtocolRecovery",
+    "methods": [
+      "class",
+      "delete_recovery_state",
+      "dispatch_recovered_publications",
+      "mark_publication_gap",
+      "mark_unknown_gap",
+      "recovery_position",
+      "request",
+      "same_epoch?",
+      "set_recovery_position"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/protocol_recovery_dispatch.rb",
+    "scope": "Volcano::Realtime::ProtocolRecoveryDispatch",
+    "methods": [
+      "admit_live_publication",
+      "close_with",
+      "closed_error",
+      "publication_delivery",
+      "reject_publication_delivery"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime/reconnect.rb",
+    "scope": "Volcano::Realtime::Reconnect",
+    "methods": [
+      "channel_lock",
+      "connect_protocol",
+      "protocol_lock",
+      "report_channel_error"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime.rb",
+    "scope": "Volcano::Realtime::PresenceInfo",
+    "methods": [
+      "client",
+      "data",
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "user",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/realtime.rb",
+    "scope": "Volcano::Realtime::Core",
+    "methods": [
+      "__send__",
+      "close_protocol",
+      "connect_protocol",
+      "default_reconnect_delay",
+      "initialize_postgres_database",
+      "open_socket",
+      "protocol_error",
+      "public_error"
+    ]
+  },
+  {
+    "path": "lib/volcano/sign_up_result.rb",
+    "scope": "Volcano::SignUpResult",
+    "methods": [
+      "confirmation_required",
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "message",
+      "self.[]",
+      "self.members",
+      "session",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_models.rb",
+    "scope": "Volcano::StoragePage",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "next_cursor",
+      "objects",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_upload_models.rb",
+    "scope": "Volcano::UploadSessionRequest",
+    "methods": [
+      "content_type",
+      "part_size",
+      "path",
+      "total_size"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_upload_models.rb",
+    "scope": "Volcano::UploadPartRequest",
+    "methods": [
+      "data",
+      "part_number",
+      "path",
+      "session_id"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_upload_models.rb",
+    "scope": "Volcano::UploadSessionReference",
+    "methods": [
+      "path",
+      "session_id"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_upload_models.rb",
+    "scope": "Volcano::UploadSession",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "expires_at",
+      "members",
+      "part_size",
+      "self.[]",
+      "self.members",
+      "session_id",
+      "to_h",
+      "total_parts",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/storage_upload_models.rb",
+    "scope": "Volcano::UploadPart",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "etag",
+      "members",
+      "part_number",
+      "self.[]",
+      "self.members",
+      "size",
+      "to_h",
+      "with"
+    ]
+  }
+]

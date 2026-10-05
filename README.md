@@ -1,9 +1,27 @@
 # Volcano Ruby SDK
 
-Official Ruby SDK for Volcano. This repository is a private proof of concept;
-the gem is not published yet.
+Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
 
-## Proof-of-concept API
+Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
+
+See [Authentication](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/authentication.md) for account, session, email, and OAuth workflows.
+
+## Install
+
+Add the gem to your Gemfile and run `bundle install`:
+
+```ruby
+gem "volcano-sdk"
+```
+
+Require it with `require "volcano"`. New versions publish to RubyGems
+automatically after a Release Please release PR merges and the release checks
+pass.
+
+Maintainers: see [Publishing releases](https://github.com/Kong/volcano-sdk-ruby/blob/main/PUBLISHING.md) for trusted publisher setup
+and the release procedure.
+
+## Create a client
 
 Create a client with the project URL and anonymous key from Volcano:
 
@@ -25,26 +43,50 @@ failures raise typed errors under `Volcano::Error`.
 ```ruby
 result = client.auth.sign_up(
   email: "new-user@example.com",
-  password: "secret",
+  password: "correct-horse-battery-staple",
   metadata: { display_name: "New User" }
 )
 puts result.message if result.confirmation_required
 ```
 
-`sign_up` returns an immutable acknowledgement and never creates or replaces a
-session. The response is identical for new and existing email addresses. Call
-`sign_in` separately after the account is ready to establish a session.
+`sign_up` returns an immutable acknowledgement without changing the session by
+default. The signup acknowledgement is identical for new and existing email
+addresses. Pass `sign_in_when_allowed: true` to follow it with `sign_in` only when
+confirmation is not required:
+
+```ruby
+result = client.auth.sign_up(email: "new-user@example.com", password: "correct-horse-battery-staple", sign_in_when_allowed: true)
+session = result.session # nil when no follow-up sign-in ran.
+```
+
+A successful follow-up stores the session and emits the normal sign-in event.
+A failed follow-up raises its usual typed error; it does not undo the successful signup.
 
 ### Sign in
 
 ```ruby
-session = client.auth.sign_in(email: "user@example.com", password: "secret")
+session = client.auth.sign_in(email: "user@example.com", password: "correct-horse-battery-staple")
 current_session = client.auth.current_session
 raise "session changed" unless current_session == session
 ```
 
 `current_session` reads immutable local state. It does not refresh or validate
 the token.
+
+Sessions returned by authentication retain the user payload in `session.user`,
+including metadata. The snapshot is deeply immutable and available without a
+request. It is cached data, not proof of authentication; use `auth.user` to fetch
+the server-validated profile. Existing three-field `Session` construction still
+works, with `user: nil`. An adopted snapshot must have the same user ID.
+Snapshots contain deeply frozen JSON data. Plain `Time` timestamps become UTC
+ISO8601 strings with nanosecond precision; symbols become strings. Custom objects,
+container/string/time subclasses, non-finite numbers, duplicate JSON keys, and
+structures deeper than 100 levels raise `TypeError`. Use the typed `auth.user`
+profile when you need Ruby `Time` values. Successful `user`, `update_user`,
+`convert_anonymous`, and `confirm_email_change` calls update this snapshot
+without changing credentials or emitting an authentication-state event unless an HTTP 401
+requires automatic refresh. Successful recovery rotates credentials and emits `:token_refreshed`.
+Previously returned sessions remain unchanged.
 
 ### Get the current user
 
@@ -55,8 +97,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `user` sends the active access token to Volcano and returns an immutable,
 server-validated `Volcano::User`. The SDK recursively freezes its strings and
-metadata, but does not cache the profile or replace the session. A session
-change while the request is in flight raises
+metadata and updates `current_session.user`. A session change while the request
+is in flight raises
 `Volcano::Error::SessionChangedError` instead of returning a stale profile.
 `get_user` is available as a cross-SDK alias.
 
@@ -64,7 +106,7 @@ change while the request is in flight raises
 
 ```ruby
 user = client.auth.update_user(
-  password: "new-secret",
+  password: "new-correct-horse-battery-staple",
   metadata: { display_name: "Grace", avatar: nil }
 )
 raise "wrong user" unless user.id == session.user_id
@@ -72,8 +114,8 @@ raise "wrong user" unless user.id == session.user_id
 
 `update_user` changes the current user's password, metadata, or both. Metadata
 is a shallow patch: omitted keys remain unchanged, and a `nil` value removes
-that key. The method returns an immutable `Volcano::User` without replacing the
-active session. It rejects a response if another authentication operation
+that key. The method returns an immutable `Volcano::User` and updates the local
+user snapshot. It rejects a response if another authentication operation
 replaces the session while the request is in flight.
 
 ### Request a password reset email
@@ -136,8 +178,8 @@ user = client.auth.confirm_email_change(token: "email-change-token")
 puts user.email
 ```
 
-The method returns the immutable updated user without replacing the active
-session. A successful stale response is rejected if another authentication
+The method returns the immutable updated user and updates the local user
+snapshot. A successful stale response is rejected if another authentication
 operation replaces that session in flight.
 
 ### List sessions
@@ -168,8 +210,9 @@ hosted_url = client.auth.get_hosted_auth_url(
 ```
 
 Store `hosted_state` in the user's signed server-side session before redirecting
-to `hosted_url`. After parsing the returned fragment into a `Volcano::Session`,
-validate and adopt it atomically:
+to `hosted_url`. In the callback, atomically fetch and delete the stored state before validation,
+even if validation or adoption fails. Reject a missing or already-consumed state.
+After parsing the returned fragment into a `Volcano::Session`, validate and adopt it:
 
 ```ruby
 session = client.auth.adopt_hosted_auth_session(
@@ -200,8 +243,9 @@ authorization_url = client.auth.sign_in_with_oauth(
 ```
 
 Store `oauth_state` in the user's signed server-side session, then redirect the
-user to the returned URL. In the callback, pass the returned and stored states
-to the SDK so it rejects login CSRF before exchanging the one-time code:
+user to the returned URL. In the callback, atomically fetch and delete the stored nonce as `stored_oauth_state`;
+reject a missing or already-consumed nonce. Pass the returned and consumed states to
+the SDK so it rejects login CSRF before exchanging the one-time code:
 
 ```ruby
 session = client.auth.exchange_oauth_code(
@@ -299,9 +343,11 @@ replacement as an "other" session. If replacement occurs, the method raises
 client.auth.delete_session('00000000-0000-4000-8000-000000000099')
 ```
 
-The request uses the current access token. Deleting that token's own session
-clears local credentials, including when the request outcome is uncertain;
-deleting another session preserves them. If another authentication operation
+The request uses the current access token. When its JWT contains a readable UUID `session_id`,
+deleting that session clears local credentials even if the request outcome is uncertain.
+Without that identifier, the SDK cannot recognize self-deletion. Deleting another session does not
+itself clear local state. HTTP 401 recovery can rotate credentials and emit `:token_refreshed`;
+a server-rejected refresh clears the captured session before the operation raises. If another authentication operation
 replaces the session before deletion finishes, the method raises
 `Volcano::Error::SessionChangedError` instead of clearing the replacement or
 acknowledging a stale result.
@@ -315,13 +361,12 @@ session = client.auth.sign_in_anonymously(metadata: { device: "mobile" })
 Anonymous sign-ins must be enabled for the project. Convert the account before
 signing out if the user needs to recover it later.
 
-Attach email credentials without changing the anonymous user's ID or current
-session:
+Attach email credentials while preserving the anonymous user's ID:
 
 ```ruby
 user = client.auth.convert_anonymous(
   email: "user@example.com",
-  password: "secure-password",
+  password: "a-long-example-password-2026",
   metadata: { display_name: "Ada" }
 )
 ```
@@ -332,12 +377,23 @@ as verified.
 ### Reset the password
 
 ```ruby
-client.auth.reset_password(token: "recovery-token", new_password: "new-secret")
+client.auth.reset_password(token: "recovery-token", new_password: "new-correct-horse-battery-staple")
 ```
 
 Success returns `nil`. The reset revokes the recovered account's existing
 sessions and does not sign it in. The client keeps any unrelated local session
 unchanged; sign in with the new password when the reset flow completes.
+
+### Start with a supplied access token
+
+Pass `access_token` to `Volcano::Client.new` to start without a refresh token or
+known user identity. Construction makes no request and leaves `refresh_token`,
+`user_id`, and `user` as `nil`. `auth.user` validates and caches the profile
+without changing credentials. Without a refresh token, `refresh_session` raises
+`Volcano::Error::AuthenticationError`. `sign_out` clears local state and revokes the server
+session when the access JWT contains a readable UUID `session_id`. Supplied credentials require both a refresh token and an access JWT with a readable UUID
+`session_id` to enable refresh.
+See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
 
 ### Adopt an existing session
 
@@ -347,8 +403,12 @@ fresh.auth.current_session = session if session
 ```
 
 The writer copies and freezes a complete native session in memory only. It does
-not make a request or persist credentials, and raises `ArgumentError` for an
-incomplete value.
+not make a request, persist credentials, or notify auth-state subscribers. It
+raises `ArgumentError` for an incomplete value.
+
+Password sign-in raises `Volcano::Error::SessionChangedError` if local session
+state changes while the request is in flight. The late response does not replace
+the newer state or emit a sign-in notification.
 
 ### Refresh the current session
 
@@ -358,8 +418,9 @@ raise "refresh failed" unless client.auth.current_session.equal?(refreshed)
 ```
 
 On success, `refresh_session` replaces the in-memory session and returns the
-immutable new snapshot. An authentication failure clears the session that
-initiated the request. Server and transport failures preserve it, and a late
+immutable new snapshot. An authentication rejection from the refresh endpoint clears the captured session.
+Missing refresh credentials, failed session-continuity checks, server errors, and
+transport failures preserve it, and a late
 response never replaces a newer session. The SDK does not persist sessions.
 
 ### Observe auth-state changes
@@ -376,7 +437,8 @@ subscription.unsubscribe
 Registration immediately yields `:initial_session`. Successful session
 creation, refresh, and local clearing yield `:signed_in`, `:token_refreshed`,
 and `:signed_out`. Callbacks are delivered locally in transition order after the
-state lock is released, and callback failures cannot interrupt auth operations.
+state lock is released. Callback `StandardError` failures are isolated; exceptions such as
+`Interrupt` propagate after the session transition has committed.
 The SDK does not broadcast between processes or persist sessions.
 
 ### Sign out the current session
@@ -386,10 +448,16 @@ client.auth.sign_out
 raise "still signed in" if client.auth.current_session
 ```
 
-`sign_out` revokes the current refresh token and clears the captured in-memory
+Sign-out uses the refresh token directly when the SDK received both credentials together from
+sign-in or a validated refresh. Supplied credentials use the access-token session when its JWT
+contains a readable UUID `session_id`; on HTTP 401, the SDK can refresh once and revoke that
+same session without adopting the renewed credentials. Without that identifier, sign-out uses
+the supplied refresh token, or only clears local state if no refresh token is available.
+It revokes the captured session and clears the captured in-memory
 session. It succeeds without a request when no session exists. If revocation
-fails, the SDK still clears that session and raises the typed error. A session
-established while sign-out is pending remains current.
+fails, the SDK still clears that session and raises the typed error. Sign-out waits for an already-running refresh and uses its validated credentials.
+Later refresh attempts raise `Volcano::Error::SessionChangedError` without a request.
+Concurrent sign-out calls share one result. A separate sign-in or adoption remains current.
 
 ### Invoke a function
 
@@ -401,23 +469,102 @@ result = client.functions.invoke(
 puts [result.status, result.version, result.data]
 ```
 
-`invoke` resolves a DNS-safe function name and sends a JSON object. It uses the
-active user session when present, then a configured service key, then the
-anonymous key. The immutable result includes the response body, status,
-headers, and `X-Volcano-Version`. A function's own non-2xx response is returned
-when the version header proves it ran; platform failures raise typed SDK errors.
+`invoke` resolves a DNS-safe function name and sends a JSON object. The request
+goes to the function's own domain rather than to `api_url`, so an egress rule
+that allows only the API host will block it; the resolved endpoint is cached for
+the lifetime the platform gives it. Deployments with no public function domain
+invoke through the API host instead. It uses the
+current session token, including a supplied `access_token`, then a configured service key, then the
+anonymous key. An anonymous key can invoke a public function without a user
+session; the function receives no user identity. The immutable result includes
+the response body, status, headers, and `X-Volcano-Version`. The body can be a
+JSON object, array, scalar, or text; an empty body returns `nil`. Values are
+deeply frozen. Invalid JSON or JSON that cannot decode to valid UTF-8 is
+returned as the original decoded response text; malformed Unicode is not repaired.
+Ruby's standard JSON nesting limit (100) also falls back to text.
+A function's own
+non-2xx response is returned when Volcano confirms it ran; non-success platform
+HTTP responses raise typed SDK errors.
+
+Function resolution and invocation recover from a platform HTTP 401 before dispatch:
+the SDK refreshes the captured session and retries the rejected request once.
+Concurrent calls share successful recovery. Replacing or signing out that session
+prevents replay under another identity. The call preserves its original payload values.
+A function's own response, HTTP 403, or a network failure never triggers this retry.
+Anonymous and service keys do not refresh.
+
+See the [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md).
+
+### Start and follow a durable execution
+
+```ruby
+project_id = "00000000-0000-4000-8000-000000000001"
+handle = client.durable.start(
+  "charge-order",
+  { order_id: "order-9" },
+  execution_name: "order-9"
+)
+
+owner_client = Volcano::Client.new(
+  api_url: "https://api.volcano.dev",
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_PLATFORM_TOKEN")
+)
+execution = owner_client.durable.get(project_id, "charge-order", handle.id)
+puts [execution.status, execution.terminal?, execution.result]
+
+page = owner_client.durable.list(project_id, "charge-order", status: "running")
+puts [page.total, page.has_more]
+
+owner_client.durable.stop(project_id, "charge-order", handle.id)
+```
+
+`start` takes a durable function's name or its id and returns a handle, never a
+result: an execution can run for up to 366 days, so its result is read back with `get`.
+It uses the same credential `invoke` does — the active user session, then a
+configured service key, then the anonymous key — and is the only durable
+operation an application credential may perform. An `execution_name` makes the
+start idempotent: starting again under the same name returns the execution that
+already exists rather than beginning a second one.
+
+`get`, `list`, and `stop` are owner-scoped and require the project owner's
+platform user token, because an execution is addressed by its id alone.
+Auth-user sessions, anonymous keys, service keys, and project access tokens are
+not accepted. `get` carries the deeply
+frozen `result` once the execution has succeeded, and `error` when it failed;
+`result_expired` separates a result the platform has discarded from a function
+that returned nothing. `terminal?` reports whether the execution has stopped
+changing, and counts `unknown` — the status the platform writes for an outcome
+it could not determine — as finished. `list` returns one page of executions,
+most recent first, each carrying the status last observed rather than a live
+one. `stop` is accepted rather than awaited: what it returns is the execution
+read back after asking, often still `running`, so poll `get` to see it reach
+`stopped`. Repeating a stop is safe.
+
+This gem starts and follows durable executions; it cannot write the durable
+function itself. Checkpointing a handler needs a durable authoring API, and
+there is no Ruby one, so Volcano hosts durable functions on `nodejs22.x`,
+`nodejs24.x`, `python3.13` and `python3.14`. Write the function in JavaScript
+or Python and drive it from Ruby; the operations above are the whole surface a
+caller needs.
+Ruby remains a fully supported runtime for [standard
+functions](https://volcano.dev/platform/functions/overview).
 
 ### Read project logs
 
 ```ruby
 project_id = "00000000-0000-4000-8000-000000000001"
-page = client.logs.search(
+logs_client = Volcano::Client.new(
+  anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+  access_token: ENV.fetch("VOLCANO_PROJECT_ACCESS_TOKEN")
+)
+page = logs_client.logs.search(
   project_id,
   { resource: { type: "function" }, limit: 100 }
 )
 page.data.each { |event| puts [event["timestamp"], event["body"]] }
 
-activity = client.logs.activity(
+activity = logs_client.logs.activity(
   project_id,
   { resource: { type: "function" }, bucket_count: 24 }
 )
@@ -427,13 +574,28 @@ puts activity.total
 `search` returns an immutable page of retained runtime or deployment log
 events. Pass `next_cursor` back as `cursor` to continue a search. `activity`
 returns immutable time buckets using the same resource selector and query
-syntax. Both methods require an active user session.
+syntax. Both methods require a platform user token or a project access token.
+A `read_only` project token is sufficient; end-user sessions cannot read project logs.
+See the [logs guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/logs.md).
 
 ### Query a database
 
 ```ruby
 rows = client.database("main").from("items").select("*").eq("slug", "a").execute
 ```
+
+Database selects, inserts, updates, deletes, log reads, and authenticated storage
+requests (including upload sessions and parts) refresh the captured
+session after an HTTP 401 and retry the same request once. Concurrent requests reuse a successful
+refresh for that session.
+Replacing or signing out the session before replay, or while replay is in flight,
+raises `SessionChangedError`. Requests do not wait for auth callbacks running on
+another thread. A later callback-driven session change does not invalidate a
+completed request.
+A failed refresh preserves the original request error. HTTP 403 responses and
+network failures do not trigger this retry. Mutations are replayed only after an
+explicit authentication rejection, never after an ambiguous transport failure.
+Realtime's fixed-token row reads do not refresh the session.
 
 Database builders are immutable, so a base query can be reused safely. Chain
 `neq`, `gt`, `gte`, `lt`, and `lte` for comparison filters:
@@ -496,7 +658,7 @@ targets, and leaves unrelated query values unchanged.
 
 ```ruby
 bucket = client.storage.from("assets")
-bucket.upload("a.txt", "hello".b)
+bucket.upload("a.txt", "hello".b, content_type: "text/plain; charset=utf-8")
 bytes = bucket.download("a.txt")
 first_kibibyte = bucket.download("archive.bin", range: "bytes=0-1023")
 video = "demo video".b
@@ -546,6 +708,11 @@ public_url = bucket.get_public_url("avatars/a.png")
 puts public_url
 ```
 
+Simple uploads accept an optional `content_type:` for the multipart file part.
+Omit it or pass `nil` to retain the transport's filename-based MIME detection and
+`application/octet-stream` fallback. Explicit values must be non-blank printable
+ASCII; MIME parameters such as `charset=utf-8` are allowed.
+
 Uploads accept a binary `String` or an `IO`. Downloads return a binary
 `String`. Listing returns immutable object metadata and an optional cursor for
 the next page. Removals run in input order; a failed request raises after any
@@ -587,6 +754,13 @@ client.locks.with_lock("deploy", ttl: 30) do |guard|
 end
 ```
 
+Acquisition accepts caller-owned UUID `token` and `request_id` values and retries
+an ambiguous transport failure or HTTP 503 once with the same request and credential.
+Retain those IDs to recover an uncertain acquisition. Other lock methods accept
+`request_id`; block-scoped helpers forward initial IDs only to acquisition.
+See the [lock guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/locks.md)
+for examples and fencing requirements.
+
 `locks.get` returns immutable lock availability, expiry, and fencing-token
 state without acquiring the lock.
 `locks.renew` returns a new immutable lease and leaves the previous value
@@ -625,6 +799,10 @@ Async do
   stop_connect.call
 end.wait
 ```
+
+`channel.unsubscribe` waits for the server acknowledgement and pauses delivery.
+Call `channel.subscribe` on the same channel to resume, then send as usual.
+These commands complete even when the connection is otherwise idle.
 
 ### Track presence
 
@@ -691,18 +869,42 @@ values must be positive integers, and the maximum batch size cannot exceed 128.
 `remove_channel` unsubscribes and forgets one channel. `remove_all_channels`
 does the same for every managed channel without disconnecting the shared
 realtime transport, so later calls to `channel` return fresh facades. Pass the
-same `type:` to `remove_channel` for every non-broadcast channel. Reconnect,
-recovery is out of scope.
+same `type:` to `remove_channel` for every non-broadcast channel. Unexpected
+transport loss reconnects with bounded exponential backoff and restores active
+subscriptions. Broadcast channels recover retained publications only for this
+client lifetime and the same authenticated-user lineage. Recovery state is not
+persisted across processes. Postgres channels do not recover missed
+publications yet; presence channels rebuild their current snapshot.
 Connection callbacks receive immutable contexts and run outside protocol
 processing. Each registration returns an idempotent callable that stops future
 delivery.
 
+## Dependencies
+
+Installing `volcano-sdk` pulls in eight gems, plus their own transitive
+dependencies:
+
+| Gem                                                          | Why                                                                     |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [`typhoeus`](https://rubygems.org/gems/typhoeus)             | The HTTP library the generated REST client uses                         |
+| [`logger`](https://rubygems.org/gems/logger)                 | Required by that client, and no longer a default gem                    |
+| [`async`](https://rubygems.org/gems/async)                   | The reactor realtime runs its connection and delivery on                |
+| [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |
+| [`async-websocket`](https://rubygems.org/gems/async-websocket) | The realtime transport itself                                         |
+| [`protocol-rack`](https://rubygems.org/gems/protocol-rack)   | A requirement of `async-websocket`, pinned here so the version is ours  |
+| [`base64`](https://rubygems.org/gems/base64)                 | Required by the generated client, and no longer a default gem since Ruby 3.4 |
+| [`json`](https://rubygems.org/gems/json)                     | Request and response encoding for the generated client                  |
+
+There is no optional durable dependency, because this gem starts and follows
+durable executions rather than writing them. See
+[Start and follow a durable execution](#start-and-follow-a-durable-execution).
+
 ## Generated boundary
 
-The internal REST transport is generated from the self-contained public
-Volcano OpenAPI bundle at hosting commit
-`cb12eb4636252cb658f13850dad930fa73a5dc4c`. Its SHA-256 is
-`95e5c102830db382064180afca4c62ad8b11faabf58148f9d21236046b930090`.
+The internal REST transport is generated from `openapi/openapi.yaml`, which
+matches the public bundle from [Hosting #991](https://github.com/Kong/volcano-hosting/pull/991)
+at commit `ef03f689e`.
+Its SHA-256 is `076d97809c95f50567d8b100f4188c1fe2b74e73a388e335c79850e66edfc0e4`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.
@@ -710,4 +912,8 @@ not a gem runtime dependency.
 Run `npm ci && bin/check-openapi` to verify generated provenance. Use
 `bundle exec rubocop -A` to apply safe formatting and lint fixes. Before
 changing the facade, run `bundle exec rubocop --parallel`, `bundle exec rspec`,
-and the shared Cucumber contract suite.
+and package checks. Hosting owns live acceptance for all SDKs.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for cross-language coordination and the full verification workflow.

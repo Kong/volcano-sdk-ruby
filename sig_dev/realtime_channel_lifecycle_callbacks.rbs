@@ -1,0 +1,105 @@
+module Volcano
+  class Realtime
+    interface _ChannelLifecycleContext
+      def end_postgres_delivery: () -> void
+      def reset_presence: () -> void
+      def detach_publication_handler: (Protocol protocol) -> void
+      def ensure_open!: () -> Core
+      def broadcast?: () -> bool
+      def next_presence_epoch: () -> Integer
+      def register_handlers: (Protocol protocol, Integer epoch) -> void
+      def begin_postgres_delivery: () -> void
+      def invalidate_presence_subscription: (Protocol protocol) -> void
+      def clear_presence: () -> Hash[String, PresenceInfo]?
+      def presence?: () -> bool
+    end
+
+    module ChannelLifecycle
+      include _ChannelLifecycleContext
+      type recovery_position = Hash[Symbol, String | Integer]
+      type recovery_binding = [SessionOperations, recovery_position]
+
+      @closed: bool
+      @subscription_desired: bool
+      @subscribed: bool
+      @handler_registered: bool
+      @protocol_provider: ^() -> Protocol
+      @name: String
+      @realtime: Core
+      @recovery_position: recovery_position
+      @recovery_lineage: SessionOperations?
+      @publication_handler: (^(Object?, Object?, Object?, recovered: bool) -> void)?
+      @callbacks: Hash[String, Array[^(Object?) -> void]]
+
+      def mark_closed: () -> void
+      def protocol_lost: (Protocol protocol) -> void
+
+      private
+
+      def unsubscribe_protocol: () -> (Hash[String, PresenceInfo] | bool | nil)
+      def clear_subscription_intent: () -> bool
+      def complete_unsubscribe: (Protocol protocol) -> Hash[String, PresenceInfo]?
+      def subscribe_protocol: (Protocol protocol) -> [Protocol, Integer]
+      def complete_protocol_subscription: (Protocol protocol, Integer epoch, recovery_binding? binding) -> [Protocol, Integer]
+      def prepare_protocol_subscription: (Protocol protocol, Integer epoch) -> void
+      def detach_from_protocol: () -> void
+      def subscription_options: (recovery_binding? binding) -> { recovery: recovery_position?, recoverable: bool, join_leave: bool }
+      def recovery_binding: () -> recovery_binding?
+      def recovery_position: (SessionOperations lineage) -> recovery_position
+      def validate_recovery_binding!: (recovery_binding? binding) -> void
+      def reject_failed_subscription: (Protocol protocol, StandardError error) -> void
+      def remember_recovery_position: (Protocol? protocol) -> void
+      def mark_removed: () -> bool
+    end
+
+    interface _ChannelCallbacksContext
+      def presence?: () -> bool
+      def postgres?: () -> bool
+      def broadcast?: () -> bool
+      def register_presence_handler: (Protocol protocol, Integer epoch) -> void
+      def detach_presence_handler: (Protocol protocol) -> void
+      def deliver_broadcast: (Object? event, Object? data, Object context) -> Object
+      def publication_context: (Protocol protocol, Object? publication, Integer generation, bool recovered) -> Object
+      def reject_broadcast: (Object context) -> Object
+      def publication_rejection: (Protocol protocol, Integer generation) -> (^(Object?) -> void)?
+      def dispatch_postgres_change: (Object? data) -> Object?
+    end
+
+    module ChannelCallbacks
+      include _ChannelCallbacksContext
+      type callback = ^(Object?) -> void
+      type publication_callback = ^(Object?, Object?, Object?, recovered: bool) -> void
+      type before_delivery = ^() -> bool
+      type delivery = [String, Object?, Array[callback], before_delivery?]
+
+      @callbacks: Hash[String, Array[callback]]
+      @publication_handler: publication_callback?
+      @publication_protocol: Protocol?
+      @callback_lock: Async::Semaphore?
+      @callback_task: Async::Task?
+      @publication_generation: Integer
+      @deferred_callback_deliveries: Array[delivery]
+      @handler_registered: bool
+      @name: String
+
+      def on: (String event, ?callback? callback) ?{ (Object?) -> void } -> self
+
+      private
+
+      def initialize_callback_dispatch: () -> void
+      def allowed_event?: (String event) -> bool
+      def register_handlers: (Protocol protocol, Integer epoch) -> void
+      def register_publication_handler: (Protocol protocol) -> void
+      def publication_callback: (Protocol protocol, Integer generation) -> publication_callback
+      def deliver_publication: (Object? event, Object? data) -> Object?
+      def emit: (String event, Object? data, ?before_delivery: before_delivery?) -> nil
+      def callback_dispatching?: () -> bool
+      def defer_callback_delivery: (delivery delivery) -> nil
+      def dispatch_callback_delivery: (delivery delivery) -> void
+      def dispatch_deferred_callbacks: () -> void
+      def dispatch_callbacks: (String event, Object? data, Array[callback] callbacks) -> void
+      def detach_publication_handler: (Protocol protocol) -> nil
+      def callback_lock: () -> Async::Semaphore
+    end
+  end
+end

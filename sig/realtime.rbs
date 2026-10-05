@@ -1,0 +1,45 @@
+module Volcano
+  class Realtime
+    def channel: (String name, ?type: String | Symbol, ?auto_fetch: bool, ?fetch_batch_window_ms: Integer, ?fetch_max_batch_size: Integer) -> Channel
+    def connected?: () -> bool
+    def disconnect: () -> void
+    def remove_channel: (String name, ?type: String | Symbol) -> nil
+    def remove_all_channels: () -> nil
+
+    def on_connect: (^(ConnectContext) -> void callback) -> ^() -> Proc?
+                  | () { (ConnectContext) -> void } -> ^() -> Proc?
+    def on_disconnect: (^(DisconnectContext) -> void callback) -> ^() -> Proc?
+                     | () { (DisconnectContext) -> void } -> ^() -> Proc?
+    def on_error: (^(ErrorContext) -> void callback) -> ^() -> Proc?
+                | () { (ErrorContext) -> void } -> ^() -> Proc?
+
+    def database_name: () -> String?
+    def database_name=: (String? name) -> String?
+
+    class Channel
+      attr_reader name: String
+
+      def subscribe: () -> nil
+      def unsubscribe: () -> nil
+      def send: (event: String | Symbol, **json_value payload) -> nil
+
+      def on: ("message" event, ^(Hash[String, json_value]) -> void callback) -> self
+            | ("message" event) { (Hash[String, json_value]) -> void } -> self
+            | ("join" | "leave" event, ^(PresenceInfo) -> void callback) -> self
+            | ("join" | "leave" event) { (PresenceInfo) -> void } -> self
+            | ("presence_sync" event, ^(Hash[String, PresenceInfo]) -> void callback) -> self
+            | ("presence_sync" event) { (Hash[String, PresenceInfo]) -> void } -> self
+            | ("INSERT" | "UPDATE" | "DELETE" | "*" event, ^(PostgresChange) -> void callback) -> self
+            | ("INSERT" | "UPDATE" | "DELETE" | "*" event) { (PostgresChange) -> void } -> self
+      def on_presence_sync: (^(Hash[String, PresenceInfo]) -> void callback) -> self
+                          | () { (Hash[String, PresenceInfo]) -> void } -> self
+      def on_postgres_changes: (String | Symbol event, schema: String, table: String, callback: ^(PostgresChange) -> void) -> self
+                             | (String | Symbol event, schema: String, table: String) { (PostgresChange) -> void } -> self
+
+      def track: (?Hash[String, json_value] state) -> nil
+      def presence_state: () -> Hash[String, PresenceInfo]
+      def get_presence_state: () -> Hash[String, PresenceInfo]
+      def tracked_state: () -> Hash[String, json_value]
+    end
+  end
+end

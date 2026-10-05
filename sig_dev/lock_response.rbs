@@ -1,0 +1,10 @@
+module Volcano
+  module LockResponse
+    private def parse_time: (Object? value) -> Time?
+    private def required_time: (Object? value) -> Time
+    private def lock_payload: (Object? body) -> Hash[String, Object?]
+    private def lock_held: (Object? value) -> bool
+    private def required_fencing_token: (Object? value) -> Integer
+    private def optional_fencing_token: (Object? value) -> Integer?
+  end
+end

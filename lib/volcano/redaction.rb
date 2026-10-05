@@ -7,28 +7,31 @@ module Volcano
   module Redaction
     MARKER = '[REDACTED]'
 
-    module_function
-
-    def message(value, secrets:)
+    def self.message(value, secrets:)
       variants(secrets).reduce(value.to_s.dup) do |redacted, secret|
         redacted.gsub(secret, MARKER)
       end
     end
 
-    def exception(error, secrets:)
+    def self.exception(error, secrets:)
       redacted = copy_exception(error, message(error.message, secrets: secrets))
-      redacted.set_backtrace(error.backtrace)
+      trace = error.backtrace
+      redacted.set_backtrace(trace.map(&:to_s)) if trace
       redacted
     end
 
-    def copy_exception(error, redacted_message)
-      return copy_volcano_error(error, redacted_message) if volcano_error?(error)
-      return error.class.new(redacted_message, code: error.code) if realtime_server_error?(error)
+    def self.copy_exception(error, redacted_message)
+      if defined?(Error::VolcanoError) && error.is_a?(Error::VolcanoError)
+        return copy_volcano_error(error, redacted_message)
+      end
+      if defined?(Realtime::ServerError) && error.is_a?(Realtime::ServerError)
+        return error.class.new(redacted_message, code: error.code)
+      end
 
       error.exception(redacted_message)
     end
 
-    def copy_volcano_error(error, redacted_message)
+    def self.copy_volcano_error(error, redacted_message)
       error.class.new(
         redacted_message,
         status: error.status,
@@ -37,15 +40,7 @@ module Volcano
       )
     end
 
-    def volcano_error?(error)
-      defined?(Error::VolcanoError) && error.is_a?(Error::VolcanoError)
-    end
-
-    def realtime_server_error?(error)
-      defined?(Realtime::ServerError) && error.is_a?(Realtime::ServerError)
-    end
-
-    def variants(secrets)
+    def self.variants(secrets)
       values = Array(secrets).compact.flat_map do |value|
         secret = value.to_s
         next [] if secret.empty?
@@ -55,6 +50,6 @@ module Volcano
       end
       values.uniq.sort_by { |value| -value.length }
     end
-    private_class_method :copy_exception, :copy_volcano_error, :realtime_server_error?, :variants, :volcano_error?
+    private_class_method :copy_exception, :copy_volcano_error, :variants
   end
 end

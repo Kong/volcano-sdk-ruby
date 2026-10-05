@@ -1,0 +1,23 @@
+module Volcano
+  interface _LockLifecycleHost
+    def acquire: (String key, ttl: Integer, ?token: String?, ?request_id: String?) -> LockLease
+    def renew: (String key, LockLease lease, ttl: Integer) -> LockLease
+    def release: (String key, LockLease lease) -> void
+  end
+
+  module LockAutoRenewal : _LockLifecycleHost
+    MIN_LOCK_TTL_SECONDS: Integer
+    MAX_LOCK_TTL_SECONDS: Integer
+    MAX_RENEWAL_DELAY_SECONDS: Float
+    RENEWAL_SAFETY_MARGIN_SECONDS: Float
+    RENEWAL_REQUEST_BUDGET_SECONDS: Float
+    RENEWER_SHUTDOWN_TIMEOUT_SECONDS: Float
+
+    def with_lock: [T] (String key, ttl: Integer, ?token: String?, ?request_id: String?) { (LockGuard) -> T } -> T
+
+    private def lock_renewer: (String key, LockGuard guard, Integer ttl) -> LockRenewer
+    private def renewal_delay: (Integer ttl, remaining: Float) -> Float
+    private def latest_renewal_delay: (Float remaining) -> Float
+    private def validate_ttl: (Object ttl) -> void
+  end
+end

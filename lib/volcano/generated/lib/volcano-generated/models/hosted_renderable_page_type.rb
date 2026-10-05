@@ -15,10 +15,14 @@ require 'time'
 
 module Volcano::Generated
   class HostedRenderablePageType
+    SIGNUP = "signup".freeze
+    FORGOT_PASSWORD = "forgot-password".freeze
+    DEVICE = "device".freeze
+    VERIFY_EMAIL = "verify-email".freeze
     RESET_PASSWORD = "reset-password".freeze
 
     def self.all_vars
-      @all_vars ||= [RESET_PASSWORD].freeze
+      @all_vars ||= [SIGNUP, FORGOT_PASSWORD, DEVICE, VERIFY_EMAIL, RESET_PASSWORD].freeze
     end
 
     # Builds the enum from string

@@ -22,10 +22,11 @@ module Volcano
 
     def stop
       request_stop
-      return unless @thread
+      thread = @thread
+      return unless thread
 
       # Renew requires current token ownership, so a late request cannot resurrect a released lease.
-      @thread.join(@config.shutdown_timeout)
+      thread.join(@config.shutdown_timeout)
     end
 
     private

@@ -1,0 +1,23 @@
+module Volcano
+  interface _LogsClient
+    def session_request: () { (String) -> Transport::Response } -> Transport::Response
+  end
+
+  interface _LogsTransport
+    def search_project_logs: (authorization: String, project_id: String, request: sdk_payload) -> Transport::Response
+    def get_project_log_activity: (authorization: String, project_id: String, request: sdk_payload) -> Transport::Response
+  end
+
+  class Logs
+    @client: _LogsClient
+    @transport: _LogsTransport
+
+    def initialize: (_LogsClient client, _LogsTransport transport) -> void
+
+    private def log_request: (Object? project_id, Object? request) -> [String, sdk_payload]
+    private def search_response: (Object? body) -> LogSearchResponse
+    private def activity_response: (Object? body) -> LogActivityResponse
+    private def response_data: (Object? body) -> [Hash[String, Object?], Array[log_row]]
+    private def boolean?: (Object? value) -> bool
+  end
+end

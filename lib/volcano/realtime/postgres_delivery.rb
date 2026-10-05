@@ -9,6 +9,7 @@ module Volcano
 
     # Serializes Postgres publications and expands lightweight row identities.
     module PostgresDelivery
+      # @dynamic postgres?, collect_postgres_batch, deliver_postgres_batch
       QUEUE_LIMIT = 128
       STOP = Object.new.freeze
       private_constant :QUEUE_LIMIT, :STOP
@@ -18,7 +19,9 @@ module Volcano
       def initialize_postgres_delivery(batch_config)
         require 'async/queue'
         @postgres_batch_config = batch_config
-        @postgres_filters = {}
+        # @type var empty_filters: Hash[^(Object?) -> void, [String, String, String]]
+        empty_filters = {}
+        @postgres_filters = empty_filters
         @postgres_queue = Async::LimitedQueue.new(QUEUE_LIMIT)
         @postgres_worker = nil
         @postgres_epoch = 0
@@ -88,10 +91,12 @@ module Volcano
       end
 
       def run_postgres_worker
+        # @type var pending: Object?
         pending = nil
         loop do
           request = pending || @postgres_queue.dequeue
           break if postgres_stop?(request)
+          raise TypeError, 'invalid Postgres delivery request' unless request.is_a?(PostgresDeliveryRequest)
 
           requests, pending = collect_postgres_batch(request)
           deliver_postgres_batch(requests)
@@ -103,8 +108,8 @@ module Volcano
       def postgres_stop?(request) = request.equal?(STOP)
 
       def current_postgres_request?(request)
-        _, lineage, = @realtime.__send__(:capture_session_binding)
-        @subscribed && request.subscription_epoch == @postgres_epoch &&
+        _, lineage, session = @realtime.__send__(:capture_session_binding)
+        @subscribed && session && request.subscription_epoch == @postgres_epoch &&
           request.session_lineage == lineage
       end
     end

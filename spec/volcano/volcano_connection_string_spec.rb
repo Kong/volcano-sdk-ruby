@@ -53,6 +53,12 @@ RSpec.describe Volcano do
     )
   end
 
+  it 'preserves credentials without a database path' do
+    expect(described_class.database_connection_string('postgres://u:pa?ss@host?sslmode=require')).to eq(
+      'postgres://u:pa?ss@host?sslmode=require&application_name=volcano_full_access'
+    )
+  end
+
   it 'accepts multi-host IPv6 connection URIs' do
     expect(described_class.database_connection_string('postgresql://[::1],[::2]/db')).to eq(
       'postgresql://[::1],[::2]/db?application_name=volcano_full_access'

@@ -5,18 +5,22 @@ module Volcano
     class Protocol
       # Exposes connection state and manages publication handlers.
       module Lifecycle
+        # @dynamic ensure_open!, initialize_recovery_positions, initialize_publication_producer, dispatch_callbacks
+        # @dynamic dispatch_publication_batches, read_loop
         def connected? = @connected && !@closed
 
-        def on_publication(channel, &handler)
+        def on_publication(channel, on_rejection: nil, &handler)
           ensure_open!
-          @publication_handlers[channel] << handler
+          @publication_handlers[channel] << ProtocolPublicationDispatch::Registration.new(
+            handler: handler, on_rejection: on_rejection
+          )
           handler
         end
 
         def off_publication(channel, handler)
-          handlers = @publication_handlers[channel]
-          handlers.delete(handler)
-          @publication_handlers.delete(channel) if handlers.empty?
+          registrations = @publication_handlers[channel]
+          registrations.reject! { |registration| registration.handler.equal?(handler) }
+          @publication_handlers.delete(channel) if registrations.empty?
           nil
         end
 
@@ -41,6 +45,8 @@ module Volcano
           @pending = {}
           initialize_locks
           initialize_handlers
+          initialize_recovery_positions
+          initialize_publication_producer
           @callback_stopping = @connected = @closed = false
           @subscriptions = Set.new
           @closed_error = nil
@@ -55,10 +61,16 @@ module Volcano
           @publication_handlers = Hash.new { |hash, key| hash[key] = [] }
           @presence_handlers = Hash.new { |hash, key| hash[key] = [] }
           @pending_presence_resyncs = {}
-          @callback_queue = Async::Queue.new
+          @callback_queue = Async::LimitedQueue.new(@max_callback_queue)
         end
 
-        def reject_pending(error) = @pending.each_value { |queue| queue.enqueue(Failure.new(error: error)) }
+        def start_tasks(task)
+          @callback_task = task.async { dispatch_callbacks }
+          @producer_task = task.async { dispatch_publication_batches }
+          @reader_task = task.async { read_loop }
+        end
+
+        def reject_pending(error) = @pending.each_value { |pending| pending.queue.enqueue(Failure.new(error: error)) }
 
         def close_socket
           @socket.close
@@ -66,9 +78,13 @@ module Volcano
           nil
         end
 
-        def stop_callback_task
+        def stop_protocol_tasks
           @callback_stopping = true
-          @callback_task.stop unless @callback_task == Async::Task.current
+          @producer_stopping = true
+          current = Async::Task.current?
+          [@reader_task, @producer_task, @callback_task].compact.each do |task|
+            task.stop unless task.equal?(current)
+          end
         end
 
         def close_with(error, notify_error: false)
@@ -94,7 +110,7 @@ module Volcano
 
         def stop_protocol(error)
           reject_pending(error)
-          stop_callback_task
+          stop_protocol_tasks
           close_socket
         end
 

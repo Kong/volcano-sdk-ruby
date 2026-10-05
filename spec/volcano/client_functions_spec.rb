@@ -61,9 +61,11 @@ RSpec.describe Volcano::Client do
   end
 
   it 'returns a function-owned error response' do
+    # The dispatch marker is what makes this the function's answer rather than a
+    # platform refusal; the version stamp is on every response either way.
     invoke_responses << Volcano::Transport::Response.new(
       status: 422, body: { 'error' => 'invalid order' },
-      headers: { 'x-volcano-version' => 'v2' }, data: nil
+      headers: { 'x-volcano-version' => 'v2', 'x-volcano-function-invoked' => 'true' }, data: nil
     )
 
     result = client.functions.invoke('validate-order')
@@ -71,6 +73,18 @@ RSpec.describe Volcano::Client do
     expect(result).to have_attributes(
       status: 422, data: { 'error' => 'invalid order' }, version: 'v2'
     )
+  end
+
+  it 'raises when the platform refuses the invocation' do
+    # Present version stamp, no dispatch marker: refused before the function
+    # ran, so it is an SDK error rather than a reply to hand back.
+    invoke_responses << Volcano::Transport::Response.new(
+      status: 400, body: { 'error' => 'function cannot be invoked (status: failed)' },
+      headers: { 'x-volcano-version' => 'v2' }, data: nil
+    )
+
+    expect { client.functions.invoke('validate-order') }
+      .to raise_error(Volcano::Error::VolcanoError, /function cannot be invoked/)
   end
 
   it 'returns an empty successful function response' do
@@ -104,12 +118,13 @@ RSpec.describe Volcano::Client do
     expect(calls).to be_empty
   end
 
-  it 'uses the anon key without a session or service key' do
-    public_client = described_class.new(anon_key: 'anon-key', _transport: transport)
+  it 'uses the local anon key without a session or service key' do
+    anon_key = 'ak-0000000000000000000000000000000000000000'
+    public_client = described_class.new(anon_key: anon_key, _transport: transport)
 
     public_client.functions.invoke('public-health')
 
     expect(calls.map { |_, arguments| arguments.fetch(:authorization) })
-      .to eq(%w[anon-key anon-key])
+      .to eq([anon_key, anon_key])
   end
 end

@@ -2,38 +2,27 @@
 
 module Volcano
   # Email-change request behavior for the authentication facade.
-  class Auth
+  module AuthEmailChange
     INVALID_EMAIL_CHANGE_RESULT = 'Expected a valid email-change acknowledgement'
     private_constant :INVALID_EMAIL_CHANGE_RESULT
 
     def request_email_change(new_email:)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(email_change_response(current.access_token, new_email), 200)
-      result = email_change_result(payload)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      session_payload(200, decode: :email_change_result) do
+        request_email = new_email.dup.freeze
+        ->(token) { email_change_response(token, request_email) }
+      end
     end
 
     def cancel_email_change
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      Transport.body(cancel_email_change_response(current.access_token), 200)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
+      session_payload(200) { ->(token) { cancel_email_change_response(token) } }
+      nil
     end
 
     def confirm_email_change(token:)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      payload = Transport.body(confirm_email_change_response(current.access_token, token), 200)
-      user = build_user(user_payload(payload))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      user
+      profile_request do
+        request_token = token.dup.freeze
+        ->(access_token) { confirm_email_change_response(access_token, request_token) }
+      end
     end
 
     private

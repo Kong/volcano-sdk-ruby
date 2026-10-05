@@ -42,7 +42,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'domain' => :'String',
-        :'tls' => :'CreateFrontendCustomDomainTLSConfig'
+        :'tls' => :'FrontendCustomDomainTLSConfig'
       }
     end
 
@@ -90,6 +90,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "domain", domain cannot be nil.')
       end
 
+      if @domain.to_s.length > 253
+        invalid_properties.push('invalid value for "domain", the character length must be smaller than or equal to 253.')
+      end
+
       if @tls.nil?
         invalid_properties.push('invalid value for "tls", tls cannot be nil.')
       end
@@ -102,6 +106,7 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @domain.nil?
+      return false if @domain.to_s.length > 253
       return false if @tls.nil?
       true
     end
@@ -111,6 +116,10 @@ module Volcano::Generated
     def domain=(domain)
       if domain.nil?
         fail ArgumentError, 'domain cannot be nil'
+      end
+
+      if domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain", the character length must be smaller than or equal to 253.'
       end
 
       @domain = domain

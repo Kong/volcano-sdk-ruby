@@ -4,17 +4,15 @@ module Volcano
   # Fixed-host OAuth-provider API proxy behavior for the auth facade.
   class Auth
     def call_oauth_api(provider, endpoint:, method: 'GET', body: nil)
-      provider_name = oauth_provider_name(provider)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      response = oauth_api_response(
-        current.access_token, provider_name, endpoint: endpoint, method: method, body: body
-      )
-      result = oauth_api_data(Transport.body(response, 200))
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      session_payload(200, decode: :oauth_api_data) do
+        provider_name = oauth_provider_name(provider)
+        owned_endpoint = endpoint.dup.freeze
+        owned_method = method.dup.freeze
+        owned_body = body.nil? ? nil : JSON.parse(JSON.generate(body), freeze: true)
+        lambda do |token|
+          oauth_api_response(token, provider_name, endpoint: owned_endpoint, method: owned_method, body: owned_body)
+        end
+      end
     end
 
     private
@@ -29,6 +27,8 @@ module Volcano
     end
 
     def oauth_api_data(response_body)
+      raise TypeError, 'Expected OAuth provider API response data' unless response_body.is_a?(Hash)
+
       data = response_body.fetch('data')
       freeze_oauth_api_data(data)
     rescue KeyError, NoMethodError
@@ -37,15 +37,22 @@ module Volcano
 
     def freeze_oauth_api_data(value)
       case value
-      when Hash
-        value.to_h { |key, item| [freeze_oauth_api_data(key), freeze_oauth_api_data(item)] }.freeze
+      when Hash then freeze_oauth_api_data_hash(value)
       when Array
         value.map { |item| freeze_oauth_api_data(item) }.freeze
       when String
         value.dup.freeze
       else
-        value.frozen? ? value : value.dup.freeze
+        freeze_oauth_api_data_scalar(value)
       end
+    end
+
+    def freeze_oauth_api_data_scalar(value)
+      value.frozen? ? value : value.dup.freeze
+    end
+
+    def freeze_oauth_api_data_hash(value)
+      value.to_h { |key, item| [freeze_oauth_api_data(key), freeze_oauth_api_data(item)] }.freeze
     end
   end
 end

@@ -4,10 +4,16 @@ module Volcano
   class Realtime
     # Maintains immutable presence state independently of protocol lifecycle.
     module PresenceState
+      # @dynamic presence_lock, active_presence_epoch?, presence?
+
       private
 
       def replace_presence(clients)
-        clients = {} unless clients.is_a?(Hash)
+        unless clients.is_a?(Hash)
+          # @type var empty_clients: Hash[String, Object?]
+          empty_clients = {}
+          clients = empty_clients
+        end
         @presence_state = clients.to_h do |client_id, info|
           [client_id.to_s.freeze, presence_info(info, client_id)]
         end.freeze
@@ -32,7 +38,10 @@ module Volcano
       end
 
       def presence_info(info, fallback_client)
-        data = info['conn_info'].is_a?(Hash) ? info.fetch('conn_info') : {}
+        # @type var empty_data: Hash[String, json_value]
+        empty_data = {}
+        raw_data = info['conn_info']
+        data = raw_data.is_a?(Hash) ? raw_data : empty_data
         PresenceInfo.new(
           client: info.fetch('client', fallback_client).to_s,
           user: info['user']&.to_s,
@@ -44,16 +53,24 @@ module Volcano
         return unless presence?
 
         presence_lock.acquire do
-          @presence_state = Immutable.call({})
-          @tracked_state = Immutable.call({})
+          # @type var empty_presence: Hash[String, PresenceInfo]
+          empty_presence = {}
+          # @type var empty_tracked: Hash[String, json_value]
+          empty_tracked = {}
+          @presence_state = Immutable.call(empty_presence)
+          @tracked_state = Immutable.call(empty_tracked)
           @presence_state
         end
       end
 
       def reset_presence
         @subscription_epoch += 1
-        @presence_state = Immutable.call({})
-        @tracked_state = Immutable.call({})
+        # @type var empty_presence: Hash[String, PresenceInfo]
+        empty_presence = {}
+        # @type var empty_tracked: Hash[String, json_value]
+        empty_tracked = {}
+        @presence_state = Immutable.call(empty_presence)
+        @tracked_state = Immutable.call(empty_tracked)
       end
     end
     private_constant :PresenceState

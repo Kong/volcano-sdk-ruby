@@ -2,7 +2,11 @@
 
 module Volcano
   # Corrects generated HTTP operations for resumable storage uploads.
-  module UploadSessionStorageApi
+  class GeneratedTransport::StorageApi
+    UPLOAD_PART_HEADERS = { 'Accept' => 'application/json', 'Content-Type' => 'application/octet-stream' }.freeze
+    COMPLETE_HEADERS = { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze
+    STATUS_HEADERS = { 'Accept' => 'application/json' }.freeze
+    ABORT_HEADERS = { 'Accept' => 'application/json' }.freeze
     CREATE_OPTIONS = {
       operation: :'StorageObjectsApi.upload_storage_object',
       header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze,
@@ -11,25 +15,25 @@ module Volcano
     }.freeze
     UPLOAD_PART_OPTIONS = {
       operation: :'StorageObjectsApi.upload_part',
-      header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/octet-stream' }.freeze,
+      header_params: UPLOAD_PART_HEADERS,
       auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
       return_type: 'UploadSessionPart'
     }.freeze
     COMPLETE_OPTIONS = {
       operation: :'StorageObjectsApi.upload_storage_object',
-      header_params: { 'Accept' => 'application/json', 'Content-Type' => 'application/json' }.freeze,
+      header_params: COMPLETE_HEADERS,
       auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
       return_type: 'CompleteUploadSessionResponse'
     }.freeze
     STATUS_OPTIONS = {
       operation: :'StorageObjectsApi.download_storage_object',
-      header_params: { 'Accept' => 'application/json' }.freeze,
+      header_params: STATUS_HEADERS,
       auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
       return_type: 'UploadSessionStatusResponse'
     }.freeze
     ABORT_OPTIONS = {
       operation: :'StorageObjectsApi.delete_storage_object',
-      header_params: { 'Accept' => 'application/json' }.freeze,
+      header_params: ABORT_HEADERS,
       auth_names: %w[ServiceRoleKey AuthUserAccessToken].freeze
     }.freeze
 
@@ -39,7 +43,7 @@ module Volcano
     end
 
     def upload_part_with_http_info(bucket_name, path, session_id, part_number, data)
-      headers = UPLOAD_PART_OPTIONS.fetch(:header_params).merge(
+      headers = UPLOAD_PART_HEADERS.merge(
         'X-Upload-Session' => session_id, 'X-Part-Number' => part_number.to_s
       )
       call_storage_api(
@@ -48,22 +52,21 @@ module Volcano
     end
 
     def complete_upload_session_with_http_info(bucket_name, path, session_id)
-      headers = COMPLETE_OPTIONS.fetch(:header_params).merge(
+      headers = COMPLETE_HEADERS.merge(
         'X-Upload-Session' => session_id, 'X-Upload-Complete' => 'true'
       )
-      options = COMPLETE_OPTIONS.merge(header_params: headers, body: JSON.generate({}))
+      options = COMPLETE_OPTIONS.merge(header_params: headers, body: '{}')
       call_storage_api(:POST, bucket_name, path, options)
     end
 
     def get_upload_session_with_http_info(bucket_name, path, session_id)
-      headers = STATUS_OPTIONS.fetch(:header_params).merge('X-Upload-Session' => session_id)
+      headers = STATUS_HEADERS.merge('X-Upload-Session' => session_id)
       call_storage_api(:GET, bucket_name, path, STATUS_OPTIONS.merge(header_params: headers))
     end
 
     def abort_upload_session_with_http_info(bucket_name, path, session_id)
-      headers = ABORT_OPTIONS.fetch(:header_params).merge('X-Upload-Session' => session_id)
+      headers = ABORT_HEADERS.merge('X-Upload-Session' => session_id)
       call_storage_api(:DELETE, bucket_name, path, ABORT_OPTIONS.merge(header_params: headers))
     end
   end
-  private_constant :UploadSessionStorageApi
 end

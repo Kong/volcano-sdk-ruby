@@ -1,0 +1,20 @@
+module Volcano
+  class Realtime
+    module BlockingCall
+      class Success[T] < Data
+        attr_reader value: T
+
+        def self.new: [T] (value: T) -> Success[T]
+      end
+
+      class Failure < Data
+        attr_reader error: StandardError
+
+        def self.new: (error: StandardError) -> Failure
+      end
+
+      def self.call: [T] () { () -> T } -> T
+      private def self.execute: [T] (Queue[Success[T] | Failure] results, ^() -> T operation) -> void
+    end
+  end
+end

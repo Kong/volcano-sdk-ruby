@@ -14,7 +14,8 @@ module Volcano
           password: password,
           user_metadata: metadata
         )
-        response(*apis.authentication.auth_signup_with_http_info(request))
+        data, status, headers = apis.authentication.auth_signup_with_http_info(request)
+        response(data, status, headers)
       end
     end
 
@@ -32,11 +33,10 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthForgotPasswordRequest.new(email: email)
-        response(
-          *apis.authentication.auth_forgot_password_with_http_info(
-            request, debug_return_type: 'String'
-          )
+        data, status, headers = apis.authentication.auth_forgot_password_with_http_info(
+          request, debug_return_type: 'String'
         )
+        response(data, status, headers)
       end
     end
 
@@ -44,11 +44,10 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthResetPasswordRequest.new(token:, new_password:)
-        response(
-          *apis.authentication.auth_reset_password_with_http_info(
-            request, debug_return_type: 'String'
-          )
+        data, status, headers = apis.authentication.auth_reset_password_with_http_info(
+          request, debug_return_type: 'String'
         )
+        response(data, status, headers)
       end
     end
 
@@ -58,6 +57,8 @@ module Volcano
         body, status, headers = apis.authentication.auth_get_user_with_http_info(
           debug_return_type: 'String'
         )
+        raise TypeError unless body.is_a?(String)
+
         response(JSON.parse(body), status, headers)
       end
     rescue JSON::ParserError, TypeError => e
@@ -67,9 +68,10 @@ module Volcano
     def auth_update_user(authorization:, password:, metadata:)
       invoke do
         apis = @api_factory.call(authorization)
-        body, status, headers = apis.authentication.auth_update_user_with_http_info(
-          **update_user_options(password:, metadata:)
-        )
+        options = update_user_options(password:, metadata:)
+        body, status, headers = apis.authentication.auth_update_user_with_http_info(options)
+        raise TypeError unless body.is_a?(String)
+
         response(JSON.parse(body), status, headers)
       end
     rescue JSON::ParserError, TypeError => e
@@ -80,7 +82,8 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthRefreshRequest.new(refresh_token: refresh_token)
-        response(*apis.authentication.auth_refresh_with_http_info(auth_refresh_request: request))
+        data, status, headers = apis.authentication.auth_refresh_with_http_info(auth_refresh_request: request)
+        response(data, status, headers)
       end
     end
 
@@ -88,16 +91,15 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthRefreshRequest.new(refresh_token: refresh_token)
-        response(*apis.authentication.auth_logout_with_http_info(auth_refresh_request: request))
+        data, status, headers = apis.authentication.auth_logout_with_http_info(auth_refresh_request: request)
+        response(data, status, headers)
       end
     end
 
     private
 
     def update_user_options(password:, metadata:)
-      attributes = {}
-      attributes[:password] = password unless password.nil?
-      attributes[:user_metadata] = metadata unless metadata.nil?
+      attributes = { password: password, user_metadata: metadata }.compact
       {
         auth_update_user_request: Generated::AuthUpdateUserRequest.new(attributes),
         debug_body: attributes,

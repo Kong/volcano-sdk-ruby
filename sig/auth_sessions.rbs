@@ -1,0 +1,7 @@
+module Volcano
+  class Auth
+    def list_sessions: (?page: Integer, ?limit: Integer) -> SessionPage
+    def delete_all_other_sessions: () -> nil
+    def delete_session: (String session_id) -> nil
+  end
+end

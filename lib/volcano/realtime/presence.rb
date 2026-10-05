@@ -4,6 +4,7 @@ module Volcano
   class Realtime
     # Presence behavior mixed into realtime channels.
     module Presence
+      # @dynamic on, emit, with_lifecycle_lock, ensure_open!, replace_presence, apply_presence_event
       def on_presence_sync(callback = nil, &)
         ensure_presence!
         on('presence_sync', callback, &)
@@ -14,7 +15,8 @@ module Volcano
           ensure_open!
           ensure_presence!
           raise ClosedError, 'realtime channel is not subscribed' unless @subscribed
-          raise ArgumentError, 'presence state must be a hash' unless state.is_a?(Hash)
+
+          validate_presence_state(state)
 
           @tracked_state = Immutable.call(state)
         end
@@ -24,14 +26,19 @@ module Volcano
       def presence_state = @presence_state
       def tracked_state = @tracked_state
 
+      # @dynamic get_presence_state
       alias get_presence_state presence_state
 
       private
 
       def initialize_presence(type)
         @type = type
-        @presence_state = Immutable.call({})
-        @tracked_state = Immutable.call({})
+        # @type var empty_presence: Hash[String, PresenceInfo]
+        empty_presence = {}
+        # @type var empty_tracked: Hash[String, json_value]
+        empty_tracked = {}
+        @presence_state = Immutable.call(empty_presence)
+        @tracked_state = Immutable.call(empty_tracked)
         @presence_handler = nil
         @presence_lock = nil
         @subscription_epoch = 0
@@ -43,6 +50,10 @@ module Volcano
         return if presence?
 
         raise ArgumentError, 'operation is only available for presence channels'
+      end
+
+      def validate_presence_state(state)
+        raise ArgumentError, 'presence state must be a hash' unless state.is_a?(Hash)
       end
 
       def register_presence_handler(protocol, epoch)
@@ -67,6 +78,8 @@ module Volcano
           next unless active_presence_epoch?(epoch)
 
           result = protocol.presence(channel: @name)
+          raise TypeError, 'realtime presence result must be an object' unless result.is_a?(Hash)
+
           replace_presence(result['presence']) if active_presence_epoch?(epoch)
         end
       end
@@ -108,7 +121,8 @@ module Volcano
       end
 
       def detach_presence_handler(protocol)
-        protocol.off_presence(@name, @presence_handler) if @presence_handler
+        handler = @presence_handler
+        protocol.off_presence(@name, handler) if handler
         @presence_handler = nil
       end
 

@@ -1,77 +1,30 @@
 # frozen_string_literal: true
 
-require 'json'
+require_relative 'session_page_mapping'
 
 module Volcano
-  # Maps the internal wire response to immutable public session values.
-  module SessionPageMapping
-    SESSION_FIELDS = %i[
-      id user_id provider expires_at is_active is_current user_agent ip_address last_ip_address
-      last_activity_at session_started_at created_at updated_at
-    ].freeze
-    REQUIRED_SESSION_FIELDS = SESSION_FIELDS.first(6).freeze
-
-    private
-
-    def session_page(body)
-      raise TypeError, 'Expected a complete session page' unless body.is_a?(Hash)
-
-      sessions = body.fetch('sessions')
-      raise TypeError, 'Expected a complete session page' unless sessions.is_a?(Array)
-
-      SessionPage.new(
-        sessions: sessions.map { |attributes| auth_session(attributes) },
-        total: body.fetch('total'), page: body.fetch('page'), limit: body.fetch('limit'),
-        total_pages: body.fetch('total_pages')
-      )
-    rescue KeyError
-      raise TypeError, 'Expected a complete session page'
-    end
-
-    def auth_session(attributes)
-      raise TypeError, 'Expected a complete authentication session' unless attributes.is_a?(Hash)
-
-      required = REQUIRED_SESSION_FIELDS.to_h { |name| [name, attributes.fetch(name.to_s)] }
-      optional = (SESSION_FIELDS - REQUIRED_SESSION_FIELDS).to_h do |name|
-        [name, attributes[name.to_s]]
-      end
-      AuthSession.new(**required, **optional)
-    rescue KeyError
-      raise TypeError, 'Expected a complete authentication session'
-    end
-  end
-  private_constant :SessionPageMapping
-
   # Multi-device session behavior for the authentication facade.
-  class Auth
+  module AuthSessions
     include SessionPageMapping
 
     def list_sessions(page: 1, limit: 20)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      body = Transport.body(list_sessions_response(current.access_token, page, limit), 200)
-      result = session_page(body)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
-
-      result
+      session_payload(200, decode: :session_page) { ->(token) { list_sessions_response(token, page, limit) } }
     end
 
     def delete_all_other_sessions
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
-
-      Transport.body(delete_all_other_sessions_response(current.access_token), 204)
-      raise Error::SessionChangedError unless @client.capture_session.first == generation
+      session_payload(204) { ->(token) { delete_all_other_sessions_response(token) } }
+      nil
     end
 
     def delete_session(session_id)
-      generation, current = @client.capture_session
-      raise Error::AuthenticationError, 'No active session' unless current
+      binding = @client.capture_session_binding
+      session = binding.last
+      raise Error::AuthenticationError, 'No active session' unless session
 
-      deletes_current = same_session_id?(current.access_token, session_id)
-      error = delete_session_error(current.access_token, session_id)
-      current_unchanged = session_unchanged_after_deletion?(deletes_current, error, generation)
+      request_id = session_id.dup.freeze
+      deletes_current = same_session_id?(session.access_token, request_id)
+      error = delete_bound_session_error(binding, request_id)
+      current_unchanged = session_unchanged_after_deletion?(deletes_current, error, binding)
       raise Error::SessionChangedError, cause: error unless current_unchanged
 
       raise error if error
@@ -111,29 +64,35 @@ module Volcano
       e
     end
 
-    def session_unchanged_after_deletion?(deletes_current, error, generation)
-      uncertain = error.nil? || error.is_a?(Error::TransportError)
-      return @client.clear_session_if_current?(generation) if deletes_current && uncertain
+    def delete_bound_session_error(binding, session_id)
+      response = session_request(binding: binding) { |token| delete_session_response(token, session_id) }
+      Transport.body(response, 204)
+      nil
+    rescue Error::VolcanoError => e
+      e
+    end
 
-      @client.capture_session.first == generation
+    def session_unchanged_after_deletion?(deletes_current, error, binding)
+      uncertain = error.nil? || error.is_a?(Error::TransportError)
+      return @client.clear_session_if_current?(binding.first, lineage: binding[1]) if deletes_current && uncertain
+
+      deletion_binding_current?(binding, error)
+    end
+
+    def deletion_binding_current?(binding, error)
+      active = @client.capture_session_binding
+      return true if active.last && active[1] == binding[1]
+
+      !error.nil? && rejected_refresh?(binding, active)
     end
 
     def same_session_id?(access_token, session_id)
       current_session_id = access_token_session_id(access_token)
-      session_id.is_a?(String) && current_session_id&.casecmp?(session_id)
+      session_id.is_a?(String) && current_session_id&.casecmp?(session_id) == true
     end
 
     def access_token_session_id(access_token)
-      parts = access_token.split('.')
-      return unless parts.length == 3
-
-      encoded = parts.fetch(1).tr('-_', '+/')
-      padding = '=' * (-encoded.length % 4)
-      payload = JSON.parse((encoded + padding).unpack1('m0'))
-      session_id = payload['session_id']
-      session_id if session_id.is_a?(String) && !session_id.empty?
-    rescue ArgumentError, JSON::ParserError
-      nil
+      SessionCredentials.session_id(access_token)
     end
   end
 end

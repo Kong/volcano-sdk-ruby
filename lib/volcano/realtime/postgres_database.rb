@@ -10,8 +10,10 @@ module Volcano
 
       attr_reader :database_name
 
+      # @dynamic database_name
+
       def database_name=(name)
-        unless name.nil? || (name.is_a?(String) && DATABASE_NAME.match?(name))
+        unless valid_database_name?(name)
           raise ArgumentError,
                 'database name must match ^[a-z0-9_]+$ and contain at most 64 characters'
         end
@@ -19,6 +21,10 @@ module Volcano
       end
 
       private
+
+      def valid_database_name?(name)
+        name.nil? || (name.is_a?(String) && DATABASE_NAME.match?(name))
+      end
 
       def initialize_postgres_database
         @database_name = nil
@@ -30,26 +36,36 @@ module Volcano
 
       def capture_protocol_session
         generation, lineage, session = capture_session_binding
-        return [generation, lineage, session] if session && session.user_id == @protocol_user_id
+        return [generation, lineage, session] if session && lineage == @protocol_session_lineage
 
         raise Error::SessionChangedError
       end
 
       def access_token_for_protocol_lineage(expected_lineage)
         _, lineage, session = capture_session_binding
-        return session.access_token if session && lineage == expected_lineage &&
-                                       session.user_id == @protocol_user_id
+        return session.access_token if session && lineage == expected_lineage && lineage == @protocol_session_lineage
 
         raise Error::SessionChangedError
       end
 
       def fetch_postgres_rows(change, ids, database_name, access_token)
         table = change.schema == 'public' ? change.table : "#{change.schema}.#{change.table}"
-        postgres_fetch_semaphore.acquire do
+        rows = postgres_fetch_semaphore.acquire do
           BlockingCall.call do
             @client.__send__(:database_with_token, database_name, access_token)
                    .from(table).select('*').in('id', ids).execute
           end
+        end
+        validate_postgres_rows(rows)
+      end
+
+      def validate_postgres_rows(rows)
+        raise TypeError, 'Postgres row lookup must return an array' unless rows.is_a?(Array)
+
+        rows.map do |row|
+          raise TypeError, 'Postgres row lookup must return objects' unless row.is_a?(Hash)
+
+          row
         end
       end
 

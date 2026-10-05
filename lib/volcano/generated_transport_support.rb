@@ -10,35 +10,30 @@ module Volcano
       rescue NameError => e
         raise unless e.name == :Generated && e.message.include?('private constant Volcano::Generated')
 
-        klass = Generated.const_get(type)
-        if klass.respond_to?(:openapi_any_of) || klass.respond_to?(:openapi_one_of)
-          klass.build(value)
-        else
-          klass.build_from_hash(value)
-        end
+        deserialize_private_model(Generated.const_get(type), value)
+      end
+
+      private
+
+      def deserialize_private_model(klass, value)
+        method_name = if klass.respond_to?(:openapi_any_of) || klass.respond_to?(:openapi_one_of)
+                        :build
+                      else
+                        :build_from_hash
+                      end
+        klass.method(method_name).call(value)
       end
     end
     private_constant :ModelDeserialization
 
-    # Enforces the BYOC certificate-pair constraint omitted by the generator.
-    module BYOCProjectConfigValidation
-      def valid?
-        return false unless super
-
-        material_present = [certificate_pem, private_key_pem, certificate_chain_pem].any? { |value| !value.nil? }
-        !material_present || (!certificate_pem.nil? && !private_key_pem.nil?)
-      end
-    end
-    private_constant :BYOCProjectConfigValidation
-
     Generated::ApiModelBase.singleton_class.prepend(ModelDeserialization)
-    Generated::BYOCProjectConfigFrontendCustomDomainTLSConfig.prepend(BYOCProjectConfigValidation)
 
     # Corrects generated content negotiation and private model lookup.
     class ApiClient < Generated::ApiClient
       def build_request(http_method, path, options = {})
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)
+        request.options[:params_encoding] = options.fetch(:params_encoding, request.options[:params_encoding])
         request
       end
 
@@ -70,8 +65,7 @@ module Volcano
 
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
-      include UploadSessionStorageApi
-
+      DOWNLOAD_HEADERS = { 'Accept' => 'application/octet-stream, application/json' }.freeze
       UPLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.upload_storage_object',
         header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' }.freeze,
@@ -80,7 +74,7 @@ module Volcano
       }.freeze
       DOWNLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.download_storage_object',
-        header_params: { 'Accept' => 'application/octet-stream, application/json' }.freeze,
+        header_params: DOWNLOAD_HEADERS,
         auth_names: %w[ServiceRoleKey AuthUserAccessToken AnonKey].freeze,
         return_type: 'File'
       }.freeze
@@ -97,12 +91,20 @@ module Volcano
       }.freeze
 
       def upload_storage_object_with_http_info(bucket_name, path, file, opts = {})
+        if opts[:content_type]
+          # Ethon accepts [filename, MIME type, local path] with encoding disabled.
+          file = [File.basename(file.path), opts[:content_type], File.expand_path(file.path)]
+          opts = opts.merge(params_encoding: :none)
+        end
         options = opts.merge(UPLOAD_OPTIONS).merge(form_params: { 'file' => file })
         call_storage_api(:POST, bucket_name, path, options)
       end
 
       def download_storage_object_with_http_info(bucket_name, path, opts = {})
-        header_params = DOWNLOAD_OPTIONS.fetch(:header_params).merge(opts[:header_params] || {})
+        provided_headers = opts[:header_params]
+        raise TypeError, 'Invalid storage headers' unless provided_headers.nil? || provided_headers.is_a?(Hash)
+
+        header_params = DOWNLOAD_HEADERS.merge(provided_headers || {})
         header_params['Range'] = opts[:range] unless opts[:range].nil?
         options = opts.merge(DOWNLOAD_OPTIONS, header_params: header_params)
 
@@ -135,26 +137,38 @@ module Volcano
       private
 
       def parse_body(value)
-        return {} if value.nil? || value.empty?
+        # @type var empty_body: Hash[String, Object?]
+        empty_body = {}
+        return empty_body if value.nil?
+        raise TypeError, 'Expected a string response body' unless value.is_a?(String)
+        return empty_body if value.empty?
 
         JSON.parse(value)
       rescue JSON::ParserError
-        {}
+        empty_body
       end
 
       def plain_value(value)
-        value = value.to_hash if value.respond_to?(:to_hash)
+        value = value.method(:to_hash).call if value.respond_to?(:to_hash)
         case value
-        when Hash then value.to_h { |key, item| [key.to_s, plain_value(item)] }
+        when Hash then plain_hash(value)
         when Array then value.map { |item| plain_value(item) }
         else value
         end
       end
 
+      def plain_hash(value)
+        value.to_h { |key, item| [key.to_s, plain_value(item)] }
+      end
+
       def deep_symbolize(value)
+        value.to_h { |key, item| [key.to_sym, deep_symbolize_value(item)] }
+      end
+
+      def deep_symbolize_value(value)
         case value
-        when Hash then value.to_h { |key, item| [key.to_sym, deep_symbolize(item)] }
-        when Array then value.map { |item| deep_symbolize(item) }
+        when Hash then deep_symbolize(value)
+        when Array then value.map { |item| deep_symbolize_value(item) }
         else value
         end
       end
@@ -163,15 +177,24 @@ module Volcano
         return value.to_s.b unless value.respond_to?(:read)
 
         prepare_stream(value)
-        value.read.b
+        result = value.method(:read).call
+        raise TypeError, 'Expected a binary stream' unless result.is_a?(String)
+
+        result.b
       ensure
-        value.close! if value.respond_to?(:close!)
+        value.method(:close!).call if value.respond_to?(:close!)
       end
 
       def prepare_stream(value)
-        value.open if value.respond_to?(:closed?) && value.closed? && value.respond_to?(:open)
-        value.binmode if value.respond_to?(:binmode)
-        value.rewind if value.respond_to?(:rewind)
+        reopen_stream(value)
+        value.method(:binmode).call if value.respond_to?(:binmode)
+        value.method(:rewind).call if value.respond_to?(:rewind)
+      end
+
+      def reopen_stream(value)
+        return unless value.respond_to?(:closed?) && value.method(:closed?).call && value.respond_to?(:open)
+
+        value.method(:open).call
       end
     end
 
@@ -185,11 +208,12 @@ module Volcano
       end
 
       def generated_configuration(authorization)
-        uri = URI(@api_url)
+        uri = URI.parse(@api_url)
+        path = uri.path || ''
         Generated::Configuration.new.tap do |configuration|
           configuration.scheme = uri.scheme
           configuration.host = host_with_port(uri)
-          configuration.base_path = uri.path == '/' ? '' : uri.path
+          configuration.base_path = path == '/' ? '' : path
           configuration.ignore_operation_servers = true
           configuration.access_token = authorization
           configuration.timeout = timeout_milliseconds
@@ -208,6 +232,7 @@ module Volcano
           storage: StorageApi.new(api_client),
           locks: Generated::LocksApi.new(api_client),
           functions: Generated::FunctionsApi.new(api_client),
+          durable: Generated::DurableFunctionsApi.new(api_client),
           logs: Generated::LogsApi.new(api_client)
         )
       end
@@ -218,9 +243,11 @@ module Volcano
       end
 
       def host_with_port(uri)
-        return uri.host if uri.port == uri.default_port
+        host = uri.host
+        raise ArgumentError, 'API URL requires a host' unless host
+        return host if uri.port == uri.default_port
 
-        "#{uri.host}:#{uri.port}"
+        "#{host}:#{uri.port}"
       end
     end
   end

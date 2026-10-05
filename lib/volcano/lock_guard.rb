@@ -14,7 +14,7 @@ module Volcano
     def initialize(lease, ttl:, started_at:)
       @lease = lease
       @ttl = ttl
-      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at)
+      @lease_clock = LockLeaseClock.new(ttl: ttl, started_at: started_at) # rubocop:disable Lint/NameTypo -- Inherited Class#new.
       @mutex = Mutex.new
       @changed = ConditionVariable.new
       @failure = nil
@@ -84,7 +84,7 @@ module Volcano
         wait = wait_duration(deadline)
         return false unless wait
 
-        @changed.wait(@mutex, wait)
+        @changed.wait(@mutex, Float(wait))
       end
     end
 
@@ -129,7 +129,11 @@ module Volcano
     def remaining_time = @lease_clock.remaining
 
     def wait_deadline(timeout)
-      timeout && (@lease_clock.monotonic_now + timeout)
+      return unless timeout
+
+      raise ArgumentError, 'invalid timeout' unless timeout.is_a?(Numeric) && timeout.real? && timeout.finite?
+
+      @lease_clock.monotonic_now + timeout
     end
   end
 end

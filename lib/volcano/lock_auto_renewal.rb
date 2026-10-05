@@ -10,10 +10,11 @@ module Volcano
     RENEWAL_REQUEST_BUDGET_SECONDS = 1.0
     RENEWER_SHUTDOWN_TIMEOUT_SECONDS = 1.0
 
-    def with_lock(key, ttl:, &)
+    def with_lock(key, ttl:, token: nil, request_id: nil, &)
       validate_ttl(ttl)
       started_at = LockLeaseClock.capture
-      guard = LockGuard.new(acquire(key, ttl: ttl), ttl: ttl, started_at: started_at)
+      lease = acquire(key, ttl: ttl, token: token, request_id: request_id)
+      guard = LockGuard.new(lease, ttl: ttl, started_at: started_at)
       owned_key = guard.lease.key
       renewer = lock_renewer(owned_key, guard, ttl)
       LockSession.new(self, owned_key, guard, renewer, method(:renewal_delay)).run(&)
@@ -29,17 +30,15 @@ module Volcano
       LockRenewer.new(self, key, guard, config)
     end
 
-    def renewal_delay(ttl, remaining: nil)
+    def renewal_delay(ttl, remaining:)
       delay = [ttl / 3.0, MAX_RENEWAL_DELAY_SECONDS].min
       latest = latest_renewal_delay(remaining)
-      delay = [delay, latest].min if latest
+      delay = [delay, latest].min
       jittered = [0.0, delay * (0.9 + (rand * 0.2))].max
-      latest ? [jittered, latest].min : jittered
+      [jittered, latest].min
     end
 
     def latest_renewal_delay(remaining)
-      return unless remaining
-
       [0.0, remaining - RENEWAL_SAFETY_MARGIN_SECONDS - RENEWAL_REQUEST_BUDGET_SECONDS].max
     end
 

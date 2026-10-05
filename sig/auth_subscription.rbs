@@ -1,0 +1,6 @@
+module Volcano
+  class AuthSubscription
+    def initialize: () ?{ () -> void } -> void
+    def unsubscribe: () -> nil
+  end
+end

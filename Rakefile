@@ -1,3 +1,61 @@
 # frozen_string_literal: true
 
 require 'bundler/gem_tasks'
+require 'securerandom'
+require 'tmpdir'
+require_relative 'maintainers/quality/native_gate'
+
+desc 'Run the same SDK checks locally and in CI'
+task quality: %w[quality:audit quality:generated quality:lint quality:types quality:spec quality:defects
+                 quality:package]
+
+desc 'Audit locked dependencies with current security advisories'
+task 'quality:audit' do
+  ruby Gem.bin_path('bundler-audit', 'bundle-audit'), 'check', '--update'
+end
+
+desc 'Verify the generated OpenAPI client'
+task 'quality:generated' do
+  sh 'bin/check-openapi'
+end
+
+desc 'Lint all maintained Ruby code'
+task 'quality:lint' do
+  NativeGate.verify_lint_targets!(__dir__)
+  ruby Gem.bin_path('rubocop', 'rubocop'), '--parallel'
+end
+
+desc 'Validate public Ruby signatures and check the typed Ruby surface'
+task 'quality:types' do
+  ruby Gem.bin_path('rbs', 'rbs'), '-r', 'uri', '-I', 'sig', '-I', 'sig_dev', 'validate'
+  ruby Gem.bin_path('steep', 'steep'), 'check', '--jobs', '1'
+  ruby Gem.bin_path('steep', 'steep'), 'check', '--steepfile', 'Steepfile.transport', '--jobs', '1'
+end
+
+desc 'Run the unit tests'
+task 'quality:spec' do
+  rspec = Gem.bin_path('rspec-core', 'rspec')
+  run_id = SecureRandom.uuid
+  environment = { 'VOLCANO_REQUIRE_FULL_SUITE' => '1', 'SIMPLECOV_RUN_ID' => run_id }
+  Bundler.with_unbundled_env do
+    sh(environment, Gem.ruby, '-r./spec/support/coverage_start', rspec,
+       '--failure-exit-code', '1', '--error-exit-code', '1')
+  end
+  NativeGate.verify_coverage!(__dir__, run_id)
+end
+
+desc 'Build and smoke test a fresh gem in an isolated install'
+task 'quality:package' do
+  Dir.mktmpdir('volcano-sdk-quality-') do |directory|
+    artifact = File.join(directory, 'volcano-sdk.gem')
+    Bundler.with_unbundled_env do
+      sh Gem.ruby, '-S', 'gem', 'build', 'volcano-sdk.gemspec', '--output', artifact
+      sh 'bash', '.github/scripts/smoke-gem.sh', artifact
+    end
+  end
+end
+
+desc 'Require tests to detect the five injected SDK defects'
+task 'quality:defects' do
+  ruby 'bin/check-defects'
+end

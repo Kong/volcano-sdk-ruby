@@ -4,6 +4,7 @@ module Volcano
   module Error
     # Base error containing structured Volcano response details.
     class VolcanoError < StandardError
+      # @dynamic status, code, retry_after
       attr_reader :status, :code, :retry_after
 
       def initialize(message, status: nil, code: nil, retry_after: nil)

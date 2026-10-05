@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 module Volcano
-  Session = Data.define(:access_token, :refresh_token, :user_id)
   AUTH_SESSION_ATTRIBUTES = %i[
     id user_id provider expires_at is_active is_current user_agent ip_address last_ip_address
     last_activity_at session_started_at created_at updated_at
   ].freeze
   private_constant :AUTH_SESSION_ATTRIBUTES
 
-  AuthSession = Data.define(*AUTH_SESSION_ATTRIBUTES) do
+  AuthSession = Data.define(*AUTH_SESSION_ATTRIBUTES)
+
+  # Reopens the generated record for checked initialization.
+  class AuthSession
     def initialize(**attributes)
       unknown = attributes.keys - AUTH_SESSION_ATTRIBUTES
       raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
@@ -19,7 +21,8 @@ module Volcano
       values = AUTH_SESSION_ATTRIBUTES.to_h do |name|
         [name, freeze_session_value(attributes[name])]
       end
-      super(**values)
+      attributes = values
+      super
     end
 
     private
@@ -29,19 +32,26 @@ module Volcano
     end
   end
 
-  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages) do
+  SessionPage = Data.define(:sessions, :total, :page, :limit, :total_pages)
+
+  # Reopens the generated record for checked initialization.
+  class SessionPage
+    # @dynamic sessions, total, page, limit, total_pages, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(sessions:, total:, page:, limit:, total_pages:)
-      super(sessions: sessions.to_a.dup.freeze, total: total, page: page, limit: limit,
-            total_pages: total_pages)
+      sessions = sessions.to_a.dup.freeze
+      super
     end
   end
-  LinkedOAuthProvider = Data.define(:provider, :linked_at, :updated_at) do
+  LinkedOAuthProvider = Data.define(:provider, :linked_at, :updated_at)
+
+  # Reopens the generated record for checked initialization.
+  class LinkedOAuthProvider
     def initialize(provider:, linked_at:, updated_at:)
-      super(
-        provider: immutable_value(provider),
-        linked_at: immutable_value(linked_at),
-        updated_at: immutable_value(updated_at)
-      )
+      provider = immutable_value(provider)
+      linked_at = immutable_value(linked_at)
+      updated_at = immutable_value(updated_at)
+      super
     end
 
     private
@@ -50,67 +60,46 @@ module Volcano
       value.frozen? ? value : value.dup.freeze
     end
   end
-  OAuthProviderTokenStatus = Data.define(:message, :provider, :expires_in) do
+  OAuthProviderTokenStatus = Data.define(:message, :provider, :expires_in)
+
+  # Reopens the generated record for checked initialization.
+  class OAuthProviderTokenStatus
+    # @dynamic message, provider, expires_in, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(message:, provider:, expires_in:)
       values = [message, provider]
       valid = values.all? { |value| value.is_a?(String) && !value.strip.empty? }
       raise TypeError, 'Expected complete OAuth provider token status' unless valid && expires_in.is_a?(Integer)
 
-      super(message: message.dup.freeze, provider: provider.dup.freeze, expires_in: expires_in)
+      message = message.dup.freeze
+      provider = provider.dup.freeze
+      super
     end
   end
-  SignUpResult = Data.define(:confirmation_required, :message)
   EmailChangeResult = Data.define(:message, :new_email)
-  USER_OPTIONAL_ATTRIBUTES = %i[
-    project_id email_confirmed user_metadata app_metadata avatar_url banned_until
-    last_sign_in_at created_at updated_at
-  ].freeze
-  private_constant :USER_OPTIONAL_ATTRIBUTES
+  LockLease = Data.define(:key, :token, :expires_at, :fencing_token)
 
-  User = Data.define(
-    :id, :project_id, :email, :email_confirmed, :user_metadata, :app_metadata,
-    :avatar_url, :status, :banned_until, :last_sign_in_at, :created_at, :updated_at
-  ) do
-    def initialize(id:, email:, status:, **attributes)
-      validate_optional_attributes(attributes)
-      super(
-        id: freeze_value(id),
-        email: freeze_value(email),
-        status: freeze_value(status),
-        **USER_OPTIONAL_ATTRIBUTES.to_h { |name| [name, freeze_value(attributes[name])] }
-      )
-    end
-
-    private
-
-    def validate_optional_attributes(attributes)
-      unknown = attributes.keys - USER_OPTIONAL_ATTRIBUTES
-      raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
-    end
-
-    def freeze_value(value)
-      case value
-      when Hash then value.to_h { |key, item| [freeze_value(key), freeze_value(item)] }.freeze
-      when Array then value.map { |item| freeze_value(item) }.freeze
-      when String then value.dup.freeze
-      else value.frozen? ? value : value.dup.freeze
-      end
-    end
-  end
-  LockLease = Data.define(:key, :token, :expires_at, :fencing_token) do
+  # Reopens the generated record for checked initialization.
+  class LockLease
+    # @dynamic key, token, expires_at, fencing_token, members, with, to_h
+    # @dynamic deconstruct, deconstruct_keys, self.[], self.members
     def initialize(key:, token:, expires_at:, fencing_token:)
-      super(
-        key: key.dup.freeze,
-        token: token.dup.freeze,
-        expires_at: expires_at&.dup&.freeze,
-        fencing_token: fencing_token
-      )
+      key = key.dup.freeze
+      token = token.dup.freeze
+      expires_at = expires_at&.dup&.freeze
+      super
     end
   end
-  LockState = Data.define(:held, :expires_at, :fencing_token) do
+  LockState = Data.define(:held, :expires_at, :fencing_token)
+
+  # Reopens the generated record for checked initialization.
+  class LockState
+    # @dynamic held, expires_at, fencing_token, members, with, to_h, deconstruct
+    # @dynamic deconstruct_keys, self.[], self.members
     def initialize(held:, expires_at:, fencing_token:)
       immutable_expiry = expires_at&.then { |value| value.frozen? ? value : value.dup.freeze }
-      super(held: held, expires_at: immutable_expiry, fencing_token: fencing_token)
+      expires_at = immutable_expiry
+      super
     end
   end
 end

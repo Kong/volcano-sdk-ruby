@@ -7,11 +7,10 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthConfirmEmailRequest.new(token:)
-        response(
-          *apis.authentication.auth_confirm_email_with_http_info(
-            request, debug_return_type: 'String'
-          )
+        data, status, headers = apis.authentication.auth_confirm_email_with_http_info(
+          request, debug_return_type: 'String'
         )
+        response(data, status, headers)
       end
     end
 
@@ -19,11 +18,10 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         request = Generated::AuthForgotPasswordRequest.new(email:)
-        response(
-          *apis.authentication.auth_resend_confirmation_with_http_info(
-            request, debug_return_type: 'String'
-          )
+        data, status, headers = apis.authentication.auth_resend_confirmation_with_http_info(
+          request, debug_return_type: 'String'
         )
+        response(data, status, headers)
       end
     end
   end

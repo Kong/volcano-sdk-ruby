@@ -4,174 +4,10 @@ require 'async'
 require 'async/queue'
 require 'json'
 require 'spec_helper'
+require_relative '../support/fake_realtime'
 
 RSpec.describe Volcano::Realtime do
-  RealtimeResponse = Data.define(:status, :body, :headers, :data) unless const_defined?(:RealtimeResponse)
-
-  class RealtimeAuthTransport
-    def auth_signin(**)
-      RealtimeResponse.new(
-        status: 200,
-        body: {
-          'access_token' => 'access-token',
-          'refresh_token' => 'refresh-token',
-          'user' => { 'id' => 'user-123' }
-        },
-        headers: {},
-        data: nil
-      )
-    end
-  end
-
-  class RealtimeDatabaseTransport < RealtimeAuthTransport
-    attr_reader :queries, :query_threads
-
-    def initialize(rows = [{ 'id' => 42, 'body' => 'fetched' }], error: nil)
-      @rows = rows
-      @error = error
-      @queries = []
-      @query_threads = []
-    end
-
-    def query_database_select(**arguments)
-      @queries << arguments
-      @query_threads << Thread.current
-      raise @error if @error
-
-      RealtimeResponse.new(
-        status: 200,
-        body: { 'data' => @rows },
-        headers: {},
-        data: nil
-      )
-    end
-  end
-
-  class BlockingRealtimeDatabaseTransport < RealtimeDatabaseTransport
-    attr_reader :started, :release
-
-    def initialize
-      super
-      @started = ThreadSignalQueue.new
-      @release = ThreadSignalQueue.new
-    end
-
-    def query_database_select(**arguments)
-      @started.enqueue(true)
-      @release.dequeue
-      super
-    end
-  end
-
-  class FirstBlockingRealtimeDatabaseTransport < RealtimeDatabaseTransport
-    attr_reader :release, :started
-
-    def initialize
-      super
-      @blocked = false
-      @started = ThreadSignalQueue.new
-      @release = ThreadSignalQueue.new
-    end
-
-    def query_database_select(**arguments)
-      unless @blocked
-        @blocked = true
-        @started.enqueue(true)
-        @release.dequeue
-      end
-      super
-    end
-  end
-
-  class ThreadSignalQueue < Queue
-    alias dequeue pop
-    alias enqueue push
-  end
-
-  class FacadeSocket
-    attr_accessor :on_write
-    attr_reader :commands
-
-    def initialize
-      @incoming = Async::Queue.new
-      @commands = []
-      @closed = false
-    end
-
-    def write(frame)
-      command = JSON.parse(frame.to_str)
-      @commands << command
-      return if on_write&.call(command) == :defer
-
-      result = command.key?('connect') ? { 'client' => 'client-123' } : {}
-      respond(command.fetch('id'), result: result)
-    end
-
-    def read
-      value = @incoming.dequeue
-      raise value if value.is_a?(Exception)
-
-      value
-    end
-
-    def publication(channel:, data:)
-      @incoming.enqueue(
-        JSON.generate(
-          'push' => {
-            'channel' => channel,
-            'pub' => { 'data' => data }
-          }
-        )
-      )
-    end
-
-    def presence_event(channel:, event:, info:)
-      @incoming.enqueue(
-        JSON.generate(
-          'push' => {
-            'channel' => channel,
-            event => { 'info' => info }
-          }
-        )
-      )
-    end
-
-    def respond(id, result: {})
-      @incoming.enqueue(JSON.generate('id' => id, 'result' => result))
-    end
-
-    def reject(id, message, code: nil)
-      error = { 'message' => message }
-      error['code'] = code if code
-      @incoming.enqueue(JSON.generate('id' => id, 'error' => error))
-    end
-
-    def invalid_frame
-      @incoming.enqueue('{')
-    end
-
-    def fail_read(error)
-      @incoming.enqueue(error)
-    end
-
-    def connect_then_invalid(id)
-      reply = JSON.generate('id' => id, 'result' => { 'client' => 'client-123' })
-      @incoming.enqueue("#{reply}\n{")
-    end
-
-    def close
-      return if @closed
-
-      @closed = true
-      @incoming.enqueue(nil)
-    end
-
-    def closed?
-      @closed
-    end
-  end
-
-  def realtime_client(socket, transport: RealtimeAuthTransport.new)
+  def realtime_client(socket, transport: SpecSupport::RealtimeAuthTransport.new)
     client = Volcano::Client.new(
       anon_key: 'anon-key',
       _transport: transport,
@@ -198,8 +34,31 @@ RSpec.describe Volcano::Realtime do
     end
   end
 
+  it 'sends commands while the socket reader is blocked waiting for data' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      task.yield
+      expect(socket.reading).to be true
+
+      task.with_timeout(0.2) do
+        channel.unsubscribe
+        channel.subscribe
+        channel.send(event: 'message', value: 'after resume')
+      end
+      expect(socket.commands.map { |command| (command.keys - ['id']).first }).to eq(
+        %w[connect subscribe unsubscribe subscribe publish]
+      )
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'exposes the canonical channel name' do
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: SpecSupport::RealtimeAuthTransport.new)
 
     expect(client.realtime.channel('contract').name).to eq('broadcast:contract')
     expect(client.realtime.channel('contract').name).to be_frozen
@@ -214,7 +73,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'routes immutable RLS-scoped Postgres changes by event, schema, and table' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     updates = []
     inserts = []
@@ -253,7 +112,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not overmatch malformed or different Postgres publication channels' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     received = []
 
@@ -281,7 +140,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'preserves lightweight Postgres metadata when a full row is unavailable' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     received = []
 
@@ -306,8 +165,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'fetches a full Postgres row for a lightweight insert' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -345,8 +204,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'batches lightweight row lookups and preserves duplicate deliveries' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new(
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new(
       [
         { 'id' => 2, 'body' => 'second' },
         { 'id' => 1, 'body' => 'first' }
@@ -386,10 +245,10 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
-  it 'flushes a row lookup batch when it reaches 50 changes' do
-    socket = FacadeSocket.new
+  it 'limits a row lookup batch to 50 changes' do
+    socket = SpecSupport::FacadeSocket.new
     rows = Array.new(51) { |index| { 'id' => index + 1 } }
-    transport = RealtimeDatabaseTransport.new(rows)
+    transport = SpecSupport::RealtimeDatabaseTransport.new(rows)
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -413,17 +272,17 @@ RSpec.describe Volcano::Realtime do
       changes = Array.new(51) { task.with_timeout(0.2) { received.dequeue } }
 
       expect(changes.map { |change| change.record.fetch('id') }).to eq((1..51).to_a)
-      expect(transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }).to eq(
-        [(1..50).to_a, [51]]
-      )
+      query_ids = transport.queries.map { |query| query.dig(:body, 'filters', 0, 'value') }
+      expect(query_ids.flatten).to eq((1..51).to_a)
+      expect(query_ids.map(&:length)).to all(be <= 50)
       client.realtime.disconnect
     end.wait
   end
 
   it 'supports a per-channel row lookup batch size' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     rows = Array.new(3) { |index| { 'id' => index + 1 } }
-    transport = RealtimeDatabaseTransport.new(rows)
+    transport = SpecSupport::RealtimeDatabaseTransport.new(rows)
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -456,7 +315,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'validates and preserves cached channel fetch settings' do
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: SpecSupport::RealtimeAuthTransport.new)
     channel = client.realtime.channel(
       'public:messages',
       type: :postgres,
@@ -493,8 +352,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'auto-fetches lightweight changes for wildcard Postgres listeners' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -521,8 +380,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'expands lightweight deletes locally without querying a vanished row' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -549,8 +408,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'queries the schema carried by a lightweight Postgres change' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -576,8 +435,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not query changes without a matching Postgres listener' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -600,7 +459,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'rejects conflicting auto-fetch options for a cached channel' do
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: SpecSupport::RealtimeAuthTransport.new)
     channel = client.realtime.channel('public:messages', type: :postgres)
 
     expect do
@@ -610,7 +469,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'delivers Postgres changes to an unfiltered on callback' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
 
     Async do |task|
@@ -632,9 +491,9 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports auto-fetch failures and delivers the lightweight change' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     error = Volcano::Error::TransportError.new('database unavailable')
-    transport = RealtimeDatabaseTransport.new(error: error)
+    transport = SpecSupport::RealtimeDatabaseTransport.new(error: error)
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -664,8 +523,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'preserves publication order while a lightweight fetch is pending' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -702,8 +561,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'waits for a running fetch and invalidates it during unsubscribe' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -746,8 +605,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'waits for a running fetch during disconnect' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -777,8 +636,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'uses a refreshed token for subsequent changes from the same user' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -809,9 +668,80 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  [false, true].each do |same_session|
+    it "binds bootstrap realtime without a profile preflight, same session: #{same_session}" do
+      token = lambda do |session_id|
+        "header.#{[{ session_id: session_id }.to_json].pack('m0').tr('+/', '-_').delete('=')}.signature"
+      end
+      session_a = '00000000-0000-4000-8000-000000000001'
+      session_b = '00000000-0000-4000-8000-000000000002'
+      socket = SpecSupport::FacadeSocket.new
+      transport = instance_double(Volcano.const_get(:GeneratedTransport, false))
+      allow(transport).to receive(:auth_refresh).and_return(
+        Volcano::Transport::Response.new(status: 200, headers: {}, data: nil,
+                                         body: { 'access_token' => token.call(same_session ? session_a : session_b),
+                                                 'refresh_token' => 'rotated', 'user' => { 'id' => 'user-123' } })
+      )
+      client = Volcano::Client.new(anon_key: 'anon', access_token: token.call(session_a), refresh_token: 'refresh',
+                                   _transport: transport, _realtime_socket_factory: ->(_address) { socket })
+      Async do
+        client.realtime.channel('contract').subscribe
+        expect(client.current_session.user_id).to be_nil
+        if same_session
+          client.auth.refresh_session
+          client.realtime.channel('another').subscribe
+        else
+          expect { client.auth.refresh_session }
+            .to raise_error(Volcano::Error::AuthenticationError, /different server session/)
+        end
+        expect(client.current_session.access_token).to eq(token.call(session_a))
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
+  end
+
+  it 'keeps a token-only connection usable after its profile establishes the user identity' do
+    socket = SpecSupport::FacadeSocket.new
+    transport = instance_double(Volcano.const_get(:GeneratedTransport, false))
+    allow(transport).to receive_messages(
+      auth_get_user: Volcano::Transport::Response.new(
+        status: 200, body: { 'user' => { 'id' => 'user-123', 'email' => 'u@example.com', 'status' => 'active' } },
+        headers: {}, data: nil
+      ),
+      query_database_select: Volcano::Transport::Response.new(
+        status: 200, body: { 'data' => [{ 'id' => 42, 'body' => 'fetched' }] }, headers: {}, data: nil
+      )
+    )
+    client = Volcano::Client.new(anon_key: 'anon', access_token: 'access-token', _transport: transport,
+                                 _realtime_socket_factory: ->(_address) { socket })
+    Async do |task|
+      broadcast = client.realtime.channel('contract')
+      broadcast.subscribe
+      client.auth.user
+      broadcast.unsubscribe
+      expect { broadcast.subscribe }.not_to raise_error
+      received = Async::Queue.new
+      client.realtime.database_name = 'app'
+      channel = client.realtime.channel('public:messages', type: :postgres)
+      channel.on_postgres_changes('INSERT', schema: 'public', table: 'messages') { |change| received.enqueue(change) }
+      channel.subscribe
+      socket.publication(
+        channel: 'project-id:postgres:public:messages:user-id',
+        data: {
+          'type' => 'INSERT', 'schema' => 'public', 'table' => 'messages',
+          'id' => 42, 'mode' => 'lightweight', 'timestamp' => '2026-09-02T12:00:00Z'
+        }
+      )
+      expect(task.with_timeout(0.2) { received.dequeue }.record).to eq('id' => 42, 'body' => 'fetched')
+      expect(transport).to have_received(:query_database_select).with(hash_including(authorization: 'access-token'))
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'preserves a queued change when the same user refreshes their token' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -846,8 +776,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'uses the refreshed token for a queued row lookup' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -888,8 +818,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not block publication dispatch when a delivery queue is full' do
-    socket = FacadeSocket.new
-    transport = FirstBlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::FirstBlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -919,8 +849,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'discards a queued change after a new same-user session is adopted' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -953,7 +883,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'rejects a Postgres subscription when the socket belongs to another user' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
 
     Async do
@@ -971,7 +901,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'validates the database name when configuring auto-fetch' do
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: SpecSupport::RealtimeAuthTransport.new)
 
     expect { client.realtime.database_name = 'Not Valid' }.to raise_error(
       ArgumentError, 'database name must match ^[a-z0-9_]+$ and contain at most 64 characters'
@@ -979,8 +909,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not deliver queued changes after the authenticated user changes' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -1017,8 +947,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'captures the database selected when a change arrives' do
-    socket = FacadeSocket.new
-    transport = BlockingRealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::BlockingRealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -1047,8 +977,8 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'can disable lightweight Postgres auto-fetch per channel' do
-    socket = FacadeSocket.new
-    transport = RealtimeDatabaseTransport.new
+    socket = SpecSupport::FacadeSocket.new
+    transport = SpecSupport::RealtimeDatabaseTransport.new
     client = realtime_client(socket, transport: transport)
 
     Async do |task|
@@ -1077,7 +1007,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'validates Postgres change registrations' do
-    client = Volcano::Client.new(anon_key: 'anon-key', _transport: RealtimeAuthTransport.new)
+    client = Volcano::Client.new(anon_key: 'anon-key', _transport: SpecSupport::RealtimeAuthTransport.new)
     callback = proc {}
 
     expect do
@@ -1092,8 +1022,73 @@ RSpec.describe Volcano::Realtime do
     end.to raise_error(ArgumentError, 'unsupported postgres change event: UPSERT')
   end
 
+  it 'delivers only message publications on presence channels without changing presence state' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do |task|
+      channel = client.realtime.channel('lobby', type: :presence)
+      received = Async::Queue.new
+      joins = []
+      channel.on('join') { |data| joins << data }
+      channel.on('message') { |data| received.enqueue(data) }
+      channel.subscribe
+      initial_state = channel.presence_state
+      socket.publication(channel: 'project:presence:lobby', data: { 'event' => 'join' })
+      message = { 'event' => 'message', 'value' => 'hello' }
+      socket.publication(channel: 'project:presence:lobby', data: message)
+
+      expect(task.with_timeout(1) { received.dequeue }).to eq(message)
+      expect(received).to be_empty
+      expect(joins).to be_empty
+      expect(channel.presence_state).to equal(initial_state)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'rejects non-hash presence tracking without replacing the tracked snapshot' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+    socket.on_write = presence_reply(socket, {})
+
+    Async do
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+      channel.track('status' => 'online')
+      snapshot = channel.tracked_state
+
+      expect { channel.track(['offline']) }.to raise_error(ArgumentError, 'presence state must be a hash')
+      expect(channel.tracked_state).to equal(snapshot)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'preserves connection and user identities from typed presence replies' do
+    socket = SpecSupport::FacadeSocket.new
+    client = realtime_client(socket)
+    alice = presence_info('alice-client', 'alice', 'Alice')
+    socket.on_write = presence_reply(socket, 'alice-client' => alice)
+
+    Async do
+      channel = client.realtime.channel('lobby', type: :presence)
+      channel.subscribe
+
+      expect(channel.presence_state).to eq(
+        'alice-client' => Volcano::Realtime::PresenceInfo.new(
+          client: 'alice-client', user: 'alice', data: alice.fetch('conn_info')
+        )
+      )
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'tracks an immutable presence snapshot through sync, join, leave, and unsubscribe', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     alice = presence_info('alice-client', 'alice', 'Alice')
     bob = presence_info('bob-client', 'bob', 'Bob')
@@ -1131,7 +1126,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'applies join and leave pushes that arrive during presence synchronization' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     alice = presence_info('alice-client', 'alice', 'Alice')
     bob = presence_info('bob-client', 'bob', 'Bob')
@@ -1159,7 +1154,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'lets presence callbacks call channel methods without deadlocking' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1180,7 +1175,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'ignores presence pushes captured before unsubscribe' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1201,7 +1196,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'delivers unsubscribe presence sync outside the lifecycle lock' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1226,7 +1221,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not emit a stale sync when a join callback unsubscribes' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1249,7 +1244,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'keeps a successful subscription usable when its initial presence query fails' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = lambda do |command|
       next unless command.key?('presence')
@@ -1271,7 +1266,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'retains the last presence snapshot when a resync fails' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     alice = presence_info('alice-client', 'alice', 'Alice')
     socket.on_write = presence_reply(socket, 'alice-client' => alice)
@@ -1297,7 +1292,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports one error when protocol loss rejects a presence resync' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1321,11 +1316,12 @@ RSpec.describe Volcano::Realtime do
       task.with_timeout(0.2) { task.yield until errors.any? }
 
       expect(errors.length).to eq(1)
+      client.realtime.disconnect
     end.wait
   end
 
   it 'clears presence after an unexpected disconnect' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     alice = presence_info('alice-client', 'alice', 'Alice')
     socket.on_write = presence_reply(socket, 'alice-client' => alice)
@@ -1338,11 +1334,12 @@ RSpec.describe Volcano::Realtime do
       task.with_timeout(0.2) { task.yield until channel.presence_state.empty? }
 
       expect(channel.presence_state).to be_empty
+      client.realtime.disconnect
     end.wait
   end
 
   it 'isolates failing join callbacks and still emits the resulting sync' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = realtime_client(socket)
     socket.on_write = presence_reply(socket, {})
 
@@ -1368,7 +1365,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'exposes the bounded async channel facade over Async::WebSocket::Client semantics', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     addresses = []
     factory = lambda do |address|
       addresses << address
@@ -1377,7 +1374,7 @@ RSpec.describe Volcano::Realtime do
     client = Volcano::Client.new(
       api_url: 'https://api.test.volcano.dev',
       anon_key: 'anon key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: factory
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1415,10 +1412,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports connection lifecycle with immutable contexts', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1455,10 +1452,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports transport errors before peer disconnection', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1471,6 +1468,7 @@ RSpec.describe Volcano::Realtime do
 
       socket.invalid_frame
       task.with_timeout(0.2) { task.yield until events.length == 2 }
+      client.realtime.disconnect
     end.wait
 
     expect(events.map(&:first)).to eq(%i[error disconnect])
@@ -1486,7 +1484,7 @@ RSpec.describe Volcano::Realtime do
   it 'prevents one error callback from mutating another callback context' do
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { raise IOError, 'socket open failed' }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1522,10 +1520,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'closes and reports an established connection when a socket write fails' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1543,6 +1541,7 @@ RSpec.describe Volcano::Realtime do
         'socket write failed'
       )
       task.with_timeout(0.2) { task.yield until events.length == 2 }
+      client.realtime.disconnect
     end.wait
 
     expect(events).to eq(
@@ -1553,10 +1552,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'keeps the connection open when a publication cannot be serialized' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1581,7 +1580,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'freezes string error codes before delivering shared contexts' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     socket.on_write = lambda do |command|
       next unless command.key?('connect')
 
@@ -1590,7 +1589,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1618,10 +1617,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'finishes transport shutdown before an error callback disconnects again' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1641,7 +1640,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not report a connection after the protocol closes while handling its reply' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     socket.on_write = lambda do |command|
       next unless command.key?('connect')
 
@@ -1650,7 +1649,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1678,7 +1677,7 @@ RSpec.describe Volcano::Realtime do
     client = Volcano::Client.new(
       api_url: 'https://api.test.volcano.dev',
       anon_key: anon_key,
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(address) { raise IOError, "failed to open #{address}" }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1698,7 +1697,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports one error when a pending connect receives a copied read failure' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     socket.on_write = lambda do |command|
       next unless command.key?('connect')
 
@@ -1707,7 +1706,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1725,7 +1724,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'preserves a connect rejection code in the error context' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     socket.on_write = lambda do |command|
       next unless command.key?('connect')
 
@@ -1734,7 +1733,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1751,10 +1750,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'runs connection callbacks outside protocol processing' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1776,10 +1775,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'reports connection state and removes one channel', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1805,10 +1804,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'removes all channels without disconnecting', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1833,10 +1832,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'detaches a removed channel before recreating it', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1865,10 +1864,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'retains a channel when removal fails' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1895,11 +1894,95 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
-  it 'reports a peer-closed transport as disconnected' do
-    socket = FacadeSocket.new
+  it 'restores a channel after its unsubscribe request is rejected' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    sockets = [first_socket, restored_socket]
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      first_socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        first_socket.reject(command.fetch('id'), 'unsubscribe failed')
+        :defer
+      end
+
+      expect { channel.unsubscribe }.to raise_error(
+        Volcano::Realtime::ServerError,
+        'unsubscribe failed'
+      )
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
+  it 'restores a channel when its unsubscribe request loses the transport' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    unsubscribe_started = Async::Queue.new
+    lose_transport = Async::Queue.new
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.subscribe
+      first_socket.on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        unsubscribe_started.enqueue(true)
+        lose_transport.dequeue
+        first_socket.fail_read(IOError.new('socket failed'))
+        :defer
+      end
+
+      unsubscribing = task.async do
+        channel.unsubscribe
+      rescue StandardError => e
+        e
+      end
+      unsubscribe_started.dequeue
+      expect(channel).to be_subscription_desired
+      lose_transport.enqueue(true)
+      expect(unsubscribing.wait).to be_a(Volcano::Realtime::ClosedError)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
+  it 'reports a peer-closed transport as disconnected' do
+    socket = SpecSupport::FacadeSocket.new
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1918,21 +2001,332 @@ RSpec.describe Volcano::Realtime do
     end.wait
   end
 
+  it 'reconnects and restores subscribed channels after transport loss' do
+    first_socket = SpecSupport::FacadeSocket.new
+    second_socket = SpecSupport::FacadeSocket.new
+    third_socket = SpecSupport::FacadeSocket.new
+    sockets = [first_socket, second_socket, third_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    received = []
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      channel.on('message') { |message| received << message }
+      channel.subscribe
+
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until second_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      second_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'restored' }
+      )
+      task.with_timeout(0.2) { task.yield until received.any? }
+
+      second_socket.fail_read(IOError.new('socket failed again'))
+      task.with_timeout(0.2) do
+        task.yield until third_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      third_socket.publication(
+        channel: 'project-id:broadcast:contract',
+        data: { 'event' => 'message', 'value' => 'restored-again' }
+      )
+      task.with_timeout(0.2) { task.yield until received.length == 2 }
+      client.realtime.disconnect
+    end.wait
+
+    expect(first_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(second_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(third_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(received).to eq(
+      [
+        { 'event' => 'message', 'value' => 'restored' },
+        { 'event' => 'message', 'value' => 'restored-again' }
+      ]
+    )
+    expect(sockets).to be_empty
+  end
+
+  it 'does not restore a channel unsubscribed during an outage' do
+    first_socket = SpecSupport::FacadeSocket.new
+    second_socket = SpecSupport::FacadeSocket.new
+    reconnect_waiting = Async::Queue.new
+    allow_reconnect = Async::Queue.new
+    sockets = [first_socket, second_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: lambda do |_attempt|
+        reconnect_waiting.enqueue(true)
+        allow_reconnect.dequeue
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      channel = client.realtime.channel('contract')
+      retained = client.realtime.channel('retained')
+      channel.subscribe
+      retained.subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      reconnect_waiting.dequeue
+
+      channel.unsubscribe
+      allow_reconnect.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until second_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(second_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(second_socket.commands.last.dig('subscribe', 'channel')).to eq('broadcast:retained')
+  end
+
+  it 'retries a failed reconnect with increasing backoff attempts' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    attempts = []
+    opened = 0
+    factory = lambda do |_address|
+      opened += 1
+      next first_socket if opened == 1
+      raise IOError, 'reconnect failed' if opened == 2
+
+      restored_socket
+    end
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: factory,
+      _realtime_reconnect_delay: lambda do |attempt|
+        attempts << attempt
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(attempts).to eq([0, 1])
+    expect(opened).to eq(3)
+  end
+
+  it 'retries when the replacement transport fails during restoration' do
+    first_socket = SpecSupport::FacadeSocket.new
+    failed_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    failed_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      failed_socket.fail_read(IOError.new('restore failed'))
+      :defer
+    end
+    sockets = [first_socket, failed_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(failed_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+    expect(restored_socket.commands.map { |command| command.keys.fetch(1) }).to eq(
+      %w[connect subscribe]
+    )
+  end
+
+  it 'allows channel creation while another channel is being restored' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    restore_started = Async::Queue.new
+    allow_restore = Async::Queue.new
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      restore_started.enqueue(true)
+      allow_restore.dequeue
+      nil
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      restore_started.dequeue
+      created = task.async do
+        client.realtime.channel('new')
+      rescue StandardError => e
+        e
+      end
+      allow_restore.enqueue(true)
+
+      expect(task.with_timeout(0.2) { created.wait }).to be_a(Volcano::Realtime::Channel)
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'restores old channels when a foreground subscription reconnects first' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    reconnect_waiting = Async::Queue.new
+    allow_reconnect = Async::Queue.new
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: lambda do |_attempt|
+        reconnect_waiting.enqueue(true)
+        allow_reconnect.dequeue
+        0
+      end
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('old').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      reconnect_waiting.dequeue
+      client.realtime.channel('new').subscribe
+      allow_reconnect.enqueue(true)
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? do |command|
+          command.dig('subscribe', 'channel') == 'broadcast:old'
+        end
+      end
+      client.realtime.disconnect
+    end.wait
+
+    subscribed_channels = restored_socket.commands.filter_map do |command|
+      command.dig('subscribe', 'channel')
+    end
+    expect(subscribed_channels).to contain_exactly('broadcast:new', 'broadcast:old')
+  end
+
+  it 'preserves subscription intent when transport loss follows the reply' do
+    failed_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    failed_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe')
+
+      reply = JSON.generate('id' => command.fetch('id'), 'result' => {})
+      failed_socket.receive_raw("#{reply}\n{")
+      :defer
+    end
+    sockets = [failed_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      expect { client.realtime.channel('contract').subscribe }.to raise_error(
+        Volcano::Realtime::ClosedError,
+        /invalid realtime frame/
+      )
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.any? { |command| command.key?('subscribe') }
+      end
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'retries a transient channel rejection on the live replacement transport' do
+    first_socket = SpecSupport::FacadeSocket.new
+    restored_socket = SpecSupport::FacadeSocket.new
+    rejected = false
+    restored_socket.on_write = lambda do |command|
+      next unless command.key?('subscribe') && !rejected
+
+      rejected = true
+      restored_socket.reject(command.fetch('id'), 'temporarily unavailable')
+      :defer
+    end
+    sockets = [first_socket, restored_socket]
+    client = Volcano::Client.new(
+      anon_key: 'anon-key',
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { sockets.shift },
+      _realtime_reconnect_delay: ->(_attempt) { 0 }
+    )
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+
+    Async do |task|
+      client.realtime.channel('contract').subscribe
+      first_socket.fail_read(IOError.new('socket failed'))
+      task.with_timeout(0.2) do
+        task.yield until restored_socket.commands.count do |command|
+          command.key?('subscribe')
+        end == 2
+      end
+      client.realtime.disconnect
+    end.wait
+
+    expect(restored_socket.commands.count { |command| command.key?('connect') }).to eq(1)
+  end
+
   it 'keeps channel teardown private' do
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
-      _realtime_socket_factory: ->(_address) { FacadeSocket.new }
+      _transport: SpecSupport::RealtimeAuthTransport.new,
+      _realtime_socket_factory: ->(_address) { SpecSupport::FacadeSocket.new }
     )
 
     expect { client.realtime.channel('contract').remove }.to raise_error(NoMethodError)
   end
 
   it 'removes an inactive channel without connecting', :aggregate_failures do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
 
@@ -1949,10 +2343,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'continues removing channels after one removal fails' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -1981,12 +2375,12 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'waits for removal before looking up the same channel' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2017,12 +2411,12 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'preserves the API base path in the realtime endpoint' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     addresses = []
     client = Volcano::Client.new(
       api_url: 'https://api.test.volcano.dev/volcano/',
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: lambda do |address|
         addresses << address
         socket
@@ -2041,10 +2435,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'rejects duplicate subscriptions' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2058,7 +2452,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'does not expose a protocol before its connect response completes' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     connect_written = Async::Queue.new
     socket.on_write = lambda do |command|
       next unless command.key?('connect')
@@ -2068,7 +2462,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2095,7 +2489,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'serializes concurrent subscriptions on one channel' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     blocked = false
@@ -2108,7 +2502,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2135,7 +2529,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'waits for an in-flight subscription before unsubscribing' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     socket.on_write = lambda do |command|
@@ -2146,7 +2540,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2179,10 +2573,10 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'routes an overlapping project-prefixed publication only to the longest channel' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: ->(_address) { socket }
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2217,7 +2611,7 @@ RSpec.describe Volcano::Realtime do
     client = Volcano::Client.new(
       api_url: 'https://api.test.volcano.dev',
       anon_key: anon_key,
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: factory
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2232,7 +2626,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'opens one socket when the protocol is first used concurrently' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     opened = 0
@@ -2244,7 +2638,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: factory
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2265,7 +2659,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'aborts an opening socket when the authenticated session changes' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     factory = lambda do |_address|
@@ -2275,7 +2669,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: factory
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
@@ -2303,7 +2697,7 @@ RSpec.describe Volcano::Realtime do
   end
 
   it 'waits for an opening protocol before disconnecting it' do
-    socket = FacadeSocket.new
+    socket = SpecSupport::FacadeSocket.new
     entered = Async::Queue.new
     release = Async::Queue.new
     factory = lambda do |_address|
@@ -2313,7 +2707,7 @@ RSpec.describe Volcano::Realtime do
     end
     client = Volcano::Client.new(
       anon_key: 'anon-key',
-      _transport: RealtimeAuthTransport.new,
+      _transport: SpecSupport::RealtimeAuthTransport.new,
       _realtime_socket_factory: factory
     )
     client.auth.sign_in(email: 'user@example.com', password: 'secret')

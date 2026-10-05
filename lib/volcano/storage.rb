@@ -6,8 +6,8 @@ module Volcano
   # Entry point for project object storage.
   class Storage
     def initialize(client, transport, api_url:, anon_key:)
-      @client = client
-      @transport = transport
+      @client = client.is_a?(StorageSessionAdapter) ? client : StorageSessionAdapter.new(client)
+      @transport = transport.is_a?(StorageTransportAdapter) ? transport : StorageTransportAdapter.new(transport)
       @api_url = api_url
       @anon_key = anon_key
     end
@@ -25,31 +25,41 @@ module Volcano
 
   # Operates on objects in one storage bucket.
   class StorageBucket
+    include StorageObjectResponse
+
     def initialize(client, transport, name, api_url:, anon_key:)
-      @client = client
-      @transport = transport
-      @name = name
+      @client = client.is_a?(StorageSessionAdapter) ? client : StorageSessionAdapter.new(client)
+      @transport = transport.is_a?(StorageTransportAdapter) ? transport : StorageTransportAdapter.new(transport)
+      @name = name.dup.freeze
       @api_url = api_url.dup.freeze
       @anon_key = anon_key.dup.freeze
       freeze
     end
 
-    def upload(path, value)
-      response = Transport.invoke do
+    def upload(path, value, content_type: nil)
+      mime_type = upload_content_type(content_type)
+      path = storage_paths(path).fetch(0)
+      binding = @client.capture_session_binding
+      @client.session_token
+      content = upload_bytes(value).freeze
+      response = storage_request(binding: binding) do |token|
         @transport.upload_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           path: path,
-          data: upload_bytes(value)
+          data: content,
+          content_type: mime_type
         )
       end
-      Transport.body(response, 201)
+      storage_payload(Transport.body(response, 201))
     end
 
     def download(path, range: nil)
-      response = Transport.invoke do
+      path = storage_paths(path).fetch(0)
+      range = range&.dup&.freeze
+      response = storage_request do |token|
         @transport.download_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           path: path,
           byte_range: range
@@ -57,55 +67,50 @@ module Volcano
       end
       expected_status = range && response.status == 206 ? 206 : 200
       Transport.body(response, expected_status)
-      response.data.b
+      storage_string(response.data).b
     end
 
     def list(prefix = '', limit: nil, cursor: nil)
-      response = Transport.invoke do
+      prefix = prefix.dup.freeze
+      cursor = cursor&.dup&.freeze
+      response = storage_request do |token|
         @transport.list_storage_objects(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           prefix: prefix,
           limit: limit,
           cursor: cursor
         )
       end
-      payload = Transport.body(response, 200)
-      next_cursor = payload['next_cursor']
+      payload = storage_payload(Transport.body(response, 200))
       StoragePage.new(
-        objects: payload.fetch('objects', []).map { |object| storage_object(object) },
-        next_cursor: next_cursor == '' ? nil : next_cursor
+        objects: storage_object_list(payload.fetch('objects', [])),
+        next_cursor: storage_cursor(payload['next_cursor'])
       )
     end
 
     private
 
+    def storage_request(binding: @client.capture_session_binding)
+      @client.session_request(binding: binding) { |token| Transport.invoke { yield(token) } }
+    end
+
+    def upload_content_type(value)
+      return if value.nil?
+      return value.dup.freeze if value.is_a?(String) && value.match?(/\A[\x20-\x7e]+\z/) && !value.strip.empty?
+
+      raise ArgumentError, 'content_type must be a non-blank printable ASCII string'
+    end
+
     def upload_bytes(value)
-      bytes = value.respond_to?(:read) ? value.read : value
+      bytes = if value.is_a?(String)
+                value
+              elsif value.respond_to?(:read)
+                value.read
+              end
       raise ArgumentError, 'upload data must be a String or IO' unless bytes.is_a?(String)
 
       bytes.b
-    end
-
-    def storage_object(payload)
-      StorageObject.new(
-        id: payload.fetch('id'),
-        bucket_id: payload.fetch('bucket_id'),
-        name: payload.fetch('name'),
-        size: payload.fetch('size'),
-        mime_type: payload.fetch('mime_type'),
-        is_public: payload.fetch('is_public'),
-        owner_id: payload['owner_id'],
-        etag: payload['etag'],
-        metadata: payload['metadata'],
-        created_at: parse_time(payload['created_at']),
-        updated_at: parse_time(payload['updated_at']),
-        public_url: payload['public_url']
-      )
-    end
-
-    def parse_time(value)
-      value.is_a?(String) ? Time.iso8601(value) : value
     end
   end
 end

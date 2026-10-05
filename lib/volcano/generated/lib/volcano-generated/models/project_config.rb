@@ -23,6 +23,9 @@ module Volcano::Generated
 
     attr_accessor :databases
 
+    # Replace the complete shared function-variable list with existing names, without changing variable values. Omission keeps membership unchanged; an empty list clears it.
+    attr_accessor :shared_variables
+
     # Fully synced when declared - variables absent from this list are deleted.
     attr_accessor :variables
 
@@ -64,6 +67,7 @@ module Volcano::Generated
         :'version' => :'version',
         :'project' => :'project',
         :'databases' => :'databases',
+        :'shared_variables' => :'shared_variables',
         :'variables' => :'variables',
         :'buckets' => :'buckets',
         :'realtime' => :'realtime',
@@ -89,6 +93,7 @@ module Volcano::Generated
         :'version' => :'Integer',
         :'project' => :'ProjectConfigProject',
         :'databases' => :'Array<ProjectConfigDatabase>',
+        :'shared_variables' => :'Array<String>',
         :'variables' => :'Array<ProjectConfigVariable>',
         :'buckets' => :'Array<ProjectConfigBucket>',
         :'realtime' => :'ProjectConfigRealtime',
@@ -133,6 +138,12 @@ module Volcano::Generated
       if attributes.key?(:'databases')
         if (value = attributes[:'databases']).is_a?(Array)
           self.databases = value
+        end
+      end
+
+      if attributes.key?(:'shared_variables')
+        if (value = attributes[:'shared_variables']).is_a?(Array)
+          self.shared_variables = value
         end
       end
 
@@ -201,6 +212,16 @@ module Volcano::Generated
       @version = version
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] shared_variables Value to be assigned
+    def shared_variables=(shared_variables)
+      if shared_variables.nil?
+        fail ArgumentError, 'shared_variables cannot be nil'
+      end
+
+      @shared_variables = shared_variables
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -209,6 +230,7 @@ module Volcano::Generated
           version == o.version &&
           project == o.project &&
           databases == o.databases &&
+          shared_variables == o.shared_variables &&
           variables == o.variables &&
           buckets == o.buckets &&
           realtime == o.realtime &&
@@ -226,7 +248,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [version, project, databases, variables, buckets, realtime, auth, functions, frontends].hash
+      [version, project, databases, shared_variables, variables, buckets, realtime, auth, functions, frontends].hash
     end
 
     # Builds the object from hash

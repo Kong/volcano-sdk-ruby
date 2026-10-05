@@ -22,4 +22,20 @@ RSpec.describe Volcano::User do
     expect(user.user_metadata.dig('profile', 'roles').first).to be_frozen
     expect(user.app_metadata).to eq('provider' => 'email').and be_frozen
   end
+
+  it 'rejects unknown optional attributes' do
+    expect { described_class.new(id: 'user', email: 'user@example.com', status: 'active', unexpected: true) }
+      .to raise_error(ArgumentError, 'unknown keywords: unexpected')
+  end
+
+  it 'owns mutable timestamp values without freezing caller-owned objects' do
+    timestamp = Time.utc(2026, 9, 21)
+    user = described_class.new(id: 'user', email: 'user@example.com', status: 'active', created_at: timestamp)
+
+    expect(user.created_at).to eq(timestamp).and be_frozen
+    expect(user.created_at).not_to equal(timestamp)
+    expect(timestamp).not_to be_frozen
+    timestamp.localtime('+02:00')
+    expect(user.created_at.utc_offset).to eq(0)
+  end
 end

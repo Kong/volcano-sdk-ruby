@@ -128,6 +128,18 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "mode", mode cannot be nil.')
       end
 
+      if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "certificate_pem", the character length must be smaller than or equal to 65536.')
+      end
+
+      if !@private_key_pem.nil? && @private_key_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "private_key_pem", the character length must be smaller than or equal to 65536.')
+      end
+
+      if !@certificate_chain_pem.nil? && @certificate_chain_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "certificate_chain_pem", the character length must be smaller than or equal to 65536.')
+      end
+
       invalid_properties
     end
 
@@ -138,6 +150,9 @@ module Volcano::Generated
       return false if @mode.nil?
       mode_validator = EnumAttributeValidator.new('String', ["byoc"])
       return false unless mode_validator.valid?(@mode)
+      return false if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536
+      return false if !@private_key_pem.nil? && @private_key_pem.to_s.length > 65536
+      return false if !@certificate_chain_pem.nil? && @certificate_chain_pem.to_s.length > 65536
       true
     end
 
@@ -149,6 +164,48 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for \"mode\", must be one of #{validator.allowable_values}."
       end
       @mode = mode
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] certificate_pem Value to be assigned
+    def certificate_pem=(certificate_pem)
+      if certificate_pem.nil?
+        fail ArgumentError, 'certificate_pem cannot be nil'
+      end
+
+      if certificate_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "certificate_pem", the character length must be smaller than or equal to 65536.'
+      end
+
+      @certificate_pem = certificate_pem
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] private_key_pem Value to be assigned
+    def private_key_pem=(private_key_pem)
+      if private_key_pem.nil?
+        fail ArgumentError, 'private_key_pem cannot be nil'
+      end
+
+      if private_key_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "private_key_pem", the character length must be smaller than or equal to 65536.'
+      end
+
+      @private_key_pem = private_key_pem
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] certificate_chain_pem Value to be assigned
+    def certificate_chain_pem=(certificate_chain_pem)
+      if certificate_chain_pem.nil?
+        fail ArgumentError, 'certificate_chain_pem cannot be nil'
+      end
+
+      if certificate_chain_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "certificate_chain_pem", the character length must be smaller than or equal to 65536.'
+      end
+
+      @certificate_chain_pem = certificate_chain_pem
     end
 
     # Checks equality by comparing each attribute.

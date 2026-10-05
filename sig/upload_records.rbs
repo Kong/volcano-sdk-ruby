@@ -1,0 +1,42 @@
+module Volcano
+  class UploadSession < Data
+    attr_reader session_id: String
+    attr_reader part_size: Integer
+    attr_reader total_parts: Integer
+    attr_reader expires_at: Time
+
+    def self.new: (String session_id, Integer part_size, Integer total_parts, Time expires_at) -> UploadSession
+                | (session_id: String, part_size: Integer, total_parts: Integer, expires_at: Time) -> UploadSession
+    def self.[]: (String session_id, Integer part_size, Integer total_parts, Time expires_at) -> UploadSession
+               | (session_id: String, part_size: Integer, total_parts: Integer, expires_at: Time) -> UploadSession
+    def self.members: () -> [:session_id, :part_size, :total_parts, :expires_at]
+
+    def initialize: (session_id: String, part_size: Integer, total_parts: Integer, expires_at: Time) -> void
+    def members: () -> [:session_id, :part_size, :total_parts, :expires_at]
+    def with: (?session_id: String, ?part_size: Integer, ?total_parts: Integer, ?expires_at: Time) -> UploadSession
+    def to_h: () -> { session_id: String, part_size: Integer, total_parts: Integer, expires_at: Time }
+            | [K, V] () { (Symbol, String | Integer | Time) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, Integer, Integer, Time]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Integer | Time]
+  end
+
+  class UploadPart < Data
+    attr_reader part_number: Integer
+    attr_reader etag: String
+    attr_reader size: Integer
+
+    def self.new: (Integer part_number, String etag, Integer size) -> UploadPart
+                | (part_number: Integer, etag: String, size: Integer) -> UploadPart
+    def self.[]: (Integer part_number, String etag, Integer size) -> UploadPart
+               | (part_number: Integer, etag: String, size: Integer) -> UploadPart
+    def self.members: () -> [:part_number, :etag, :size]
+
+    def initialize: (part_number: Integer, etag: String, size: Integer) -> void
+    def members: () -> [:part_number, :etag, :size]
+    def with: (?part_number: Integer, ?etag: String, ?size: Integer) -> UploadPart
+    def to_h: () -> { part_number: Integer, etag: String, size: Integer }
+            | [K, V] () { (Symbol, String | Integer) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Integer, String, Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Integer]
+  end
+end

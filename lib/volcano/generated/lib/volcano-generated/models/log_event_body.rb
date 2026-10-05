@@ -84,11 +84,11 @@ module Volcano::Generated
             return data.each_with_object({}) { |(k, v), hsh| hsh[k] = find_and_cast_into_type(sub_type, v) }
           end
         else # model
-          const = Volcano::Generated.const_get(klass)
+          const = Object.const_get('Volcano::Generated').const_get(klass)
           if const
             if const.respond_to?(:openapi_one_of) # nested oneOf model
               model = const.build(data)
-              return model if model
+              return model unless model.nil?
             else
               # raise if data contains keys that are not known to the model
               raise if const.respond_to?(:acceptable_attributes) && !(data.keys - const.acceptable_attributes).empty?

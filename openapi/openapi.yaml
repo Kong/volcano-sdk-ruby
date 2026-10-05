@@ -21,6 +21,14 @@ tags:
     description: Project-scoped log search and activity APIs
   - name: Functions
     description: Function deployment and management
+  - name: Durable Functions
+    description: |-
+      Long-running functions that checkpoint their progress and resume from the
+      last completed step, and the executions started against them. Separate
+      from Functions because a durable function is started asynchronously: what
+      a start returns is an execution to poll and stop, not a result. Durable
+      work is metered on its own allowances: executions, and the operations each
+      execution performs while it runs.
   - name: Frontends
     description: Frontend deployment and management. Supports Next.js 15.x and 16.x with Node.js 22.x or 24.x inferred from package.json engines.node when the selected Node.js family satisfies the installed Next.js package engines.node constraint.
   - name: Tokens
@@ -949,7 +957,9 @@ paths:
         `limit`, returns `next_cursor`/`prev_cursor`, and supports a bounded
         `offset` past the cursor anchor. Supplying `limit` without `page`
         selects cursor mode. `search` applies a case-insensitive project-name
-        filter in either mode. Sending `page` with `cursor` or `ending_before`,
+        filter in either mode. `include` optionally expands each returned
+        project with its Git connection and/or aggregate health summary using
+        `git_connection` and `health`. Sending `page` with `cursor` or `ending_before`,
         or sending both cursor directions, returns 400.
       operationId: listProjects
       security:
@@ -961,6 +971,20 @@ paths:
         - $ref: '#/components/parameters/EndingBefore'
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Search'
+        - name: include
+          in: query
+          required: false
+          description: Optional comma-separated project metadata expansions.
+          style: form
+          explode: false
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              enum:
+                - git_connection
+                - health
       responses:
         '200':
           description: Successful response
@@ -1055,13 +1079,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
         '400':
-          description: Bad request
+          description: |
+            Bad request (no region selected, an unknown region, or — for a
+            project holding durable functions — a region that does not offer
+            durable execution)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden (for example, selecting subset regions on non-PRO plan)
+          description: Forbidden (for example, selecting subset regions on non-SUPERAGENT plan)
           content:
             application/json:
               schema:
@@ -1394,6 +1421,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/shared-variables:
+    put:
+      tags:
+        - Projects
+      summary: Replace shared variable names
+      description: |
+        Atomically replaces the complete shared function-variable list without
+        changing values. Names must already exist. Validates final affected
+        function environments before membership or propagation side effects.
+        An empty list clears membership. Omitted names remain stored as non-shared variables.
+      operationId: replaceSharedVariables
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - shared_variables
+              not:
+                required:
+                  - expected_shared_variables
+                  - expected_shared_variables_digest
+              properties:
+                shared_variables:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                    maxLength: 256
+                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                expected_shared_variables:
+                  type: array
+                  uniqueItems: true
+                  description: When present, replace only if the current complete shared list matches this list.
+                  items:
+                    type: string
+                    maxLength: 256
+                    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                expected_shared_variables_digest:
+                  type: string
+                  minLength: 64
+                  maxLength: 64
+                  pattern: ^[a-f0-9]{64}$
+                  description: SHA-256 of the sorted unique current shared names joined by a newline. Use instead of expected_shared_variables for a compact conditional replacement.
+      responses:
+        '204':
+          description: Shared list replaced and affected function synchronization started.
+        '400':
+          description: Invalid names or final function environment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Project not found
+        '409':
+          description: Shared list changed since it was read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body exceeds 4,194,304 bytes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Persistence or synchronization failed
+        '503':
+          description: Shared variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/config:
     get:
       tags:
@@ -1405,8 +1515,8 @@ paths:
         volcano-config.yaml rendering with `Accept: application/yaml` or
         `?format=yaml`; the YAML is returned verbatim as the raw response body
         (`Content-Type: application/yaml`) and is meant to be saved as-is.
-        Write-only secrets (SMTP password, OAuth client secrets, TLS material)
-        are omitted from the export; the YAML rendering adds a header comment
+        Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material)
+        are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment
         describing how to set them via CLI environment interpolation.
       operationId: getProjectConfig
       security:
@@ -1438,7 +1548,8 @@ paths:
                 format: binary
                 description: |
                   Canonical volcano-config.yaml document returned verbatim,
-                  ready to be saved as-is.
+                  ready to be saved as-is. The response body is limited to
+                  4,194,304 bytes, matching the configuration apply limit.
         '401':
           description: Unauthorized - invalid or missing token
           content:
@@ -1447,6 +1558,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Canonical YAML export exceeds 4,194,304 bytes
           content:
             application/json:
               schema:
@@ -1527,6 +1644,243 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProjectConfigValidationErrorResponse'
+        '503':
+          description: Shared variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/source-export:
+    get:
+      tags:
+        - Projects
+        - Git Connections
+      summary: Report the project's source-of-truth state
+      operationId: getProjectSourceExport
+      description: |
+        Volcano stores the source of the functions and frontend it runs for a
+        project. This reports whether that source has been written to the
+        connected repository, and whether the repository has taken over as the
+        project's source of truth.
+
+        `mode` is `platform`, `git_exporting`, `git_pending`, or `git`. Export
+        enters `git_exporting` before reading stored source. GitHub's signed
+        push event confirms that the initial commit reached the production
+        branch. That push or a newer production push changes the mode to
+        `git_pending` when it starts a deployment. `exported_at` records that
+        transition.
+
+        A successful Git run completes the transition when it matches the
+        recorded repository, production branch, and root directory and actually
+        dispatches every recorded resource. Ordinary production-branch pushes
+        deploy without changing a platform-managed project's source ownership.
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: The project's source-of-truth state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSourceExportState'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Source export is not available in this deployment mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Projects
+        - Git Connections
+      summary: Initialize an empty repository with a project's stored source
+      operationId: exportProjectSource
+      description: |
+        Creates the first commit in the connected repository and pushes it
+        directly to the configured production branch. The push enters the
+        ordinary Git auto-deploy flow. Direct source writes remain frozen until
+        that deployment succeeds and the repository becomes the source of truth.
+
+        The caller confirms the production branch shown before export. Starting
+        export pins that branch: later GitHub default-branch changes do not
+        repoint the project. If the configured branch changed after the caller
+        read it, the request fails without exporting so the caller can show and
+        confirm the new value.
+
+        The response lists what the export could not carry: resources with no
+        successful deployment to take source from (`skipped`), and things no
+        export can hand back (`omitted`) — migrations, which Volcano stores no
+        copy of, and credential-shaped files, which are left for their owner to
+        add.
+
+        Requires a connected repository with no commits or branches, and runs
+        once. Volcano never creates the repository. If GitHub did not confirm
+        the push, retrying creates the same commit and adopts it when it already
+        reached the repository.
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportProjectSourceRequest'
+      responses:
+        '201':
+          description: The initial production-branch commit that was pushed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSourceExport'
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found, or it has no repository connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The source has already been exported, the repository has already
+            taken over as the source of truth, the confirmed production branch
+            is stale, a function or frontend deployment is still in progress,
+            or the project has no stored source to export
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: |
+            The repository refused the branch, or its contents cannot be laid
+            out as a repository — a stored file that only ever carries
+            credentials, or a layout Git auto-deploy would not read back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: GitHub rate limited the request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Source export is not available in this deployment mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: GitHub integration is not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Projects
+        - Git Connections
+      summary: Cancel an incomplete source export
+      operationId: cancelProjectSourceExport
+      description: |
+        Restores platform source writes while the project is in
+        `git_exporting` or `git_pending`. If Volcano reserved or deployed the
+        root commit, export remains consumed and cannot be run again. The
+        connected repository and any commit already pushed to it are unchanged.
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: The incomplete source transition was canceled
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: No incomplete transition exists, or Git already took ownership
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Source export is not available in this deployment mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/git-connection/production-branch:
     put:
       tags:
@@ -1590,6 +1944,12 @@ paths:
             Project not found, or it has no repository connected. The branch is
             part of the connection, so there is nothing to set it on until one
             exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: A Git source transition is pending
           content:
             application/json:
               schema:
@@ -1706,6 +2066,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A Git source transition is pending or complete, so the recorded
+            repository and root cannot be changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Failed to connect project git
           content:
@@ -1745,6 +2113,14 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Project not found, or has no repo connection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A Git source transition is pending or complete, so the recorded
+            repository cannot be disconnected
           content:
             application/json:
               schema:
@@ -1856,6 +2232,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A Git source transition is pending, or this change would remove
+            deploy coverage after Git has taken over
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Failed to update project git deploy settings
           content:
@@ -1871,8 +2255,8 @@ paths:
         Returns the database's current top queries from pg_stat_statements
         ranked by total execution time.
 
-        **PRO plan required.** This endpoint is only available to projects owned
-        by users on the PRO billing plan.
+        **SUPERAGENT plan required.** This endpoint is only available to projects owned
+        by users on the SUPERAGENT billing plan.
       operationId: getProjectDatabaseQueries
       security:
         - UserToken: []
@@ -2335,6 +2719,30 @@ paths:
                     - Ruby: def handler() (in main.rb)
                   default: handler
                   example: handler
+                is_public:
+                  type: boolean
+                  description: |
+                    Whether the function can be reached through public invocation
+                    ingress. Omit it to keep the function's current visibility; a
+                    new function starts private.
+                invocation_mode:
+                  $ref: '#/components/schemas/FunctionInvocationMode'
+                http_auth_mode:
+                  $ref: '#/components/schemas/FunctionHTTPAuthMode'
+                openapi_spec:
+                  type: string
+                  description: JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
+                variable_scope:
+                  type: string
+                  enum:
+                    - all
+                    - scoped
+                  description: |
+                    Which project variables this function receives. `all` (the default) gives it only project variables marked `shared: true`; `scoped` gives it only the variables it selects. Omitting this leaves an existing function's scope unchanged.
+                variables:
+                  type: string
+                  description: |
+                    JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when `variable_scope` is `scoped`. Omitting this leaves an existing function's declared names unchanged.
       responses:
         '200':
           description: Existing function updated; its deployment was started or queued
@@ -2361,7 +2769,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Function deletion is queued or running
+          description: |
+            Function deletion is queued or running, or the name is already held
+            by a durable function — a function cannot change kind.
           content:
             application/json:
               schema:
@@ -2496,9 +2906,22 @@ paths:
         - Function receives payload only (no `__volcano_auth`)
 
         **Transport and CORS:**
-        - Direct invocation endpoint is intended for `http://api.<domain>/functions/{functionId}/invoke`
-        - DNS invocation endpoint is `https://{functionId}.functions.<domain>/`
-        - CORS preflight for invocation allows only `POST, OPTIONS`
+        - This operation is the authenticated direct RPC endpoint and always uses the
+          POST `{payload: ...}` contract, including for functions whose DNS ingress is
+          configured in HTTP mode.
+        - The geo-routed DNS ingress is `https://{functionId}.functions.<domain>/`.
+        - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,
+          HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths.
+        - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS
+          preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`.
+        - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this
+          direct operation always requires a Volcano credential.
+
+        **Durable functions are not invocable here.** A durable function's id
+        answers 404, whatever its visibility, because a synchronous call would
+        run it with no execution record, no idempotency and no concurrency
+        accounting. Start one with
+        `POST /durable-functions/{functionId}/executions`.
       operationId: invokeFunction
       security:
         - AnonKey: []
@@ -2608,6 +3031,147 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FunctionInvocationResponse'
+  /durable-functions/{functionId}/executions:
+    post:
+      tags:
+        - Durable Functions
+      summary: Start a durable execution from an application
+      description: |
+        Starts an execution of a durable function using an application
+        credential, and returns its handle.
+
+        This is the durable counterpart of `POST /functions/{functionId}/invoke`,
+        and it is the endpoint an application calls. Like that one, it is not
+        project-scoped: an anon key, a service key and an auth user token each
+        carry their own project. The project-scoped collection under
+        `/projects/{id}/durable-functions/...` remains the owner's management
+        surface.
+
+        **With a service key or an auth user token:** any durable function in
+        the project.
+
+        **With an anon key:** requires the `functions.invoke` permission, and
+        the function must have `is_public: true`.
+
+        Starting is all this endpoint does. Reading a result or stopping an
+        execution requires the project owner's token, because an anon key is
+        shared by everyone who loads the page and an execution is addressed by
+        id alone.
+
+        Send `X-Volcano-Execution-Name` to make the start idempotent: repeating
+        a start with the same name returns the existing execution instead of
+        beginning a second one.
+
+        Each execution counts once against the project's durable execution
+        allowance, however many times the start is retried under the same
+        execution name, and the number in flight at once is capped by the plan.
+        The operations the execution performs are counted against the durable
+        operations allowance when it finishes.
+      operationId: startDurableExecutionFromApplication
+      security:
+        - AnonKey: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - name: X-Volcano-Execution-Name
+          in: header
+          required: false
+          description: |
+            Idempotency key for this execution. Generated when omitted. A repeat
+            under a name that already names a running execution returns that
+            execution and is not charged again.
+
+            Letters, digits, `-`, `_` and `.`, up to 255 characters. Anything
+            else is rejected with `400`.
+          schema:
+            type: string
+            maxLength: 255
+            pattern: ^[A-Za-z0-9._-]+$
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              description: Input passed to the function, up to 256 KiB.
+      responses:
+        '202':
+          description: Execution accepted and started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '400':
+          description: Payload is not valid JSON, or the execution name is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: |
+            Missing or invalid credential. Also returned for a platform user
+            token, which is not an application credential; project owners start
+            executions through the project-scoped collection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The anon key lacks `functions.invoke`, the function is not public,
+            or the request's origin is refused by the project's CORS policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            Durable function not found. Also returned for a standard function's
+            id and for a durable function in another project, so the response
+            cannot be used to tell those apart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            Function is not deployed yet, or has no deployed region. Also
+            returned when two starts under the same execution name raced and
+            both released it, which is retryable as it stands.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload is larger than 256 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            The project has too many executions in flight for its plan, the
+            function invocation rate limit was exceeded, the project is over
+            its bandwidth cap, or the account is out of one of its
+            billing-cycle durable allowances: executions, operations, or
+            compute. Operations and compute are counted once an execution
+            finishes, so a refusal on either never interrupts an execution
+            already running — it declines the next start.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment, or the
+            usage limit service could not be reached to charge the start. The
+            first is returned by a deployment that has no durable execution
+            engine, such as a local one, and is not retryable there; the second
+            is transient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /functions/resolve:
     get:
       tags:
@@ -2668,7 +3232,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Function not found (or private function with anon key)
+          description: |
+            Function not found (or private function with anon key). A durable
+            function is never resolvable here: it is started through
+            `POST /durable-functions/{functionId}/executions`, not invoked.
           content:
             application/json:
               schema:
@@ -2684,9 +3251,9 @@ paths:
         `resource.ids` to filter to one or more resources, and add
         `resource.deployments.ids` to count deployment logs instead of runtime
         logs for functions and frontends. Deployment logs are not supported for
-        databases. Database logs are a PRO-plan feature; `resource.type=database`
-        from a FREE-plan project owner returns 403. The activity window is limited
-        to the plan's retention window (FREE: 1 day, PRO: 30 days); older start
+        databases. Database logs are a SUPERAGENT-plan feature; `resource.type=database`
+        from a HOBBY-plan project owner returns 403. The activity window is limited
+        to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start
         times are clamped to that window.
       operationId: getProjectLogActivity
       security:
@@ -2741,10 +3308,10 @@ paths:
         `resource.ids` to filter to one or more resources, and add
         `resource.deployments.ids` to read deployment logs instead of runtime
         logs for functions and frontends. Deployment logs are not supported for
-        databases. Database logs are a PRO-plan feature; requests for
-        `resource.type=database` from a FREE-plan project owner return 403.
+        databases. Database logs are a SUPERAGENT-plan feature; requests for
+        `resource.type=database` from a HOBBY-plan project owner return 403.
         Log history (runtime and deployment) is limited to the plan's retention
-        window (FREE: 1 day, PRO: 30 days); older time ranges are clamped to that
+        window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that
         window.
       operationId: searchProjectLogs
       security:
@@ -2798,12 +3365,12 @@ paths:
         resource selector plus `q`, `start_time`, and `limit`,
         including runtime logs and function/frontend deployment logs selected
         with `resource.deployments`. Deployment logs are not supported for
-        databases. Database logs are a PRO-plan feature; `resource.type=database`
-        from a FREE-plan project owner returns 403. The `q` field uses the same
+        databases. Database logs are a SUPERAGENT-plan feature; `resource.type=database`
+        from a HOBBY-plan project owner returns 403. The `q` field uses the same
         syntax as search and activity requests. Do not send `cursor` or
         `end_time`; use `/logs/search` for range backfills.
         Explicit historical `start_time` values are limited to the plan's
-        retention window (FREE: 1 day, PRO: 30 days). Resume with
+        retention window (HOBBY: 1 day, SUPERAGENT: 30 days). Resume with
         `Last-Event-ID` or the `last_event_id` query parameter. The cursor is
         bound to the request body: the resource selector and every filter must
         match the original request when reconnecting, otherwise the request is
@@ -2913,7 +3480,10 @@ paths:
               properties:
                 functions:
                   type: string
-                  description: JSON array of functions with `name`, `runtime`, optional `handler`, and `file_field`. Each `file_field` must name a multipart file field containing that function's ZIP or tar.gz source bundle.
+                  description: |
+                    JSON array of functions with `name`, `runtime`, optional `handler`, and `file_field`. Each `file_field` must name a multipart file field containing that function's ZIP or tar.gz source bundle.
+
+                    Each entry may also declare `variable_scope` (`all` or `scoped`) and `variables` (an array of project variable names). Omitting them leaves the function's stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes.
                 code_0:
                   type: string
                   format: binary
@@ -2935,6 +3505,29 @@ paths:
                 $ref: '#/components/schemas/BatchFunctionDeployResponse'
         '400':
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Function limit exceeded for the project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A name in the batch is held by a function of the other kind — a
+            function cannot change kind — or the project's source is managed by
+            Git, where deploys come from a push to the production branch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            The batch carries a durable function and durable deploys are paused
+            platform-wide. The same request succeeds once they are re-enabled.
           content:
             application/json:
               schema:
@@ -2985,6 +3578,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FunctionSchedulerListResponse'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       tags:
         - Functions
@@ -3010,7 +3609,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/FunctionScheduler'
         '400':
-          description: Invalid schedule or geofenced region
+          description: |
+            Invalid schedule, geofenced region, a scheduler of this name
+            already exists on the function, or the function is not active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            Schedulers are not available on this plan, or the project already
+            holds as many as the plan allows. The cap counts standard and
+            durable function schedulers together.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Function not found
           content:
             application/json:
               schema:
@@ -3034,6 +3650,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FunctionScheduler'
+        '404':
+          description: Function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     patch:
       tags:
         - Functions
@@ -3058,6 +3680,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FunctionScheduler'
+        '400':
+          description: |
+            Invalid schedule, geofenced region, or a scheduler of this name
+            already exists on the function.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
         - Functions
@@ -3072,6 +3708,12 @@ paths:
       responses:
         '204':
           description: Scheduler deleted
+        '404':
+          description: Function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/functions/{functionId}/deployments:
     get:
       tags:
@@ -3094,6 +3736,656 @@ paths:
                 $ref: '#/components/schemas/PaginatedFunctionDeployments'
         '404':
           description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions:
+    get:
+      tags:
+        - Durable Functions
+      summary: List all durable functions in a project
+      description: |
+        Standard functions never appear here, and durable functions never appear
+        under `/projects/{id}/functions`. The two are separate collections.
+      operationId: listDurableFunctions
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDurableFunctions'
+        '400':
+          description: Bad request - invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Durable Functions
+      summary: Create or update a durable function
+      description: |
+        Upload a durable function source bundle. Creates the function on the
+        first call for a name and redeploys it on every call after that, the
+        same create-or-update contract `POST /projects/{id}/functions` has.
+
+        Volcano builds and deploys asynchronously. A deployment that starts
+        immediately returns `status: provisioning`, then transitions to `active`
+        or `failed`; a deployment that has to wait for a running one is exposed
+        through `pending_deployment_id`. Existing executions keep running
+        against the runtime they started on.
+
+        The `durable` configuration is derived from the project's plan rather
+        than supplied here, and is fixed once the function exists. A name
+        already held by a standard function is rejected with 409: a function
+        cannot change kind.
+      operationId: createDurableFunction
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - code
+                - runtime
+              properties:
+                name:
+                  type: string
+                  description: DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
+                  maxLength: 63
+                  pattern: ^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+                  example: order-pipeline
+                code:
+                  type: string
+                  format: binary
+                  description: ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles.
+                runtime:
+                  type: string
+                  enum:
+                    - nodejs22.x
+                    - nodejs24.x
+                    - python3.13
+                    - python3.14
+                  description: |
+                    Runtime environment. Required. Durable execution needs the
+                    durable authoring API, which ships for these runtimes only;
+                    any other runtime is rejected with 400 and the response
+                    names the ones that work. Note that a durable Python
+                    function needs a newer runtime than a standard one defaults
+                    to. `GET /functions/runtimes` reports `durable_capable` per
+                    runtime.
+                  example: nodejs24.x
+                handler:
+                  type: string
+                  description: The name of the function to invoke. Defaults to "handler" if not specified.
+                  default: handler
+                  example: handler
+                is_public:
+                  type: boolean
+                  description: |
+                    Whether anon keys with `functions.invoke` may start an
+                    execution. Redeploying is the only way to change it, since
+                    the collection has no update endpoint; omit it to keep the
+                    current visibility, and a new function starts private.
+
+                    The standard collection's synchronous invocation fields —
+                    `invocation_mode`, `http_auth_mode`, `openapi_spec` —
+                    configure a request path no durable route serves, and are
+                    rejected with 400 rather than ignored.
+                variable_scope:
+                  type: string
+                  enum:
+                    - all
+                    - scoped
+                  description: |
+                    Which project variables this function receives. `all` (the default) gives it every project variable; `scoped` gives it only the variables it selects. Omitting this leaves an existing function's scope unchanged.
+                variables:
+                  type: string
+                  description: |
+                    JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when `variable_scope` is `scoped`. Omitting this leaves an existing function's declared names unchanged.
+      responses:
+        '200':
+          description: Existing durable function updated; its deployment was started or queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableFunction'
+        '201':
+          description: Durable function created and deployment workflow started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableFunction'
+        '400':
+          description: |
+            Bad request (invalid archive, unsupported runtime, invalid name, or a
+            project region that does not offer durable execution — a durable
+            function deploys to every region of its project)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Durable function limit exceeded for the project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Name is held by a standard function, or a deletion is queued or running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error (function deployment failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable deploys are paused platform-wide. The same request succeeds
+            once they are re-enabled; executions already running are unaffected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get durable function by ID or name
+      operationId: getDurableFunction
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableFunction'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Durable Functions
+      summary: Delete a durable function
+      description: |
+        Accepted for asynchronous teardown; the work continues after the
+        response. The function's executions go with it: history stops being
+        readable whatever `retention_days` had left, and the executions still
+        running stop counting against the project's concurrency cap. Stop an
+        execution first if you need it to end before the function does.
+      operationId: deleteDurableFunction
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+      responses:
+        '202':
+          description: Deletion accepted and teardown started
+        '404':
+          description: |
+            Durable function not found. Also returned for an id that names a
+            durable function in another project, so the response cannot be used
+            to tell the two apart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/deployments:
+    get:
+      tags:
+        - Durable Functions
+      summary: List durable function deployments
+      operationId: listDurableFunctionDeployments
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFunctionDeployments'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/schedulers:
+    get:
+      tags:
+        - Durable Functions
+      summary: List schedulers for a durable function
+      description: |
+        The durable collection's counterpart to
+        `/projects/{id}/functions/{functionId}/schedulers`. A standard
+        function's id is not accepted here, and a durable function's id is not
+        accepted there.
+      operationId: listDurableFunctionSchedulers
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+      responses:
+        '200':
+          description: Durable function schedulers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionSchedulerListResponse'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Durable Functions
+      summary: Create a scheduler for a durable function
+      description: |
+        Each tick starts an execution rather than invoking the function, under
+        an execution name derived from the run, so a retried tick resolves to
+        the execution it already started. Requested regions must be a subset of
+        the function's deployed regions.
+
+        A tick draws on the same durable allowances and concurrency cap a
+        manual start does, and a tick that would exceed the cap fails that run.
+      operationId: createDurableFunctionScheduler
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFunctionSchedulerRequest'
+      responses:
+        '201':
+          description: Scheduler created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionScheduler'
+        '400':
+          description: |
+            Invalid schedule, geofenced region, a scheduler of this name
+            already exists on the function, or the function is not active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            Schedulers are not available on this plan, or the project already
+            holds as many as the plan allows. The cap counts standard and
+            durable function schedulers together.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId}:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get a durable function scheduler
+      operationId: getDurableFunctionScheduler
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/SchedulerId'
+      responses:
+        '200':
+          description: Durable function scheduler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionScheduler'
+        '404':
+          description: Durable function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Durable Functions
+      summary: Update a durable function scheduler
+      operationId: updateDurableFunctionScheduler
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/SchedulerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFunctionSchedulerRequest'
+      responses:
+        '200':
+          description: Scheduler updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionScheduler'
+        '400':
+          description: |
+            Invalid schedule, geofenced region, or a scheduler of this name
+            already exists on the function.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Durable function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Durable Functions
+      summary: Delete a durable function scheduler
+      operationId: deleteDurableFunctionScheduler
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/SchedulerId'
+      responses:
+        '204':
+          description: Scheduler deleted
+        '404':
+          description: Durable function or scheduler not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/executions:
+    post:
+      tags:
+        - Durable Functions
+      summary: Start a durable execution
+      description: |
+        Starts an execution and returns its handle. Never returns a result: an
+        execution can outlive any request a client could hold open, so the
+        result is read back from
+        `GET /projects/{id}/durable-functions/{functionId}/executions/{executionId}`.
+
+        The request body is the execution's input and must be valid JSON if
+        present. An empty body starts the execution with no input.
+
+        Send `X-Volcano-Execution-Name` to make the start idempotent: repeating a
+        start with the same name returns the existing execution instead of
+        beginning a second one.
+
+        Each execution counts against the project's durable execution
+        allowance, the operations it performs count against the durable
+        operations allowance when it finishes, and the number of executions in
+        flight at once is capped by the plan.
+      operationId: startDurableExecution
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - name: X-Volcano-Execution-Name
+          in: header
+          required: false
+          description: |
+            Idempotency key for this execution. Generated when omitted. A repeat
+            under a name that already names a running execution returns that
+            execution and is not charged again.
+
+            Letters, digits, `-`, `_` and `.`, up to 255 characters. Anything
+            else is rejected with `400`.
+          schema:
+            type: string
+            maxLength: 255
+            pattern: ^[A-Za-z0-9._-]+$
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              description: Input passed to the function, up to 256 KiB.
+      responses:
+        '202':
+          description: Execution accepted and started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '400':
+          description: Payload is not valid JSON, or the execution name is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            Function is not deployed yet, or has no deployed region. Also
+            returned when two starts under the same execution name raced and
+            both released it, which is retryable as it stands.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload exceeds the maximum execution input size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            Too many executions already in flight for this project, or the
+            account is out of one of its billing-cycle durable allowances:
+            executions, operations, or compute. An owner-started execution is
+            metered exactly like an application-started one.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment, or the
+            usage limit service could not be reached to charge the start. The
+            first is returned by a deployment that has no durable execution
+            engine, such as a local one, and is not retryable there; the second
+            is transient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags:
+        - Durable Functions
+      summary: List a durable function's executions
+      description: |
+        Returns the platform's last observed status for each execution; listing
+        does not poll each one. Fetch a single execution for its live state.
+      operationId: listDurableExecutions
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          required: false
+          description: Return only executions in this status.
+          schema:
+            $ref: '#/components/schemas/DurableExecutionStatus'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDurableExecutions'
+        '400':
+          description: Unsupported status filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Durable function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/executions/{executionId}:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get a durable execution
+      description: |
+        Returns the execution's current state, including its `result` once it has
+        succeeded. Poll this to wait for an execution to finish.
+      operationId: getDurableExecution
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/DurableExecutionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '404':
+          description: Durable function or execution not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment. Returned by
+            a deployment that has no durable execution engine, such as a local
+            one; the request is not retryable there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop:
+    post:
+      tags:
+        - Durable Functions
+      summary: Stop a durable execution
+      description: |
+        Cancels a running execution. Its completed steps are not undone.
+
+        The call is accepted rather than awaited: cancellation happens behind
+        it, so the response reports the execution as it was read back and may
+        still say `running`. Do not branch on that status — the execution
+        settles into `stopped` shortly after, and polling
+        `GET /projects/{id}/durable-functions/{functionId}/executions/{executionId}`
+        is how you see it get there.
+
+        Stopping an execution that already finished is not an error: the
+        response carries the state it settled in.
+      operationId: stopDurableExecution
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/DurableExecutionId'
+      responses:
+        '200':
+          description: |
+            Stop accepted. The body is the execution as it was read back, which
+            may still report `running`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '404':
+          description: Durable function or execution not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Execution has not started yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment. Returned by
+            a deployment that has no durable execution engine, such as a local
+            one; the request is not retryable there.
           content:
             application/json:
               schema:
@@ -3182,7 +4474,7 @@ paths:
         22.x or 24.x. The Node.js runtime is inferred from
         `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x.
         The selected Node.js family must also satisfy the installed Next.js package's
-        `engines.node` constraint. Volcano tests Next 15.5.24 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.3 (`>=20.9.0`).
+        `engines.node` constraint. Volcano tests Next 15.5.25 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.3.5 (`>=20.9.0`).
         Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI
         does not apply its own source archive size limit. After the final container images are
         built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing.
@@ -3503,11 +4795,12 @@ paths:
     post:
       tags:
         - Frontends
-      summary: Configure frontend custom domain (PRO)
+      summary: Configure frontend custom domain (SUPERAGENT)
       description: |
         Configures one custom domain for a frontend.
         The default Volcano-generated frontend URL remains active.
         Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes.
+        Managed TLS returns the DNS records currently required for setup. Volcano may require a tenant-specific TXT ownership challenge before returning the certificate authority's validation record. After ownership verification succeeds, Volcano permanently assigns the hostname to the account. A required but unverified ownership reservation expires after 72 hours.
       operationId: createFrontendCustomDomain
       security:
         - UserToken: []
@@ -3546,7 +4839,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden - custom domains require PRO plan
+          description: Forbidden - custom domains require SUPERAGENT plan
           content:
             application/json:
               schema:
@@ -3558,7 +4851,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict - custom domain already in use or frontend already has a custom domain
+          description: Conflict - custom domain already in use, still detaching, or frontend already has a custom domain
           content:
             application/json:
               schema:
@@ -3797,6 +5090,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '503':
+          description: Private variable membership writes are disabled during rollout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases:
     get:
       tags:
@@ -3819,6 +5118,18 @@ paths:
         - $ref: '#/components/parameters/EndingBefore'
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Search'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - provisioning
+              - active
+              - restoring
+              - failed
+              - deleting
+          description: Return only the databases in this status.
       responses:
         '200':
           description: Successful response
@@ -3832,7 +5143,8 @@ paths:
       summary: Create a new serverless PostgreSQL database
       description: |
         Creates a serverless PostgreSQL database in the project.
-        Each project can contain up to 100 databases. Requests over this cap return 403.
+        Each project can hold 1 database on Hobby and up to 10,000 on Superagent.
+        Requests over the plan's cap return 403.
       operationId: createDatabase
       security:
         - UserToken: []
@@ -3913,6 +5225,29 @@ paths:
                     example: database deletion in progress
         '204':
           description: Database deleted (backing instance removed synchronously)
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A restore is running on the database. Deleting it while a worker is
+            replacing its data would race that worker, so wait for the restore
+            to finish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Volcano could not check whether a restore is running, and will not
+            delete a database that might be mid-restore. Retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases/{databaseName}/branches:
     get:
       tags:
@@ -4007,7 +5342,7 @@ paths:
           description: |
             A branch of that name already exists on this database, or the
             database cannot be branched right now because it is still
-            provisioning, failed, or being deleted.
+            provisioning, being restored, failed, or being deleted.
           content:
             application/json:
               schema:
@@ -4192,7 +5527,10 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: |
-            The branch is not active, or a reset is already in progress.
+            The branch is not active, a reset is already in progress, the parent
+            database is being restored, or the parent was restored within the
+            last 24 hours — a reset re-forks from the parent, and the provider
+            holds a child's reset shut for that long afterwards.
           content:
             application/json:
               schema:
@@ -4211,7 +5549,9 @@ paths:
       description: |
         Issues a new password for the branch and invalidates the previous
         connection string. Existing connections are not interrupted; new ones
-        must use the returned string.
+        must use the returned string. Proxies pick the rotation up within a few
+        seconds, so the previous password can still open new connections until
+        then.
 
         The parent database's credentials are untouched.
       operationId: resetDatabaseBranchPassword
@@ -4246,6 +5586,492 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/databases/{databaseName}/backups:
+    get:
+      tags:
+        - Database Backups
+      summary: List a database's backups
+      description: |
+        Returns every backup of the database, newest first, together with the
+        window a point-in-time restore may target.
+
+        Both backups you took and backups the schedule produced are listed;
+        `source` tells them apart. Only manual backups count against the plan's
+        backup allowance.
+      operationId: listDatabaseBackups
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseBackupList'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The database has no storage project yet, so there is nothing to
+            list. A database reports this while it is still provisioning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Database Backups
+      summary: Back up a database
+      description: |
+        Captures the database as it is now. The backup is available immediately;
+        its `size_bytes` appears once the storage provider has costed it.
+
+        Backups are rate-limited to one per minute per database, and capped by
+        the owner's plan.
+      operationId: createDatabaseBackup
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatabaseBackupRequest'
+      responses:
+        '201':
+          description: Backup created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseBackup'
+        '400':
+          description: Invalid backup name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The database has reached its backup allowance, or the owner's plan
+            does not include backups, which are SUPERAGENT-only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A backup of that name already exists, the database is not active, a
+            restore is running on it, or a backup was taken too recently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/databases/{databaseName}/backups/{backupName}:
+    get:
+      tags:
+        - Database Backups
+      summary: Get a backup
+      description: Returns one backup of the database.
+      operationId: getDatabaseBackup
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+        - $ref: '#/components/parameters/BackupName'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseBackup'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project, database, or backup not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The database has no storage project yet, so it holds no backups. A
+            database reports this while it is still provisioning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Database Backups
+      summary: Delete a backup
+      description: |
+        Deletes the backup and frees its storage. Scheduled backups can be
+        deleted too. A backup that is already gone reports `404`, so a name
+        that never existed and a name that no longer does read the same.
+        Refused with `409` while the database is being restored.
+      operationId: deleteDatabaseBackup
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+        - $ref: '#/components/parameters/BackupName'
+      responses:
+        '200':
+          description: Backup deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+                  message:
+                    type: string
+                    example: backup deleted
+                required:
+                  - status
+                  - message
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project, database, or backup not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The database is being restored. A restore is pinned to a backup it
+            may not have restored yet, so deleting one is refused until the
+            restore finishes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/databases/{databaseName}/backup-schedule:
+    get:
+      tags:
+        - Database Backups
+      summary: Get the automated backup schedule
+      description: |
+        Returns the database's backup schedule. An empty list means no scheduled
+        backups.
+      operationId: getDatabaseBackupSchedule
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseBackupSchedule'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The database has no storage project yet, so it has no schedule. A
+            database reports this while it is still provisioning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Database Backups
+      summary: Replace the automated backup schedule
+      description: |
+        Replaces the schedule wholesale. Send an empty `entries` list to stop
+        scheduled backups.
+
+        Scheduled backups do not count against the plan's backup allowance, but
+        their retention is clamped to the plan's.
+      operationId: updateDatabaseBackupSchedule
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseBackupSchedule'
+      responses:
+        '200':
+          description: Schedule replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseBackupSchedule'
+        '400':
+          description: |
+            The schedule names a recurrence that cannot fire: a weekly or
+            monthly one with no `day`, or a `day` outside its frequency's range
+            (1-7 for weekly, 1-28 for monthly). The response says which.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The database is not active, or a restore is running on it — a restore
+            moves the data to a new branch, and the provider keeps the schedule
+            per branch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/databases/{databaseName}/restores:
+    get:
+      tags:
+        - Database Backups
+      summary: List a database's restores
+      description: |
+        Returns the database's restore history, newest first, capped at the 50
+        most recent. There is no pagination: a database that has been restored
+        more than 50 times keeps the older records but does not return them.
+      operationId: listDatabaseRestores
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseRestoreList'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Database Backups
+      summary: Restore a database
+      description: |
+        Replaces the database's data, either with a named backup or with its
+        state at a point in time. This is destructive: everything written after
+        that point is discarded.
+
+        Asynchronous: the response is `202` with the restore `pending` and the
+        database `restoring`. The database does not accept connections until the
+        restore reports `completed`; its connection string is unchanged
+        throughout, so nothing holding it needs updating.
+
+        Restores are in place. There is no way to restore into a second
+        database, and a database's branches are never restored — they keep
+        serving their own data, but resetting a branch from its parent is
+        refused by the storage provider for up to 24 hours afterwards.
+      operationId: createDatabaseRestore
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatabaseRestoreRequest'
+      responses:
+        '202':
+          description: Restore accepted and in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseRestore'
+        '400':
+          description: |
+            Neither or both restore targets were named, or the requested time is
+            outside the available window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The owner's plan does not include backups or point-in-time restore.
+            Both are SUPERAGENT-only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project, database, or backup not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A restore is already in progress, the database is not active,
+            another database operation is still running, or the database is
+            holding as many pre-restore branches as it may.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/databases/{databaseName}/restores/{restoreId}:
+    get:
+      tags:
+        - Database Backups
+      summary: Get a restore
+      description: |
+        Returns the restore. Poll this after starting one; the database is
+        connectable again once it reports `completed`.
+      operationId: getDatabaseRestore
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DatabaseName'
+        - $ref: '#/components/parameters/RestoreId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseRestore'
+        '403':
+          description: Backups are SUPERAGENT-only and the owner's plan does not include them
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project, database, or restore not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Backups are temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases/{databaseName}/reset-password:
     post:
       tags:
@@ -4256,6 +6082,10 @@ paths:
         through pgproxy. This does not rotate or expose the internal owner password.
         The returned password and connection string are the only client credentials that
         will authenticate through pgproxy after reset.
+
+        Existing connections are not interrupted; new ones must use the returned
+        string. Proxies pick the rotation up within a few seconds, so the previous
+        password can still open new connections until then.
       operationId: resetDatabasePassword
       security:
         - UserToken: []
@@ -4282,6 +6112,34 @@ paths:
                   connection_string:
                     type: string
                     description: Updated pgproxy connection string using Volcano-managed credentials.
+        '400':
+          description: Database is not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A restore is running on the database. A restore replaces the
+            credentials as it finishes, so wait for it and rotate afterwards.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Volcano could not check whether a restore is running, and will not
+            rotate a credential a restore might be about to replace. Retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases/{databaseName}/type:
     patch:
       tags:
@@ -4320,6 +6178,22 @@ paths:
           description: Invalid database type
         '404':
           description: Database not found
+        '409':
+          description: |
+            The database is not active — being provisioned, deleted, or
+            restored. Compute can only be changed while it is active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Volcano could not check whether a restore is running, and will not
+            reconfigure compute a restore might be moving. Retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/databases/{databaseName}/stats:
     get:
       tags:
@@ -4759,6 +6633,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/DatabaseQueryCapExceeded'
+        '503':
+          $ref: '#/components/responses/DatabaseBranchQueryUnavailable'
   /databases/{databaseName}/branches/{branchName}/query/select:
     post:
       tags:
@@ -4835,6 +6711,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/DatabaseQueryCapExceeded'
+        '503':
+          $ref: '#/components/responses/DatabaseBranchQueryUnavailable'
   /databases/{databaseName}/branches/{branchName}/query/insert:
     post:
       tags:
@@ -4907,6 +6785,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/DatabaseQueryCapExceeded'
+        '503':
+          $ref: '#/components/responses/DatabaseBranchQueryUnavailable'
   /databases/{databaseName}/branches/{branchName}/query/update:
     post:
       tags:
@@ -4978,6 +6858,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/DatabaseQueryCapExceeded'
+        '503':
+          $ref: '#/components/responses/DatabaseBranchQueryUnavailable'
   /databases/{databaseName}/branches/{branchName}/query/delete:
     post:
       tags:
@@ -5045,6 +6927,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/DatabaseQueryCapExceeded'
+        '503':
+          $ref: '#/components/responses/DatabaseBranchQueryUnavailable'
   /databases/regions:
     get:
       tags:
@@ -5053,6 +6937,8 @@ paths:
       operationId: listDatabaseRegions
       description: |
         Returns the regions enabled for database provisioning in this platform environment.
+        These are the same regions offered for function deployment, and the only values
+        the `region` field of a database accepts.
         This is a public endpoint that doesn't require authentication.
       responses:
         '200':
@@ -5070,8 +6956,8 @@ paths:
                       description: Region identifier for API usage
                     name:
                       type: string
-                      example: AWS US East 1 (N. Virginia)
-                      description: Human-readable region name
+                      example: US East (N. Virginia)
+                      description: Human-readable region location
   /databases/postgres-versions:
     get:
       tags:
@@ -5197,6 +7083,12 @@ paths:
                 $ref: '#/components/schemas/Variable'
         '404':
           description: Variable not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Private variable membership writes are disabled during rollout
           content:
             application/json:
               schema:
@@ -6782,8 +8674,8 @@ paths:
       summary: Create email template
       description: |
         Creates a custom email template for the project. Custom email templates
-        are a PRO-plan feature: requests from a FREE-plan project owner are
-        rejected with 403, and FREE projects always send the built-in default
+        are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner are
+        rejected with 403, and HOBBY projects always send the built-in default
         templates regardless of any previously saved custom rows.
         Every project is created with one template per type, so customizing one
         is usually a PUT; creating a type the project already has returns 409.
@@ -6813,7 +8705,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Custom email templates require the PRO plan
+          description: Custom email templates require the SUPERAGENT plan
           content:
             application/json:
               schema:
@@ -6858,9 +8750,9 @@ paths:
         - Auth Configuration
       summary: Update email template
       description: |
-        Updates a custom email template. Custom email templates are a PRO-plan
-        feature: requests from a FREE-plan project owner are rejected with 403
-        (including after a PRO→FREE downgrade), so a FREE project cannot modify
+        Updates a custom email template. Custom email templates are a SUPERAGENT-plan
+        feature: requests from a HOBBY-plan project owner are rejected with 403
+        (including after a SUPERAGENT→HOBBY downgrade), so a HOBBY project cannot modify
         templates and always sends the built-in defaults.
       operationId: updateEmailTemplate
       security:
@@ -6891,7 +8783,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplate'
         '403':
-          description: Custom email templates require the PRO plan
+          description: Custom email templates require the SUPERAGENT plan
           content:
             application/json:
               schema:
@@ -6904,7 +8796,7 @@ paths:
       summary: Delete email template
       description: |
         Deletes a custom template, reverting to the default. Custom email
-        templates are a PRO-plan feature: requests from a FREE-plan project owner
+        templates are a SUPERAGENT-plan feature: requests from a HOBBY-plan project owner
         are rejected with 403.
       operationId: deleteEmailTemplate
       security:
@@ -6925,7 +8817,7 @@ paths:
         '204':
           description: Template deleted
         '403':
-          description: Custom email templates require the PRO plan
+          description: Custom email templates require the SUPERAGENT plan
           content:
             application/json:
               schema:
@@ -7022,7 +8914,7 @@ paths:
           description: |
             The update would turn on, widen, or otherwise edit the email domain
             allowlist (`allowed_email_domains`, `allowed_email_domains_mode`)
-            for a project that is not on the PRO plan. A FREE project keeps
+            for a project that is not on the SUPERAGENT plan. A HOBBY project keeps
             whatever allowlist it already has — parked, enforcing nothing until
             it upgrades — and may still remove it, so a downgrade never leaves a
             project locked out of its own signups.
@@ -7142,13 +9034,345 @@ paths:
           description: Forbidden
         '404':
           description: Project not found
+  /projects/{id}/auth/pages/appearance:
+    get:
+      tags:
+        - Auth Configuration
+      summary: Get managed auth page appearance
+      operationId: getAuthPageAppearance
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Saved appearance and effective plan state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthPageAppearanceResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Appearance could not be read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/theme:
+    put:
+      tags:
+        - Auth Configuration
+      summary: Save the managed auth page theme
+      operationId: updateAuthPageTheme
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthPageThemeRequest'
+      responses:
+        '200':
+          description: Theme saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAuthPageThemeRequest'
+        '400':
+          description: Invalid or unreadable theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Theme could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Auth Configuration
+      summary: Clear the managed auth page theme
+      operationId: deleteAuthPageTheme
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: Theme cleared
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Theme could not be cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/{pageType}/layout:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: pageType
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/HostedAuthPageType'
+    put:
+      tags:
+        - Auth Configuration
+      summary: Save one managed auth page layout
+      operationId: updateAuthPageLayout
+      security:
+        - UserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthPageLayoutRequest'
+      responses:
+        '200':
+          description: Layout saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateAuthPageLayoutRequest'
+        '400':
+          description: Invalid page type or layout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Layout could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Auth Configuration
+      summary: Clear one managed auth page layout
+      operationId: deleteAuthPageLayout
+      security:
+        - UserToken: []
+      responses:
+        '204':
+          description: Layout cleared
+        '400':
+          description: Invalid page type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Plan does not permit customisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Layout could not be cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/auth/pages/{pageType}/preview:
+    get:
+      tags:
+        - Auth Configuration
+      summary: Render a short-lived managed auth page preview
+      description: |
+        Public HTML endpoint for a preview URL returned by the POST operation.
+        The signed ticket contains the unsaved appearance, expires shortly, and
+        runs the production page runtime against mocked authentication responses.
+      operationId: renderAuthPagePreview
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: pageType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/HostedAuthPageType'
+        - name: ticket
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 4096
+          description: Short-lived signed preview ticket returned by the POST operation.
+      responses:
+        '200':
+          description: Rendered preview document
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          description: Ticket is invalid or expired, its path does not match, or managed authentication is disabled
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Preview could not be rendered
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      tags:
+        - Auth Configuration
+      summary: Preview an unsaved managed auth page appearance
+      operationId: previewAuthPage
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: pageType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/HostedAuthPageType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewAuthPageRequest'
+      responses:
+        '200':
+          description: Short-lived URL for the rendered preview document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewAuthPageResponse'
+        '400':
+          description: Invalid page type or draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found or managed authentication is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Preview could not be rendered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/auth/hosted/{pageType}:
     get:
       tags:
         - Auth Configuration
-      summary: Render managed reset-password page
+      summary: Render a managed auth page
       description: |
-        Public HTML endpoint for the managed reset-password page.
+        Public HTML endpoint for signup, forgot-password, device approval,
+        verify-email, and reset-password pages. Login uses the path without a
+        page type.
         Requires `Accept: text/html`.
         Returns 404 when managed hosted pages are disabled for the project.
       security: []
@@ -8236,6 +10460,12 @@ paths:
         - Microsoft Graph profile: `/me`
 
         The response wraps the provider's raw JSON value with request metadata.
+        An empty provider body is represented as `data: null`; the envelope
+        preserves the provider's HTTP status in `status_code`, including errors.
+        Provider response bodies are limited to 8 MiB after decompression.
+        Transport failures, invalid JSON (including invalid UTF-8), and oversized
+        bodies return `502`. Provider redirects to another origin are blocked and
+        return `400`.
       operationId: callOAuthProviderAPI
       security:
         - AuthUserAccessToken: []
@@ -8293,7 +10523,11 @@ paths:
                 properties:
                   provider:
                     type: string
-                    enum: [google, github, microsoft, apple]
+                    enum:
+                      - google
+                      - github
+                      - microsoft
+                      - apple
                   endpoint:
                     type: string
                   status_code:
@@ -8301,23 +10535,37 @@ paths:
                     minimum: 100
                     maximum: 599
                   data:
-                    description: Raw JSON value returned by the OAuth provider's API
+                    description: Raw provider JSON value, or null when the provider returns no body
+                    nullable: true
         '400':
           description: |
             Invalid request (for example: missing `endpoint`, an `endpoint` that is
-            not a relative path, or an unsupported HTTP method).
+            not a relative path, or an unsupported HTTP method), or a provider
+            redirect to another origin.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Not authenticated or provider not linked
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: OAuth provider configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to create the provider API request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '502':
-          description: Provider API error
+          description: Provider transport failure, invalid JSON, or response body larger than 8 MiB
           content:
             application/json:
               schema:
@@ -9486,6 +11734,12 @@ paths:
         **Complete Resumable Session:**
         Complete a session after all parts are uploaded.
         Requires: `X-Upload-Session` header with session ID and `X-Upload-Complete: true` header.
+
+        **Resumable Session Ownership:**
+        A session created with a user access token remains bound to that user. A session
+        created with an anon key remains bound to that exact anon key. Reuse the same
+        identity or anon key for part uploads, status, completion, and abort requests;
+        an ownership mismatch returns `404`.
       operationId: uploadStorageObject
       security:
         - AnonKey: []
@@ -9553,10 +11807,12 @@ paths:
             - Invalid request body or missing required fields
         '403':
           description: Access denied by storage policy
+        '404':
+          description: Resumable upload session not found or not owned by this credential
         '413':
           description: |
             File size exceeds plan-based limits. This occurs when:
-            - File exceeds the plan-based maximum file size (FREE or PRO tier)
+            - File exceeds the plan-based maximum file size (HOBBY or SUPERAGENT tier)
             - Upload would exceed the project's total storage quota
         '429':
           $ref: '#/components/responses/BandwidthCapExceeded'
@@ -9573,6 +11829,7 @@ paths:
         - Maximum part size is 25MB
         - Parts can be uploaded in any order
         - Re-uploading a part overwrites the previous upload
+        - Anonymous sessions must reuse the exact anon key that created the session
       operationId: uploadPart
       security:
         - AnonKey: []
@@ -9619,7 +11876,7 @@ paths:
         '403':
           description: Access denied
         '404':
-          description: Session not found
+          description: Session not found or not owned by this credential
     get:
       tags:
         - Storage Objects
@@ -9632,6 +11889,7 @@ paths:
 
         **Session Status (with X-Upload-Session header):**
         Returns the status of a resumable upload session, including which parts have been uploaded.
+        Anonymous sessions must reuse the exact anon key that created the session.
       operationId: downloadStorageObject
       security:
         - AnonKey: []
@@ -9689,7 +11947,7 @@ paths:
         '403':
           description: Access denied by storage policy
         '404':
-          description: Object or session not found
+          description: Object or session not found, or session not owned by this credential
         '429':
           $ref: '#/components/responses/BandwidthCapExceeded'
     delete:
@@ -9704,8 +11962,10 @@ paths:
 
         **Abort Session (with X-Upload-Session header):**
         Aborts a resumable upload session and cleans up any uploaded parts.
+        Anonymous sessions must reuse the exact anon key that created the session.
       operationId: deleteStorageObject
       security:
+        - AnonKey: []
         - ServiceRoleKey: []
         - AuthUserAccessToken: []
       parameters:
@@ -9728,7 +11988,7 @@ paths:
         '403':
           description: Access denied by storage policy
         '404':
-          description: Object or session not found
+          description: Object or session not found, or session not owned by this credential
         '429':
           $ref: '#/components/responses/BandwidthCapExceeded'
   /storage/{bucketName}/{path}/visibility:
@@ -9884,6 +12144,21 @@ components:
         Required for project management operations.
         Obtain via POST /tokens in Management API (port 8001).
   parameters:
+    BackupName:
+      name: backupName
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      description: |
+        Backup name, unique within the database, exactly as returned by the list
+        endpoint.
+
+        Deliberately looser than the names you can create: a backup made by a
+        schedule is named for you, so reading or deleting one accepts any name a
+        backup can have.
     BranchName:
       name: branchName
       in: path
@@ -9959,6 +12234,21 @@ components:
         type: string
         format: uuid
       description: Function ID
+    DurableFunctionId:
+      name: functionId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Durable function ID, or its name within the project
+    DurableExecutionId:
+      name: executionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Durable execution ID
     Limit:
       name: limit
       in: query
@@ -10108,6 +12398,14 @@ components:
       description: |
         Case-insensitive substring match on the resource `name`. See the
         endpoint description for supported pagination modes.
+    RestoreId:
+      name: restoreId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Database restore ID
     SchedulerId:
       name: schedulerId
       in: path
@@ -10144,6 +12442,15 @@ components:
         owned projects) or their database-request allowance. Enforcement is
         eventual: queries are rejected until the allowance increases or the
         next anniversary cycle begins. The error message identifies the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    DatabaseBranchQueryUnavailable:
+      description: |
+        The branch exists but cannot serve queries: it is still provisioning,
+        being reset, expired, or its parent is being restored. Distinct from
+        `404` so a caller waiting on a branch can tell it apart from a typo.
       content:
         application/json:
           schema:
@@ -10277,9 +12584,9 @@ components:
             403, and `allowed_email_domains_mode` decides whether sign-in is
             covered as well.
 
-            The allowlist is a PRO feature to configure and to enforce. A
+            The allowlist is a SUPERAGENT feature to configure and to enforce. A
             downgrade parks it: the domains are still returned here and stop
-            being applied until the project is back on PRO.
+            being applied until the project is back on SUPERAGENT.
           items:
             type: string
           example:
@@ -10499,6 +12806,91 @@ components:
         updated_at:
           type: string
           format: date-time
+    AuthPageAppearanceResponse:
+      type: object
+      required:
+        - theme
+        - layouts
+        - customisation_allowed
+        - parked
+        - defaults
+        - options
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layouts:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AuthPageLayout'
+        customisation_allowed:
+          type: boolean
+        parked:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Per-page saved-but-not-live state.
+        defaults:
+          $ref: '#/components/schemas/AuthPageAppearanceDefaults'
+        options:
+          $ref: '#/components/schemas/AuthPageAppearanceOptions'
+    AuthPageDensity:
+      type: string
+      enum:
+        - compact
+        - comfortable
+        - spacious
+    AuthPageFont:
+      type: string
+      enum:
+        - system
+        - humanist
+        - geometric
+        - slab
+        - mono
+    AuthPageLayout:
+      type: string
+      enum:
+        - centered
+        - split-left
+        - split-right
+    AuthPageRadius:
+      type: string
+      enum:
+        - none
+        - small
+        - medium
+        - large
+    AuthPageScale:
+      type: string
+      enum:
+        - small
+        - default
+        - large
+    AuthPageTheme:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - colors
+        - font
+        - scale
+        - density
+        - radius
+      properties:
+        version:
+          type: integer
+          enum:
+            - 1
+        colors:
+          $ref: '#/components/schemas/AuthPageThemeColors'
+        font:
+          $ref: '#/components/schemas/AuthPageFont'
+        scale:
+          $ref: '#/components/schemas/AuthPageScale'
+        density:
+          $ref: '#/components/schemas/AuthPageDensity'
+        radius:
+          $ref: '#/components/schemas/AuthPageRadius'
     AuthHostedPageResponse:
       type: object
       required:
@@ -10888,6 +13280,19 @@ components:
       properties:
         object:
           $ref: '#/components/schemas/StorageObject'
+    CreateDatabaseBackupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: |
+            Backup name, unique within the database. Names beginning with
+            `volcano-` are reserved for the platform's own snapshots.
+          pattern: ^[a-z0-9][a-z0-9_-]{0,62}$
+          maxLength: 63
+          example: before_migration
+      required:
+        - name
     CreateDatabaseBranchRequest:
       type: object
       properties:
@@ -10908,6 +13313,31 @@ components:
           example: 86400
       required:
         - name
+    CreateDatabaseRestoreRequest:
+      type: object
+      description: |
+        Names what to restore. Supply exactly one of `backup_name` or
+        `restore_to`.
+      properties:
+        backup_name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: |
+            A backup of this database to restore, exactly as returned by the list
+            endpoint.
+
+            Deliberately looser than the names you can create, like the backup
+            path parameter: a backup made by a schedule is named for you, so
+            restoring one accepts any name a backup can have.
+          example: before_migration
+        restore_to:
+          type: string
+          format: date-time
+          description: |
+            A point in time to restore to, which must fall inside the
+            `restore_window` reported when listing backups.
+          example: '2026-01-15T09:30:00Z'
     CreateDatabaseRequest:
       type: object
       description: |
@@ -10925,17 +13355,12 @@ components:
           example: my_database
         region:
           type: string
-          description: Region for database hosting
+          description: |
+            Region for database hosting. The accepted values are the regions this
+            environment runs in, so read them from `GET /databases/regions` rather
+            than hardcoding a list. A region the environment does not offer is
+            rejected with 400.
           example: aws-us-east-1
-          enum:
-            - aws-us-east-1
-            - aws-us-east-2
-            - aws-us-west-2
-            - aws-eu-central-1
-            - aws-eu-west-2
-            - aws-ap-southeast-1
-            - aws-ap-southeast-2
-            - aws-sa-east-1
         pg_version:
           type: string
           description: PostgreSQL major version
@@ -10997,10 +13422,11 @@ components:
       properties:
         domain:
           type: string
+          maxLength: 253
           description: Fully-qualified domain name (hostname only, no scheme/path)
           example: app.example.com
         tls:
-          $ref: '#/components/schemas/CreateFrontendCustomDomainTLSConfig'
+          $ref: '#/components/schemas/FrontendCustomDomainTLSConfig'
       required:
         - domain
         - tls
@@ -11191,6 +13617,9 @@ components:
     CreateVariableRequest:
       type: object
       properties:
+        shared:
+          type: boolean
+          description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         name:
           type: string
           minLength: 1
@@ -11223,8 +13652,13 @@ components:
             - provisioning
             - active
             - failed
+            - restoring
             - deleting
-          description: Database provisioning status
+          description: |
+            Database status. `restoring` means a restore is replacing the
+            database's data: it does not accept connections, and the operations
+            that would race the restore are rejected until it finishes. Its
+            branches keep serving throughout.
         provisioning_started_at:
           type: string
           format: date-time
@@ -11265,8 +13699,13 @@ components:
           format: int64
           minimum: 0
           description: |
-            Latest observed on-disk size from `pg_database_size`, in bytes. This
-            point-in-time gauge may be absent until the database has been sampled.
+            Latest observed storage for this database, in bytes: its own on-disk
+            size, plus what each branch has diverged from it, plus what its
+            backups cost to hold. This is the figure the storage allowance is
+            enforced against, and the stats endpoint breaks it down. A
+            point-in-time gauge recorded by a background pass, so it may be
+            absent until the database has been sampled, and it can trail the
+            stats endpoint's `current_storage_bytes`, which measures on request.
             Summing the latest samples for every database in a project produces
             the project's "Database Storage (Bytes)" usage gauge. Populated on
             database list responses; single-database responses omit it.
@@ -11287,6 +13726,108 @@ components:
         - status
         - created_at
         - updated_at
+    DatabaseBackup:
+      type: object
+      description: |
+        A point-in-time copy of a database, kept by the storage provider and
+        restorable in place.
+
+        Backups cover the database itself, not its branches. Restoring one
+        replaces the database's data and keeps its connection string.
+      properties:
+        name:
+          type: string
+          description: |
+            Backup name, unique within the database. Backups you create are
+            named by you; scheduled backups are named by the storage provider.
+        source:
+          type: string
+          enum:
+            - manual
+            - scheduled
+          description: |
+            Whether the backup was requested explicitly or produced by the
+            backup schedule. Only `manual` backups count against the plan's
+            backup allowance.
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Storage the backup occupies. Absent until the provider has costed
+            it, which takes a few minutes after the backup is taken; absent is
+            not the same as empty.
+        expires_at:
+          type: string
+          format: date-time
+          description: |
+            When the backup is deleted automatically, from the plan's retention.
+            Absent means it is kept until deleted explicitly.
+        created_at:
+          type: string
+          format: date-time
+          description: The point in time the backup captures.
+      required:
+        - name
+        - source
+        - created_at
+    DatabaseBackupList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseBackup'
+        restore_window:
+          $ref: '#/components/schemas/DatabaseRestoreWindow'
+      required:
+        - data
+    DatabaseBackupSchedule:
+      type: object
+      description: |
+        The database's automated backup schedule. An empty list means no
+        scheduled backups; sending one clears the schedule.
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseBackupScheduleEntry'
+      required:
+        - entries
+    DatabaseBackupScheduleEntry:
+      type: object
+      description: One recurrence of the automated backup schedule.
+      properties:
+        frequency:
+          type: string
+          enum:
+            - daily
+            - weekly
+            - monthly
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Hour of the day in UTC.
+        day:
+          type: integer
+          minimum: 1
+          maximum: 28
+          description: |
+            Day of the week (1-7, Monday to Sunday) for a weekly schedule, or day
+            of the month (1-28) for a monthly one. Required for both, ignored for
+            a daily schedule. Monthly stops at 28 so the schedule fires in every
+            month.
+        retention_seconds:
+          type: integer
+          format: int64
+          minimum: 3600
+          description: |
+            How long each backup from this recurrence is kept. Clamped to the
+            plan's retention, and defaulted to it when omitted.
+      required:
+        - frequency
+        - hour
     DatabaseBranch:
       type: object
       description: |
@@ -11552,6 +14093,106 @@ components:
         count:
           type: integer
           description: Number of rows returned
+    DatabaseRestore:
+      type: object
+      description: |
+        A restore of a database, either from a named backup or to a point in
+        time. Restores run in the background and take longer than a request, so
+        the database is unavailable until this reports `completed`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        database_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - snapshot
+            - point_in_time
+          description: |
+            Whether the restore targets a named backup or an arbitrary point in
+            time. Both replace the database's data in place.
+        status:
+          type: string
+          enum:
+            - pending
+            - running
+            - completed
+            - failed
+            - exhausted
+          description: |
+            Restore status. `pending` and `running` both mean the restore is
+            still in flight and the database is not connectable; an attempt that
+            fails with tries left goes back to `pending`. `failed` and
+            `exhausted` both mean Volcano gave up: the database is left `failed`
+            if its data may already have been replaced, and `active` if the
+            restore never started — a backup that no longer exists at the
+            provider ends the restore without touching the database. A restore
+            cannot be cancelled once it starts.
+        backup_name:
+          type: string
+          description: |
+            The backup restored, kept even if that backup is later deleted.
+            Absent for a point-in-time restore.
+        restore_to:
+          type: string
+          format: date-time
+          description: The point in time restored to. Absent for a backup restore.
+        error:
+          type: string
+          description: Why the most recent attempt failed, when one has.
+        completed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - database_id
+        - project_id
+        - kind
+        - status
+        - created_at
+        - updated_at
+    DatabaseRestoreList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseRestore'
+      required:
+        - data
+    DatabaseRestoreWindow:
+      type: object
+      description: |
+        The span a point-in-time restore may target. Absent from the response
+        when the owner's plan does not include point-in-time restore, and while
+        the storage provider has no history window in place yet — briefly the
+        case after an upgrade, since the window is applied asynchronously. The
+        window is read from the provider rather than from the plan, so it never
+        advertises a point a restore could not actually reach.
+      properties:
+        earliest_restore_at:
+          type: string
+          format: date-time
+          description: |
+            The oldest point that can still be restored. Moves forward
+            continuously as history ages out, so treat it as a lower bound at
+            the moment it was read rather than a fixed value.
+        latest_restore_at:
+          type: string
+          format: date-time
+          description: The most recent point that can be restored, which is now.
     DatabaseStats:
       type: object
       properties:
@@ -11560,9 +14201,10 @@ components:
           format: int64
           minimum: 0
           description: |
-            On-disk size right now, in bytes: the database itself plus every
-            branch's divergence from it. This is the figure the storage
-            allowance is enforced against. `branches` breaks it down.
+            On-disk size right now, in bytes: the database itself, plus every
+            branch's divergence from it, plus what its backups cost to hold. This
+            is the figure the storage allowance is enforced against. `branches`
+            and `backup_storage_bytes` break it down.
         current_storage_mb:
           type: number
           format: double
@@ -11576,6 +14218,22 @@ components:
             parent contributes nothing.
           items:
             $ref: '#/components/schemas/DatabaseBranchStorage'
+        backup_storage_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            What this database's backups contribute to `current_storage_bytes`.
+
+            A backup taken on request is charged as a full copy of the database
+            as it was at that moment, so two backups of a 2 GB database are 4 GB.
+            A backup schedule is charged its first snapshot in full and each
+            later one only for the storage it adds. Deleting a backup releases
+            its storage immediately.
+
+            Sampled from the provider rather than measured live, so it can lag a
+            change by a few minutes, and a backup taken seconds ago may not be
+            costed yet. Zero on a plan without backups.
         storage_bytes:
           type: integer
           format: int64
@@ -11609,6 +14267,7 @@ components:
       required:
         - current_storage_bytes
         - current_storage_mb
+        - backup_storage_bytes
         - storage_bytes
         - data_written_bytes
         - data_transfer_bytes
@@ -12209,11 +14868,15 @@ components:
           type: string
         private:
           type: boolean
+        is_empty:
+          type: boolean
+          description: Whether the repository has no commits and can receive an initial source export.
       required:
         - id
         - full_name
         - default_branch
         - private
+        - is_empty
     GitRepositoriesResponse:
       type: object
       properties:
@@ -12345,6 +15008,106 @@ components:
           description: Current holder's fencing token. Present only when held.
       required:
         - held
+    ProjectSourceExportState:
+      type: object
+      description: The project's source of truth and any pending Git transition.
+      properties:
+        mode:
+          type: string
+          enum:
+            - platform
+            - git_exporting
+            - git_pending
+            - git
+        transition_started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When source export started, cleared if an incomplete transition is canceled.
+        exported_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the initial export push entered deployment, or when a transition was canceled after its commit was reserved. Once set, the one-time export is consumed.
+        handed_over_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When a complete production-branch deployment first proved the repository could drive the project, null until then. Once set, the repository is the project's source of truth.
+      required:
+        - mode
+        - transition_started_at
+        - exported_at
+        - handed_over_at
+    ProjectSourceExport:
+      type: object
+      description: The initial production-branch commit, and everything export could not carry.
+      properties:
+        repo_full_name:
+          type: string
+        branch:
+          type: string
+          description: The production branch that was created.
+        commit_sha:
+          type: string
+        file_count:
+          type: integer
+        skipped:
+          type: array
+          description: Resources whose source could not be taken, with the reason. Most often a resource that has never deployed successfully.
+          items:
+            $ref: '#/components/schemas/ProjectSourceExportSkip'
+        omitted:
+          type: array
+          description: Things deliberately left out of the branch.
+          items:
+            $ref: '#/components/schemas/ProjectSourceExportOmission'
+      required:
+        - repo_full_name
+        - branch
+        - commit_sha
+        - file_count
+        - skipped
+        - omitted
+    ExportProjectSourceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        production_branch:
+          type: string
+          minLength: 1
+          description: The currently configured production branch the user confirmed for export.
+      required:
+        - production_branch
+    ProjectSourceExportSkip:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: 'The kind of resource, "function" or "frontend". Deliberately not an enum: the generated constants would collide with an existing resource-type enum and rename its members.'
+        name:
+          type: string
+        reason:
+          type: string
+      required:
+        - kind
+        - name
+        - reason
+    ProjectSourceExportOmission:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: 'What was left out: migrations Volcano stores no copy of, variable values, a credential-shaped file, installed dependencies, or an archive entry a repository cannot carry.'
+        resource:
+          type: string
+          description: The resource it came from, empty when project-wide.
+        path:
+          type: string
+      required:
+        - kind
+        - resource
+        - path
     SetProjectGitProductionBranchRequest:
       type: object
       properties:
@@ -12494,6 +15257,9 @@ components:
             - pending
             - verified
             - failed
+        failure_reason:
+          type: string
+          description: Safe failure category returned for failed managed TLS provisioning. One of provider, certificate, ownership, or internal. Ownership means another account has already verified the hostname.
         verification_records:
           type: array
           items:
@@ -12518,122 +15284,60 @@ components:
         - effective_urls
         - created_at
         - updated_at
-    CreateFrontendCustomDomainTLSConfig:
-      oneOf:
-        - $ref: '#/components/schemas/ManagedFrontendCustomDomainTLSConfig'
-        - $ref: '#/components/schemas/BYOCFrontendCustomDomainTLSConfig'
-      discriminator:
-        propertyName: mode
-        mapping:
-          managed: '#/components/schemas/ManagedFrontendCustomDomainTLSConfig'
-          byoc: '#/components/schemas/BYOCFrontendCustomDomainTLSConfig'
-    ManagedFrontendCustomDomainTLSConfig:
-      type: object
-      description: Volcano issues and renews the certificate. Do not send certificate material.
-      additionalProperties: false
-      properties:
-        mode:
-          type: string
-          enum:
-            - managed
-      required:
-        - mode
-    BYOCFrontendCustomDomainTLSConfig:
-      type: object
-      description: Use certificate material that you manage.
-      additionalProperties: false
-      properties:
-        mode:
-          type: string
-          enum:
-            - byoc
-        certificate_pem:
-          type: string
-          description: Required. PEM-encoded certificate.
-        private_key_pem:
-          type: string
-          description: Required. PEM-encoded private key.
-        certificate_chain_pem:
-          type: string
-          description: Optional PEM-encoded certificate chain.
-      required:
-        - mode
-        - certificate_pem
-        - private_key_pem
     FrontendCustomDomainTLSConfig:
       type: object
-      deprecated: true
-      description: Deprecated compatibility model. Use BYOCFrontendCustomDomainTLSConfig.
-      properties:
-        mode:
-          type: string
-          enum:
-            - byoc
-          default: byoc
-        certificate_pem:
-          type: string
-        private_key_pem:
-          type: string
-        certificate_chain_pem:
-          type: string
-      required:
-        - mode
-        - certificate_pem
-        - private_key_pem
-    ProjectConfigFrontendCustomDomainTLSConfig:
-      oneOf:
-        - $ref: '#/components/schemas/ManagedProjectConfigFrontendCustomDomainTLSConfig'
-        - $ref: '#/components/schemas/BYOCProjectConfigFrontendCustomDomainTLSConfig'
-      discriminator:
-        propertyName: mode
-        mapping:
-          managed: '#/components/schemas/ManagedProjectConfigFrontendCustomDomainTLSConfig'
-          byoc: '#/components/schemas/BYOCProjectConfigFrontendCustomDomainTLSConfig'
-    ManagedProjectConfigFrontendCustomDomainTLSConfig:
-      type: object
-      additionalProperties: false
-      properties:
-        mode:
-          type: string
-          enum:
-            - managed
-      required:
-        - mode
-    BYOCProjectConfigFrontendCustomDomainTLSConfig:
-      type: object
+      description: Set mode to managed for Volcano-issued TLS, or byoc with certificate_pem and private_key_pem.
       additionalProperties: false
       not:
         anyOf:
-          - required:
-              - certificate_pem
-            not:
-              required:
-                - private_key_pem
-          - required:
-              - private_key_pem
-            not:
-              required:
-                - certificate_pem
-          - required:
-              - certificate_chain_pem
-            not:
-              required:
-                - certificate_pem
-                - private_key_pem
+          - allOf:
+              - properties:
+                  mode:
+                    enum:
+                      - managed
+                required:
+                  - mode
+              - anyOf:
+                  - required:
+                      - certificate_pem
+                  - required:
+                      - private_key_pem
+                  - required:
+                      - certificate_chain_pem
+          - allOf:
+              - properties:
+                  mode:
+                    enum:
+                      - byoc
+                required:
+                  - mode
+              - anyOf:
+                  - not:
+                      required:
+                        - certificate_pem
+                  - not:
+                      required:
+                        - private_key_pem
       properties:
         mode:
           type: string
           enum:
+            - managed
             - byoc
         certificate_pem:
           type: string
-          description: PEM-encoded certificate for BYOC create or rotation. Omitted from exports.
+          maxLength: 65536
+          x-go-type-skip-optional-pointer: true
+          description: Required. PEM-encoded certificate.
         private_key_pem:
           type: string
-          description: PEM-encoded private key for BYOC create or rotation. Omitted from exports.
+          maxLength: 65536
+          x-go-type-skip-optional-pointer: true
+          description: Required. PEM-encoded private key.
         certificate_chain_pem:
           type: string
-          description: Optional PEM-encoded certificate chain for BYOC. Omitted from exports.
+          maxLength: 65536
+          description: Optional PEM-encoded certificate chain.
       required:
         - mode
     FrontendDeployment:
@@ -12748,6 +15452,7 @@ components:
         - value
     FrontendDomainVerificationRecord:
       type: object
+      description: The DNS records currently required for managed TLS. Volcano may require a tenant-specific TXT ownership record before returning a CNAME that authorizes certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
       additionalProperties: false
       properties:
         name:
@@ -12864,6 +15569,18 @@ components:
             Function visibility for anon-key invocation.
             - `false` (default): only auth user tokens and service keys can invoke
             - `true`: anon keys with `functions.invoke` can invoke
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Optional OpenAPI 3.0 or 3.1 document describing an HTTP-mode function.
+        has_openapi_spec:
+          type: boolean
+          description: Whether OpenAPI metadata is configured; list responses omit the document itself.
         aws_function_arn:
           type: string
         invoke_url:
@@ -12902,9 +15619,229 @@ components:
         - name
         - status
         - is_public
+        - invocation_mode
+        - http_auth_mode
+        - openapi_spec
+        - has_openapi_spec
         - deployed_regions
         - created_at
         - updated_at
+    DurableFunction:
+      type: object
+      description: |
+        A durable function. Separate from `Function` because a durable function
+        is invoked only through its own execution endpoints, so it has no
+        invocation mode, HTTP auth mode, OpenAPI document or invoke URL, and it
+        carries a `durable` configuration that a standard function has no field
+        for.
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 63
+          pattern: ^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+        status:
+          type: string
+          enum:
+            - provisioning
+            - active
+            - failed
+            - deleting
+        provisioning_started_at:
+          type: string
+          format: date-time
+          description: Timestamp when the current provisioning phase started
+        is_public:
+          type: boolean
+          description: |
+            Whether anon keys may start executions of this function through
+            `POST /durable-functions/{functionId}/executions`.
+
+            When `true`, an anon key holding `functions.invoke` can start an
+            execution. When `false` (the default) only service keys and auth
+            user tokens can. Reading and stopping an execution always require
+            the project owner's token, whatever this is set to.
+
+            Set it when the function is created. Durable functions have no
+            update endpoint, so changing visibility later means redeploying.
+
+            A public durable function is startable, never invocable: it is not
+            reachable through `POST /functions/{functionId}/invoke` or a
+            function URL, which answer `404` for either visibility.
+        durable:
+          $ref: '#/components/schemas/DurableFunctionConfig'
+        deployed_regions:
+          type: array
+          items:
+            type: string
+          description: Regions where this function is currently deployed
+        runtime:
+          type: string
+        handler:
+          type: string
+        current_deployment_id:
+          type: string
+          format: uuid
+          description: Identifier of the latest deployment operation
+        pending_deployment_id:
+          type: string
+          format: uuid
+          description: Newest queued deployment that will run after the current operation
+        last_invoked_at:
+          type: string
+          format: date-time
+          description: Most recent successful invocation timestamp
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - name
+        - status
+        - is_public
+        - durable
+        - deployed_regions
+        - created_at
+        - updated_at
+    DurableFunctionConfig:
+      type: object
+      description: |
+        Execution limits the function was created with, derived from the
+        project's plan. Fixed for the life of the function: changing them means
+        creating a new one.
+
+        The memory the function runs at, and the timeout on one attempt within
+        an execution, also come from the plan but are not reported here: they
+        are applied to the deployed function rather than recorded on it. Both
+        are published per plan in the plans and limits guide.
+      properties:
+        execution_timeout_seconds:
+          type: integer
+          format: int64
+          description: |
+            How long a whole execution may run, including time suspended in a
+            wait. This is not a limit on one attempt: an execution outlives any
+            single attempt by checkpointing and resuming, and the per-attempt
+            timeout is the plan's own, smaller number.
+        retention_days:
+          type: integer
+          format: int64
+          description: |
+            How long a finished execution's result and history are retained, for
+            as long as the function exists. Deleting the function, or its
+            project, ends retention early and takes the history with it.
+      required:
+        - execution_timeout_seconds
+        - retention_days
+    DurableExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        function_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: |
+            Idempotency key for the execution. Supplied by the client through
+            `X-Volcano-Execution-Name`, otherwise generated.
+        status:
+          $ref: '#/components/schemas/DurableExecutionStatus'
+        region:
+          type: string
+          description: |
+            Region the execution runs in. An execution is pinned to one region
+            for its whole life because its checkpoints live there.
+        result:
+          description: |
+            Whatever the function returned, verbatim. Absent while the execution
+            is still running, absent when the result was too large to return and
+            was checkpointed instead, and absent once the retention period has
+            lapsed.
+        result_expired:
+          type: boolean
+          description: |
+            `true` when the execution is terminal but its result is no longer
+            retained, which distinguishes a discarded result from an empty one.
+            Shortly after that the execution itself is dropped and reads answer
+            `404`.
+
+            A result that was checkpointed rather than returned leaves this
+            unset, so it reads like a function that returned nothing.
+        error:
+          $ref: '#/components/schemas/DurableExecutionError'
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          description: Present once the execution has reached a terminal status.
+      required:
+        - id
+        - function_id
+        - name
+        - status
+        - region
+        - created_at
+    DurableExecutionStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - succeeded
+        - failed
+        - timed_out
+        - stopped
+        - unknown
+      description: |
+        Lifecycle state of an execution. `pending` covers the window between the
+        platform reserving the execution name and the function accepting the
+        start, and has no counterpart once the execution is under way.
+        `succeeded`, `failed`, `timed_out`, `stopped` and `unknown` are
+        terminal.
+
+        `unknown` means the platform lost track of the execution's outcome: it
+        was never seen to finish and is no longer reported, so no result or
+        error can be given for it. It is terminal because nothing can settle it
+        later, and it is rare — treat it as an outcome to retry under a new
+        name rather than a state to wait on. `completed_at` on an `unknown`
+        execution is when the platform gave up, not when the work ended.
+    DurableExecutionError:
+      type: object
+      description: Why a failed or timed-out execution ended.
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+    FunctionInvocationMode:
+      type: string
+      enum:
+        - rpc
+        - http
+      description: |
+        Invocation contract. `rpc` preserves the existing POST `{payload: ...}` contract;
+        `http` forwards HTTP request semantics to the function runtime.
+    FunctionHTTPAuthMode:
+      type: string
+      enum:
+        - volcano
+        - none
+      description: |
+        Authentication applied by the HTTP ingress. `none` is valid only for public
+        HTTP-mode functions and is intended for externally signed webhooks.
     FunctionDeployment:
       type: object
       properties:
@@ -13209,6 +16146,7 @@ components:
         - name
         - language
         - default
+        - durable_capable
         - deployment
       properties:
         name:
@@ -13222,6 +16160,9 @@ components:
         default:
           type: boolean
           description: Whether this runtime is the CLI default for its language.
+        durable_capable:
+          type: boolean
+          description: Whether a durable function can be authored on this runtime. Only runtimes with a durable authoring API report true, and a durable deploy naming any other runtime is rejected.
         deployment:
           $ref: '#/components/schemas/FunctionRuntimeDeployment'
     FunctionRuntimesResponse:
@@ -13245,6 +16186,15 @@ components:
         function_id:
           type: string
           format: uuid
+        function_kind:
+          allOf:
+            - $ref: '#/components/schemas/FunctionKind'
+          description: |
+            Which collection the scheduled function belongs to. A project-wide
+            scheduler list mixes both kinds, and this is what says whether the
+            function is read back from `/projects/{id}/functions` or
+            `/projects/{id}/durable-functions` — and whether a tick invokes it
+            or starts a durable execution.
         name:
           type: string
         enabled:
@@ -13316,6 +16266,10 @@ components:
       type: string
       enum:
         - login
+        - signup
+        - forgot-password
+        - device
+        - verify-email
         - reset-password
     HostedLoginEmailCheckRequest:
       type: object
@@ -13348,6 +16302,10 @@ components:
     HostedRenderablePageType:
       type: string
       enum:
+        - signup
+        - forgot-password
+        - device
+        - verify-email
         - reset-password
     LogEvent:
       type: object
@@ -13405,12 +16363,23 @@ components:
           type: string
           description: |
             Metric name (for example, "Function & Frontend Invocations", "Frontend Requests",
-            "CodeBuild Build Seconds", "Bandwidth Ingress (Bytes)", "Bandwidth Egress (Bytes)",
+            "Durable Executions", "Durable Operations", "Durable Compute (MB-Seconds)",
+            "CodeBuild Build Seconds",
+            "Bandwidth Ingress (Bytes)", "Bandwidth Egress (Bytes)",
             "Bandwidth Total (Bytes)", or "Database Storage (Bytes)"). Byte-based metrics are
             reported in bytes. "Bandwidth Total (Bytes)" is derived (ingress + egress) and
-            is not billed separately. "Database Storage (Bytes)" is a current observed gauge,
-            not a cumulative counter. It is the sum of the latest `pg_database_size` samples
-            exposed as `storage_bytes` by the project's database list.
+            is not billed separately. The three durable metrics are
+            counted separately from "Function & Frontend Invocations", which covers standard
+            invocations only. Operations and compute are counted when an execution finishes,
+            so they appear in the window the execution completed in rather than the one it
+            started in. "Durable Compute (MB-Seconds)" reports the memory the execution ran
+            at times the time it spent running, in megabyte-seconds; the allowance for it is
+            published in gigabyte-seconds, which is 1024 of these.
+            "Database Storage (Bytes)" is a current observed gauge,
+            not a cumulative counter. It is the sum of the latest samples exposed as
+            `storage_bytes` by the project's database list, so it includes what each
+            database's branches and backups hold, and it inherits that field's lag
+            behind a live measurement.
         total:
           type: integer
           format: int64
@@ -13671,6 +16640,56 @@ components:
         - limit
         - total
         - has_more
+    PaginatedDurableFunctions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DurableFunction'
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+        limit:
+          type: integer
+          description: Number of items per page
+        total:
+          type: integer
+          description: Total number of items across all pages
+        has_more:
+          type: boolean
+          description: Whether there are more pages available
+      required:
+        - data
+        - page
+        - limit
+        - total
+        - has_more
+    PaginatedDurableExecutions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DurableExecution'
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+        limit:
+          type: integer
+          description: Number of items per page
+        total:
+          type: integer
+          description: Total number of items across all pages
+        has_more:
+          type: boolean
+          description: Whether there are more pages available
+      required:
+        - data
+        - page
+        - limit
+        - total
+        - has_more
     PaginatedProjectCustomDomains:
       type: object
       properties:
@@ -13916,9 +16935,11 @@ components:
         plan:
           type: string
           enum:
+            - HOBBY
+            - SUPERAGENT
             - FREE
             - PRO
-          description: Platform plan applied to the project when available
+          description: Public plan name; FREE and PRO are accepted from older Hosting responses.
         all_regions:
           type: boolean
           description: |
@@ -13944,6 +16965,14 @@ components:
             param that changes on each upload. Absent when the project has no
             logo. The logo image is stored in the project's storage folder.
           example: /projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/logo?v=1718524800
+        git_connection:
+          allOf:
+            - $ref: '#/components/schemas/ProjectGitConnectionSummary'
+          description: Present for connected projects when `git_connection` is requested through the list endpoint's `include` parameter.
+        health:
+          allOf:
+            - $ref: '#/components/schemas/ProjectHealthSummary'
+          description: Present when `health` is requested through the list endpoint's `include` parameter.
         created_at:
           type: string
           format: date-time
@@ -13984,6 +17013,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectConfigDatabase'
+        shared_variables:
+          type: array
+          uniqueItems: true
+          description: Replace the complete shared function-variable list with existing names, without changing variable values. Omission keeps membership unchanged; an empty list clears it.
+          items:
+            type: string
+            pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
         variables:
           type: array
           description: Fully synced when declared - variables absent from this list are deleted.
@@ -14197,6 +17233,8 @@ components:
           $ref: '#/components/schemas/ProjectConfigAuthRedirects'
         pages:
           $ref: '#/components/schemas/ProjectConfigHostedPages'
+        appearance:
+          $ref: '#/components/schemas/ProjectConfigAuthPageAppearance'
     ProjectConfigAuthPassword:
       type: object
       additionalProperties: false
@@ -14295,8 +17333,8 @@ components:
             prefix) and must be bare domains such as `domain1.com`. Matching is
             exact, so subdomains need their own entry. At most 100 entries.
 
-            Restricting signups is a PRO feature to configure and to enforce: a
-            FREE project can only declare the list it already has or remove the
+            Restricting signups is a SUPERAGENT feature to configure and to enforce: a
+            HOBBY project can only declare the list it already has or remove the
             restriction, and the list it keeps is parked until it upgrades.
           items:
             type: string
@@ -14381,12 +17419,13 @@ components:
       type: object
       additionalProperties: false
       description: |
-        Custom domain with managed or BYOC TLS (PRO plan). `tls` is required
+        Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required
         when the domain is first created and optional afterwards. BYOC TLS
         material is write-only and omitted from config export.
       properties:
         domain:
           type: string
+          maxLength: 253
           description: Fully-qualified domain name (hostname only, no scheme/path)
         tls:
           $ref: '#/components/schemas/ProjectConfigFrontendCustomDomainTLSConfig'
@@ -14438,11 +17477,11 @@ components:
         html_body:
           type: string
           maxLength: 262144
-          description: HTML body. Max 256 KiB. PRO plan required for custom bodies.
+          description: HTML body. Max 256 KiB. SUPERAGENT plan required for custom bodies.
         text_body:
           type: string
           maxLength: 262144
-          description: Plain-text body. Max 256 KiB. PRO plan required for custom bodies.
+          description: Plain-text body. Max 256 KiB. SUPERAGENT plan required for custom bodies.
     ProjectConfigEmailTemplates:
       type: object
       additionalProperties: false
@@ -14450,7 +17489,7 @@ components:
         Email templates keyed by type. Fully synced when declared - template
         types absent from a declared map revert to server defaults (custom
         bodies deleted, subject overrides cleared). Custom template bodies
-        require the PRO plan; subject-only changes are available on FREE.
+        require the SUPERAGENT plan; subject-only changes are available on HOBBY.
       properties:
         confirmation:
           $ref: '#/components/schemas/ProjectConfigEmailTemplate'
@@ -14482,14 +17521,52 @@ components:
         Configuration for an existing (deployed) function. Functions are never
         created or deleted through the manifest. When `schedulers` is declared
         it is fully synced (schedulers absent from the list are deleted);
-        omitting `schedulers` leaves the function's schedulers untouched.
+        omitting `schedulers` leaves the function's schedulers untouched. The
+        same applies to `variables`: declaring it replaces the function's
+        declared variable names, and omitting it leaves them untouched.
       properties:
         name:
           type: string
           minLength: 1
+        kind:
+          $ref: '#/components/schemas/FunctionKind'
         public:
           type: boolean
           description: Function visibility for anon-key invocation
+        variable_scope:
+          type: string
+          enum:
+            - all
+            - scoped
+          description: |
+            Which project variables this function receives. `all` (the default)
+            gives it the project variables marked `shared: true`. `scoped` gives it only the variables
+            it selects: every name declared in `variables`, plus the names
+            Volcano detects in its source that the project defines.
+        variables:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 256
+          description: |
+            Project variable names this function requires, on top of the ones
+            detected in its source. Declare a name here when the function reads
+            it through a computed key, which detection cannot see, or when the
+            function must not deploy without it: a declared name the project does
+            not define fails the apply, while a detected name it does not define
+            is ignored. Only used when `variable_scope` is `scoped`.
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          x-go-type: nullable.Nullable[map[string]interface{}]
+          x-go-type-skip-optional-pointer: true
+          description: OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function
         schedulers:
           type: array
           items:
@@ -14514,13 +17591,46 @@ components:
       type: object
       additionalProperties: false
       description: |
-        Hosted auth pages keyed by page type (PRO plan). Upsert-only: omitted
+        Hosted auth pages keyed by page type (SUPERAGENT plan). Upsert-only: omitted
         pages are left untouched (there is no delete for hosted pages).
       properties:
         login:
           $ref: '#/components/schemas/ProjectConfigHostedPage'
         reset_password:
           $ref: '#/components/schemas/ProjectConfigHostedPage'
+        signup:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        forgot_password:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        device:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+        verify_email:
+          $ref: '#/components/schemas/ProjectConfigHostedPage'
+    PreviewAuthPageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - theme
+        - layout
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+        action:
+          type: string
+    PreviewAuthPageResponse:
+      type: object
+      required:
+        - preview_url
+        - expires_at
+      properties:
+        preview_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
     ProjectConfigMissingResource:
       type: object
       properties:
@@ -14581,7 +17691,7 @@ components:
           maxLength: 255
         all_regions:
           type: boolean
-          description: Region policy. `false` requires `selected_regions` (PRO plan).
+          description: Region policy. `false` requires `selected_regions` (SUPERAGENT plan).
         selected_regions:
           type: array
           items:
@@ -14667,6 +17777,9 @@ components:
       type: object
       additionalProperties: false
       properties:
+        shared:
+          type: boolean
+          description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         name:
           type: string
           minLength: 1
@@ -14690,6 +17803,13 @@ components:
           format: uuid
         name:
           type: string
+        kind:
+          allOf:
+            - $ref: '#/components/schemas/FunctionKind'
+          description: |
+            Which kind of function this check is about. Present only when `type`
+            is `function`, where both kinds share the name space and this is
+            what tells them apart.
       required:
         - type
         - id
@@ -15069,6 +18189,14 @@ components:
           format: uuid
         name:
           type: string
+        kind:
+          allOf:
+            - $ref: '#/components/schemas/FunctionKind'
+          description: |
+            Which kind of function this deployment belongs to. Both kinds appear
+            in this feed under `type: function`, because a deployment means the
+            same thing for either, so this is what tells them apart. Absent when
+            `type` is `frontend`.
       required:
         - type
         - id
@@ -15175,8 +18303,8 @@ components:
       properties:
         plan:
           type: string
-          description: Plan name (FREE or PRO)
-          example: FREE
+          description: Public plan name (HOBBY or SUPERAGENT).
+          example: HOBBY
         max_connections:
           type: integer
           description: Maximum concurrent connections allowed
@@ -15660,8 +18788,8 @@ components:
             prefix); matching is exact, so subdomains need their own entry. At
             most 100 entries.
 
-            Restricting signups is a PRO feature to configure and to enforce: a
-            FREE project can only remove the restriction and gets 403 for any
+            Restricting signups is a SUPERAGENT feature to configure and to enforce: a
+            HOBBY project can only remove the restriction and gets 403 for any
             other change, and the list it keeps is parked until it upgrades.
           items:
             type: string
@@ -15754,6 +18882,22 @@ components:
         css:
           type: string
           description: Optional CSS injected at render time. Max 256 KiB.
+    UpdateAuthPageLayoutRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - layout
+      properties:
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+    UpdateAuthPageThemeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - theme
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
     UpdateDatabaseTypeRequest:
       type: object
       description: Update database compute size tier
@@ -15782,6 +18926,8 @@ components:
           type: string
     UpdateFunctionRequest:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         is_public:
           type: boolean
@@ -15789,8 +18935,15 @@ components:
             Function visibility for anon-key invocation.
             - `false` (default): private function
             - `true`: public function (anon keys with `functions.invoke` can invoke)
-      required:
-        - is_public
+        invocation_mode:
+          $ref: '#/components/schemas/FunctionInvocationMode'
+        http_auth_mode:
+          $ref: '#/components/schemas/FunctionHTTPAuthMode'
+        openapi_spec:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: OpenAPI 3.0 or 3.1 metadata for HTTP mode. Send null to clear it.
     UpdateFunctionSchedulerRequest:
       type: object
       properties:
@@ -15881,6 +19034,9 @@ components:
     UpdateVariableRequest:
       type: object
       properties:
+        shared:
+          type: boolean
+          description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         value:
           type: string
       required:
@@ -15970,6 +19126,9 @@ components:
     Variable:
       type: object
       properties:
+        shared:
+          type: boolean
+          description: Include this name in the project's shared function variables. Omission preserves existing membership; new variables default to true for legacy clients. Send false explicitly to create a non-shared variable.
         id:
           type: string
           format: uuid
@@ -16019,6 +19178,158 @@ components:
         - value
         - created_at
         - updated_at
+    ProjectGitConnectionSummary:
+      type: object
+      properties:
+        repo_installation_id:
+          type: integer
+          format: int64
+        repo_id:
+          type: integer
+          format: int64
+        repo_full_name:
+          type: string
+        root_directory:
+          type: string
+        production_branch:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - repo_installation_id
+        - repo_id
+        - repo_full_name
+        - root_directory
+        - production_branch
+        - updated_at
+    ProjectHealthSummary:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ProjectHealthStatus'
+      required:
+        - status
+    FunctionKind:
+      type: string
+      enum:
+        - standard
+        - durable
+      default: standard
+      description: |
+        Which kind of function this is. `standard` runs once per invocation.
+        `durable` checkpoints its progress and resumes from the last completed
+        step, and is invoked asynchronously through its own executions
+        collection. A function's kind is fixed when it is created and cannot be
+        changed afterwards. Omitting this field means `standard`.
+    AuthPageThemeColors:
+      type: object
+      additionalProperties: false
+      required:
+        - background
+        - surface
+        - text
+        - accent
+        - accent_text
+      properties:
+        background:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        surface:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        text:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        accent:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        accent_text:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+    ProjectConfigAuthPageLayouts:
+      type: object
+      additionalProperties: false
+      properties:
+        login:
+          $ref: '#/components/schemas/AuthPageLayout'
+        signup:
+          $ref: '#/components/schemas/AuthPageLayout'
+        forgot_password:
+          $ref: '#/components/schemas/AuthPageLayout'
+        device:
+          $ref: '#/components/schemas/AuthPageLayout'
+        verify_email:
+          $ref: '#/components/schemas/AuthPageLayout'
+        reset_password:
+          $ref: '#/components/schemas/AuthPageLayout'
+    ProjectConfigAuthPageAppearance:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layouts:
+          $ref: '#/components/schemas/ProjectConfigAuthPageLayouts'
+    ManagedProjectConfigFrontendCustomDomainTLSConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+            - managed
+      required:
+        - mode
+    BYOCProjectConfigFrontendCustomDomainTLSConfig:
+      type: object
+      additionalProperties: false
+      not:
+        anyOf:
+          - required:
+              - certificate_pem
+            not:
+              required:
+                - private_key_pem
+          - required:
+              - private_key_pem
+            not:
+              required:
+                - certificate_pem
+          - required:
+              - certificate_chain_pem
+            not:
+              required:
+                - certificate_pem
+                - private_key_pem
+      properties:
+        mode:
+          type: string
+          enum:
+            - byoc
+        certificate_pem:
+          type: string
+          maxLength: 65536
+          description: PEM-encoded certificate for BYOC create or rotation. Omitted from exports.
+        private_key_pem:
+          type: string
+          maxLength: 65536
+          description: PEM-encoded private key for BYOC create or rotation. Omitted from exports.
+        certificate_chain_pem:
+          type: string
+          maxLength: 65536
+          description: Optional PEM-encoded certificate chain for BYOC. Omitted from exports.
+      required:
+        - mode
+    ProjectConfigFrontendCustomDomainTLSConfig:
+      oneOf:
+        - $ref: '#/components/schemas/ManagedProjectConfigFrontendCustomDomainTLSConfig'
+        - $ref: '#/components/schemas/BYOCProjectConfigFrontendCustomDomainTLSConfig'
+      discriminator:
+        propertyName: mode
+        mapping:
+          managed: '#/components/schemas/ManagedProjectConfigFrontendCustomDomainTLSConfig'
+          byoc: '#/components/schemas/BYOCProjectConfigFrontendCustomDomainTLSConfig'
     DatabaseQueryPerformanceDatabase:
       type: object
       properties:
@@ -16405,3 +19716,47 @@ components:
         mock_prelude:
           type: string
           description: Preview harness that supplies request params and stubs the hosted-auth API. Never served on a real page.
+    AuthPageAppearanceDefaults:
+      type: object
+      required:
+        - theme
+        - layout
+      properties:
+        theme:
+          $ref: '#/components/schemas/AuthPageTheme'
+        layout:
+          $ref: '#/components/schemas/AuthPageLayout'
+    AuthPageAppearanceOptions:
+      type: object
+      required:
+        - pages
+        - fonts
+        - scales
+        - densities
+        - radii
+        - layouts
+      properties:
+        pages:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostedAuthPageType'
+        fonts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageFont'
+        scales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageScale'
+        densities:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageDensity'
+        radii:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageRadius'
+        layouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthPageLayout'

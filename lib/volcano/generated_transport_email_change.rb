@@ -14,6 +14,8 @@ module Volcano
           request,
           debug_return_type: 'String'
         )
+        raise TypeError unless data.is_a?(String)
+
         response(JSON.parse(data), status, headers)
       end
     rescue JSON::ParserError, TypeError => e
@@ -23,7 +25,8 @@ module Volcano
     def auth_cancel_email_change(authorization:)
       invoke do
         apis = @api_factory.call(authorization)
-        response(*apis.authentication.auth_cancel_email_change_with_http_info)
+        data, status, headers = apis.authentication.auth_cancel_email_change_with_http_info
+        response(data, status, headers)
       end
     end
 
@@ -35,6 +38,8 @@ module Volcano
           request,
           debug_return_type: 'String'
         )
+        raise TypeError unless body.is_a?(String)
+
         response(JSON.parse(body), status, headers)
       end
     rescue JSON::ParserError, TypeError => e

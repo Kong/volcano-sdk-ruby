@@ -14,14 +14,17 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Deprecated compatibility model. Use BYOCFrontendCustomDomainTLSConfig.
+  # Set mode to managed for Volcano-issued TLS, or byoc with certificate_pem and private_key_pem.
   class FrontendCustomDomainTLSConfig < ApiModelBase
     attr_accessor :mode
 
+    # Required. PEM-encoded certificate.
     attr_accessor :certificate_pem
 
+    # Required. PEM-encoded private key.
     attr_accessor :private_key_pem
 
+    # Optional PEM-encoded certificate chain.
     attr_accessor :certificate_chain_pem
 
     class EnumAttributeValidator
@@ -101,19 +104,15 @@ module Volcano::Generated
       if attributes.key?(:'mode')
         self.mode = attributes[:'mode']
       else
-        self.mode = 'byoc'
+        self.mode = nil
       end
 
       if attributes.key?(:'certificate_pem')
         self.certificate_pem = attributes[:'certificate_pem']
-      else
-        self.certificate_pem = nil
       end
 
       if attributes.key?(:'private_key_pem')
         self.private_key_pem = attributes[:'private_key_pem']
-      else
-        self.private_key_pem = nil
       end
 
       if attributes.key?(:'certificate_chain_pem')
@@ -130,12 +129,16 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "mode", mode cannot be nil.')
       end
 
-      if @certificate_pem.nil?
-        invalid_properties.push('invalid value for "certificate_pem", certificate_pem cannot be nil.')
+      if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "certificate_pem", the character length must be smaller than or equal to 65536.')
       end
 
-      if @private_key_pem.nil?
-        invalid_properties.push('invalid value for "private_key_pem", private_key_pem cannot be nil.')
+      if !@private_key_pem.nil? && @private_key_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "private_key_pem", the character length must be smaller than or equal to 65536.')
+      end
+
+      if !@certificate_chain_pem.nil? && @certificate_chain_pem.to_s.length > 65536
+        invalid_properties.push('invalid value for "certificate_chain_pem", the character length must be smaller than or equal to 65536.')
       end
 
       invalid_properties
@@ -146,17 +149,18 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @mode.nil?
-      mode_validator = EnumAttributeValidator.new('String', ["byoc"])
+      mode_validator = EnumAttributeValidator.new('String', ["managed", "byoc"])
       return false unless mode_validator.valid?(@mode)
-      return false if @certificate_pem.nil?
-      return false if @private_key_pem.nil?
+      return false if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536
+      return false if !@private_key_pem.nil? && @private_key_pem.to_s.length > 65536
+      return false if !@certificate_chain_pem.nil? && @certificate_chain_pem.to_s.length > 65536
       true
     end
 
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] mode Object to be assigned
     def mode=(mode)
-      validator = EnumAttributeValidator.new('String', ["byoc"])
+      validator = EnumAttributeValidator.new('String', ["managed", "byoc"])
       unless validator.valid?(mode)
         fail ArgumentError, "invalid value for \"mode\", must be one of #{validator.allowable_values}."
       end
@@ -170,6 +174,10 @@ module Volcano::Generated
         fail ArgumentError, 'certificate_pem cannot be nil'
       end
 
+      if certificate_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "certificate_pem", the character length must be smaller than or equal to 65536.'
+      end
+
       @certificate_pem = certificate_pem
     end
 
@@ -180,7 +188,25 @@ module Volcano::Generated
         fail ArgumentError, 'private_key_pem cannot be nil'
       end
 
+      if private_key_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "private_key_pem", the character length must be smaller than or equal to 65536.'
+      end
+
       @private_key_pem = private_key_pem
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] certificate_chain_pem Value to be assigned
+    def certificate_chain_pem=(certificate_chain_pem)
+      if certificate_chain_pem.nil?
+        fail ArgumentError, 'certificate_chain_pem cannot be nil'
+      end
+
+      if certificate_chain_pem.to_s.length > 65536
+        fail ArgumentError, 'invalid value for "certificate_chain_pem", the character length must be smaller than or equal to 65536.'
+      end
+
+      @certificate_chain_pem = certificate_chain_pem
     end
 
     # Checks equality by comparing each attribute.

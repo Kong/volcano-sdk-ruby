@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with managed or BYOC TLS (PRO plan). `tls` is required when the domain is first created and optional afterwards. BYOC TLS material is write-only and omitted from config export. 
+  # Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards. BYOC TLS material is write-only and omitted from config export. 
   class ProjectConfigCustomDomain < ApiModelBase
     # Fully-qualified domain name (hostname only, no scheme/path)
     attr_accessor :domain
@@ -89,6 +89,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "domain", domain cannot be nil.')
       end
 
+      if @domain.to_s.length > 253
+        invalid_properties.push('invalid value for "domain", the character length must be smaller than or equal to 253.')
+      end
+
       invalid_properties
     end
 
@@ -97,6 +101,7 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @domain.nil?
+      return false if @domain.to_s.length > 253
       true
     end
 
@@ -105,6 +110,10 @@ module Volcano::Generated
     def domain=(domain)
       if domain.nil?
         fail ArgumentError, 'domain cannot be nil'
+      end
+
+      if domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain", the character length must be smaller than or equal to 253.'
       end
 
       @domain = domain

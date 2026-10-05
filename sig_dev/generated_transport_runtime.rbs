@@ -1,0 +1,373 @@
+# Public namespace for the Volcano Ruby SDK.
+module Volcano
+  type generated_storage_options = Hash[Symbol, Symbol | Hash[String, String] | Array[String] | String]
+  type generated_storage_delete_options = Hash[Symbol, Symbol | Hash[String, String] | Array[String]]
+  # Adapts the generated OpenAPI client to the stable SDK transport contract.
+  class GeneratedTransport
+    @api_url: String
+
+    @timeout: Integer | Float
+
+    @api_factory: ^(String) -> GeneratedApis
+
+    include ApiFactory
+
+
+    include ValueNormalization
+
+    class GeneratedApis < Data
+      attr_reader authentication: Generated::AuthenticationApi
+      attr_reader oauth: Generated::OAuthAuthenticationApi
+      attr_reader database: Generated::DatabaseQueriesApi
+      attr_reader storage: StorageApi
+      attr_reader locks: Generated::LocksApi
+      attr_reader functions: Generated::FunctionsApi
+      attr_reader durable: Generated::DurableFunctionsApi
+      attr_reader logs: Generated::LogsApi
+
+      def self.new: (authentication: Generated::AuthenticationApi, oauth: Generated::OAuthAuthenticationApi, database: Generated::DatabaseQueriesApi, storage: StorageApi, locks: Generated::LocksApi, functions: Generated::FunctionsApi, durable: Generated::DurableFunctionsApi, logs: Generated::LogsApi) -> GeneratedApis
+    end
+
+    def initialize: (api_url: String, ?timeout: (Integer | Float), ?api_factory: (^(String) -> GeneratedApis)?) -> void
+
+    def acquire_project_lock: (authorization: String, key: String, ttl: Integer, token: String, ?request_id: String) -> Transport::Response
+
+    def get_project_lock: (authorization: String, key: String, ?request_id: String) -> Transport::Response
+
+    def force_release_project_lock: (authorization: String, key: String, ?request_id: String) -> Transport::Response
+
+    def renew_project_lock: (authorization: String, key: String, ttl: Integer, token: String, ?request_id: String) -> Transport::Response
+
+    def release_project_lock: (authorization: String, key: String, token: String, ?request_id: String) -> Transport::Response
+
+    private
+
+    def invoke: [T] () { () -> T } -> (T | Transport::Response)
+
+    def error_status: (Generated::ApiError error) -> Integer
+
+    def response: (Object? data, Integer status, Hash[String, String]? headers, ?binary: String?) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Anonymous authentication operations for the internal generated transport.
+  class GeneratedTransport
+    def auth_signup_anonymous: (authorization: String, metadata: session_user_input) -> Transport::Response
+
+    def auth_convert_anonymous: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Authentication operations for the internal generated transport.
+  class GeneratedTransport
+    MALFORMED_USER_PROFILE: "Expected a complete user profile"
+
+    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+
+    def auth_signin: (authorization: String, email: String, password: String) -> Transport::Response
+
+    def auth_forgot_password: (authorization: String, email: String) -> Transport::Response
+
+    def auth_reset_password: (authorization: String, token: String, new_password: String) -> Transport::Response
+
+    def auth_get_user: (authorization: String) -> Transport::Response
+
+    def auth_update_user: (authorization: String, password: String?, metadata: Hash[String, json_value]?) -> Transport::Response
+
+    def auth_refresh: (authorization: String, refresh_token: String) -> Transport::Response
+
+    def auth_logout: (authorization: String, refresh_token: String) -> Transport::Response
+
+    private
+
+    def update_user_options: (password: String?, metadata: Hash[String, json_value]?) -> { auth_update_user_request: Generated::AuthUpdateUserRequest, debug_body: Hash[Symbol, sdk_json], debug_return_type: "String" }
+  end
+end
+
+module Volcano
+  # Email confirmation operations for the internal generated transport.
+  class GeneratedTransport
+    def auth_confirm_email: (authorization: String, token: String) -> Transport::Response
+
+    def auth_resend_confirmation: (authorization: String, email: String) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Database operations for the internal generated transport.
+  class GeneratedTransport
+    def query_database_select: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+
+    def query_database_insert: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+
+    def query_database_update: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+
+    def query_database_delete: (authorization: String, database_name: String, body: sdk_payload) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Durable execution operations for the internal generated transport.
+  class GeneratedTransport
+    def start_durable_execution_from_application: (authorization: String, function_id: String, payload: sdk_payload, ?execution_name: String?) -> Transport::Response
+
+    def get_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
+
+    def list_durable_executions: (authorization: String, project_id: String, function_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
+
+    def stop_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Email-change operations for the internal generated transport.
+  class GeneratedTransport
+    INVALID_EMAIL_CHANGE_RESPONSE: "Expected a valid email-change acknowledgement"
+
+    def auth_request_email_change: (authorization: String, new_email: String) -> Transport::Response
+
+    def auth_cancel_email_change: (authorization: String) -> Transport::Response
+
+    def auth_confirm_email_change: (authorization: String, token: String) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Preserves function-owned response bodies through the generated transport.
+  class GeneratedTransport
+    def resolve_function_for_invocation: (authorization: String, name: String) -> Transport::Response
+
+    def invoke_function: (authorization: String, function_id: String, payload: sdk_payload) -> Transport::Response
+
+    def invoke_function_url: (authorization: String, invoke_url: String, payload: sdk_payload) -> Transport::Response
+
+    private
+
+    def resolve_body: (Object? body) -> Object?
+
+    # The resolved endpoint is absolute and off the API host, so it cannot go
+    # through the generated client's configured base URL. The body still uses
+    # the invoke contract's { payload } envelope.
+    def function_url_response: (String authorization, String invoke_url, sdk_payload payload) -> [String, Integer, Hash[String, String]]
+
+    def function_http_response: (String authorization, String function_id, sdk_payload payload) -> Generated::api_result
+
+    def function_body: (Object? body, Hash[String, String]? headers) -> Object?
+
+    def normalized_function_text: (Object? body) -> String?
+
+    def parse_function_json: (String text) -> Object?
+
+    def valid_function_encoding?: (Object? value) -> bool
+
+    def valid_function_hash_encoding?: (Hash[Object?, Object?] value) -> bool
+
+    def function_json?: (String text, Hash[String, String]? headers) -> bool
+  end
+end
+
+module Volcano
+  class GeneratedTransport
+    # Generated OpenAPI operations used by the public logs facade.
+    def search_project_logs: (authorization: String, project_id: String, request: sdk_payload) -> Transport::Response
+
+    def get_project_log_activity: (authorization: String, project_id: String, request: sdk_payload) -> Transport::Response
+  end
+end
+
+module Volcano
+  # OAuth operations for the internal generated transport.
+  class GeneratedTransport
+    def auth_oauth_authorization_url: (anon_key: String, provider: String, redirect_url: String, client_state: String) -> String
+
+    def auth_oauth_exchange: (authorization: String, code: String, redirect_url: String) -> Transport::Response
+
+    def auth_link_oauth_provider: (authorization: String, provider: String) -> Transport::Response
+
+    def auth_list_oauth_providers: (authorization: String) -> Transport::Response
+
+    def auth_unlink_oauth_provider: (authorization: String, provider: String) -> Transport::Response
+
+    def auth_get_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
+
+    def auth_refresh_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
+
+    def auth_call_oauth_api: (authorization: String, provider: String, endpoint: String, method: String, body: json_value) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Session-management operations for the internal generated transport.
+  class GeneratedTransport
+    def auth_get_my_sessions: (authorization: String, page: Integer, limit: Integer) -> Transport::Response
+
+    def auth_delete_all_my_sessions: (authorization: String) -> Transport::Response
+
+    def auth_delete_my_session: (authorization: String, session_id: String) -> Transport::Response
+  end
+end
+
+module Volcano
+  # Storage operations for the internal generated transport.
+  class GeneratedTransport
+    def upload_storage_object: (authorization: String, bucket_name: String, path: String, data: String, ?content_type: String?) -> Transport::Response
+
+    def download_storage_object: (authorization: String, bucket_name: String, path: String, ?byte_range: String?) -> Transport::Response
+
+    def list_storage_objects: (authorization: String, bucket_name: String, prefix: String, limit: Integer?, cursor: String?) -> Transport::Response
+
+    def delete_storage_object: (authorization: String, bucket_name: String, path: String) -> Transport::Response
+
+    def move_storage_object: (authorization: String, bucket_name: String, from_path: String, to_path: String) -> Transport::Response
+
+    def copy_storage_object: (authorization: String, bucket_name: String, from_path: String, to_path: String) -> Transport::Response
+
+    def update_storage_object_visibility: (authorization: String, bucket_name: String, path: String, is_public: bool) -> Transport::Response
+
+    private
+
+    def with_upload_file: [T] (String path, String data) { (File) -> T } -> T
+  end
+end
+
+module Volcano
+  # Internal transport implementation assembled across support modules.
+  interface _GeneratedModelDeserializer
+    def _deserialize: (String type, Object? value) -> Object?
+  end
+
+  class GeneratedTransport
+    # Resolves generated model constants across the private namespace boundary.
+    module ModelDeserialization : _GeneratedModelDeserializer
+      def _deserialize: (String type, Object? value) -> Object?
+
+      private
+
+      def deserialize_private_model: (Object? klass, Object? value) -> Object?
+    end
+
+    # Corrects generated content negotiation and private model lookup.
+    class ApiClient < Generated::ApiClient
+      def build_request: (Symbol http_method, String path, ?Generated::api_options options) -> Typhoeus::Request
+
+      def select_header_content_type: (Array[String] content_types) -> String?
+
+      def convert_to_type: (Object? data, String return_type) -> Object?
+    end
+
+    # Captures a generated request URL without performing network I/O.
+    class AuthorizationURLApiClient < ApiClient
+      def call_api: (Symbol http_method, String path, ?Generated::api_options options) -> [String, Integer, Hash[String, String]]
+    end
+
+    # Implements storage endpoints omitted by the generated API surface.
+    class StorageApi < Generated::StorageObjectsApi
+      DOWNLOAD_HEADERS: Hash[String, String]
+      UPLOAD_OPTIONS: generated_storage_options
+
+      DOWNLOAD_OPTIONS: generated_storage_options
+
+      DELETE_OPTIONS: generated_storage_delete_options
+
+      VISIBILITY_OPTIONS: generated_storage_options
+
+      def upload_storage_object_with_http_info: (String bucket_name, String path, File file, ?Generated::api_options opts) -> Generated::api_result
+
+      def download_storage_object_with_http_info: (String bucket_name, String path, ?Generated::api_options opts) -> Generated::api_result
+
+      def delete_storage_object_with_http_info: (String bucket_name, String path, ?Generated::api_options opts) -> Generated::api_result
+
+      def update_storage_object_visibility_with_http_info: (String bucket_name, String path, Object request, ?Generated::api_options opts) -> Generated::api_result
+
+      private
+
+      def call_storage_api: (Symbol method, String? bucket_name, String? path, Generated::api_options options, ?suffix: String) -> Generated::api_result
+    end
+
+    # Normalizes values returned by the generated client.
+    module ValueNormalization
+      private
+
+      def parse_body: (Object? value) -> Object?
+
+      def plain_value: (Object? value) -> Object?
+
+      def plain_hash: (Hash[Object?, Object?] value) -> Hash[String, Object?]
+
+      def deep_symbolize: (sdk_payload value) -> Hash[Symbol, sdk_json]
+      def deep_symbolize_value: (sdk_json value) -> sdk_json
+
+      def binary_data: (Object? value) -> String
+
+      def prepare_stream: (Object? value) -> Object?
+
+      def reopen_stream: (Object? value) -> (Object? | nil)
+    end
+
+    # Builds generated API wrappers with consistent authentication and timeouts.
+    module ApiFactory
+      @api_url: String
+      @timeout: Integer | Float
+
+      private
+
+      def build_apis: (String authorization) -> GeneratedApis
+
+      def generated_configuration: (String? authorization) -> Generated::Configuration
+
+      def timeout_milliseconds: () -> Integer
+
+      def generated_apis: (ApiClient api_client) -> GeneratedApis
+
+      def oauth_authorization_api: () -> Generated::OAuthAuthenticationApi
+
+      def host_with_port: (URI::Generic uri) -> String
+    end
+  end
+end
+
+module Volcano
+  # Corrects generated HTTP operations for resumable storage uploads.
+  class GeneratedTransport::StorageApi
+    UPLOAD_PART_HEADERS: Hash[String, String]
+    COMPLETE_HEADERS: Hash[String, String]
+    STATUS_HEADERS: Hash[String, String]
+    ABORT_HEADERS: Hash[String, String]
+    CREATE_OPTIONS: generated_storage_options
+
+    UPLOAD_PART_OPTIONS: generated_storage_options
+
+    COMPLETE_OPTIONS: generated_storage_options
+
+    STATUS_OPTIONS: generated_storage_options
+
+    ABORT_OPTIONS: generated_storage_delete_options
+
+    def create_upload_session_with_http_info: (String bucket_name, String path, Generated::CreateUploadSessionRequest request) -> Generated::api_result
+
+    def upload_part_with_http_info: (String bucket_name, String path, String session_id, Integer part_number, String data) -> Generated::api_result
+
+    def complete_upload_session_with_http_info: (String bucket_name, String path, String session_id) -> Generated::api_result
+
+    def get_upload_session_with_http_info: (String bucket_name, String path, String session_id) -> Generated::api_result
+
+    def abort_upload_session_with_http_info: (String bucket_name, String path, String session_id) -> Generated::api_result
+  end
+end
+
+module Volcano
+  # Resumable storage operations for the internal generated transport.
+  class GeneratedTransport
+    def create_upload_session: (authorization: String, bucket_name: String, request: UploadSessionRequest) -> Transport::Response
+
+    def upload_part: (authorization: String, bucket_name: String, request: UploadPartRequest) -> Transport::Response
+
+    def complete_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+
+    def get_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+
+    def abort_upload_session: (authorization: String, bucket_name: String, request: UploadSessionReference) -> Transport::Response
+  end
+end

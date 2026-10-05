@@ -5,7 +5,7 @@ require 'securerandom'
 require 'tempfile'
 require 'uri'
 
-generated_load_path = File.expand_path('generated/lib', __dir__)
+generated_load_path = File.expand_path('generated/lib', __dir__.to_s)
 $LOAD_PATH.unshift(generated_load_path) unless $LOAD_PATH.include?(generated_load_path)
 require 'volcano-generated'
 
@@ -17,8 +17,8 @@ end
 # Public namespace for the Volcano Ruby SDK.
 module Volcano
   private_constant :Generated
-  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_support'
+  require_relative 'generated_transport_upload_session_api'
   require_relative 'generated_transport_auth'
   require_relative 'generated_transport_anonymous'
   require_relative 'generated_transport_confirmation'
@@ -27,95 +27,80 @@ module Volcano
   require_relative 'generated_transport_oauth'
   require_relative 'generated_transport_database'
   require_relative 'generated_transport_logs'
+  require_relative 'generated_transport_functions'
+  require_relative 'generated_transport_durable'
   require_relative 'generated_transport_storage'
   require_relative 'generated_transport_upload_sessions'
 
   # Adapts the generated OpenAPI client to the stable SDK transport contract.
   class GeneratedTransport
     include ApiFactory
-    include LogTransport
     include ValueNormalization
 
     GeneratedApis = Data.define(
-      :authentication, :oauth, :database, :storage, :locks, :functions, :logs
+      :authentication, :oauth, :database, :storage, :locks, :functions, :durable, :logs
     )
 
     def initialize(api_url:, timeout: 60, api_factory: nil)
       @api_url = api_url
       @timeout = timeout
-      @api_factory = api_factory || method(:build_apis)
+      @api_factory = api_factory || ->(authorization) { build_apis(authorization) }
     end
 
-    def acquire_project_lock(authorization:, key:, ttl:, token:)
+    def acquire_project_lock(authorization:, key:, ttl:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
-        result = apis.locks.acquire_project_lock_with_http_info(key, token, SecureRandom.uuid, body)
+        result = apis.locks.acquire_project_lock_with_http_info(
+          key, token, request_id, body, debug_return_type: 'Object'
+        )
         data, status, headers = result
         response(data, status, headers)
       end
     end
 
-    def get_project_lock(authorization:, key:)
+    def get_project_lock(authorization:, key:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.get_project_lock_with_http_info(
           key,
-          SecureRandom.uuid
+          request_id,
+          debug_return_type: 'Object'
         )
         response(data, status, headers)
       end
     end
 
-    def force_release_project_lock(authorization:, key:)
+    def force_release_project_lock(authorization:, key:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.force_release_project_lock_with_http_info(
           key,
-          SecureRandom.uuid
+          request_id
         )
         response(data, status, headers)
       end
     end
 
-    def renew_project_lock(authorization:, key:, ttl:, token:)
+    def renew_project_lock(authorization:, key:, ttl:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         body = Generated::ProjectLockLeaseRequest.new(ttl_seconds: ttl)
         result = apis.locks.renew_project_lock_with_http_info(
-          key, token, SecureRandom.uuid, body
+          key, token, request_id, body, debug_return_type: 'Object'
         )
         data, status, headers = result
         response(data, status, headers)
       end
     end
 
-    def release_project_lock(authorization:, key:, token:)
+    def release_project_lock(authorization:, key:, token:, request_id: SecureRandom.uuid)
       invoke do
         apis = @api_factory.call(authorization)
         data, status, headers = apis.locks.release_project_lock_with_http_info(
           key,
           token,
-          SecureRandom.uuid
-        )
-        response(data, status, headers)
-      end
-    end
-
-    def resolve_function_for_invocation(authorization:, name:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        data, status, headers = apis.functions.resolve_function_for_invocation_with_http_info(name)
-        response(data, status, headers)
-      end
-    end
-
-    def invoke_function(authorization:, function_id:, payload:)
-      invoke do
-        apis = @api_factory.call(authorization)
-        request = Generated::FunctionInvocationRequest.new(payload: payload)
-        data, status, headers = apis.functions.invoke_function_with_http_info(
-          function_id, request, follow_location: false
+          request_id
         )
         response(data, status, headers)
       end
@@ -126,7 +111,7 @@ module Volcano
     def invoke
       yield
     rescue Generated::ApiError => e
-      status = e.code.to_i
+      status = error_status(e)
       raise Error::TransportError.new(e.message), cause: e if status.zero?
 
       Transport::Response.new(
@@ -135,6 +120,10 @@ module Volcano
         headers: e.response_headers || {},
         data: nil
       )
+    end
+
+    def error_status(error)
+      error.code.to_i # rubocop:disable Lint/NumberConversion -- Preserve generated ApiError status coercion.
     end
 
     def response(data, status, headers, binary: nil)

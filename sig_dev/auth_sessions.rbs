@@ -1,0 +1,26 @@
+module Volcano
+  module AuthSessions : Object, _AuthFacadeHost
+    include SessionPageMapping
+    include AuthSessionBinding
+    @client: _AuthLifecycleClient
+    @transport: _AuthLifecycleTransport
+
+    def list_sessions: (?page: Integer, ?limit: Integer) -> SessionPage
+    def delete_all_other_sessions: () -> nil
+    def delete_session: (String session_id) -> nil
+
+    private def list_sessions_response: (String access_token, Integer page, Integer limit) -> Transport::Response
+    private def delete_all_other_sessions_response: (String access_token) -> Transport::Response
+    private def delete_session_response: (String access_token, String session_id) -> Transport::Response
+    private def delete_session_error: (String access_token, String session_id) -> Error::VolcanoError?
+    private def delete_bound_session_error: (session_binding binding, String session_id) -> Error::VolcanoError?
+    private def session_unchanged_after_deletion?: (bool deletes_current, Error::VolcanoError? error, session_binding binding) -> bool
+    private def deletion_binding_current?: (session_binding binding, Error::VolcanoError? error) -> bool
+    private def same_session_id?: (String access_token, String session_id) -> bool
+    private def access_token_session_id: (String access_token) -> String?
+  end
+
+  class Auth
+    include AuthSessions
+  end
+end

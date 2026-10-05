@@ -47,7 +47,7 @@ module Volcano::Generated
         klass = openapi_discriminator_mapping[discriminator_value.to_s.to_sym]
         return nil unless klass
 
-        Volcano.const_get(:Generated, false).const_get(klass).build_from_hash(data)
+        Object.const_get('Volcano::Generated').const_get(klass).build_from_hash(data)
       end
     end
   end

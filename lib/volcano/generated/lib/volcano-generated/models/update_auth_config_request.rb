@@ -52,7 +52,7 @@ module Volcano::Generated
 
     attr_accessor :enable_anonymous_signins
 
-    # Replaces the email domain allowlist. Empty array removes the restriction so any domain can sign up. Entries must be bare domains such as `domain1.com` and are stored normalized (lowercase, no `@` prefix); matching is exact, so subdomains need their own entry. At most 100 entries.  Restricting signups is a PRO feature to configure and to enforce: a FREE project can only remove the restriction and gets 403 for any other change, and the list it keeps is parked until it upgrades. 
+    # Replaces the email domain allowlist. Empty array removes the restriction so any domain can sign up. Entries must be bare domains such as `domain1.com` and are stored normalized (lowercase, no `@` prefix); matching is exact, so subdomains need their own entry. At most 100 entries.  Restricting signups is a SUPERAGENT feature to configure and to enforce: a HOBBY project can only remove the restriction and gets 403 for any other change, and the list it keeps is parked until it upgrades. 
     attr_accessor :allowed_email_domains
 
     # How far `allowed_email_domains` reaches. `signup` gates account creation only. `signup_and_signin` also blocks sign-in for accounts outside the list; switching to it, or narrowing the list while in it, deletes the sessions of every account it locks out. `disabled` keeps the list without enforcing it. 

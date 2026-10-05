@@ -1,0 +1,42 @@
+module Volcano
+  class LockLease < Data
+    attr_reader key: String
+    attr_reader token: String
+    attr_reader expires_at: Time?
+    attr_reader fencing_token: Integer
+
+    def self.new: (String key, String token, Time? expires_at, Integer fencing_token) -> LockLease
+                | (key: String, token: String, expires_at: Time?, fencing_token: Integer) -> LockLease
+    def self.[]: (String key, String token, Time? expires_at, Integer fencing_token) -> LockLease
+               | (key: String, token: String, expires_at: Time?, fencing_token: Integer) -> LockLease
+    def self.members: () -> [:key, :token, :expires_at, :fencing_token]
+
+    def initialize: (key: String, token: String, expires_at: Time?, fencing_token: Integer) -> void
+    def members: () -> [:key, :token, :expires_at, :fencing_token]
+    def with: (?key: String, ?token: String, ?expires_at: Time?, ?fencing_token: Integer) -> LockLease
+    def to_h: () -> { key: String, token: String, expires_at: Time?, fencing_token: Integer }
+            | [K, V] () { (Symbol, String | Time | Integer | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, Time?, Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time | Integer | nil]
+  end
+
+  class LockState < Data
+    attr_reader held: bool
+    attr_reader expires_at: Time?
+    attr_reader fencing_token: Integer?
+
+    def self.new: (bool held, Time? expires_at, Integer? fencing_token) -> LockState
+                | (held: bool, expires_at: Time?, fencing_token: Integer?) -> LockState
+    def self.[]: (bool held, Time? expires_at, Integer? fencing_token) -> LockState
+               | (held: bool, expires_at: Time?, fencing_token: Integer?) -> LockState
+    def self.members: () -> [:held, :expires_at, :fencing_token]
+
+    def initialize: (held: bool, expires_at: Time?, fencing_token: Integer?) -> void
+    def members: () -> [:held, :expires_at, :fencing_token]
+    def with: (?held: bool, ?expires_at: Time?, ?fencing_token: Integer?) -> LockState
+    def to_h: () -> { held: bool, expires_at: Time?, fencing_token: Integer? }
+            | [K, V] () { (Symbol, bool | Time | Integer | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [bool, Time?, Integer?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, bool | Time | Integer | nil]
+  end
+end

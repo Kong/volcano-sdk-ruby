@@ -20,7 +20,7 @@ module Volcano
     def exchange_oauth_code(code:, redirect_to:, state:, expected_state:)
       validate_oauth_callback_state(state, expected_state)
       generation, = @client.capture_session
-      session = build_session(Transport.body(oauth_exchange_response(code, redirect_to), 200))
+      session = owned_complete_session(build_session(Transport.body(oauth_exchange_response(code, redirect_to), 200)))
       raise Error::SessionChangedError unless @client.store_session_if_current?(session, generation)
 
       session

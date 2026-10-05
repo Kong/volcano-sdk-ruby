@@ -1,0 +1,83 @@
+module Volcano
+  class Realtime
+    class ConnectContext < Data
+      attr_reader client: String?
+
+      def self.new: (String? client) -> ConnectContext
+                  | (client: String?) -> ConnectContext
+      def self.[]: (String? client) -> ConnectContext
+                 | (client: String?) -> ConnectContext
+      def self.members: () -> [:client]
+
+      def initialize: (client: String?) -> void
+                    | (String? client) -> void
+      def members: () -> [:client]
+      def with: (?client: String?) -> ConnectContext
+      def to_h: () -> { client: String? }
+              | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+      def deconstruct: () -> [String?]
+      def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+    end
+
+    class DisconnectContext < Data
+      attr_reader code: Integer?
+      attr_reader reason: String
+
+      def self.new: (Integer? code, String reason) -> DisconnectContext
+                  | (code: Integer?, reason: String) -> DisconnectContext
+      def self.[]: (Integer? code, String reason) -> DisconnectContext
+                 | (code: Integer?, reason: String) -> DisconnectContext
+      def self.members: () -> [:code, :reason]
+
+      def initialize: (code: Integer?, reason: String) -> void
+                    | (Integer? code, String reason) -> void
+      def members: () -> [:code, :reason]
+      def with: (?code: Integer?, ?reason: String) -> DisconnectContext
+      def to_h: () -> { code: Integer?, reason: String }
+              | [K, V] () { (Symbol, Integer | String | nil) -> [K, V] } -> Hash[K, V]
+      def deconstruct: () -> [Integer?, String]
+      def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Integer | String | nil]
+    end
+
+    class ErrorContext < Data
+      attr_reader code: String | Integer | nil
+      attr_reader message: String
+      attr_reader error: Exception
+
+      def self.new: (String | Integer | nil code, String message, Exception error) -> ErrorContext
+                  | (code: String | Integer | nil, message: String, error: Exception) -> ErrorContext
+      def self.[]: (String | Integer | nil code, String message, Exception error) -> ErrorContext
+                 | (code: String | Integer | nil, message: String, error: Exception) -> ErrorContext
+      def self.members: () -> [:code, :message, :error]
+
+      def initialize: (code: String | Integer | nil, message: String, error: Exception) -> void
+                    | (String | Integer | nil code, String message, Exception error) -> void
+      def members: () -> [:code, :message, :error]
+      def with: (?code: String | Integer | nil, ?message: String, ?error: Exception) -> ErrorContext
+      def to_h: () -> { code: String | Integer | nil, message: String, error: Exception }
+              | [K, V] () { (Symbol, String | Integer | Exception | nil) -> [K, V] } -> Hash[K, V]
+      def deconstruct: () -> [String | Integer | nil, String, Exception]
+      def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Integer | Exception | nil]
+    end
+
+    class PresenceInfo < Data
+      attr_reader client: String
+      attr_reader user: String?
+      attr_reader data: Hash[String, json_value]
+
+      def self.new: (String client, ?String? user, ?Hash[String, json_value] data) -> PresenceInfo
+                  | (client: String, ?user: String?, ?data: Hash[String, json_value]) -> PresenceInfo
+      def self.[]: (String client, ?String? user, ?Hash[String, json_value] data) -> PresenceInfo
+                 | (client: String, ?user: String?, ?data: Hash[String, json_value]) -> PresenceInfo
+      def self.members: () -> [:client, :user, :data]
+
+      def initialize: (client: String, ?user: String?, ?data: Hash[String, json_value]) -> void
+      def members: () -> [:client, :user, :data]
+      def with: (?client: String, ?user: String?, ?data: Hash[String, json_value]) -> PresenceInfo
+      def to_h: () -> { client: String, user: String?, data: Hash[String, json_value] }
+              | [K, V] () { (Symbol, String | Hash[String, json_value] | nil) -> [K, V] } -> Hash[K, V]
+      def deconstruct: () -> [String, String?, Hash[String, json_value]]
+      def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Hash[String, json_value] | nil]
+    end
+  end
+end

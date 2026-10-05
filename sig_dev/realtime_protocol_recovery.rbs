@@ -1,0 +1,97 @@
+module Volcano
+  class Realtime
+    module ProtocolPublicationDispatch
+      class PublicationDelivery < Data
+        attr_reader channel: String
+        attr_reader handlers: Array[^(Object?, Object?, Object?, recovered: bool) -> void]
+        attr_reader event: Object?
+        attr_reader data: Hash[String, Object?]
+        attr_reader publication: Hash[String, Object?]
+        attr_reader recovered: bool
+        attr_reader on_rejection: (^(Object?) -> void)?
+        attr_reader rejection_key: Array[Registration]
+        def self.new: (channel: String, handlers: Array[^(Object?, Object?, Object?, recovered: bool) -> void], event: Object?, data: Hash[String, Object?], publication: Hash[String, Object?], recovered: bool, on_rejection: (^(Object?) -> void)?, rejection_key: Array[Registration]) -> PublicationDelivery
+      end
+    end
+
+    interface _RecoveryContext
+      def class: () -> singleton(Protocol)
+      def request: (String reply_key, ?on_reply: (^(Object) -> void)?) { (Integer) -> Hash[String, Object] } -> Object
+      def dispatch_recovered_publications: (String channel, Array[Hash[String, Object]] publications) -> void
+      def recovery_position: (Object epoch, Object offset) -> { epoch: String, offset: Integer }?
+      def delete_recovery_state: (String channel) -> void
+      def set_recovery_position: (String channel, Object epoch, Object offset) -> void
+      def mark_unknown_gap: (String channel) -> void
+      def mark_publication_gap: (String channel, Object publication) -> void
+      def same_epoch?: ({ epoch: String, offset: Integer } first, { epoch: String, offset: Integer } second) -> bool
+    end
+
+    module ProtocolRecovery
+      include _RecoveryContext
+      type position = { epoch: String, offset: Integer }
+      type publication = Hash[String, Object]
+      type retained_publication = [publication, position]
+      type validated_result = [position, Array[retained_publication]] | [nil, nil]
+
+      private
+
+      def subscribe_request: (channel: String, recoverable: bool, join_leave: bool, recovery: Hash[Symbol, String | Integer]?) -> Object
+      def parse_recovery_result: (channel: String, recovery: Hash[Symbol, String | Integer]?, result: Object) -> Array[publication]
+      def block_malformed_recovery_result: (String channel, Hash[Symbol, String | Integer]? recovery) -> Array[publication]
+      def block_recovery_result: (String channel, position? requested_position) -> Array[publication]
+      def unrecovered_empty_result?: (Object result, position? requested_position, Array[retained_publication] publications) -> bool?
+      def validated_recovery_result: (Object result) -> validated_result
+      def validate_recovery_publications: (Object publications, position result_position) -> validated_result
+      def validated_recovery_publication: (Object publication, position fallback_position) -> retained_publication?
+      def requested_recovery_position: (Hash[Symbol, String | Integer]? recovery) -> position?
+      def install_empty_recovery_result: (String channel, position result_position) -> Array[publication]
+      def install_retained_recovery_result: (String channel, position? requested_position, Array[retained_publication] publications) -> Array[publication]
+      def replace_recovery_position: (String channel, position position) -> void
+      def mark_retained_gap: (String channel, position current, position first_position, publication first_publication) -> void
+    end
+
+    interface _RecoveryDispatchContext
+      def publication_delivery: (String channel, Object publication, recovered: bool) -> ProtocolPublicationDispatch::PublicationDelivery?
+      def reject_publication_delivery: (ProtocolPublicationDispatch::PublicationDelivery delivery) -> Object
+      def admit_live_publication: (ProtocolPublicationDispatch::PublicationDelivery delivery) -> Object
+      def close_with: (StandardError error, ?notify_error: bool) -> void
+      def closed_error: (StandardError error) -> ClosedError
+    end
+
+    module ProtocolRecoveryDispatch
+      include _RecoveryDispatchContext
+      type delivery = ProtocolPublicationDispatch::PublicationDelivery
+      type rejection_key = Array[String | Array[ProtocolPublicationDispatch::Registration]]
+
+      class PublicationBatch < Data
+        attr_reader channel: String
+        attr_reader deliveries: Array[delivery]
+        attr_reader rejection_key: rejection_key?
+        def self.new: (channel: String, deliveries: Array[delivery], rejection_key: rejection_key?) -> PublicationBatch
+      end
+
+      @publication_queue: Async::Queue[PublicationBatch]
+      @publication_queue_size: Integer
+      @publication_pending_by_channel: Hash[String, Integer]
+      @publication_rejections: Hash[rejection_key, true]
+      @producer_stopping: bool
+      @max_callback_queue: Integer
+      @callback_queue: Async::LimitedQueue[Object]
+
+      private
+
+      def initialize_publication_producer: () -> void
+      def dispatch_recovered_publications: (String channel, Array[Hash[String, Object]] publications) -> void
+      def publication_batch: (String channel, Array[delivery] deliveries, ?rejection_key: rejection_key?) -> PublicationBatch
+      def enqueue_recovered_batch: (PublicationBatch batch) -> void
+      def enqueue_live_publication: (delivery delivery) -> void
+      def enqueue_publication_rejection: (delivery delivery) -> void
+      def enqueue_publication_batch: (PublicationBatch batch, ?bounded: bool) -> void
+      def publication_queue_full?: () -> bool
+      def dispatch_publication_batches: () -> void
+      def next_publication_batch: () -> PublicationBatch
+      def dispatch_publication_batch: (PublicationBatch batch) -> Object
+      def complete_publication_batch: (PublicationBatch batch) -> void
+    end
+  end
+end

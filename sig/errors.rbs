@@ -1,0 +1,36 @@
+module Volcano
+  module Error
+    class VolcanoError < StandardError
+      attr_reader status: Integer?
+      attr_reader code: String?
+      attr_reader retry_after: Integer?
+
+      def initialize: (String? message, ?status: Integer?, ?code: String?, ?retry_after: Integer?) -> void
+    end
+
+    class AuthenticationError < VolcanoError
+    end
+
+    class ValidationError < VolcanoError
+    end
+
+    class NotFoundError < VolcanoError
+    end
+
+    class ConflictError < VolcanoError
+    end
+
+    class SessionChangedError < ConflictError
+      def initialize: (?String? message, ?status: Integer?, ?code: String?, ?retry_after: Integer?) -> void
+    end
+
+    class RateLimitedError < VolcanoError
+    end
+
+    class ServerError < VolcanoError
+    end
+
+    class TransportError < VolcanoError
+    end
+  end
+end

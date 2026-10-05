@@ -23,6 +23,9 @@ module Volcano::Generated
 
     attr_accessor :verification_status
 
+    # Safe failure category returned for failed managed TLS provisioning. One of provider, certificate, ownership, or internal. Ownership means another account has already verified the hostname.
+    attr_accessor :failure_reason
+
     attr_accessor :verification_records
 
     attr_accessor :required_routing_record
@@ -62,6 +65,7 @@ module Volcano::Generated
         :'tls_mode' => :'tls_mode',
         :'domain_status' => :'domain_status',
         :'verification_status' => :'verification_status',
+        :'failure_reason' => :'failure_reason',
         :'verification_records' => :'verification_records',
         :'required_routing_record' => :'required_routing_record',
         :'effective_urls' => :'effective_urls',
@@ -87,6 +91,7 @@ module Volcano::Generated
         :'tls_mode' => :'String',
         :'domain_status' => :'String',
         :'verification_status' => :'String',
+        :'failure_reason' => :'String',
         :'verification_records' => :'Array<FrontendDomainVerificationRecord>',
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
         :'effective_urls' => :'Array<String>',
@@ -139,6 +144,10 @@ module Volcano::Generated
         self.verification_status = attributes[:'verification_status']
       else
         self.verification_status = nil
+      end
+
+      if attributes.key?(:'failure_reason')
+        self.failure_reason = attributes[:'failure_reason']
       end
 
       if attributes.key?(:'verification_records')
@@ -307,6 +316,7 @@ module Volcano::Generated
           tls_mode == o.tls_mode &&
           domain_status == o.domain_status &&
           verification_status == o.verification_status &&
+          failure_reason == o.failure_reason &&
           verification_records == o.verification_records &&
           required_routing_record == o.required_routing_record &&
           effective_urls == o.effective_urls &&
@@ -323,7 +333,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, effective_urls, created_at, updated_at].hash
+      [domain, tls_mode, domain_status, verification_status, failure_reason, verification_records, required_routing_record, effective_urls, created_at, updated_at].hash
     end
 
     # Builds the object from hash

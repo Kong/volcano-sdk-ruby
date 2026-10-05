@@ -9,6 +9,15 @@ RSpec.describe Volcano::Locks do
   let(:client) { Struct.new(:service_token).new('service-key') }
   let(:transport) { SpecSupport::FakeLockTransport.new }
 
+  it 'forwards acquisition IDs while release gets a separate request ID' do
+    owner = '00000000-0000-4000-8000-000000000001'
+    request = '00000000-0000-4000-8000-000000000002'
+    locks.with_lock('build', ttl: 30, token: owner, request_id: request) { nil }
+    expect(transport.calls.first.last).to include(token: owner, request_id: request)
+    expect(transport.calls.last.last).to include(token: owner)
+    expect(transport.calls.last.last.fetch(:request_id)).not_to eq(request)
+  end
+
   it 'renews before yielding a lease without a safe remaining window' do
     advance_acquire_past_ttl
     yielded = false
@@ -37,7 +46,7 @@ RSpec.describe Volcano::Locks do
     clock = advance_acquire_past_ttl
     transport.renew_handler = lambda do |_arguments|
       clock.advance(31)
-      transport.response(200, 'expires_at' => (Time.now.utc - 1).iso8601)
+      transport.response(200, 'expires_at' => (Time.now.utc - 1).iso8601, 'fencing_token' => 8)
     end
 
     expect { |block| locks.with_lock('build', ttl: 30, &block) }

@@ -1,0 +1,14 @@
+module Volcano
+  FULL_ACCESS_APP_NAME: String
+  USER_ACCESS_APP_NAME: String
+  CONNECTION_URI_PREFIX: Regexp
+  INVALID_PERCENT_ENCODING: Regexp
+
+  def self?.database_connection_parts: (String value) -> [String?, String?]
+  def self?.database_connection_prefix_end: (String value) -> Integer
+  def self?.database_query_start: (String value, Integer prefix_end) -> Integer?
+  def self?.database_userinfo_end: (String value, Integer prefix_end) -> Integer?
+  def self?.database_query_parameters: (String? query) -> Array[String]
+  def self?.database_application_name_query_value: (String? user_id) -> String
+  def self?.database_application_name: (String? user_id) -> String
+end

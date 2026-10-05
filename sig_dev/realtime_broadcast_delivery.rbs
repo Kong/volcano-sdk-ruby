@@ -1,0 +1,40 @@
+module Volcano
+  class Realtime
+    interface _BroadcastDeliveryContext
+      def emit: (String event, Object? data, before_delivery: ^() -> bool) -> nil
+      def with_lifecycle_lock: [T] () { () -> T } -> T
+      def broadcast?: () -> bool
+    end
+
+    module BroadcastDelivery
+      include _BroadcastDeliveryContext
+      class PublicationContext < Data
+        attr_reader protocol: Protocol
+        attr_reader publication: Object?
+        attr_reader generation: Integer
+        attr_reader recovered: bool
+        def self.new: (protocol: Protocol, publication: Object?, generation: Integer, recovered: bool) -> PublicationContext
+        def initialize: (protocol: Protocol, publication: Object?, generation: Integer, recovered: bool) -> void
+      end
+
+      @callbacks: Hash[String, Array[ChannelCallbacks::callback]]
+      @name: String
+      @publication_generation: Integer
+      @publication_protocol: Protocol?
+      @recovery_position: Hash[Symbol, String | Integer]
+      @recovery_lineage: SessionOperations?
+
+      private
+
+      def deliver_broadcast: (Object? event, Object? data, PublicationContext context) -> Object?
+      def broadcast_message?: (Object? event, Object? data) -> bool
+      def publication_context: (Protocol protocol, Object? publication, Integer generation, bool recovered) -> PublicationContext
+      def publication_rejection: (Protocol protocol, Integer generation) -> (^(Object?) -> void)?
+      def reject_broadcast: (PublicationContext context) -> bool
+      def complete_broadcast: (PublicationContext context) -> bool
+      def with_current_publication: (PublicationContext context) { () -> void } -> bool
+      def clear_broadcast_recovery_state: () -> nil
+      def clear_channel_recovery_state: () -> nil
+    end
+  end
+end

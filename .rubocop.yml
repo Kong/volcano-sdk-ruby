@@ -1,19 +1,29 @@
+require:
+  - "./maintainers/rubocop/coverage_suppression.rb"
+  - "./maintainers/rubocop/type_suppression.rb"
+
 plugins:
   - rubocop-performance
   - rubocop-rake
   - rubocop-rspec
 
 AllCops:
+  UseProjectIndex: true
+  inherit_mode:
+    merge:
+      - Include
   NewCops: enable
   SuggestExtensions: false
   TargetRubyVersion: 3.2
+  Include:
+    - ".simplecov"
+    - ".github/scripts/**/*.rb"
   Exclude:
     - "lib/volcano/generated/**/*"
     - "vendor/**/*"
 
 Metrics/BlockLength:
   Exclude:
-    - "features/step_definitions/**/*"
     - "spec/**/*"
 
 Metrics/MethodLength:
@@ -23,6 +33,15 @@ Metrics/MethodLength:
     - hash
     - heredoc
     - method_call
+
+Metrics/CyclomaticComplexity:
+  Max: 5
+
+Performance/ChainArrayAllocation:
+  Enabled: true
+
+Performance/SelectMap:
+  Enabled: true
 
 RSpec/ExampleLength:
   Max: 15
@@ -35,54 +54,41 @@ RSpec/ExampleLength:
 RSpec/MultipleExpectations:
   Max: 5
 
-# Script/contract specs have no single class; two private implementation
-# constants are resolved dynamically and cannot be recognized by this cop.
-RSpec/DescribeClass:
-  Exclude:
-    - "spec/contract_structure_spec.rb"
-    - "spec/volcano/errors_spec.rb"
-    - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
-
-# These files define stateful transport/socket fakes inside their example groups;
-# their instance variables belong to the fakes, not to RSpec example state.
-RSpec/InstanceVariable:
-  Exclude:
-    - "spec/volcano/errors_spec.rb"
-    - "spec/volcano/facade_spec.rb"
-    - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
-    - "spec/volcano/realtime_spec.rb"
-
-# These same fake classes intentionally keep their helper constants scoped to
-# the example group; the files are isolated processes under RSpec.
-RSpec/LeakyConstantDeclaration:
-  Exclude:
-    - "spec/volcano/errors_spec.rb"
-    - "spec/volcano/facade_spec.rb"
-    - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
-    - "spec/volcano/realtime_spec.rb"
-
-# Cross-cutting contract/facade specs intentionally cover more than one class.
-RSpec/SpecFilePathFormat:
-  Exclude:
-    - "spec/volcano/contract_world_spec.rb"
-    - "spec/volcano/facade_spec.rb"
-
-Lint/ConstantDefinitionInBlock:
-  Exclude:
-    - "spec/volcano/errors_spec.rb"
-    - "spec/volcano/facade_spec.rb"
-    - "spec/volcano/generated_transport_spec.rb"
-    - "spec/volcano/generation_spec.rb"
-    - "spec/volcano/realtime/protocol_spec.rb"
-    - "spec/volcano/realtime_spec.rb"
-
 Style/Documentation:
   Enabled: true
   Exclude:
-    - "features/**/*"
     - "spec/**/*"
+
+Volcano/CoverageSuppression:
+  Enabled: true
+
+Volcano/TypeSuppression:
+  Enabled: true
+
+Style/DisableCopsWithinSourceCodeDirective:
+  Enabled: true
+  AllowedCops:
+    - Metrics/ParameterLists
+    - Lint/UnderscorePrefixedVariableName
+    - Lint/NameTypo
+    - Lint/UnusedPrivateMethod
+    - Lint/NumberConversion
+
+Lint/ConstantResolution:
+  Enabled: true
+
+Lint/HeredocMethodCallPosition:
+  Enabled: true
+
+Lint/NumberConversion:
+  Enabled: true
+
+Lint/ShadowingOuterLocalVariable:
+  Enabled: true
+
+Lint/UnusedPrivateMethod:
+  Enabled: true
+
+RSpec/SpecFilePathFormat:
+  CustomTransform:
+    SpecSupport: ""

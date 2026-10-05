@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require_relative '../maintainers/quality/defect_gate'
+
+exit(Quality::DefectGate.new(File.expand_path('..', __dir__)).run ? 0 : 1)

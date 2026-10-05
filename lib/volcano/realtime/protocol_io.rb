@@ -6,12 +6,15 @@ module Volcano
     class Protocol
       # Coordinates protocol requests and the socket reader loop.
       module IO
+        # @dynamic ensure_open!, close_with, process
+
         private
 
-        def request
+        def request(reply_key, on_reply: nil)
+          # @type var registered_id: Integer?
           ensure_open!
-          id, reply_queue = register_request
-          write_frame(yield(id))
+          registered_id, reply_queue = register_request(reply_key, on_reply)
+          write_frame(yield(registered_id || raise(TypeError, 'invalid realtime request id')))
           reply = await_reply(reply_queue)
           raise reply.error if reply.is_a?(Failure)
 
@@ -19,22 +22,27 @@ module Volcano
         rescue StandardError => e
           raise Redaction.exception(e, secrets: @secrets), cause: nil
         ensure
-          @pending.delete(id) if defined?(id)
+          @pending.delete(registered_id) if registered_id
         end
 
-        def register_request
+        def register_request(reply_key, on_reply)
           if @pending.length >= @max_pending
             raise PendingLimitError, "realtime pending command limit #{@max_pending} reached"
           end
 
           @next_id += 1
-          [@next_id, Async::Queue.new].tap { |id, queue| @pending[id] = queue }
+          queue = Async::Queue.new
+          @pending[@next_id] = Pending.new(queue: queue, on_reply: on_reply, reply_key: reply_key)
+          [@next_id, queue]
         end
 
         def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
 
         def write_serialized_frame(frame)
-          @write_lock.acquire { @socket.write(frame) }
+          @write_lock.acquire do
+            @socket.write(frame)
+            @socket.flush
+          end
         rescue StandardError => e
           failure = closed_error(e)
           close_with(failure, notify_error: true)
@@ -78,7 +86,8 @@ module Volcano
 
         def closed_error(error)
           ClosedError.new(Redaction.message(error.message, secrets: @secrets)).tap do |closed|
-            closed.set_backtrace(error.backtrace)
+            trace = error.backtrace
+            closed.set_backtrace(trace) if trace
           end
         end
       end

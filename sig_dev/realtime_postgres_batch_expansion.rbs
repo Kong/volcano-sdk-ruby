@@ -1,0 +1,61 @@
+module Volcano
+  class Realtime
+    class PostgresDeliveryRequest < Data
+      attr_reader change: PostgresChange
+      attr_reader database_name: String?
+      attr_reader session_lineage: SessionOperations | Integer
+      attr_reader subscription_epoch: Integer
+      def self.new: (change: PostgresChange, database_name: String?, session_lineage: SessionOperations | Integer, subscription_epoch: Integer) -> PostgresDeliveryRequest
+    end
+
+    interface _PostgresBatchContext
+      def postgres_stop?: (Object request) -> bool
+      def current_postgres_request?: (PostgresDeliveryRequest request) -> bool?
+      def expanded_postgres_changes: (Array[PostgresDeliveryRequest] requests) -> Array[PostgresChange]
+      def emit: (String event, PostgresChange change) -> Object?
+    end
+
+    module PostgresBatch
+      include _PostgresBatchContext
+      type batch_key = [String?, SessionOperations | Integer, Integer, String, String]
+
+      @postgres_batch_config: PostgresBatchConfig
+      @postgres_queue: Async::LimitedQueue[Object]
+
+      private
+
+      def collect_postgres_batch: (PostgresDeliveryRequest first) -> [Array[PostgresDeliveryRequest], Object?]
+      def collect_compatible_requests: (Array[PostgresDeliveryRequest] requests, Float deadline) -> Object?
+      def dequeue_postgres_before: (Float deadline) -> Object?
+      def compatible_postgres_request?: (PostgresDeliveryRequest first, PostgresDeliveryRequest candidate) -> bool?
+      def postgres_batch_key: (PostgresDeliveryRequest request) -> batch_key
+      def monotonic_time: () -> Float
+      def deliver_postgres_batch: (Array[PostgresDeliveryRequest] requests) -> void
+      def deliver_expanded_postgres_change: (PostgresDeliveryRequest request, PostgresChange change) -> void
+    end
+
+    interface _PostgresExpansionContext
+      def current_postgres_request?: (PostgresDeliveryRequest request) -> bool?
+      def postgres_batch_key: (PostgresDeliveryRequest request) -> [String?, SessionOperations | Integer, Integer, String, String]
+    end
+
+    module PostgresExpansion
+      include _PostgresExpansionContext
+      type rows_by_id = Hash[String, Hash[String, json_value]]
+
+      @realtime: Core
+
+      private
+
+      def expanded_postgres_changes: (Array[PostgresDeliveryRequest] requests) -> Array[PostgresChange]
+      def local_postgres_changes: (Array[PostgresDeliveryRequest] requests) -> Array[PostgresChange]
+      def lightweight_delete?: (PostgresChange change) -> bool
+      def fetch_postgres_records: (Array[PostgresDeliveryRequest] requests) -> rows_by_id
+      def postgres_ids: (Array[PostgresDeliveryRequest] requests) -> Array[json_value]
+      def expanded_postgres_record: (PostgresDeliveryRequest request, rows_by_id records) -> PostgresChange
+      def report_postgres_fetch_error: (PostgresDeliveryRequest request, StandardError error) -> void
+      def delete_postgres_change: (PostgresChange change) -> PostgresChange
+      def local_postgres_change: (PostgresChange change) -> PostgresChange
+    end
+  end
+end

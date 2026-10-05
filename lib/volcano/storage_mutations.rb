@@ -5,16 +5,18 @@ module Volcano
   class StorageBucket
     def remove(paths)
       deleted = storage_paths(paths)
-      authorization = @client.session_token
-      deleted.each { |path| delete_path(path, authorization) }
+      binding = @client.capture_session_binding
+      deleted.each { |path| delete_path(path, binding) }
       deleted
     end
 
     def move(from_path, to_path)
-      source, destination = storage_paths([from_path, to_path])
-      response = Transport.invoke do
+      paths = storage_paths([from_path, to_path])
+      source = paths.fetch(0)
+      destination = paths.fetch(1)
+      response = storage_request do |token|
         @transport.move_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           from_path: source,
           to_path: destination
@@ -24,10 +26,12 @@ module Volcano
     end
 
     def copy(from_path, to_path)
-      source, destination = storage_paths([from_path, to_path])
-      response = Transport.invoke do
+      paths = storage_paths([from_path, to_path])
+      source = paths.fetch(0)
+      destination = paths.fetch(1)
+      response = storage_request do |token|
         @transport.copy_storage_object(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           from_path: source,
           to_path: destination
@@ -39,9 +43,9 @@ module Volcano
     def update_visibility(path, public:)
       object_path = storage_paths(path).fetch(0)
       visibility = visibility_value(public)
-      response = Transport.invoke do
+      response = storage_request do |token|
         @transport.update_storage_object_visibility(
-          authorization: @client.session_token,
+          authorization: token,
           bucket_name: @name,
           path: object_path,
           is_public: visibility
@@ -54,17 +58,19 @@ module Volcano
 
     def storage_paths(paths)
       path_list = paths.is_a?(String) ? [paths] : paths.to_a
-      if path_list.empty? || !path_list.all? { |path| path.is_a?(String) && !path.empty? }
-        raise ArgumentError, 'storage paths must be non-empty strings'
-      end
+      raise ArgumentError, 'storage paths must be non-empty strings' unless valid_storage_paths?(path_list)
 
       path_list.map { |path| path.dup.freeze }.freeze
     end
 
-    def delete_path(path, authorization)
-      response = Transport.invoke do
+    def valid_storage_paths?(paths)
+      !paths.empty? && paths.all? { |path| path.is_a?(String) && !path.empty? }
+    end
+
+    def delete_path(path, binding)
+      response = storage_request(binding: binding) do |token|
         @transport.delete_storage_object(
-          authorization: authorization,
+          authorization: token,
           bucket_name: @name,
           path: path
         )
@@ -73,7 +79,8 @@ module Volcano
     end
 
     def visibility_value(value)
-      return value if [true, false].include?(value)
+      return true if value == true
+      return false if value == false
 
       raise ArgumentError, 'public must be true or false'
     end

@@ -105,7 +105,7 @@ module Volcano::Generated
     end
 
     # Delete a file or abort upload session
-    # Delete a file, or abort a resumable upload session.  **File Delete (default):** Deletes the file at the specified path.  **Abort Session (with X-Upload-Session header):** Aborts a resumable upload session and cleans up any uploaded parts. 
+    # Delete a file, or abort a resumable upload session.  **File Delete (default):** Deletes the file at the specified path.  **Abort Session (with X-Upload-Session header):** Aborts a resumable upload session and cleans up any uploaded parts. Anonymous sessions must reuse the exact anon key that created the session. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param [Hash] opts the optional parameters
@@ -117,7 +117,7 @@ module Volcano::Generated
     end
 
     # Delete a file or abort upload session
-    # Delete a file, or abort a resumable upload session.  **File Delete (default):** Deletes the file at the specified path.  **Abort Session (with X-Upload-Session header):** Aborts a resumable upload session and cleans up any uploaded parts. 
+    # Delete a file, or abort a resumable upload session.  **File Delete (default):** Deletes the file at the specified path.  **Abort Session (with X-Upload-Session header):** Aborts a resumable upload session and cleans up any uploaded parts. Anonymous sessions must reuse the exact anon key that created the session. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param [Hash] opts the optional parameters
@@ -170,7 +170,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'AnonKey']
 
       new_options = opts.merge(
         :operation => :"StorageObjectsApi.delete_storage_object",
@@ -278,7 +278,7 @@ module Volcano::Generated
     end
 
     # Download a file or get upload session status
-    # Download a file, or get the status of a resumable upload session.  **File Download (default):** Downloads the file at the specified path.  **Session Status (with X-Upload-Session header):** Returns the status of a resumable upload session, including which parts have been uploaded. 
+    # Download a file, or get the status of a resumable upload session.  **File Download (default):** Downloads the file at the specified path.  **Session Status (with X-Upload-Session header):** Returns the status of a resumable upload session, including which parts have been uploaded. Anonymous sessions must reuse the exact anon key that created the session. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param [Hash] opts the optional parameters
@@ -291,7 +291,7 @@ module Volcano::Generated
     end
 
     # Download a file or get upload session status
-    # Download a file, or get the status of a resumable upload session.  **File Download (default):** Downloads the file at the specified path.  **Session Status (with X-Upload-Session header):** Returns the status of a resumable upload session, including which parts have been uploaded. 
+    # Download a file, or get the status of a resumable upload session.  **File Download (default):** Downloads the file at the specified path.  **Session Status (with X-Upload-Session header):** Returns the status of a resumable upload session, including which parts have been uploaded. Anonymous sessions must reuse the exact anon key that created the session. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param [Hash] opts the optional parameters
@@ -636,7 +636,7 @@ module Volcano::Generated
     end
 
     # Upload a part of a resumable upload
-    # Upload a single part of a resumable upload session.  **Requirements:** - Part numbers start at 1 - All parts except the last must be at least 5MB - Maximum part size is 25MB - Parts can be uploaded in any order - Re-uploading a part overwrites the previous upload 
+    # Upload a single part of a resumable upload session.  **Requirements:** - Part numbers start at 1 - All parts except the last must be at least 5MB - Maximum part size is 25MB - Parts can be uploaded in any order - Re-uploading a part overwrites the previous upload - Anonymous sessions must reuse the exact anon key that created the session 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param x_upload_session [String] Upload session ID
@@ -650,7 +650,7 @@ module Volcano::Generated
     end
 
     # Upload a part of a resumable upload
-    # Upload a single part of a resumable upload session.  **Requirements:** - Part numbers start at 1 - All parts except the last must be at least 5MB - Maximum part size is 25MB - Parts can be uploaded in any order - Re-uploading a part overwrites the previous upload 
+    # Upload a single part of a resumable upload session.  **Requirements:** - Part numbers start at 1 - All parts except the last must be at least 5MB - Maximum part size is 25MB - Parts can be uploaded in any order - Re-uploading a part overwrites the previous upload - Anonymous sessions must reuse the exact anon key that created the session 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param x_upload_session [String] Upload session ID
@@ -751,7 +751,7 @@ module Volcano::Generated
     end
 
     # Upload a file or create resumable session
-    # Unified endpoint for file uploads. Behavior depends on Content-Type and headers:  **Simple Upload (multipart/form-data):** Upload a complete file in a single request. Best for files under 100MB.  **Create Resumable Session (application/json):** Create a session for chunked uploads. Best for large files or unreliable networks. Requires: `Content-Type: application/json` with body `{\"filename\": \"...\", \"content_type\": \"...\", \"total_size\": ...}`  **Complete Resumable Session:** Complete a session after all parts are uploaded. Requires: `X-Upload-Session` header with session ID and `X-Upload-Complete: true` header. 
+    # Unified endpoint for file uploads. Behavior depends on Content-Type and headers:  **Simple Upload (multipart/form-data):** Upload a complete file in a single request. Best for files under 100MB.  **Create Resumable Session (application/json):** Create a session for chunked uploads. Best for large files or unreliable networks. Requires: `Content-Type: application/json` with body `{\"filename\": \"...\", \"content_type\": \"...\", \"total_size\": ...}`  **Complete Resumable Session:** Complete a session after all parts are uploaded. Requires: `X-Upload-Session` header with session ID and `X-Upload-Complete: true` header.  **Resumable Session Ownership:** A session created with a user access token remains bound to that user. A session created with an anon key remains bound to that exact anon key. Reuse the same identity or anon key for part uploads, status, completion, and abort requests; an ownership mismatch returns `404`. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param file [File] File to upload (simple upload)
@@ -765,7 +765,7 @@ module Volcano::Generated
     end
 
     # Upload a file or create resumable session
-    # Unified endpoint for file uploads. Behavior depends on Content-Type and headers:  **Simple Upload (multipart/form-data):** Upload a complete file in a single request. Best for files under 100MB.  **Create Resumable Session (application/json):** Create a session for chunked uploads. Best for large files or unreliable networks. Requires: &#x60;Content-Type: application/json&#x60; with body &#x60;{\&quot;filename\&quot;: \&quot;...\&quot;, \&quot;content_type\&quot;: \&quot;...\&quot;, \&quot;total_size\&quot;: ...}&#x60;  **Complete Resumable Session:** Complete a session after all parts are uploaded. Requires: &#x60;X-Upload-Session&#x60; header with session ID and &#x60;X-Upload-Complete: true&#x60; header. 
+    # Unified endpoint for file uploads. Behavior depends on Content-Type and headers:  **Simple Upload (multipart/form-data):** Upload a complete file in a single request. Best for files under 100MB.  **Create Resumable Session (application/json):** Create a session for chunked uploads. Best for large files or unreliable networks. Requires: &#x60;Content-Type: application/json&#x60; with body &#x60;{\&quot;filename\&quot;: \&quot;...\&quot;, \&quot;content_type\&quot;: \&quot;...\&quot;, \&quot;total_size\&quot;: ...}&#x60;  **Complete Resumable Session:** Complete a session after all parts are uploaded. Requires: &#x60;X-Upload-Session&#x60; header with session ID and &#x60;X-Upload-Complete: true&#x60; header.  **Resumable Session Ownership:** A session created with a user access token remains bound to that user. A session created with an anon key remains bound to that exact anon key. Reuse the same identity or anon key for part uploads, status, completion, and abort requests; an ownership mismatch returns &#x60;404&#x60;. 
     # @param bucket_name [String] Storage bucket name
     # @param path [String] Object path within bucket
     # @param file [File] File to upload (simple upload)

@@ -19,6 +19,69 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
+    # Cancel an incomplete source export
+    # Restores platform source writes while the project is in `git_exporting` or `git_pending`. If Volcano reserved or deployed the root commit, export remains consumed and cannot be run again. The connected repository and any commit already pushed to it are unchanged. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def cancel_project_source_export(id, opts = {})
+      cancel_project_source_export_with_http_info(id, opts)
+      nil
+    end
+
+    # Cancel an incomplete source export
+    # Restores platform source writes while the project is in &#x60;git_exporting&#x60; or &#x60;git_pending&#x60;. If Volcano reserved or deployed the root commit, export remains consumed and cannot be run again. The connected repository and any commit already pushed to it are unchanged. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def cancel_project_source_export_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: GitConnectionsApi.cancel_project_source_export ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling GitConnectionsApi.cancel_project_source_export"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"GitConnectionsApi.cancel_project_source_export",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: GitConnectionsApi#cancel_project_source_export\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Connect or update a project's repo connection
     # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
     # @param id [String] Project ID
@@ -215,6 +278,80 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Initialize an empty repository with a project's stored source
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (`skipped`), and things no export can hand back (`omitted`) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # @param id [String] Project ID
+    # @param export_project_source_request [ExportProjectSourceRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectSourceExport]
+    def export_project_source(id, export_project_source_request, opts = {})
+      data, _status_code, _headers = export_project_source_with_http_info(id, export_project_source_request, opts)
+      data
+    end
+
+    # Initialize an empty repository with a project&#39;s stored source
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (&#x60;skipped&#x60;), and things no export can hand back (&#x60;omitted&#x60;) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # @param id [String] Project ID
+    # @param export_project_source_request [ExportProjectSourceRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectSourceExport, Integer, Hash)>] ProjectSourceExport data, response status code and response headers
+    def export_project_source_with_http_info(id, export_project_source_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: GitConnectionsApi.export_project_source ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling GitConnectionsApi.export_project_source"
+      end
+      # verify the required parameter 'export_project_source_request' is set
+      if @api_client.config.client_side_validation && export_project_source_request.nil?
+        fail ArgumentError, "Missing the required parameter 'export_project_source_request' when calling GitConnectionsApi.export_project_source"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(export_project_source_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectSourceExport'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"GitConnectionsApi.export_project_source",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: GitConnectionsApi#export_project_source\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get a project's repo connection
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
@@ -333,6 +470,69 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: GitConnectionsApi#get_project_git_deploy_settings\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Report the project's source-of-truth state
+    # Volcano stores the source of the functions and frontend it runs for a project. This reports whether that source has been written to the connected repository, and whether the repository has taken over as the project's source of truth.  `mode` is `platform`, `git_exporting`, `git_pending`, or `git`. Export enters `git_exporting` before reading stored source. GitHub's signed push event confirms that the initial commit reached the production branch. That push or a newer production push changes the mode to `git_pending` when it starts a deployment. `exported_at` records that transition.  A successful Git run completes the transition when it matches the recorded repository, production branch, and root directory and actually dispatches every recorded resource. Ordinary production-branch pushes deploy without changing a platform-managed project's source ownership. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectSourceExportState]
+    def get_project_source_export(id, opts = {})
+      data, _status_code, _headers = get_project_source_export_with_http_info(id, opts)
+      data
+    end
+
+    # Report the project&#39;s source-of-truth state
+    # Volcano stores the source of the functions and frontend it runs for a project. This reports whether that source has been written to the connected repository, and whether the repository has taken over as the project&#39;s source of truth.  &#x60;mode&#x60; is &#x60;platform&#x60;, &#x60;git_exporting&#x60;, &#x60;git_pending&#x60;, or &#x60;git&#x60;. Export enters &#x60;git_exporting&#x60; before reading stored source. GitHub&#39;s signed push event confirms that the initial commit reached the production branch. That push or a newer production push changes the mode to &#x60;git_pending&#x60; when it starts a deployment. &#x60;exported_at&#x60; records that transition.  A successful Git run completes the transition when it matches the recorded repository, production branch, and root directory and actually dispatches every recorded resource. Ordinary production-branch pushes deploy without changing a platform-managed project&#39;s source ownership. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectSourceExportState, Integer, Hash)>] ProjectSourceExportState data, response status code and response headers
+    def get_project_source_export_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: GitConnectionsApi.get_project_source_export ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling GitConnectionsApi.get_project_source_export"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/source-export'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectSourceExportState'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"GitConnectionsApi.get_project_source_export",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: GitConnectionsApi#get_project_source_export\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

@@ -1,0 +1,28 @@
+# frozen_string_literal: true
+
+target :client_transport do
+  signature 'sig', 'sig_dev', 'sig_client'
+  ignore_signature 'sig/client.rbs'
+  check 'lib/volcano/client.rb'
+  check 'lib/volcano/generated_transport.rb'
+  check 'lib/volcano/generated_transport_anonymous.rb'
+  check 'lib/volcano/generated_transport_auth.rb'
+  check 'lib/volcano/generated_transport_confirmation.rb'
+  check 'lib/volcano/generated_transport_database.rb'
+  check 'lib/volcano/generated_transport_durable.rb'
+  check 'lib/volcano/generated_transport_email_change.rb'
+  check 'lib/volcano/generated_transport_functions.rb'
+  check 'lib/volcano/generated_transport_logs.rb'
+  check 'lib/volcano/generated_transport_oauth.rb'
+  check 'lib/volcano/generated_transport_sessions.rb'
+  check 'lib/volcano/generated_transport_storage.rb'
+  check 'lib/volcano/generated_transport_support.rb'
+  check 'lib/volcano/generated_transport_upload_session_api.rb'
+  check 'lib/volcano/generated_transport_upload_sessions.rb'
+  library 'cgi'
+  library 'json'
+  library 'securerandom'
+  library 'tempfile'
+  library 'uri'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end

@@ -45,9 +45,9 @@ client.sandboxes.create(
   raise 'Sandbox did not become ready' unless session.state == 'running'
 
   bytes = (0..255).to_a.pack('C*')
-  session.files.write('/tmp/input.bin', bytes)
-  raise 'File changed' unless session.files.read('/tmp/input.bin') == bytes
-  puts session.exec('wc -c /tmp/input.bin').stdout
+  session.files.write('/workspace/input.bin', bytes)
+  raise 'File changed' unless session.files.read('/workspace/input.bin') == bytes
+  puts session.exec('wc -c /workspace/input.bin').stdout
 end
 ```
 

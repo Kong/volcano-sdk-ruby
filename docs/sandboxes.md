@@ -26,7 +26,9 @@ puts result.stdout
 Keep the same `request_id` when retrying an uncertain create or execution. A new
 ID represents a new operation. The SDK does not replay commands after transport failures. A rejected user token
 is refreshed once; the retry preserves the request ID.
-Nonzero exits and timeouts are result fields, not API exceptions. API failures
+Nonzero exits and session command timeouts are result fields. A one-shot execution
+timeout raises an API error (HTTP 504); retrying the same request ID returns an
+unknown-outcome conflict (HTTP 409), without running the command again. API failures
 raise typed `Volcano::Error` exceptions with `status`, `code`, and `retry_after`
 when supplied by the server.
 

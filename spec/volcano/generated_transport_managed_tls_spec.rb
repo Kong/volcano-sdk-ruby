@@ -4,15 +4,12 @@ module Volcano
   RSpec.describe GeneratedTransport do
     let(:generated) { Generated }
     let(:api_client) { described_class::ApiClient.new(generated::Configuration.new) }
-    let(:routing_record) do
-      { record_type: 'CNAME', zone_apex_record_type: 'ALIAS', name: 'app.example.com',
-        value: 'frontend.frontends.volcano.dev' }
-    end
     let(:verification_record) { { name: '_token.app.example.com', type: 'CNAME', value: '_validation.volcano.dev' } }
     let(:managed_response) do
       { domain: 'app.example.com', tls_mode: 'managed', domain_status: 'pending_verification',
         verification_status: 'pending', verification_records: [verification_record],
-        required_routing_record: routing_record, effective_urls: ['https://frontend.frontends.volcano.dev/'],
+        routing_target_hostname: 'frontend.frontends.volcano.dev',
+        effective_urls: ['https://frontend.frontends.volcano.dev/'],
         created_at: '2026-09-02T12:00:00Z', updated_at: '2026-09-02T12:00:00Z' }
     end
 
@@ -38,7 +35,8 @@ module Volcano
       expect(response.domain_status).to eq('pending_verification')
       expect(response.verification_status).to eq('pending')
       expect(response.verification_records.map(&:to_hash)).to eq([verification_record])
-      expect(response.required_routing_record.to_hash).to eq(routing_record)
+      expect(response.routing_target_hostname).to eq('frontend.frontends.volcano.dev')
+      expect(response.required_routing_record).to be_nil
     end
 
     it 'decodes a failed managed verification with its failure category' do
@@ -49,6 +47,24 @@ module Volcano
 
       expect(response.verification_status).to eq('failed')
       expect(response.failure_reason).to eq('ownership')
+    end
+
+    it 'decodes the ownership record required by a reservation conflict' do
+      conflict = api_client.convert_to_type(
+        { error: 'ownership verification required', code: 'ownership_verification_required',
+          required_record: verification_record },
+        'FrontendCustomDomainConflictError'
+      )
+
+      expect(conflict.code).to eq('ownership_verification_required')
+      expect(conflict.required_record.to_hash).to eq(verification_record)
+    end
+
+    it 'decodes a conflict without an ownership recovery path' do
+      conflict = api_client.convert_to_type({ error: 'custom domain already in use' },
+                                            'FrontendCustomDomainConflictError')
+
+      expect(conflict.to_hash).to eq(error: 'custom domain already in use')
     end
 
     it 'decodes discriminated project-config TLS from symbol keys' do

@@ -166,6 +166,7 @@ lib/volcano-generated/models/email_template.rb
 lib/volcano-generated/models/error.rb
 lib/volcano-generated/models/export_project_source_request.rb
 lib/volcano-generated/models/frontend.rb
+lib/volcano-generated/models/frontend_custom_domain_conflict_error.rb
 lib/volcano-generated/models/frontend_custom_domain_response.rb
 lib/volcano-generated/models/frontend_custom_domain_tls_config.rb
 lib/volcano-generated/models/frontend_custom_domain_tls_config_not.rb

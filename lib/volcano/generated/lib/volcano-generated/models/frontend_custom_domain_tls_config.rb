@@ -14,17 +14,18 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Set mode to managed for Volcano-issued TLS, or byoc with certificate_pem and private_key_pem.
+  # TLS for a new custom domain. With `mode: managed`, Volcano issues and renews the certificate; omit every PEM field. With `mode: byoc`, send both `certificate_pem` and `private_key_pem`, plus an optional `certificate_chain_pem`.
   class FrontendCustomDomainTLSConfig < ApiModelBase
+    # managed for a Volcano-issued certificate; byoc to supply your own.
     attr_accessor :mode
 
-    # Required. PEM-encoded certificate.
+    # PEM-encoded certificate. Required when mode is byoc; not allowed when mode is managed.
     attr_accessor :certificate_pem
 
-    # Required. PEM-encoded private key.
+    # PEM-encoded private key. Required when mode is byoc; not allowed when mode is managed.
     attr_accessor :private_key_pem
 
-    # Optional PEM-encoded certificate chain.
+    # Optional PEM-encoded certificate chain when mode is byoc; not allowed when mode is managed.
     attr_accessor :certificate_chain_pem
 
     class EnumAttributeValidator

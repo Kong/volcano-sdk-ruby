@@ -488,6 +488,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::Error](docs/Error.md)
  - [Volcano::Generated::ExportProjectSourceRequest](docs/ExportProjectSourceRequest.md)
  - [Volcano::Generated::Frontend](docs/Frontend.md)
+ - [Volcano::Generated::FrontendCustomDomainConflictError](docs/FrontendCustomDomainConflictError.md)
  - [Volcano::Generated::FrontendCustomDomainResponse](docs/FrontendCustomDomainResponse.md)
  - [Volcano::Generated::FrontendCustomDomainTLSConfig](docs/FrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::FrontendCustomDomainTLSConfigNot](docs/FrontendCustomDomainTLSConfigNot.md)

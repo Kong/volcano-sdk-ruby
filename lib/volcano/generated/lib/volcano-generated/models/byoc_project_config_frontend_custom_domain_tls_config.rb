@@ -14,16 +14,17 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
+  # Your own certificate. Send `certificate_pem` and `private_key_pem` together, with an optional `certificate_chain_pem`, to create the domain or rotate its certificate. For an existing BYOC domain, `mode: byoc` without certificate fields keeps the stored certificate; exports render only the mode.
   class BYOCProjectConfigFrontendCustomDomainTLSConfig < ApiModelBase
     attr_accessor :mode
 
-    # PEM-encoded certificate for BYOC create or rotation. Omitted from exports.
+    # PEM-encoded certificate for create or rotation. Requires private_key_pem. Omitted from exports.
     attr_accessor :certificate_pem
 
-    # PEM-encoded private key for BYOC create or rotation. Omitted from exports.
+    # PEM-encoded private key for create or rotation. Requires certificate_pem. Omitted from exports.
     attr_accessor :private_key_pem
 
-    # Optional PEM-encoded certificate chain for BYOC. Omitted from exports.
+    # Optional PEM-encoded certificate chain. Requires certificate_pem and private_key_pem. Omitted from exports.
     attr_accessor :certificate_chain_pem
 
     class EnumAttributeValidator

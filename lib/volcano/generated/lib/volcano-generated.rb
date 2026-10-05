@@ -144,6 +144,7 @@ Volcano::Generated.autoload :EmailTemplate, 'volcano-generated/models/email_temp
 Volcano::Generated.autoload :Error, 'volcano-generated/models/error'
 Volcano::Generated.autoload :ExportProjectSourceRequest, 'volcano-generated/models/export_project_source_request'
 Volcano::Generated.autoload :Frontend, 'volcano-generated/models/frontend'
+Volcano::Generated.autoload :FrontendCustomDomainConflictError, 'volcano-generated/models/frontend_custom_domain_conflict_error'
 Volcano::Generated.autoload :FrontendCustomDomainResponse, 'volcano-generated/models/frontend_custom_domain_response'
 Volcano::Generated.autoload :FrontendCustomDomainTLSConfig, 'volcano-generated/models/frontend_custom_domain_tls_config'
 Volcano::Generated.autoload :FrontendCustomDomainTLSConfigNot, 'volcano-generated/models/frontend_custom_domain_tls_config_not'

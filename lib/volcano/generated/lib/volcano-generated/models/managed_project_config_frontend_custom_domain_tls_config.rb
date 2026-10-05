@@ -14,6 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
+  # Volcano issues and renews the certificate. Certificate fields are not allowed.
   class ManagedProjectConfigFrontendCustomDomainTLSConfig < ApiModelBase
     attr_accessor :mode
 

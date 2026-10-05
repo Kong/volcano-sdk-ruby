@@ -14,9 +14,9 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards. BYOC TLS material is write-only and omitted from config export. 
+  # Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards. For an existing domain, omitting `tls` or sending only `tls.mode` keeps the stored certificate; new BYOC material for the same domain rotates the certificate in place (zero downtime). Changing `tls.mode` for the same hostname, or the hostname of a managed domain, requires deleting the domain first. BYOC TLS material is write-only; exports render only `tls.mode`. 
   class ProjectConfigCustomDomain < ApiModelBase
-    # Fully-qualified domain name (hostname only, no scheme/path)
+    # Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.
     attr_accessor :domain
 
     attr_accessor :tls

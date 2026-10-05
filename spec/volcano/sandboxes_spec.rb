@@ -19,7 +19,7 @@ RSpec.describe Volcano::Sandboxes do
   end
 
   def state(value = 'running')
-    { id: session_id, project_id: project, region: 'aws-us-east-1', state: value, expires_at: 'tomorrow' }
+    { id: session_id, project_id: project, region: 'aws-us-east-1', state: value, expires_at: '2026-10-06T10:00:00Z' }
   end
 
   def reply(payload = nil, status: 200)
@@ -46,7 +46,7 @@ RSpec.describe Volcano::Sandboxes do
     expect(handle.id).to eq(session_id)
     expect(handle.project_id).to eq(project)
     expect(handle.region).to eq('aws-us-east-1')
-    expect(handle.expires_at).to eq('tomorrow')
+    expect(handle.expires_at).to eq(Time.utc(2026, 10, 6, 10))
   end
 
   it 'returns nonzero command exits as one-shot data' do
@@ -95,17 +95,17 @@ RSpec.describe Volcano::Sandboxes do
   it 'redacts expiring access credentials from inspection' do
     reply(state)
     handle = facade.get(session_id)
-    reply({ url: 'https://access.test', token: 'secret', expires_at: 'tomorrow' })
+    reply({ url: 'https://access.test', token: 'secret', expires_at: '2026-10-06T10:00:00Z' })
     access = handle.access(8080)
     expect(access.token).to eq('secret')
     expect(access.url).to eq('https://access.test')
-    expect(access.expires_at).to eq('tomorrow')
+    expect(access.expires_at).to eq(Time.utc(2026, 10, 6, 10))
     expect(access.inspect).not_to include('secret')
   end
 
   it 'grants and revokes session access for a backend-selected user' do
     reply(nil, status: 204)
-    expect(facade.grant(session_id, subject_id, expires_at: 'tomorrow')).to be_nil
+    expect(facade.grant(session_id, subject_id, expires_at: '2026-10-06T10:00:00Z')).to be_nil
     expect(facade.revoke(session_id, subject_id)).to be_nil
   end
 
@@ -206,7 +206,7 @@ RSpec.describe Volcano::Sandboxes do
       reply(command.merge(session_id: session_id, region: 'aws-us-east-1', duration_ms: 42))
       options = { region: 'aws-us-east-1', preset: 'python3.12' }
       options[:timeout_seconds] = timeout if timeout
-      facade.exec(project, 'run', options)
+      facade.exec(project, 'run', **options)
       expect(requests.last.options[:timeout]).to eq(((timeout || 60) + 120) * 1000)
     end
   end
@@ -218,7 +218,7 @@ RSpec.describe Volcano::Sandboxes do
     handle = facade.get(session_id)
     reply(state('suspending'), status: 202)
     handle.suspend
-    reply({ url: 'https://access.test', token: 'secret', expires_at: 'tomorrow' })
+    reply({ url: 'https://access.test', token: 'secret', expires_at: '2026-10-06T10:00:00Z' })
     handle.access(8080)
     reply({ data: 'aGVsbG8=' })
     handle.files.read('/workspace/file')
@@ -252,7 +252,7 @@ RSpec.describe Volcano::Sandboxes do
       handle.public_send(operation)
     end
     reply(nil, status: 204)
-    facade.grant(session_id, subject_id, expires_at: 'tomorrow')
+    facade.grant(session_id, subject_id, expires_at: '2026-10-06T10:00:00Z')
     facade.revoke(session_id, subject_id)
     reply(command.merge(session_id: session_id, region: 'aws-us-east-1', duration_ms: 1))
     facade.exec(project, 'run', region: 'aws-us-east-1', preset: 'python3.12')
@@ -283,7 +283,7 @@ RSpec.describe Volcano::Sandboxes do
       .to eq([request_id, request_id])
     expect(requests.last.options[:headers]['Authorization']).to eq("Bearer #{access_token('new')}")
     expect([requests[-3], requests.last].map { |request| JSON.parse(request.options[:body]) })
-      .to all(eq('command' => 'run', 'environment' => { 'KEY' => 'original' }))
+      .to all(eq('command' => 'run', 'environment' => { 'KEY' => 'original' }, 'timeout_seconds' => 60))
   end
 
   it 'preserves a block error when termination also fails' do
@@ -313,8 +313,106 @@ RSpec.describe Volcano::Sandboxes do
     handle.files.write('/workspace/file', 'hello')
     reply({ data: 'aGVsbG8=' })
     expect(handle.files.read('/workspace/file')).to eq('hello')
-    reply({ url: 'https://access.test', token: 'secret', expires_at: 'tomorrow' })
+    reply({ url: 'https://access.test', token: 'secret', expires_at: '2026-10-06T10:00:00Z' })
     handle.access(8080)
     expect(requests.map { |request| request.options[:headers]['Authorization'] }).to all(eq('Bearer user'))
+  end
+
+  it 'rejects misspelled creation and execution keywords' do
+    expect { facade.create(project, region: 'us-east-1', preset: 'python3.12', max_duration: 60) }
+      .to raise_error(ArgumentError, /unknown keyword/)
+    expect { facade.exec(project, 'run', region: 'us-east-1', preset: 'python3.12', timeout: 5) }
+      .to raise_error(ArgumentError, /unknown keyword/)
+    reply(state)
+    handle = facade.get(session_id)
+    expect { handle.exec('run', timeout: 5) }.to raise_error(ArgumentError, /unknown keyword/)
+  end
+
+  it 'reports cleanup failure even inside an outer rescue' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ error: 'cleanup failed' }, status: 500)
+    begin
+      raise ArgumentError, 'outer error'
+    rescue ArgumentError
+      expect { handle.use(&:id) }.to raise_error(Volcano::Error::ServerError)
+    end
+  end
+
+  it 'does not terminate an already terminating session' do
+    reply(state('terminating'))
+    handle = facade.get(session_id)
+    expect(handle.use(&:id)).to eq(session_id)
+    expect(requests.length).to eq(1)
+  end
+
+  it 'treats cleanup of an expired session as success' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ error: 'gone' }, status: 404)
+    expect(handle.use(&:id)).to eq(session_id)
+  end
+
+  it 'formats Time grants as UTC ISO8601 without mutating the argument' do
+    expiry = Time.new(2026, 10, 6, 12, 0, 0, '+02:00')
+    reply(nil, status: 204)
+    facade.grant(session_id, subject_id, expires_at: expiry)
+    expect(JSON.parse(requests.last.options[:body])).to eq('expires_at' => '2026-10-06T10:00:00Z')
+    expect(expiry.utc_offset).to eq(7200)
+  end
+
+  it 'rejects invalid grant timestamps before sending a request' do
+    expect { facade.grant(session_id, subject_id, expires_at: 'tomorrow') }
+      .to raise_error(Volcano::Error::ValidationError)
+    expect(requests).to be_empty
+  end
+
+  it 'redacts all Sandbox facade and handle inspection' do
+    client.auth.current_session = Volcano::Session.new(access_token: 'user-secret', refresh_token: 'refresh-secret',
+                                                       user_id: subject_id)
+    reply(state)
+    handle = facade.get(session_id)
+    [facade, handle, handle.files].each do |value|
+      expect(value.inspect).not_to match(/service|user-secret|refresh-secret|@requests|@client/)
+    end
+  end
+
+  it 'keeps service credentials on handles returned by create' do
+    reply(state, status: 201)
+    handle = facade.create(project, region: 'us-east-1', preset: 'python3.12')
+    client.auth.current_session = Volcano::Session.new(access_token: 'user-secret', refresh_token: 'refresh-secret',
+                                                       user_id: subject_id)
+    reply(state)
+    handle.refresh
+    reply(command)
+    handle.exec('run')
+    reply({ data: 'aGVsbG8=' })
+    handle.files.read('/workspace/file')
+    reply({ url: 'https://access.test', token: 'secret', expires_at: '2026-10-06T10:00:00Z' })
+    handle.access(8080)
+    expect(requests.map { |request| request.options[:headers]['Authorization'] }).to all(eq('Bearer service'))
+  end
+
+  it 'does not refresh a valid user denied by a missing grant' do
+    client.auth.current_session = Volcano::Session.new(access_token: access_token, refresh_token: 'refresh',
+                                                       user_id: subject_id)
+    reply({ error: 'denied' }, status: 403)
+    expect { facade.get(session_id) }.to raise_error(Volcano::Error::AuthenticationError)
+    expect(requests.length).to eq(1)
+  end
+
+  it 'refuses malformed response timestamps without changing the observed state' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply(state('terminated').merge(expires_at: 'tomorrow'))
+    expect { handle.refresh }.to raise_error(TypeError, 'Invalid Sandbox timestamp')
+    expect(handle.state).to eq('running')
+  end
+
+  it 'preserves non-StandardError block failures during cleanup' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ error: 'cleanup failed' }, status: 500)
+    expect { handle.use { raise Interrupt, 'cancelled' } }.to raise_error(Interrupt, 'cancelled')
   end
 end

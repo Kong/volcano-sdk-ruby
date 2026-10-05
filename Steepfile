@@ -180,5 +180,6 @@ target :sandboxes do
   check 'lib/volcano/sandbox_files.rb'
   library 'base64'
   library 'securerandom'
+  library 'time'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end

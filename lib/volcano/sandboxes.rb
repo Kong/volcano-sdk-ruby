@@ -12,12 +12,21 @@ module Volcano
       SandboxResponse.array(Transport.json_object(response)['data']).map { |value| SandboxResponse.preset(value) }
     end
 
-    def create(project_id, options)
+    def inspect = '#<Volcano::Sandboxes>'
+
+    def create( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.
+      project_id, region:, preset: nil, sandbox_id: nil, memory_mb: nil,
+      max_duration_seconds: nil, idle_timeout_seconds: nil, request_id: nil
+    )
+      options = { region: region, preset: preset, sandbox_id: sandbox_id, memory_mb: memory_mb,
+                  max_duration_seconds: max_duration_seconds, idle_timeout_seconds: idle_timeout_seconds,
+                  request_id: request_id }.compact
       body = SandboxRequests.selector(options).merge(options.slice(:max_duration_seconds, :idle_timeout_seconds))
       request = SandboxRequest.new(operation: :create_sandbox_session,
                                    resource_id: SandboxRequests.identifier(project_id), body: body,
                                    request_id: SandboxRequests.request_id(options))
-      SandboxSession.new(@requests, @requests.call(request, status: 201))
+      requests = @requests.service_scope
+      SandboxSession.new(requests, requests.call(request, status: 201))
     end
 
     def get(session_id)
@@ -25,7 +34,12 @@ module Volcano
       SandboxSession.new(@requests, @requests.call(request))
     end
 
-    def exec(project_id, command, options)
+    def exec( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.
+      project_id, command, region:, preset: nil, sandbox_id: nil, memory_mb: nil,
+      timeout_seconds: 60, environment: nil, request_id: nil
+    )
+      options = { region: region, preset: preset, sandbox_id: sandbox_id, memory_mb: memory_mb,
+                  timeout_seconds: timeout_seconds, environment: environment, request_id: request_id }.compact
       body = SandboxRequests.selector(options).merge(SandboxRequests.command(command, options))
       request = SandboxRequest.new(operation: :execute_sandbox, resource_id: SandboxRequests.identifier(project_id),
                                    body: body, request_id: SandboxRequests.request_id(options),
@@ -37,7 +51,7 @@ module Volcano
       request = SandboxRequest.new(operation: :grant_sandbox_session,
                                    resource_id: SandboxRequests.identifier(session_id),
                                    subject_id: SandboxRequests.identifier(auth_user_id),
-                                   body: { expires_at: expires_at })
+                                   body: { expires_at: SandboxRequests.expiry(expires_at) })
       @requests.call(request, status: 204)
       nil
     end

@@ -12,6 +12,12 @@ module Volcano
       raise TypeError, 'Invalid Sandbox text field'
     end
 
+    def self.timestamp(value)
+      Time.iso8601(text(value)).freeze
+    rescue ArgumentError
+      raise TypeError, 'Invalid Sandbox timestamp'
+    end
+
     def self.integer(value)
       return value if value.is_a?(Integer)
 
@@ -50,7 +56,7 @@ module Volcano
 
     def self.access(value)
       data = Transport.json_object(value)
-      SandboxAccess.new(url: text(data['url']), token: text(data['token']), expires_at: text(data['expires_at']))
+      SandboxAccess.new(url: text(data['url']), token: text(data['token']), expires_at: timestamp(data['expires_at']))
     end
 
     def self.preset(value)

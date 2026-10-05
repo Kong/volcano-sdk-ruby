@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'English'
-
 module Volcano
   # A session handle whose observed state changes only after validated responses.
   class SandboxSession
@@ -22,7 +20,13 @@ module Volcano
     def resume = update(:resume_sandbox_session, status: 202)
     def terminate = update(:terminate_sandbox_session, status: 202)
 
-    def exec(command, options = {})
+    def inspect
+      "#<Volcano::SandboxSession id=#{@id.inspect} project_id=#{@project_id.inspect} " \
+        "region=#{@region.inspect} state=#{@state.inspect}>"
+    end
+
+    def exec(command, timeout_seconds: 60, environment: nil, request_id: nil)
+      options = { timeout_seconds: timeout_seconds, environment: environment, request_id: request_id }.compact
       request = SandboxRequest.new(operation: :execute_sandbox_session, resource_id: @id,
                                    body: SandboxRequests.command(command, options),
                                    request_id: SandboxRequests.request_id(options),
@@ -36,17 +40,22 @@ module Volcano
     end
 
     def use
-      yield self
+      unwinding = true
+      result = yield self
+      unwinding = false
+      result
     ensure
-      cleanup($ERROR_INFO) unless @state == 'terminated'
+      cleanup(unwinding) unless %w[terminating terminated].include?(@state)
     end
 
     private
 
-    def cleanup(original_error)
+    def cleanup(unwinding)
       terminate
+    rescue Error::NotFoundError
+      nil
     rescue StandardError
-      raise unless original_error
+      raise unless unwinding
     end
 
     def update(operation, status: 200)
@@ -60,7 +69,7 @@ module Volcano
 
     def assign_state(data)
       next_state = SandboxResponse.state(data['state'])
-      expiry = SandboxResponse.text(data['expires_at'])
+      expiry = SandboxResponse.timestamp(data['expires_at'])
       @state = next_state
       @expires_at = expiry
     end

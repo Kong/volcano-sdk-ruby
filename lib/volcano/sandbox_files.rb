@@ -13,6 +13,8 @@ module Volcano
       @session_id = session_id
     end
 
+    def inspect = "#<Volcano::SandboxFiles session_id=#{@session_id.inspect}>"
+
     def read(path)
       response = @requests.call(request(:read_sandbox_session_file, { path: path }))
       Base64.strict_decode64(SandboxResponse.text(Transport.json_object(response)['data']))

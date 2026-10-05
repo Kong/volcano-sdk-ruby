@@ -17,6 +17,7 @@ module Volcano::Generated
   class CreateSandboxTemplateRequest < ApiModelBase
     attr_accessor :name
 
+    # Preset ID from the available Sandbox preset catalog.
     attr_accessor :preset
 
     attr_accessor :memory_mb
@@ -140,8 +141,6 @@ module Volcano::Generated
       return false if @name.nil?
       return false if @name !~ Regexp.new(/^[a-z][a-z0-9-]{0,62}$/)
       return false if @preset.nil?
-      preset_validator = EnumAttributeValidator.new('String', ["python3.12", "node22"])
-      return false unless preset_validator.valid?(@preset)
       memory_mb_validator = EnumAttributeValidator.new('Integer', [1024, 2048])
       return false unless memory_mb_validator.valid?(@memory_mb)
       true
@@ -162,13 +161,13 @@ module Volcano::Generated
       @name = name
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] preset Object to be assigned
+    # Custom attribute writer method with validation
+    # @param [Object] preset Value to be assigned
     def preset=(preset)
-      validator = EnumAttributeValidator.new('String', ["python3.12", "node22"])
-      unless validator.valid?(preset)
-        fail ArgumentError, "invalid value for \"preset\", must be one of #{validator.allowable_values}."
+      if preset.nil?
+        fail ArgumentError, 'preset cannot be nil'
       end
+
       @preset = preset
     end
 

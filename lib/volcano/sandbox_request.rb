@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'securerandom'
+require 'time'
 
 module Volcano
   # Immutable addressing and payload for a generated Sandbox operation.
@@ -28,20 +29,30 @@ module Volcano
                          write_sandbox_session_file create_sandbox_session_access].freeze
     private_constant :UUID, :USER_OPERATIONS
 
-    def initialize(client, transport)
+    def initialize(client, transport, service_only: false)
       @client = client
       @transport = transport
+      @service_only = service_only
     end
+
+    def service_scope = SandboxRequests.new(@client, @transport, service_only: true)
 
     def call(request, status: 200)
       response = if request.operation == :list_sandbox_presets
                    dispatch(request, '')
-                 elsif USER_OPERATIONS.include?(request.operation) && @client.current_session
+                 elsif user_request?(request)
                    @client.session_request { |token| dispatch(request, token) }
                  else
                    dispatch(request, @client.service_token)
                  end
       Transport.body(response, status)
+    end
+
+    def self.expiry(value)
+      parsed = value.is_a?(Time) ? value : Time.iso8601(value)
+      parsed.getutc.iso8601
+    rescue ArgumentError
+      raise Error::ValidationError, 'Sandbox grant expiry must be a Time or ISO8601 timestamp'
     end
 
     def self.identifier(value)
@@ -69,6 +80,10 @@ module Volcano
     end
 
     private
+
+    def user_request?(request)
+      !@service_only && USER_OPERATIONS.include?(request.operation) && !@client.current_session.nil?
+    end
 
     def dispatch(request, token)
       Transport.invoke { @transport.sandbox_request(authorization: token, request: request) }

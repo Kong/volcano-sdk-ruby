@@ -10,14 +10,14 @@ module Volcano
   SandboxPreset = Data.define(:id, :memory_mb, :regions)
   # Expiring HTTP access credentials are redacted from inspection.
   class SandboxAccess
+    attr_reader :url, :token, :expires_at
+
     def initialize(url:, token:, expires_at:)
-      @values = { url: url.dup.freeze, token: token.dup.freeze, expires_at: expires_at.dup.freeze }.freeze
+      @url = url.dup.freeze
+      @token = token.dup.freeze
+      @expires_at = expires_at.dup.freeze
       freeze
     end
-
-    def url = @values.fetch(:url)
-    def token = @values.fetch(:token)
-    def expires_at = @values.fetch(:expires_at)
 
     def inspect = "#<Volcano::SandboxAccess expires_at=#{expires_at.inspect}>"
   end

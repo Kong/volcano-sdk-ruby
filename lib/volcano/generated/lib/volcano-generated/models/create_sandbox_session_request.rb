@@ -15,6 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class CreateSandboxSessionRequest < ApiModelBase
+    # Preset ID from the available Sandbox preset catalog.
     attr_accessor :preset
 
     attr_accessor :sandbox_id
@@ -152,8 +153,6 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      preset_validator = EnumAttributeValidator.new('String', ["python3.12", "node22"])
-      return false unless preset_validator.valid?(@preset)
       memory_mb_validator = EnumAttributeValidator.new('Integer', [1024, 2048])
       return false unless memory_mb_validator.valid?(@memory_mb)
       return false if @region.nil?
@@ -163,16 +162,6 @@ module Volcano::Generated
       return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds > 28800
       return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds < 0
       true
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] preset Object to be assigned
-    def preset=(preset)
-      validator = EnumAttributeValidator.new('String', ["python3.12", "node22"])
-      unless validator.valid?(preset)
-        fail ArgumentError, "invalid value for \"preset\", must be one of #{validator.allowable_values}."
-      end
-      @preset = preset
     end
 
     # Custom attribute writer method checking allowed values (enum).

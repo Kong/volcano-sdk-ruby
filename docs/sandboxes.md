@@ -18,7 +18,7 @@ project_id = ENV.fetch('VOLCANO_PROJECT_ID')
 request_id = SecureRandom.uuid
 result = client.sandboxes.exec(
   project_id, 'python -c "print(42)"',
-  region: 'aws-us-east-1', preset: 'python3.12', request_id: request_id
+  region: 'us-east-1', preset: 'python3.12', request_id: request_id
 )
 puts result.stdout
 ```
@@ -34,7 +34,7 @@ when supplied by the server.
 
 ```ruby
 client.sandboxes.create(
-  project_id, region: 'aws-us-east-1', preset: 'python3.12', max_duration_seconds: 300
+  project_id, region: 'us-east-1', preset: 'python3.12', max_duration_seconds: 300
 ).use do |session|
   60.times do
     break if session.refresh.state == 'running'
@@ -52,6 +52,7 @@ end
 Creation, suspension, resumption, and termination are asynchronous. Use `refresh`
 to observe state. `use` requests termination when its block exits, including on
 exceptions. If cleanup also fails, the original block exception is preserved.
+Cleanup treats an already terminating, terminated, or missing session as complete.
 It does not wait for termination to complete. Use `get(session_id)`
 to reconnect, then `suspend`, `resume`, or `terminate` as needed. Files preserve
 binary `String` content. Writes accept at most 8 MiB.
@@ -78,9 +79,15 @@ template's configured memory.
 
 Only trusted backend code should call
 `client.sandboxes.grant(session_id, auth_user_id, expires_at: expiry)` or
-`client.sandboxes.revoke(session_id, auth_user_id)`. Project users can access only
+`client.sandboxes.revoke(session_id, auth_user_id)`. Supply a `Time` or ISO8601
+string for `expiry`; returned session and access expiries are `Time` values. Project users can access only
 sessions explicitly granted to them; they cannot create or manage sessions.
-Service keys stay on the backend. Anonymous keys alone cannot use this facade.
+Service keys stay on the backend. The preset catalog is public; anonymous keys cannot create or manage sessions.
 
 When both credentials are configured, management operations use the service key.
-Granted session reads, commands, files, and HTTP access use the signed-in user.
+Handles returned by `create` keep using service credentials for subsequent operations.
+Handles returned by `get` use the signed-in user for granted reads, commands, files,
+and HTTP access.
+
+Creation and execution use explicit keyword arguments. Unknown keywords raise
+`ArgumentError`; pass a keyword options hash with `**options`.

@@ -23,7 +23,9 @@ module Volcano
   end
 
   class SandboxAccess
-    @values: Hash[Symbol, String]
+    @url: String
+    @token: String
+    @expires_at: Time
   end
 
   class SandboxRequests
@@ -31,7 +33,11 @@ module Volcano
     USER_OPERATIONS: Array[Symbol]
     @client: _SandboxClient
     @transport: _SandboxTransport
-    def initialize: (_SandboxClient client, _SandboxTransport transport) -> void
+    @service_only: bool
+    def initialize: (_SandboxClient client, _SandboxTransport transport, ?service_only: bool) -> void
+    def service_scope: () -> SandboxRequests
+    private def user_request?: (SandboxRequest request) -> bool
+    def self.expiry: ((Time | String) value) -> String
     def call: (SandboxRequest request, ?status: Integer) -> Object?
     private def dispatch: (SandboxRequest request, String token) -> Transport::Response
     def self.identifier: (Object? value) -> String
@@ -42,6 +48,7 @@ module Volcano
 
   module SandboxResponse
     STATES: Array[String]
+    def self.timestamp: (Object? value) -> Time
     def self.text: (Object? value) -> String
     def self.integer: (Object? value) -> Integer
     def self.flag: (Object? value) -> bool
@@ -61,7 +68,7 @@ module Volcano
   class SandboxSession
     @requests: SandboxRequests
     def initialize: (SandboxRequests requests, Object? value) -> void
-    private def cleanup: (Exception? original_error) -> (SandboxSession | nil)
+    private def cleanup: (bool unwinding) -> (SandboxSession | nil)
     private def update: (Symbol operation, ?status: Integer) -> SandboxSession
     private def assign_state: (Hash[String, json_value] data) -> void
   end

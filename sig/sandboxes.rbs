@@ -43,37 +43,40 @@ module Volcano
   class SandboxAccess
     attr_reader url: String
     attr_reader token: String
-    attr_reader expires_at: String
-    def initialize: (url: String, token: String, expires_at: String) -> void
+    attr_reader expires_at: Time
+    def initialize: (url: String, token: String, expires_at: Time) -> void
     def inspect: () -> String
   end
 
   class Sandboxes
+    def inspect: () -> String
     def presets: () -> Array[SandboxPreset]
-    def create: (String project_id, sandbox_create_options options) -> SandboxSession
+    def create: (String project_id, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?max_duration_seconds: Integer?, ?idle_timeout_seconds: Integer?, ?request_id: String?) -> SandboxSession
     def get: (String session_id) -> SandboxSession
-    def exec: (String project_id, String command, sandbox_exec_options options) -> SandboxExecutionResult
-    def grant: (String session_id, String auth_user_id, expires_at: String) -> nil
+    def exec: (String project_id, String command, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?timeout_seconds: Integer, ?environment: Hash[String, String]?, ?request_id: String?) -> SandboxExecutionResult
+    def grant: (String session_id, String auth_user_id, expires_at: (Time | String)) -> nil
     def revoke: (String session_id, String auth_user_id) -> nil
   end
 
   class SandboxSession
+    def inspect: () -> String
     attr_reader id: String
     attr_reader project_id: String
     attr_reader region: String
     attr_reader state: String
-    attr_reader expires_at: String
+    attr_reader expires_at: Time
     attr_reader files: SandboxFiles
     def refresh: () -> SandboxSession
     def suspend: () -> SandboxSession
     def resume: () -> SandboxSession
     def terminate: () -> SandboxSession
-    def exec: (String command, ?sandbox_command_options options) -> SandboxCommandResult
+    def exec: (String command, ?timeout_seconds: Integer, ?environment: Hash[String, String]?, ?request_id: String?) -> SandboxCommandResult
     def access: (Integer port) -> SandboxAccess
     def use: [T] () { (SandboxSession) -> T } -> T
   end
 
   class SandboxFiles
+    def inspect: () -> String
     def read: (String path) -> String
     def write: (String path, String data) -> nil
   end

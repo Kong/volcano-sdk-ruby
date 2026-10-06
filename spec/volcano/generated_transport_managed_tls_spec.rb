@@ -29,6 +29,13 @@ module Volcano
       expect(request.to_hash[:tls]).to eq(mode: 'byoc', certificate_pem: 'certificate', private_key_pem: 'private key')
     end
 
+    it 'defaults an omitted custom-domain TLS mode to BYOC' do
+      material = { certificate_pem: 'certificate', private_key_pem: 'private key' }
+
+      expect(generated::FrontendCustomDomainTLSConfig.new(material).to_hash).to eq(mode: 'byoc', **material)
+      expect(generated::FrontendCustomDomainTLSConfig.build_from_hash(material).mode).to eq('byoc')
+    end
+
     it 'decodes the managed lifecycle and DNS records' do
       response = api_client.convert_to_type(managed_response, 'FrontendCustomDomainResponse')
 

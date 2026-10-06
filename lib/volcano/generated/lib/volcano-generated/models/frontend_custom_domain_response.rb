@@ -21,9 +21,10 @@ module Volcano::Generated
 
     attr_accessor :domain_status
 
+    # `verified`: the domain is served by a validated certificate. `pending`: it is not served yet, is being re-validated after its certificate material was withdrawn, or Volcano is retrying after a failure. `failed`: a failure left the domain unserved, alongside `domain_status: failed`; managed domains report the cause in `failure_reason`.
     attr_accessor :verification_status
 
-    # Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already verified the hostname. Treat unrecognized values as internal.
+    # Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
     attr_accessor :failure_reason
 
     attr_accessor :verification_records

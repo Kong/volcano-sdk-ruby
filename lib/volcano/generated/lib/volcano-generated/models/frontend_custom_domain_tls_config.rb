@@ -105,7 +105,7 @@ module Volcano::Generated
       if attributes.key?(:'mode')
         self.mode = attributes[:'mode']
       else
-        self.mode = nil
+        self.mode = 'byoc'
       end
 
       if attributes.key?(:'certificate_pem')

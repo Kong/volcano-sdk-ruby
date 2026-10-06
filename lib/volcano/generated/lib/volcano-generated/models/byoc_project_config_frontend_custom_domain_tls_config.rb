@@ -16,6 +16,7 @@ require 'time'
 module Volcano::Generated
   # Your own certificate. Send `certificate_pem` and `private_key_pem` together, with an optional `certificate_chain_pem`, to create the domain or rotate its certificate. For an existing BYOC domain, `mode: byoc` without certificate fields keeps the stored certificate; exports render only the mode.
   class BYOCProjectConfigFrontendCustomDomainTLSConfig < ApiModelBase
+    # Optional; a TLS block without `mode` is BYOC.
     attr_accessor :mode
 
     # PEM-encoded certificate for create or rotation. Requires private_key_pem. Omitted from exports.
@@ -103,8 +104,6 @@ module Volcano::Generated
 
       if attributes.key?(:'mode')
         self.mode = attributes[:'mode']
-      else
-        self.mode = nil
       end
 
       if attributes.key?(:'certificate_pem')
@@ -125,10 +124,6 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @mode.nil?
-        invalid_properties.push('invalid value for "mode", mode cannot be nil.')
-      end
-
       if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536
         invalid_properties.push('invalid value for "certificate_pem", the character length must be smaller than or equal to 65536.')
       end
@@ -148,7 +143,6 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @mode.nil?
       mode_validator = EnumAttributeValidator.new('String', ["byoc"])
       return false unless mode_validator.valid?(@mode)
       return false if !@certificate_pem.nil? && @certificate_pem.to_s.length > 65536

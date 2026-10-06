@@ -87,7 +87,7 @@ module Volcano::Generated
               return model unless model.nil?
             else
               # raise if data contains keys that are not known to the model
-              raise if const.respond_to?(:acceptable_attributes) && !(data.keys - const.acceptable_attributes).empty?
+              raise if const.respond_to?(:acceptable_attributes) && !(data.keys.map(&:to_sym) - const.acceptable_attributes).empty?
               model = const.build_from_hash(data)
               return model if model
             end

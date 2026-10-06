@@ -74,7 +74,7 @@ module Volcano
       expect(conflict.to_hash).to eq(error: 'custom domain already in use')
     end
 
-    it 'decodes discriminated project-config TLS from symbol keys' do
+    it 'decodes managed project-config TLS from symbol keys' do
       domain = generated::ApiModelBase._deserialize(
         'ProjectConfigCustomDomain', { domain: 'app.example.com', tls: { mode: 'managed' } }
       )
@@ -83,7 +83,16 @@ module Volcano
       expect(domain.to_hash).to eq(domain: 'app.example.com', tls: { mode: 'managed' })
     end
 
-    it 'decodes discriminated project-config TLS from string keys' do
+    it 'decodes managed project-config TLS from string keys' do
+      domain = generated::ApiModelBase._deserialize(
+        'ProjectConfigCustomDomain', { 'domain' => 'app.example.com', 'tls' => { 'mode' => 'managed' } }
+      )
+
+      expect(domain.tls).to be_a(generated::ManagedProjectConfigFrontendCustomDomainTLSConfig)
+      expect(domain.to_hash).to eq(domain: 'app.example.com', tls: { mode: 'managed' })
+    end
+
+    it 'decodes BYOC project-config TLS from string keys' do
       domain = generated::ApiModelBase._deserialize(
         'ProjectConfigCustomDomain', { 'domain' => 'app.example.com', 'tls' => { 'mode' => 'byoc' } }
       )
@@ -92,9 +101,29 @@ module Volcano
       expect(domain.to_hash).to eq(domain: 'app.example.com', tls: { mode: 'byoc' })
     end
 
+    [{}, { certificate_pem: 'certificate', private_key_pem: 'private key' }].each do |tls|
+      [tls, tls.transform_keys(&:to_s)].uniq.each do |input|
+        it "decodes project-config TLS without a mode as BYOC from #{input.inspect}" do
+          domain = generated::ApiModelBase._deserialize(
+            'ProjectConfigCustomDomain', { domain: 'app.example.com', tls: input }
+          )
+
+          expect(domain.tls).to be_a(generated::BYOCProjectConfigFrontendCustomDomainTLSConfig)
+          expect(domain.tls.mode).to be_nil
+          expect(domain.to_hash).to eq(domain: 'app.example.com', tls: tls)
+        end
+      end
+    end
+
     it 'does not accept unknown project-config TLS modes' do
       expect(generated::ApiModelBase._deserialize('ProjectConfigFrontendCustomDomainTLSConfig', mode: 'other'))
         .to be_nil
+    end
+
+    it 'does not accept certificate material on managed project-config TLS' do
+      expect(generated::ApiModelBase._deserialize(
+               'ProjectConfigFrontendCustomDomainTLSConfig', mode: 'managed', certificate_pem: 'certificate'
+             )).to be_nil
     end
   end
 end

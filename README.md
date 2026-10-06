@@ -1,6 +1,6 @@
 # Volcano Ruby SDK
 
-Official Ruby SDK for Volcano. Requires Ruby 3.2 or later.
+Official Ruby SDK for Volcano. Requires Ruby 3.3 or later.
 
 Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
 

@@ -39,7 +39,7 @@ RSpec.describe RuboCop::DirectiveComment do
   end
 
   def directives(path)
-    source = RuboCop::ProcessedSource.from_file(File.join(root, path), 3.2)
+    source = RuboCop::ProcessedSource.from_file(File.join(root, path), 3.3)
     source.comments.filter_map do |comment|
       next unless RuboCop::DirectiveComment.new(comment).mode
 

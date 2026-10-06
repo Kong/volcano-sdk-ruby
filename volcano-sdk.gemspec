@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.summary = 'Official Ruby SDK for Volcano'
   spec.homepage = 'https://github.com/Kong/volcano-sdk-ruby'
   spec.license = 'Apache-2.0'
-  spec.required_ruby_version = '>= 3.2'
+  spec.required_ruby_version = '>= 3.3'
   spec.files = Dir[
     'lib/volcano.rb',
     'lib/volcano/*.rb',

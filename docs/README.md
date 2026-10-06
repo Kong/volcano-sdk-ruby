@@ -6,7 +6,7 @@ order: 1
 
 Use `volcano-sdk` for authentication, database queries, storage, functions, logs, locks, and realtime events.
 REST calls are synchronous and raise typed exceptions on failure.
-Ruby 3.2 or later is required; CI tests Ruby 3.2 and 3.4.
+Ruby 3.3 or later is required; CI tests Ruby 3.3 and 3.4.
 
 ## Install the published gem
 

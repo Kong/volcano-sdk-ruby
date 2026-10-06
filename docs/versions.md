@@ -16,7 +16,7 @@ Commit `Gemfile` and `Gemfile.lock`. Install in Bundler frozen mode in CI and de
 
 ## Runtime and compatibility
 
-Use Ruby 3.2 or later. Native CI tests Ruby 3.2 and 3.4; it does not test every intervening interpreter release. REST methods are synchronous, while realtime uses an asynchronous task lifecycle.
+Use Ruby 3.3 or later. Native CI tests Ruby 3.3 and 3.4; it does not test every intervening interpreter release. REST methods are synchronous, while realtime uses an asynchronous task lifecycle.
 
 The gem is currently on the 0.x release line. Treat a minor-version update as potentially incompatible and read its release notes before upgrading.
 JavaScript, Python and Ruby releases have independent version numbers; matching numbers are not a compatibility requirement.

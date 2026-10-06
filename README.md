@@ -881,7 +881,7 @@ delivery.
 
 ## Dependencies
 
-Installing `volcano-sdk` pulls in eight gems, plus their own transitive
+Installing `volcano-sdk` pulls in nine gems, plus their own transitive
 dependencies:
 
 | Gem                                                          | Why                                                                     |
@@ -892,6 +892,7 @@ dependencies:
 | [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |
 | [`async-websocket`](https://rubygems.org/gems/async-websocket) | The realtime transport itself                                         |
 | [`protocol-rack`](https://rubygems.org/gems/protocol-rack)   | A requirement of `async-websocket`, pinned here so the version is ours  |
+| [`io-event`](https://rubygems.org/gems/io-event)             | The event loop under `async`, with a floor at the release that fixes AIKIDO-2026-10943 |
 | [`base64`](https://rubygems.org/gems/base64)                 | Required by the generated client, and no longer a default gem since Ruby 3.4 |
 | [`json`](https://rubygems.org/gems/json)                     | Request and response encoding for the generated client                  |
 

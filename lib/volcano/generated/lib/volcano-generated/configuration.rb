@@ -276,6 +276,14 @@ module Volcano::Generated
             key: 'Authorization',
             value: "Bearer #{access_token_with_refresh}"
           },
+        'ProjectAccessToken' =>
+          {
+            type: 'bearer',
+            in: 'header',
+            format: 'opaque',
+            key: 'Authorization',
+            value: "Bearer #{access_token_with_refresh}"
+          },
       }
     end
 

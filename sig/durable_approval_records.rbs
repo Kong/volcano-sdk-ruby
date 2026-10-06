@@ -1,0 +1,218 @@
+module Volcano
+  class DurableApprovalFunction < Data
+    attr_reader id: String?
+    attr_reader name: String
+
+    def self.new: (String? id, String name) -> DurableApprovalFunction
+                | (id: String?, name: String) -> DurableApprovalFunction
+    def self.[]: (String? id, String name) -> DurableApprovalFunction
+               | (id: String?, name: String) -> DurableApprovalFunction
+    def self.members: () -> [:id, :name]
+
+    def initialize: (id: String?, name: String) -> void
+    def members: () -> [:id, :name]
+    def with: (?id: String?, ?name: String) -> DurableApprovalFunction
+    def to_h: () -> { id: String?, name: String }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String?, String]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+
+  class DurableApprovalExecution < Data
+    attr_reader id: String?
+    attr_reader name: String
+    attr_reader status: String?
+
+    def self.new: (String? id, String name, String? status) -> DurableApprovalExecution
+                | (id: String?, name: String, status: String?) -> DurableApprovalExecution
+    def self.[]: (String? id, String name, String? status) -> DurableApprovalExecution
+               | (id: String?, name: String, status: String?) -> DurableApprovalExecution
+    def self.members: () -> [:id, :name, :status]
+
+    def initialize: (id: String?, name: String, status: String?) -> void
+    def members: () -> [:id, :name, :status]
+    def with: (?id: String?, ?name: String, ?status: String?) -> DurableApprovalExecution
+    def to_h: () -> { id: String?, name: String, status: String? }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String?, String, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+
+  class DurableApprovalDecider < Data
+    attr_reader id: String
+    attr_reader email: String
+
+    def self.new: (String id, String email) -> DurableApprovalDecider
+                | (id: String, email: String) -> DurableApprovalDecider
+    def self.[]: (String id, String email) -> DurableApprovalDecider
+               | (id: String, email: String) -> DurableApprovalDecider
+    def self.members: () -> [:id, :email]
+
+    def initialize: (id: String, email: String) -> void
+    def members: () -> [:id, :email]
+    def with: (?id: String, ?email: String) -> DurableApprovalDecider
+    def to_h: () -> { id: String, email: String }
+            | [K, V] () { (Symbol, String) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String]
+  end
+
+  class DurableApprovalDecision < Data
+    attr_reader comment: String
+    attr_reader decided_by: DurableApprovalDecider?
+    attr_reader decided_at: Time
+
+    def self.new: (String comment, DurableApprovalDecider? decided_by, Time decided_at) -> DurableApprovalDecision
+                | (comment: String, decided_by: DurableApprovalDecider?, decided_at: Time) -> DurableApprovalDecision
+    def self.[]: (String comment, DurableApprovalDecider? decided_by, Time decided_at) -> DurableApprovalDecision
+               | (comment: String, decided_by: DurableApprovalDecider?, decided_at: Time) -> DurableApprovalDecision
+    def self.members: () -> [:comment, :decided_by, :decided_at]
+
+    def initialize: (comment: String, decided_by: DurableApprovalDecider?, decided_at: Time) -> void
+    def members: () -> [:comment, :decided_by, :decided_at]
+    def with: (?comment: String, ?decided_by: DurableApprovalDecider?, ?decided_at: Time) -> DurableApprovalDecision
+    def to_h: () -> { comment: String, decided_by: DurableApprovalDecider?, decided_at: Time }
+            | [K, V] () { (Symbol, String | DurableApprovalDecider | Time | nil) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, DurableApprovalDecider?, Time]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | DurableApprovalDecider | Time | nil]
+  end
+
+  class DurableApproval < Data
+    type field = String | json_value | DurableApprovalFunction | DurableApprovalExecution | Time | DurableApprovalDecision | nil
+
+    attr_reader id: String
+    attr_reader status: String
+    attr_reader name: String
+    attr_reader title: String
+    attr_reader description: String
+    attr_reader details: json_value
+    attr_reader function: DurableApprovalFunction
+    attr_reader execution: DurableApprovalExecution
+    attr_reader requested_at: Time
+    attr_reader expires_at: Time?
+    attr_reader decision: DurableApprovalDecision?
+
+    def self.new: (String id, String status, String name, String title, String description, json_value details, DurableApprovalFunction function, DurableApprovalExecution execution, Time requested_at, ?Time? expires_at, ?DurableApprovalDecision? decision) -> DurableApproval
+                | (id: String, status: String, name: String, title: String, description: String, ?details: json_value, function: DurableApprovalFunction, execution: DurableApprovalExecution, requested_at: Time, ?expires_at: Time?, ?decision: DurableApprovalDecision?) -> DurableApproval
+    def self.[]: (String id, String status, String name, String title, String description, json_value details, DurableApprovalFunction function, DurableApprovalExecution execution, Time requested_at, ?Time? expires_at, ?DurableApprovalDecision? decision) -> DurableApproval
+               | (id: String, status: String, name: String, title: String, description: String, ?details: json_value, function: DurableApprovalFunction, execution: DurableApprovalExecution, requested_at: Time, ?expires_at: Time?, ?decision: DurableApprovalDecision?) -> DurableApproval
+    def self.members: () -> [:id, :status, :name, :title, :description, :details, :function, :execution, :requested_at, :expires_at, :decision]
+
+    private def initialize: (**field attributes) -> void
+    def members: () -> [:id, :status, :name, :title, :description, :details, :function, :execution, :requested_at, :expires_at, :decision]
+    def with: (?id: String, ?status: String, ?name: String, ?title: String, ?description: String, ?details: json_value, ?function: DurableApprovalFunction, ?execution: DurableApprovalExecution, ?requested_at: Time, ?expires_at: Time?, ?decision: DurableApprovalDecision?) -> DurableApproval
+    def to_h: () -> { id: String, status: String, name: String, title: String, description: String, details: json_value, function: DurableApprovalFunction, execution: DurableApprovalExecution, requested_at: Time, expires_at: Time?, decision: DurableApprovalDecision? }
+            | [K, V] () { (Symbol, field) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, String, String, String, json_value, DurableApprovalFunction, DurableApprovalExecution, Time, Time?, DurableApprovalDecision?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, field]
+  end
+
+  class DurableApprovalPage < Data
+    attr_reader approvals: Array[DurableApproval]
+    attr_reader page: Integer
+    attr_reader limit: Integer
+    attr_reader total: Integer
+    attr_reader has_more: bool
+
+    def self.new: (Enumerable[DurableApproval] approvals, Integer page, Integer limit, Integer total, bool has_more) -> DurableApprovalPage
+                | (approvals: Enumerable[DurableApproval], page: Integer, limit: Integer, total: Integer, has_more: bool) -> DurableApprovalPage
+    def self.[]: (Enumerable[DurableApproval] approvals, Integer page, Integer limit, Integer total, bool has_more) -> DurableApprovalPage
+               | (approvals: Enumerable[DurableApproval], page: Integer, limit: Integer, total: Integer, has_more: bool) -> DurableApprovalPage
+    def self.members: () -> [:approvals, :page, :limit, :total, :has_more]
+
+    def initialize: (approvals: Enumerable[DurableApproval], page: Integer, limit: Integer, total: Integer, has_more: bool) -> void
+    def members: () -> [:approvals, :page, :limit, :total, :has_more]
+    def with: (?approvals: Enumerable[DurableApproval], ?page: Integer, ?limit: Integer, ?total: Integer, ?has_more: bool) -> DurableApprovalPage
+    def to_h: () -> { approvals: Array[DurableApproval], page: Integer, limit: Integer, total: Integer, has_more: bool }
+            | [K, V] () { (Symbol, Array[DurableApproval] | Integer | bool) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[DurableApproval], Integer, Integer, Integer, bool]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[DurableApproval] | Integer | bool]
+  end
+
+  class DurableApprovalCounts < Data
+    attr_reader requested: Integer
+    attr_reader pending: Integer
+    attr_reader approved: Integer
+    attr_reader denied: Integer
+    attr_reader expired: Integer
+    attr_reader cancelled: Integer
+
+    def self.new: (Integer requested, Integer pending, Integer approved, Integer denied, Integer expired, Integer cancelled) -> DurableApprovalCounts
+                | (requested: Integer, pending: Integer, approved: Integer, denied: Integer, expired: Integer, cancelled: Integer) -> DurableApprovalCounts
+    def self.[]: (Integer requested, Integer pending, Integer approved, Integer denied, Integer expired, Integer cancelled) -> DurableApprovalCounts
+               | (requested: Integer, pending: Integer, approved: Integer, denied: Integer, expired: Integer, cancelled: Integer) -> DurableApprovalCounts
+    def self.members: () -> [:requested, :pending, :approved, :denied, :expired, :cancelled]
+
+    def members: () -> [:requested, :pending, :approved, :denied, :expired, :cancelled]
+    def with: (?requested: Integer, ?pending: Integer, ?approved: Integer, ?denied: Integer, ?expired: Integer, ?cancelled: Integer) -> DurableApprovalCounts
+    def to_h: () -> { requested: Integer, pending: Integer, approved: Integer, denied: Integer, expired: Integer, cancelled: Integer }
+            | [K, V] () { (Symbol, Integer) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Integer, Integer, Integer, Integer, Integer, Integer]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Integer]
+  end
+
+  class DurableApprovalFunctionCounts < Data
+    attr_reader function: DurableApprovalFunction
+    attr_reader counts: DurableApprovalCounts
+
+    def self.new: (DurableApprovalFunction function, DurableApprovalCounts counts) -> DurableApprovalFunctionCounts
+                | (function: DurableApprovalFunction, counts: DurableApprovalCounts) -> DurableApprovalFunctionCounts
+    def self.[]: (DurableApprovalFunction function, DurableApprovalCounts counts) -> DurableApprovalFunctionCounts
+               | (function: DurableApprovalFunction, counts: DurableApprovalCounts) -> DurableApprovalFunctionCounts
+    def self.members: () -> [:function, :counts]
+
+    def members: () -> [:function, :counts]
+    def with: (?function: DurableApprovalFunction, ?counts: DurableApprovalCounts) -> DurableApprovalFunctionCounts
+    def to_h: () -> { function: DurableApprovalFunction, counts: DurableApprovalCounts }
+            | [K, V] () { (Symbol, DurableApprovalFunction | DurableApprovalCounts) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [DurableApprovalFunction, DurableApprovalCounts]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, DurableApprovalFunction | DurableApprovalCounts]
+  end
+
+  class DurableApprovalDailyCounts < Data
+    attr_reader date: String
+    attr_reader counts: DurableApprovalCounts
+
+    def self.new: (String date, DurableApprovalCounts counts) -> DurableApprovalDailyCounts
+                | (date: String, counts: DurableApprovalCounts) -> DurableApprovalDailyCounts
+    def self.[]: (String date, DurableApprovalCounts counts) -> DurableApprovalDailyCounts
+               | (date: String, counts: DurableApprovalCounts) -> DurableApprovalDailyCounts
+    def self.members: () -> [:date, :counts]
+
+    def initialize: (date: String, counts: DurableApprovalCounts) -> void
+    def members: () -> [:date, :counts]
+    def with: (?date: String, ?counts: DurableApprovalCounts) -> DurableApprovalDailyCounts
+    def to_h: () -> { date: String, counts: DurableApprovalCounts }
+            | [K, V] () { (Symbol, String | DurableApprovalCounts) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, DurableApprovalCounts]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | DurableApprovalCounts]
+  end
+
+  class DurableApprovalStats < Data
+    type field = Time | DurableApprovalCounts | Float | Array[DurableApprovalFunctionCounts] | Array[DurableApprovalDailyCounts] | nil
+
+    attr_reader from: Time
+    attr_reader to: Time
+    attr_reader counts: DurableApprovalCounts
+    attr_reader approval_rate: Float?
+    attr_reader median_seconds_to_decision: Float?
+    attr_reader p90_seconds_to_decision: Float?
+    attr_reader functions: Array[DurableApprovalFunctionCounts]
+    attr_reader other_functions: DurableApprovalCounts
+    attr_reader daily: Array[DurableApprovalDailyCounts]
+
+    def self.new: (Time from, Time to, DurableApprovalCounts counts, Float? approval_rate, Float? median_seconds_to_decision, Float? p90_seconds_to_decision, Array[DurableApprovalFunctionCounts] functions, DurableApprovalCounts other_functions, Array[DurableApprovalDailyCounts] daily) -> DurableApprovalStats
+                | (from: Time, to: Time, counts: DurableApprovalCounts, ?approval_rate: Float?, ?median_seconds_to_decision: Float?, ?p90_seconds_to_decision: Float?, functions: Array[DurableApprovalFunctionCounts], other_functions: DurableApprovalCounts, daily: Array[DurableApprovalDailyCounts]) -> DurableApprovalStats
+    def self.[]: (Time from, Time to, DurableApprovalCounts counts, Float? approval_rate, Float? median_seconds_to_decision, Float? p90_seconds_to_decision, Array[DurableApprovalFunctionCounts] functions, DurableApprovalCounts other_functions, Array[DurableApprovalDailyCounts] daily) -> DurableApprovalStats
+               | (from: Time, to: Time, counts: DurableApprovalCounts, ?approval_rate: Float?, ?median_seconds_to_decision: Float?, ?p90_seconds_to_decision: Float?, functions: Array[DurableApprovalFunctionCounts], other_functions: DurableApprovalCounts, daily: Array[DurableApprovalDailyCounts]) -> DurableApprovalStats
+    def self.members: () -> [:from, :to, :counts, :approval_rate, :median_seconds_to_decision, :p90_seconds_to_decision, :functions, :other_functions, :daily]
+
+    private def initialize: (**field attributes) -> void
+    def members: () -> [:from, :to, :counts, :approval_rate, :median_seconds_to_decision, :p90_seconds_to_decision, :functions, :other_functions, :daily]
+    def with: (?from: Time, ?to: Time, ?counts: DurableApprovalCounts, ?approval_rate: Float?, ?median_seconds_to_decision: Float?, ?p90_seconds_to_decision: Float?, ?functions: Array[DurableApprovalFunctionCounts], ?other_functions: DurableApprovalCounts, ?daily: Array[DurableApprovalDailyCounts]) -> DurableApprovalStats
+    def to_h: () -> { from: Time, to: Time, counts: DurableApprovalCounts, approval_rate: Float?, median_seconds_to_decision: Float?, p90_seconds_to_decision: Float?, functions: Array[DurableApprovalFunctionCounts], other_functions: DurableApprovalCounts, daily: Array[DurableApprovalDailyCounts] }
+            | [K, V] () { (Symbol, field) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Time, Time, DurableApprovalCounts, Float?, Float?, Float?, Array[DurableApprovalFunctionCounts], DurableApprovalCounts, Array[DurableApprovalDailyCounts]]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, field]
+  end
+end

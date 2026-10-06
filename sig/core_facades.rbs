@@ -67,7 +67,20 @@ module Volcano
     def invoke: (String name, ?sdk_payload payload) -> FunctionResponse
   end
 
+  class DurableApprovals
+    MAX_FUNCTION_LENGTH: Integer
+    MAX_COMMENT_LENGTH: Integer
+
+    def list: (String project_id, ?status: String?, ?function: String?, ?execution_id: String?, ?from: (Time | String)?, ?to: (Time | String)?, ?page: Integer?, ?limit: Integer?) -> DurableApprovalPage
+    def get: (String project_id, String approval_id) -> DurableApproval
+    def stats: (String project_id, ?function: String?, ?from: (Time | String)?, ?to: (Time | String)?) -> DurableApprovalStats
+    def approve: (String project_id, String approval_id, ?comment: String?) -> DurableApproval
+    def deny: (String project_id, String approval_id, ?comment: String?) -> DurableApproval
+  end
+
   class Durable
+    attr_reader approvals: DurableApprovals
+
     def start: (String function_name, ?sdk_payload payload, ?execution_name: String?) -> DurableExecution
     def get: (String project_id, String function_name, String execution_id) -> DurableExecution
     def list: (String project_id, String function_name, ?status: String?, ?page: Integer?, ?limit: Integer?) -> DurableExecutionPage

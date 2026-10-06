@@ -19,6 +19,82 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
+    # Approve a durable approval
+    # Approves a pending approval. The workflow resumes with the decision.  Only a person can decide: use the dashboard or a platform token from `volcano login`. Project access tokens are refused with `403`.  Approving an approval that is already approved returns it unchanged. If the workflow cannot be reached right away, the decision still stands and Volcano keeps delivering it. 
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableApprovalDecisionRequest] :durable_approval_decision_request 
+    # @return [DurableApproval]
+    def approve_durable_approval(id, approval_id, opts = {})
+      data, _status_code, _headers = approve_durable_approval_with_http_info(id, approval_id, opts)
+      data
+    end
+
+    # Approve a durable approval
+    # Approves a pending approval. The workflow resumes with the decision.  Only a person can decide: use the dashboard or a platform token from &#x60;volcano login&#x60;. Project access tokens are refused with &#x60;403&#x60;.  Approving an approval that is already approved returns it unchanged. If the workflow cannot be reached right away, the decision still stands and Volcano keeps delivering it. 
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableApprovalDecisionRequest] :durable_approval_decision_request 
+    # @return [Array<(DurableApproval, Integer, Hash)>] DurableApproval data, response status code and response headers
+    def approve_durable_approval_with_http_info(id, approval_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.approve_durable_approval ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.approve_durable_approval"
+      end
+      # verify the required parameter 'approval_id' is set
+      if @api_client.config.client_side_validation && approval_id.nil?
+        fail ArgumentError, "Missing the required parameter 'approval_id' when calling DurableFunctionsApi.approve_durable_approval"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-approvals/{approvalId}/approve'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'approvalId' + '}', CGI.escape(approval_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(opts[:'durable_approval_decision_request'])
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableApproval'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.approve_durable_approval",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#approve_durable_approval\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Create or update a durable function
     # Upload a durable function source bundle. Creates the function on the first call for a name and redeploys it on every call after that, the same create-or-update contract `POST /projects/{id}/functions` has.  Volcano builds and deploys asynchronously. A deployment that starts immediately returns `status: provisioning`, then transitions to `active` or `failed`; a deployment that has to wait for a running one is exposed through `pending_deployment_id`. Existing executions keep running against the runtime they started on.  The `durable` configuration is derived from the project's plan rather than supplied here, and is fixed once the function exists. A name already held by a standard function is rejected with 409: a function cannot change kind. 
     # @param id [String] Project ID
@@ -360,6 +436,229 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Deny a durable approval
+    # Denies a pending approval. The workflow resumes with the decision; a denial is a value the workflow branches on, not an error.  Only a person can decide: use the dashboard or a platform token from `volcano login`. Project access tokens are refused with `403`.  Denying an approval that is already denied returns it unchanged. If the workflow cannot be reached right away, the decision still stands and Volcano keeps delivering it. 
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableApprovalDecisionRequest] :durable_approval_decision_request 
+    # @return [DurableApproval]
+    def deny_durable_approval(id, approval_id, opts = {})
+      data, _status_code, _headers = deny_durable_approval_with_http_info(id, approval_id, opts)
+      data
+    end
+
+    # Deny a durable approval
+    # Denies a pending approval. The workflow resumes with the decision; a denial is a value the workflow branches on, not an error.  Only a person can decide: use the dashboard or a platform token from &#x60;volcano login&#x60;. Project access tokens are refused with &#x60;403&#x60;.  Denying an approval that is already denied returns it unchanged. If the workflow cannot be reached right away, the decision still stands and Volcano keeps delivering it. 
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableApprovalDecisionRequest] :durable_approval_decision_request 
+    # @return [Array<(DurableApproval, Integer, Hash)>] DurableApproval data, response status code and response headers
+    def deny_durable_approval_with_http_info(id, approval_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.deny_durable_approval ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.deny_durable_approval"
+      end
+      # verify the required parameter 'approval_id' is set
+      if @api_client.config.client_side_validation && approval_id.nil?
+        fail ArgumentError, "Missing the required parameter 'approval_id' when calling DurableFunctionsApi.deny_durable_approval"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-approvals/{approvalId}/deny'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'approvalId' + '}', CGI.escape(approval_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(opts[:'durable_approval_decision_request'])
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableApproval'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.deny_durable_approval",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#deny_durable_approval\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get a durable approval
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @return [DurableApproval]
+    def get_durable_approval(id, approval_id, opts = {})
+      data, _status_code, _headers = get_durable_approval_with_http_info(id, approval_id, opts)
+      data
+    end
+
+    # Get a durable approval
+    # @param id [String] Project ID
+    # @param approval_id [String] Durable approval ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableApproval, Integer, Hash)>] DurableApproval data, response status code and response headers
+    def get_durable_approval_with_http_info(id, approval_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.get_durable_approval ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.get_durable_approval"
+      end
+      # verify the required parameter 'approval_id' is set
+      if @api_client.config.client_side_validation && approval_id.nil?
+        fail ArgumentError, "Missing the required parameter 'approval_id' when calling DurableFunctionsApi.get_durable_approval"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-approvals/{approvalId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'approvalId' + '}', CGI.escape(approval_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableApproval'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.get_durable_approval",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_approval\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get durable approval statistics
+    # Counts the project's approvals by outcome over a time window, overall, per workflow, and per day. The window defaults to the last 30 days and can cover up to a year. An approval is counted on the day it was requested.  Project access tokens can read statistics, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :function Only approvals requested by this durable function, given by id or by name. A name also matches approvals from a deleted function of that name. 
+    # @option opts [Time] :from Start of the window. Defaults to 30 days before &#x60;to&#x60;.
+    # @option opts [Time] :to End of the window. Defaults to now.
+    # @return [DurableApprovalStats]
+    def get_durable_approval_stats(id, opts = {})
+      data, _status_code, _headers = get_durable_approval_stats_with_http_info(id, opts)
+      data
+    end
+
+    # Get durable approval statistics
+    # Counts the project&#39;s approvals by outcome over a time window, overall, per workflow, and per day. The window defaults to the last 30 days and can cover up to a year. An approval is counted on the day it was requested.  Project access tokens can read statistics, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :function Only approvals requested by this durable function, given by id or by name. A name also matches approvals from a deleted function of that name. 
+    # @option opts [Time] :from Start of the window. Defaults to 30 days before &#x60;to&#x60;.
+    # @option opts [Time] :to End of the window. Defaults to now.
+    # @return [Array<(DurableApprovalStats, Integer, Hash)>] DurableApprovalStats data, response status code and response headers
+    def get_durable_approval_stats_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.get_durable_approval_stats ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.get_durable_approval_stats"
+      end
+      if @api_client.config.client_side_validation && !opts[:'function'].nil? && opts[:'function'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"function"]" when calling DurableFunctionsApi.get_durable_approval_stats, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'function'].nil? && opts[:'function'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"function"]" when calling DurableFunctionsApi.get_durable_approval_stats, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/durable-approvals/stats'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'function'] = opts[:'function'] if !opts[:'function'].nil?
+      query_params[:'from'] = opts[:'from'] if !opts[:'from'].nil?
+      query_params[:'to'] = opts[:'to'] if !opts[:'to'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableApprovalStats'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.get_durable_approval_stats",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_approval_stats\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get a durable execution
     # Returns the execution's current state, including its `result` once it has succeeded. Poll this to wait for an execution to finish. 
     # @param id [String] Project ID
@@ -571,6 +870,110 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_function_scheduler\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List durable approvals
+    # Lists the approvals durable workflows in the project have requested, newest first. Pending approvals are the ones a workflow is waiting on; decided, expired, and cancelled ones are kept for a year.  Project access tokens can list approvals, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [DurableApprovalStatus] :status Return only approvals in this status.
+    # @option opts [String] :function Only approvals requested by this durable function, given by id or by name. A name also matches approvals from a deleted function of that name. 
+    # @option opts [String] :execution_id Return only approvals requested by this durable execution.
+    # @option opts [Time] :from Return only approvals requested at or after this time.
+    # @option opts [Time] :to Return only approvals requested before this time.
+    # @return [PaginatedDurableApprovals]
+    def list_durable_approvals(id, opts = {})
+      data, _status_code, _headers = list_durable_approvals_with_http_info(id, opts)
+      data
+    end
+
+    # List durable approvals
+    # Lists the approvals durable workflows in the project have requested, newest first. Pending approvals are the ones a workflow is waiting on; decided, expired, and cancelled ones are kept for a year.  Project access tokens can list approvals, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [DurableApprovalStatus] :status Return only approvals in this status.
+    # @option opts [String] :function Only approvals requested by this durable function, given by id or by name. A name also matches approvals from a deleted function of that name. 
+    # @option opts [String] :execution_id Return only approvals requested by this durable execution.
+    # @option opts [Time] :from Return only approvals requested at or after this time.
+    # @option opts [Time] :to Return only approvals requested before this time.
+    # @return [Array<(PaginatedDurableApprovals, Integer, Hash)>] PaginatedDurableApprovals data, response status code and response headers
+    def list_durable_approvals_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_approvals ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.list_durable_approvals"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page'].nil? && opts[:'page'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"page"]" when calling DurableFunctionsApi.list_durable_approvals, must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 100
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_approvals, must be smaller than or equal to 100.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_approvals, must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'function'].nil? && opts[:'function'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"function"]" when calling DurableFunctionsApi.list_durable_approvals, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'function'].nil? && opts[:'function'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"function"]" when calling DurableFunctionsApi.list_durable_approvals, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/durable-approvals'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'page'] = opts[:'page'] if !opts[:'page'].nil?
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+      query_params[:'status'] = opts[:'status'] if !opts[:'status'].nil?
+      query_params[:'function'] = opts[:'function'] if !opts[:'function'].nil?
+      query_params[:'execution_id'] = opts[:'execution_id'] if !opts[:'execution_id'].nil?
+      query_params[:'from'] = opts[:'from'] if !opts[:'from'].nil?
+      query_params[:'to'] = opts[:'to'] if !opts[:'to'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'PaginatedDurableApprovals'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_approvals",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_approvals\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -903,6 +1306,74 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_functions\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Request an approval from inside a workflow
+    # Registers an approval request for a running durable execution. The Volcano SDK calls this from `ctx.waitForApproval`; applications do not call it directly.  `execution_ref` and `callback_id` are opaque values the SDK reads from the running workflow. Together they are the request's credential, so the operation takes no other authentication. The approval belongs to the project that owns the execution, and expires when the workflow's own approval timeout does.  Retrying is safe: a request for an approval that is already registered returns it with `200`. 
+    # @param request_durable_approval_request [RequestDurableApprovalRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [DurableApprovalRegistration]
+    def request_durable_approval(request_durable_approval_request, opts = {})
+      data, _status_code, _headers = request_durable_approval_with_http_info(request_durable_approval_request, opts)
+      data
+    end
+
+    # Request an approval from inside a workflow
+    # Registers an approval request for a running durable execution. The Volcano SDK calls this from &#x60;ctx.waitForApproval&#x60;; applications do not call it directly.  &#x60;execution_ref&#x60; and &#x60;callback_id&#x60; are opaque values the SDK reads from the running workflow. Together they are the request&#39;s credential, so the operation takes no other authentication. The approval belongs to the project that owns the execution, and expires when the workflow&#39;s own approval timeout does.  Retrying is safe: a request for an approval that is already registered returns it with &#x60;200&#x60;. 
+    # @param request_durable_approval_request [RequestDurableApprovalRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableApprovalRegistration, Integer, Hash)>] DurableApprovalRegistration data, response status code and response headers
+    def request_durable_approval_with_http_info(request_durable_approval_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.request_durable_approval ...'
+      end
+      # verify the required parameter 'request_durable_approval_request' is set
+      if @api_client.config.client_side_validation && request_durable_approval_request.nil?
+        fail ArgumentError, "Missing the required parameter 'request_durable_approval_request' when calling DurableFunctionsApi.request_durable_approval"
+      end
+      # resource path
+      local_var_path = '/durable-approvals'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(request_durable_approval_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableApprovalRegistration'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.request_durable_approval",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#request_durable_approval\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

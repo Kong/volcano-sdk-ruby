@@ -11,6 +11,9 @@ module Volcano
     class AuthenticationError < VolcanoError
     end
 
+    class PermissionError < AuthenticationError
+    end
+
     class ValidationError < VolcanoError
     end
 

@@ -61,6 +61,147 @@
     ]
   },
   {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApproval",
+    "methods": [
+      "decision",
+      "deconstruct",
+      "deconstruct_keys",
+      "description",
+      "details",
+      "execution",
+      "expires_at",
+      "function",
+      "id",
+      "members",
+      "name",
+      "requested_at",
+      "self.[]",
+      "self.members",
+      "status",
+      "title",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalDailyCounts",
+    "methods": [
+      "counts",
+      "date",
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalDecider",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "email",
+      "id",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalDecision",
+    "methods": [
+      "comment",
+      "decided_at",
+      "decided_by",
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalExecution",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "id",
+      "members",
+      "name",
+      "self.[]",
+      "self.members",
+      "status",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalFunction",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "id",
+      "members",
+      "name",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalPage",
+    "methods": [
+      "approvals",
+      "deconstruct",
+      "deconstruct_keys",
+      "has_more",
+      "limit",
+      "members",
+      "page",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "total",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_approval_models.rb",
+    "scope": "Volcano::DurableApprovalStats",
+    "methods": [
+      "approval_rate",
+      "counts",
+      "daily",
+      "deconstruct",
+      "deconstruct_keys",
+      "from",
+      "functions",
+      "median_seconds_to_decision",
+      "members",
+      "other_functions",
+      "p90_seconds_to_decision",
+      "self.[]",
+      "self.members",
+      "to",
+      "to_h",
+      "with"
+    ]
+  },
+  {
     "path": "lib/volcano/errors.rb",
     "scope": "Volcano::Error::VolcanoError",
     "methods": [

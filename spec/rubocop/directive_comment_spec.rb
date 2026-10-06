@@ -20,6 +20,9 @@ RSpec.describe RuboCop::DirectiveComment do
         'def create( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.',
         'def exec( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.'
       ],
+      'lib/volcano/durable_approvals.rb' => [
+        'def list( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.'
+      ],
       'lib/volcano/generated_transport.rb' => [
         'error.code.to_i # rubocop:disable Lint/NumberConversion -- Preserve generated ApiError status coercion.'
       ],
@@ -73,7 +76,7 @@ RSpec.describe RuboCop::DirectiveComment do
     )
     cops = files.flat_map { |file| file.fetch('offenses').map { |offense| offense.fetch('cop_name') } }
     expect(cops.tally).to eq(
-      'Metrics/ParameterLists' => 3, 'Lint/UnderscorePrefixedVariableName' => 3,
+      'Metrics/ParameterLists' => 4, 'Lint/UnderscorePrefixedVariableName' => 3,
       'Lint/UnusedPrivateMethod' => 1, 'Lint/NumberConversion' => 1, 'Lint/NameTypo' => 1
     )
   end

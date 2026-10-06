@@ -165,10 +165,6 @@ module Volcano
       value
     end
 
-    def present_string?(value)
-      value.is_a?(String) && !value.strip.empty?
-    end
-
     def parse_time(value)
       return Time.iso8601(value) if value.is_a?(String)
       return value if value.nil? || value.is_a?(Time)

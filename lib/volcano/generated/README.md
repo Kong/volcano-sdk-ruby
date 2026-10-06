@@ -186,17 +186,23 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DatabasesApi* | [**list_postgres_versions**](docs/DatabasesApi.md#list_postgres_versions) | **GET** /databases/postgres-versions | List available PostgreSQL versions
 *Volcano::Generated::DatabasesApi* | [**reset_database_password**](docs/DatabasesApi.md#reset_database_password) | **POST** /projects/{id}/databases/{databaseName}/reset-password | Reset database password
 *Volcano::Generated::DatabasesApi* | [**update_database_type**](docs/DatabasesApi.md#update_database_type) | **PATCH** /projects/{id}/databases/{databaseName}/type | Update database size
+*Volcano::Generated::DurableFunctionsApi* | [**approve_durable_approval**](docs/DurableFunctionsApi.md#approve_durable_approval) | **POST** /projects/{id}/durable-approvals/{approvalId}/approve | Approve a durable approval
 *Volcano::Generated::DurableFunctionsApi* | [**create_durable_function**](docs/DurableFunctionsApi.md#create_durable_function) | **POST** /projects/{id}/durable-functions | Create or update a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**create_durable_function_scheduler**](docs/DurableFunctionsApi.md#create_durable_function_scheduler) | **POST** /projects/{id}/durable-functions/{functionId}/schedulers | Create a scheduler for a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function**](docs/DurableFunctionsApi.md#delete_durable_function) | **DELETE** /projects/{id}/durable-functions/{functionId} | Delete a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function_scheduler**](docs/DurableFunctionsApi.md#delete_durable_function_scheduler) | **DELETE** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Delete a durable function scheduler
+*Volcano::Generated::DurableFunctionsApi* | [**deny_durable_approval**](docs/DurableFunctionsApi.md#deny_durable_approval) | **POST** /projects/{id}/durable-approvals/{approvalId}/deny | Deny a durable approval
+*Volcano::Generated::DurableFunctionsApi* | [**get_durable_approval**](docs/DurableFunctionsApi.md#get_durable_approval) | **GET** /projects/{id}/durable-approvals/{approvalId} | Get a durable approval
+*Volcano::Generated::DurableFunctionsApi* | [**get_durable_approval_stats**](docs/DurableFunctionsApi.md#get_durable_approval_stats) | **GET** /projects/{id}/durable-approvals/stats | Get durable approval statistics
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_execution**](docs/DurableFunctionsApi.md#get_durable_execution) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId} | Get a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_function**](docs/DurableFunctionsApi.md#get_durable_function) | **GET** /projects/{id}/durable-functions/{functionId} | Get durable function by ID or name
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_function_scheduler**](docs/DurableFunctionsApi.md#get_durable_function_scheduler) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Get a durable function scheduler
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_approvals**](docs/DurableFunctionsApi.md#list_durable_approvals) | **GET** /projects/{id}/durable-approvals | List durable approvals
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_executions**](docs/DurableFunctionsApi.md#list_durable_executions) | **GET** /projects/{id}/durable-functions/{functionId}/executions | List a durable function's executions
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_deployments**](docs/DurableFunctionsApi.md#list_durable_function_deployments) | **GET** /projects/{id}/durable-functions/{functionId}/deployments | List durable function deployments
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_schedulers**](docs/DurableFunctionsApi.md#list_durable_function_schedulers) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers | List schedulers for a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_functions**](docs/DurableFunctionsApi.md#list_durable_functions) | **GET** /projects/{id}/durable-functions | List all durable functions in a project
+*Volcano::Generated::DurableFunctionsApi* | [**request_durable_approval**](docs/DurableFunctionsApi.md#request_durable_approval) | **POST** /durable-approvals | Request an approval from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution**](docs/DurableFunctionsApi.md#start_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions | Start a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution_from_application**](docs/DurableFunctionsApi.md#start_durable_execution_from_application) | **POST** /durable-functions/{functionId}/executions | Start a durable execution from an application
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
@@ -479,6 +485,18 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DeploymentProgress](docs/DeploymentProgress.md)
  - [Volcano::Generated::DeploymentReference](docs/DeploymentReference.md)
  - [Volcano::Generated::DeviceAuthorizationResponse](docs/DeviceAuthorizationResponse.md)
+ - [Volcano::Generated::DurableApproval](docs/DurableApproval.md)
+ - [Volcano::Generated::DurableApprovalCounts](docs/DurableApprovalCounts.md)
+ - [Volcano::Generated::DurableApprovalDailyCounts](docs/DurableApprovalDailyCounts.md)
+ - [Volcano::Generated::DurableApprovalDecider](docs/DurableApprovalDecider.md)
+ - [Volcano::Generated::DurableApprovalDecision](docs/DurableApprovalDecision.md)
+ - [Volcano::Generated::DurableApprovalDecisionRequest](docs/DurableApprovalDecisionRequest.md)
+ - [Volcano::Generated::DurableApprovalExecution](docs/DurableApprovalExecution.md)
+ - [Volcano::Generated::DurableApprovalFunction](docs/DurableApprovalFunction.md)
+ - [Volcano::Generated::DurableApprovalFunctionCounts](docs/DurableApprovalFunctionCounts.md)
+ - [Volcano::Generated::DurableApprovalRegistration](docs/DurableApprovalRegistration.md)
+ - [Volcano::Generated::DurableApprovalStats](docs/DurableApprovalStats.md)
+ - [Volcano::Generated::DurableApprovalStatus](docs/DurableApprovalStatus.md)
  - [Volcano::Generated::DurableExecution](docs/DurableExecution.md)
  - [Volcano::Generated::DurableExecutionError](docs/DurableExecutionError.md)
  - [Volcano::Generated::DurableExecutionStatus](docs/DurableExecutionStatus.md)
@@ -566,6 +584,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::OAuthErrorResponse](docs/OAuthErrorResponse.md)
  - [Volcano::Generated::PaginatedAuthUsers](docs/PaginatedAuthUsers.md)
  - [Volcano::Generated::PaginatedDatabases](docs/PaginatedDatabases.md)
+ - [Volcano::Generated::PaginatedDurableApprovals](docs/PaginatedDurableApprovals.md)
  - [Volcano::Generated::PaginatedDurableExecutions](docs/PaginatedDurableExecutions.md)
  - [Volcano::Generated::PaginatedDurableFunctions](docs/PaginatedDurableFunctions.md)
  - [Volcano::Generated::PaginatedFrontendDeployments](docs/PaginatedFrontendDeployments.md)
@@ -684,6 +703,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
  - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
+ - [Volcano::Generated::RequestDurableApprovalRequest](docs/RequestDurableApprovalRequest.md)
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
  - [Volcano::Generated::ResourceReference](docs/ResourceReference.md)
@@ -765,4 +785,8 @@ Authentication schemes defined for the API:
 ### UserToken
 
 - **Type**: Bearer authentication (JWT)
+
+### ProjectAccessToken
+
+- **Type**: Bearer authentication (opaque)
 

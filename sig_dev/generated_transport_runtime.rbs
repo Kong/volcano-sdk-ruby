@@ -118,6 +118,18 @@ module Volcano
     def list_durable_executions: (authorization: String, project_id: String, function_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
 
     def stop_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
+
+    def list_durable_approvals: (authorization: String, project_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
+
+    def get_durable_approval: (authorization: String, project_id: String, approval_id: String) -> Transport::Response
+
+    def get_durable_approval_stats: (authorization: String, project_id: String, options: Hash[Symbol, String]) -> Transport::Response
+
+    def approve_durable_approval: (authorization: String, project_id: String, approval_id: String, comment: String?) -> Transport::Response
+
+    def deny_durable_approval: (authorization: String, project_id: String, approval_id: String, comment: String?) -> Transport::Response
+
+    private def durable_approval_decision: (String? comment) -> Generated::api_options
   end
 end
 

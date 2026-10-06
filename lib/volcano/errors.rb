@@ -16,6 +16,11 @@ module Volcano
     end
 
     class AuthenticationError < VolcanoError; end
+
+    # Raised for HTTP 403: the credential is valid but may not do this. It
+    # remains an AuthenticationError so existing handlers still catch it.
+    class PermissionError < AuthenticationError; end
+
     class ValidationError < VolcanoError; end
     class NotFoundError < VolcanoError; end
     class ConflictError < VolcanoError; end

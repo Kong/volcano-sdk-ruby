@@ -30,14 +30,15 @@ RSpec.describe Quality::DefectProcess do
 
   it 'runs a lone command string as a program name instead of a shell script' do
     marker = File.join(directory, 'injected')
-    command = ["true; touch #{marker}"]
-    expect { described_class.new.run(command, directory: directory, log: log) }.to raise_error(Errno::ENOENT)
+    [["true; touch #{marker}"], [{ 'DEFECT_PROCESS_PROBE' => '1' }, "true; touch #{marker}"]].each do |command|
+      expect { described_class.new.run(command, directory: directory, log: log) }.to raise_error(Errno::ENOENT)
+    end
     expect(File).not_to exist(marker)
   end
 
-  it 'applies a leading environment hash without shell expansion' do
-    probe = 'exit(ENV.fetch("DEFECT_PROCESS_PROBE") == "$(id); `id`" ? 0 : 3)'
-    command = [{ 'DEFECT_PROCESS_PROBE' => '$(id); `id`' }, Gem.ruby, '-e', probe]
+  it 'applies a leading environment hash to the child' do
+    probe = 'exit(ENV.fetch("DEFECT_PROCESS_PROBE") == "set" ? 0 : 3)'
+    command = [{ 'DEFECT_PROCESS_PROBE' => 'set' }, Gem.ruby, '-e', probe]
     expect(described_class.new.run(command, directory: directory, log: log)).to eq(0)
   end
 

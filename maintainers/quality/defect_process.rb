@@ -9,8 +9,8 @@ module Quality
       @timeout = timeout
     end
 
-    # Run an argv array, optionally preceded by an environment hash. The program is always executed
-    # directly: the [program, argv0] form stops Ruby from handing a lone command string to /bin/sh.
+    # Run an argv array, optionally preceded by an environment hash. No shell ever parses the command:
+    # the [program, argv0] form stops Ruby from handing a lone command string to /bin/sh.
     def run(command, directory:, log:)
       environment, program, *arguments = command.first.is_a?(Hash) ? command : [{}, *command]
       pid = Process.spawn(environment, [program, program], *arguments,

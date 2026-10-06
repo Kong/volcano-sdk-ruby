@@ -14,17 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Application log value. JSON arguments retain their JSON type. Strings containing a serialized JSON object or array are normalized to that object or array; all other strings remain strings.
-  module LogEventBody
+  # TLS for the custom domain. `mode` defaults to `byoc` when omitted.
+  module ProjectConfigFrontendCustomDomainTLSConfig
     class << self
       # List of class defined in oneOf (OpenAPI v3)
       def openapi_one_of
         [
-          :'Array<Object>',
-          :'Boolean',
-          :'Float',
-          :'Hash<String, Object>',
-          :'String'
+          :'BYOCProjectConfigFrontendCustomDomainTLSConfig',
+          :'ManagedProjectConfigFrontendCustomDomainTLSConfig'
         ]
       end
 

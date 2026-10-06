@@ -21,11 +21,19 @@ module Volcano::Generated
 
     attr_accessor :domain_status
 
+    # `verified`: the domain is served by a validated certificate. `pending`: it is not served yet, is being re-validated after its certificate material was withdrawn, or Volcano is retrying after a failure. `failed`: a failure left the domain unserved, alongside `domain_status: failed`; managed domains report the cause in `failure_reason`.
     attr_accessor :verification_status
+
+    # Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
+    attr_accessor :failure_reason
 
     attr_accessor :verification_records
 
+    # Deprecated and no longer returned. Use routing_target_hostname as the DNS routing target.
     attr_accessor :required_routing_record
+
+    # DNS routing target hostname for this frontend. The DNS record type depends on whether the custom domain is a zone apex.
+    attr_accessor :routing_target_hostname
 
     attr_accessor :effective_urls
 
@@ -62,8 +70,10 @@ module Volcano::Generated
         :'tls_mode' => :'tls_mode',
         :'domain_status' => :'domain_status',
         :'verification_status' => :'verification_status',
+        :'failure_reason' => :'failure_reason',
         :'verification_records' => :'verification_records',
         :'required_routing_record' => :'required_routing_record',
+        :'routing_target_hostname' => :'routing_target_hostname',
         :'effective_urls' => :'effective_urls',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
@@ -87,8 +97,10 @@ module Volcano::Generated
         :'tls_mode' => :'String',
         :'domain_status' => :'String',
         :'verification_status' => :'String',
+        :'failure_reason' => :'String',
         :'verification_records' => :'Array<FrontendDomainVerificationRecord>',
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
+        :'routing_target_hostname' => :'String',
         :'effective_urls' => :'Array<String>',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
@@ -141,6 +153,10 @@ module Volcano::Generated
         self.verification_status = nil
       end
 
+      if attributes.key?(:'failure_reason')
+        self.failure_reason = attributes[:'failure_reason']
+      end
+
       if attributes.key?(:'verification_records')
         if (value = attributes[:'verification_records']).is_a?(Array)
           self.verification_records = value
@@ -149,6 +165,10 @@ module Volcano::Generated
 
       if attributes.key?(:'required_routing_record')
         self.required_routing_record = attributes[:'required_routing_record']
+      end
+
+      if attributes.key?(:'routing_target_hostname')
+        self.routing_target_hostname = attributes[:'routing_target_hostname']
       end
 
       if attributes.key?(:'effective_urls')
@@ -220,7 +240,7 @@ module Volcano::Generated
       domain_status_validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed", "deleted"])
       return false unless domain_status_validator.valid?(@domain_status)
       return false if @verification_status.nil?
-      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       return false unless verification_status_validator.valid?(@verification_status)
       return false if @effective_urls.nil?
       return false if @created_at.nil?
@@ -261,7 +281,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] verification_status Object to be assigned
     def verification_status=(verification_status)
-      validator = EnumAttributeValidator.new('String', ["pending", "verified"])
+      validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       unless validator.valid?(verification_status)
         fail ArgumentError, "invalid value for \"verification_status\", must be one of #{validator.allowable_values}."
       end
@@ -307,8 +327,10 @@ module Volcano::Generated
           tls_mode == o.tls_mode &&
           domain_status == o.domain_status &&
           verification_status == o.verification_status &&
+          failure_reason == o.failure_reason &&
           verification_records == o.verification_records &&
           required_routing_record == o.required_routing_record &&
+          routing_target_hostname == o.routing_target_hostname &&
           effective_urls == o.effective_urls &&
           created_at == o.created_at &&
           updated_at == o.updated_at
@@ -323,7 +345,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, verification_records, required_routing_record, effective_urls, created_at, updated_at].hash
+      [domain, tls_mode, domain_status, verification_status, failure_reason, verification_records, required_routing_record, routing_target_hostname, effective_urls, created_at, updated_at].hash
     end
 
     # Builds the object from hash

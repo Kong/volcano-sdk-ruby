@@ -14,9 +14,9 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards: providing new TLS material for the same domain rotates the certificate in place (zero downtime); omitting `tls` keeps the stored certificate. TLS material is write-only and omitted from config export. 
+  # Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards. For an existing domain, omitting `tls` or sending only `tls.mode` keeps the stored certificate; new BYOC material for the same domain rotates the certificate in place (zero downtime). Changing `tls.mode` for the same hostname, or the hostname of a managed domain, requires deleting the domain first. BYOC TLS material is write-only; exports render only `tls.mode`. 
   class ProjectConfigCustomDomain < ApiModelBase
-    # Fully-qualified domain name (hostname only, no scheme/path)
+    # Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.
     attr_accessor :domain
 
     attr_accessor :tls
@@ -43,7 +43,7 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'domain' => :'String',
-        :'tls' => :'FrontendCustomDomainTLSConfig'
+        :'tls' => :'ProjectConfigFrontendCustomDomainTLSConfig'
       }
     end
 
@@ -89,6 +89,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "domain", domain cannot be nil.')
       end
 
+      if @domain.to_s.length > 253
+        invalid_properties.push('invalid value for "domain", the character length must be smaller than or equal to 253.')
+      end
+
       invalid_properties
     end
 
@@ -97,6 +101,7 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @domain.nil?
+      return false if @domain.to_s.length > 253
       true
     end
 
@@ -105,6 +110,10 @@ module Volcano::Generated
     def domain=(domain)
       if domain.nil?
         fail ArgumentError, 'domain cannot be nil'
+      end
+
+      if domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain", the character length must be smaller than or equal to 253.'
       end
 
       @domain = domain

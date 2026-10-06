@@ -44,7 +44,7 @@ module Volcano::Generated
       # @param [Mixed] Data to be matched against the list of oneOf items
       # @return [Object] Returns the model or the data itself
       def build(data)
-        discriminator_value = data[openapi_discriminator_name]
+        discriminator_value = data[openapi_discriminator_name] || data[openapi_discriminator_name.to_s]
         return nil if discriminator_value.nil?
 
         klass = openapi_discriminator_mapping[discriminator_value.to_s.to_sym]

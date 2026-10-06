@@ -4800,6 +4800,8 @@ paths:
         Configures one custom domain for a frontend.
         The default Volcano-generated frontend URL remains active.
         Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes.
+        Managed TLS returns the DNS records currently required for setup. Volcano may require a tenant-specific TXT ownership challenge before returning the certificate authority's validation record. After ownership verification succeeds, Volcano permanently assigns the hostname to the account, including after the domain is deleted. A required but unverified ownership reservation expires after 72 hours.
+        An unverified reservation does not block an account that proves ownership. When another account holds one, a managed TLS request gets `409` with `code: ownership_verification_required` and the caller's own `required_record`; after publishing it, the same request takes over the reservation. A BYOC request with a publicly trusted certificate and key for the hostname also takes it over; other BYOC requests get a `409` without `code`. Hostnames claimed through ownership verification and BYOC domains are never taken over.
       operationId: createFrontendCustomDomain
       security:
         - UserToken: []
@@ -4850,11 +4852,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict - custom domain already in use, still detaching, or frontend already has a custom domain
+          description: Conflict - custom domain already in use, reserved by another account until ownership is proven, still detaching, or frontend already has a custom domain
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/FrontendCustomDomainConflictError'
         '500':
           description: Internal server error
           content:
@@ -14600,10 +14602,12 @@ components:
         - text_body
     CreateFrontendCustomDomainRequest:
       type: object
+      additionalProperties: false
       properties:
         domain:
           type: string
-          description: Fully-qualified domain name (hostname only, no scheme/path)
+          maxLength: 253
+          description: 'Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.'
           example: app.example.com
         tls:
           $ref: '#/components/schemas/FrontendCustomDomainTLSConfig'
@@ -16436,12 +16440,23 @@ components:
           enum:
             - pending
             - verified
+            - failed
+          description: '`verified`: the domain is served by a validated certificate. `pending`: it is not served yet, is being re-validated after its certificate material was withdrawn, or Volcano is retrying after a failure. `failed`: a failure left the domain unserved, alongside `domain_status: failed`; managed domains report the cause in `failure_reason`.'
+        failure_reason:
+          type: string
+          description: Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
         verification_records:
           type: array
           items:
             $ref: '#/components/schemas/FrontendDomainVerificationRecord'
         required_routing_record:
-          $ref: '#/components/schemas/FrontendDomainRoutingRecord'
+          allOf:
+            - $ref: '#/components/schemas/FrontendDomainRoutingRecord'
+          deprecated: true
+          description: Deprecated and no longer returned. Use routing_target_hostname as the DNS routing target.
+        routing_target_hostname:
+          type: string
+          description: DNS routing target hostname for this frontend. The DNS record type depends on whether the custom domain is a zone apex.
         effective_urls:
           type: array
           items:
@@ -16462,26 +16477,60 @@ components:
         - updated_at
     FrontendCustomDomainTLSConfig:
       type: object
+      description: 'TLS for a new custom domain. With `mode: managed`, Volcano issues and renews the certificate; omit every PEM field. With `mode: byoc`, send both `certificate_pem` and `private_key_pem`, plus an optional `certificate_chain_pem`.'
+      additionalProperties: false
+      not:
+        anyOf:
+          - allOf:
+              - properties:
+                  mode:
+                    enum:
+                      - managed
+                required:
+                  - mode
+              - anyOf:
+                  - required:
+                      - certificate_pem
+                  - required:
+                      - private_key_pem
+                  - required:
+                      - certificate_chain_pem
+          - allOf:
+              - properties:
+                  mode:
+                    enum:
+                      - byoc
+                required:
+                  - mode
+              - anyOf:
+                  - not:
+                      required:
+                        - certificate_pem
+                  - not:
+                      required:
+                        - private_key_pem
       properties:
         mode:
           type: string
           enum:
+            - managed
             - byoc
           default: byoc
-          description: BYOC is mandatory for custom domain creation.
+          description: managed for a Volcano-issued certificate; byoc to supply your own.
         certificate_pem:
           type: string
-          description: Required. PEM-encoded certificate.
+          maxLength: 65536
+          description: PEM-encoded certificate. Required when mode is byoc; not allowed when mode is managed.
         private_key_pem:
           type: string
-          description: Required. PEM-encoded private key.
+          maxLength: 65536
+          description: PEM-encoded private key. Required when mode is byoc; not allowed when mode is managed.
         certificate_chain_pem:
           type: string
-          description: Optional PEM-encoded certificate chain.
+          maxLength: 65536
+          description: Optional PEM-encoded certificate chain when mode is byoc; not allowed when mode is managed.
       required:
         - mode
-        - certificate_pem
-        - private_key_pem
     FrontendDeployment:
       type: object
       properties:
@@ -16586,6 +16635,7 @@ components:
         - value
     FrontendDomainVerificationRecord:
       type: object
+      description: The DNS records currently required for managed TLS. Volcano may require a tenant-specific TXT ownership record before returning a CNAME that authorizes certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
       properties:
         name:
           type: string
@@ -16597,6 +16647,14 @@ components:
         - name
         - type
         - value
+    FrontendCustomDomainConflictError:
+      description: 'Custom domain create conflict. With `code: ownership_verification_required`, another account holds an unverified managed TLS reservation for the hostname: publish `required_record` in DNS and send the same request again. The retry succeeds once Volcano can see the record. Other conflicts omit both fields.'
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            required_record:
+              $ref: '#/components/schemas/FrontendDomainVerificationRecord'
     FrontendUsageDailyEntry:
       type: object
       description: One day of request and error counts for a single frontend.
@@ -18551,17 +18609,21 @@ components:
       type: object
       additionalProperties: false
       description: |
-        Custom domain with BYOC TLS (SUPERAGENT plan). `tls` is required when the
-        domain is first created and optional afterwards: providing new TLS
-        material for the same domain rotates the certificate in place (zero
-        downtime); omitting `tls` keeps the stored certificate. TLS material is
-        write-only and omitted from config export.
+        Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required
+        when the domain is first created and optional afterwards. For an existing
+        domain, omitting `tls` or sending only `tls.mode` keeps the stored
+        certificate; new BYOC material for the same domain rotates the
+        certificate in place (zero downtime). Changing `tls.mode` for the same
+        hostname, or the hostname of a managed domain, requires deleting the
+        domain first. BYOC TLS material is write-only; exports render only
+        `tls.mode`.
       properties:
         domain:
           type: string
-          description: Fully-qualified domain name (hostname only, no scheme/path)
+          maxLength: 253
+          description: 'Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.'
         tls:
-          $ref: '#/components/schemas/FrontendCustomDomainTLSConfig'
+          $ref: '#/components/schemas/ProjectConfigFrontendCustomDomainTLSConfig'
       required:
         - domain
     ProjectConfigDatabase:
@@ -20404,6 +20466,62 @@ components:
           $ref: '#/components/schemas/AuthPageTheme'
         layouts:
           $ref: '#/components/schemas/ProjectConfigAuthPageLayouts'
+    ManagedProjectConfigFrontendCustomDomainTLSConfig:
+      type: object
+      description: Volcano issues and renews the certificate. Certificate fields are not allowed.
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+            - managed
+      required:
+        - mode
+    BYOCProjectConfigFrontendCustomDomainTLSConfig:
+      type: object
+      description: 'Your own certificate. Send `certificate_pem` and `private_key_pem` together, with an optional `certificate_chain_pem`, to create the domain or rotate its certificate. For an existing BYOC domain, `mode: byoc` without certificate fields keeps the stored certificate; exports render only the mode.'
+      additionalProperties: false
+      not:
+        anyOf:
+          - required:
+              - certificate_pem
+            not:
+              required:
+                - private_key_pem
+          - required:
+              - private_key_pem
+            not:
+              required:
+                - certificate_pem
+          - required:
+              - certificate_chain_pem
+            not:
+              required:
+                - certificate_pem
+                - private_key_pem
+      properties:
+        mode:
+          type: string
+          enum:
+            - byoc
+          description: Optional; a TLS block without `mode` is BYOC.
+        certificate_pem:
+          type: string
+          maxLength: 65536
+          description: PEM-encoded certificate for create or rotation. Requires private_key_pem. Omitted from exports.
+        private_key_pem:
+          type: string
+          maxLength: 65536
+          description: PEM-encoded private key for create or rotation. Requires certificate_pem. Omitted from exports.
+        certificate_chain_pem:
+          type: string
+          maxLength: 65536
+          description: Optional PEM-encoded certificate chain. Requires certificate_pem and private_key_pem. Omitted from exports.
+    ProjectConfigFrontendCustomDomainTLSConfig:
+      description: TLS for the custom domain. `mode` defaults to `byoc` when omitted.
+      oneOf:
+        - $ref: '#/components/schemas/ManagedProjectConfigFrontendCustomDomainTLSConfig'
+        - $ref: '#/components/schemas/BYOCProjectConfigFrontendCustomDomainTLSConfig'
     DatabaseQueryPerformanceDatabase:
       type: object
       properties:

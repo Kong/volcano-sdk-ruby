@@ -125,7 +125,7 @@ module Volcano::Generated
     end
 
     # Configure frontend custom domain (SUPERAGENT)
-    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. 
+    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. Managed TLS returns the DNS records currently required for setup. Volcano may require a tenant-specific TXT ownership challenge before returning the certificate authority's validation record. After ownership verification succeeds, Volcano permanently assigns the hostname to the account, including after the domain is deleted. A required but unverified ownership reservation expires after 72 hours. An unverified reservation does not block an account that proves ownership. When another account holds one, a managed TLS request gets `409` with `code: ownership_verification_required` and the caller's own `required_record`; after publishing it, the same request takes over the reservation. A BYOC request with a publicly trusted certificate and key for the hostname also takes it over; other BYOC requests get a `409` without `code`. Hostnames claimed through ownership verification and BYOC domains are never taken over. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param create_frontend_custom_domain_request [CreateFrontendCustomDomainRequest] 
@@ -137,7 +137,7 @@ module Volcano::Generated
     end
 
     # Configure frontend custom domain (SUPERAGENT)
-    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. 
+    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. Managed TLS returns the DNS records currently required for setup. Volcano may require a tenant-specific TXT ownership challenge before returning the certificate authority&#39;s validation record. After ownership verification succeeds, Volcano permanently assigns the hostname to the account, including after the domain is deleted. A required but unverified ownership reservation expires after 72 hours. An unverified reservation does not block an account that proves ownership. When another account holds one, a managed TLS request gets &#x60;409&#x60; with &#x60;code: ownership_verification_required&#x60; and the caller&#39;s own &#x60;required_record&#x60;; after publishing it, the same request takes over the reservation. A BYOC request with a publicly trusted certificate and key for the hostname also takes it over; other BYOC requests get a &#x60;409&#x60; without &#x60;code&#x60;. Hostnames claimed through ownership verification and BYOC domains are never taken over. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param create_frontend_custom_domain_request [CreateFrontendCustomDomainRequest] 

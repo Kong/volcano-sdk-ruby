@@ -14,32 +14,26 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Application log value. JSON arguments retain their JSON type. Strings containing a serialized JSON object or array are normalized to that object or array; all other strings remain strings.
-  module LogEventBody
+  module BYOCProjectConfigFrontendCustomDomainTLSConfigNot
     class << self
-      # List of class defined in oneOf (OpenAPI v3)
-      def openapi_one_of
+      # List of class defined in anyOf (OpenAPI v3)
+      def openapi_any_of
         [
-          :'Array<Object>',
-          :'Boolean',
-          :'Float',
-          :'Hash<String, Object>',
-          :'String'
+          :'Object'
         ]
       end
 
       # Builds the object
-      # @param [Mixed] Data to be matched against the list of oneOf items
+      # @param [Mixed] Data to be matched against the list of anyOf items
       # @return [Object] Returns the model or the data itself
       def build(data)
-        # Go through the list of oneOf items and attempt to identify the appropriate one.
+        # Go through the list of anyOf items and attempt to identify the appropriate one.
         # Note:
-        # - We do not attempt to check whether exactly one item matches.
         # - No advanced validation of types in some cases (e.g. "x: { type: string }" will happily match { x: 123 })
         #   due to the way the deserialization is made in the base_object template (it just casts without verifying).
         # - TODO: scalar values are de facto behaving as if they were nullable.
         # - TODO: logging when debugging is set.
-        openapi_one_of.each do |klass|
+        openapi_any_of.each do |klass|
           begin
             next if klass == :AnyType # "nullable: true"
             return find_and_cast_into_type(klass, data)
@@ -47,7 +41,7 @@ module Volcano::Generated
           end
         end
 
-        openapi_one_of.include?(:AnyType) ? data : nil
+        openapi_any_of.include?(:AnyType) ? data : nil
       end
 
       private
@@ -84,14 +78,14 @@ module Volcano::Generated
             return data.each_with_object({}) { |(k, v), hsh| hsh[k] = find_and_cast_into_type(sub_type, v) }
           end
         else # model
-          const = Object.const_get('Volcano::Generated').const_get(klass)
+          const = Volcano::Generated.const_get(klass)
           if const
-            if const.respond_to?(:openapi_one_of) # nested oneOf model
+            if const.respond_to?(:openapi_any_of) # nested anyOf model
               model = const.build(data)
-              return model unless model.nil?
+              return model if model
             else
               # raise if data contains keys that are not known to the model
-              raise if const.respond_to?(:acceptable_attributes) && !(data.keys.map(&:to_sym) - const.acceptable_attributes).empty?
+              raise if const.respond_to?(:acceptable_attributes) && !(data.keys - const.acceptable_attributes).empty?
               model = const.build_from_hash(data)
               return model if model
             end

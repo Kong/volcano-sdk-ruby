@@ -26,6 +26,12 @@ module Volcano
       end
     end
 
+    it 'resolves discriminated log-resource models from string keys' do
+      model = generated::ApiModelBase._deserialize('LogRequestResource', { 'type' => 'function', 'ids' => ['id'] })
+
+      expect(model.to_hash).to eq(type: 'function', ids: ['id'])
+    end
+
     it 'does not accept unknown log-resource discriminators' do
       expect(generated::ApiModelBase._deserialize('LogRequestResource', type: 'unknown')).to be_nil
     end

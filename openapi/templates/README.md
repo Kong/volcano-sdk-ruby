@@ -17,6 +17,7 @@ Nested unions also retain `false` results instead of treating them as a failed
 match. Discriminated unions read the discriminator from symbol or string keys,
 and undiscriminated unions compare symbolized keys with a model's attributes,
 both matching the key handling of generated models' `build_from_hash`.
-`generated_transport_managed_tls_spec.rb` exercises both key styles. The upstream
-template SHA256 is
+`generated_transport_model_boundaries_spec.rb` (discriminated) and
+`generated_transport_managed_tls_spec.rb` (undiscriminated) exercise both key
+styles. The upstream template SHA256 is
 `c6da53b56e16bc39bfaa2965c07c0d259837999b4a4673aa68cac2e3b571713f`.

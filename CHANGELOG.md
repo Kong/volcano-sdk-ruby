@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.33.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.7...v0.33.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** require Ruby 3.3 to lock patched io-event ([#324](https://github.com/Kong/volcano-sdk-ruby/issues/324))
+
+### Features
+
+* **sandboxes:** add Ruby session and execution facade ([#316](https://github.com/Kong/volcano-sdk-ruby/issues/316)) ([a5b968a](https://github.com/Kong/volcano-sdk-ruby/commit/a5b968af621a8622f33c5cc19893baf867131096))
+
+
+### Bug Fixes
+
+* **deps:** bump bigdecimal to 4.1.3 past advisory ([#322](https://github.com/Kong/volcano-sdk-ruby/issues/322)) ([6885995](https://github.com/Kong/volcano-sdk-ruby/commit/688599540c1606da87b108c28fa3f1433ab4a425))
+* **deps:** require Ruby 3.3 to lock patched io-event ([#324](https://github.com/Kong/volcano-sdk-ruby/issues/324)) ([b71c6a4](https://github.com/Kong/volcano-sdk-ruby/commit/b71c6a407f9e7df6c0ec84e25469a69f482bc3d1))
+
 ## [0.32.7](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.6...v0.32.7) (2026-09-28)
 
 

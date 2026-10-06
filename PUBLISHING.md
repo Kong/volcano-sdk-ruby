@@ -10,7 +10,7 @@ RubyGems after the release checks pass. No separate publish action is required.
 2. The `release: published` event starts `publish.yml`. Only stable, non-draft
    releases authored by `kong-volcano-app[bot]` enter the automatic path.
 3. The workflow verifies tag ancestry and the release manifest, runs CI on Ruby
-   3.2 and 3.4, and installs and loads the built gem with only its runtime
+   3.3 and 3.4, and installs and loads the built gem with only its runtime
    dependencies. The gem name and version must match the release. It records the
    file inventory and SHA-256 with the artifact.
 4. A separate job downloads that artifact, verifies its checksum, obtains a

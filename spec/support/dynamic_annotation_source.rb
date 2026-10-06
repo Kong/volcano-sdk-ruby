@@ -9,7 +9,7 @@ module SpecSupport
     SCOPES = %i[class module sclass def defs block].freeze
 
     def initialize(source, path)
-      @source = RuboCop::ProcessedSource.new(source, 3.2, path)
+      @source = RuboCop::ProcessedSource.new(source, 3.3, path)
       @path = path
     end
 

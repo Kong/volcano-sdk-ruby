@@ -27,8 +27,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - series: "3.2"
-            ruby-version: "3.2.11"
+          - series: "3.3"
+            ruby-version: "3.3.12"
           - series: "3.4"
             ruby-version: "3.4.10"
     steps:

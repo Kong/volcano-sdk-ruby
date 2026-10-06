@@ -14,7 +14,7 @@ AllCops:
       - Include
   NewCops: enable
   SuggestExtensions: false
-  TargetRubyVersion: 3.2
+  TargetRubyVersion: 3.3
   Include:
     - ".simplecov"
     - ".github/scripts/**/*.rb"

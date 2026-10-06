@@ -1,6 +1,6 @@
 # Contributing to the Ruby SDK
 
-Use a supported Ruby version (CI covers 3.2 and 3.4), Bundler, Node.js 22,
+Use a supported Ruby version (CI covers 3.3 and 3.4), Bundler, Node.js 22,
 and Java 21. Node and Java support generation and are not gem runtime dependencies.
 
 ## Verify a change

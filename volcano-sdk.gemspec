@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.summary = 'Official Ruby SDK for Volcano'
   spec.homepage = 'https://github.com/Kong/volcano-sdk-ruby'
   spec.license = 'Apache-2.0'
-  spec.required_ruby_version = '>= 3.2'
+  spec.required_ruby_version = '>= 3.3'
   spec.files = Dir[
     'lib/volcano.rb',
     'lib/volcano/*.rb',
@@ -25,6 +25,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'async-http', '0.94.2'
   spec.add_dependency 'async-websocket', '0.30.0'
   spec.add_dependency 'base64', '~> 0.2'
+  spec.add_dependency 'io-event', '~> 1.16'
   spec.add_dependency 'json', '~> 2.17'
   spec.add_dependency 'logger', '~> 1.7'
   spec.add_dependency 'protocol-rack', '0.21.1'

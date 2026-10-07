@@ -5,6 +5,7 @@ source 'https://rubygems.org'
 gemspec
 
 group :development do
+  gem 'bigdecimal', '~> 4.1'
   gem 'bundler-audit', '0.9.3'
   gem 'prop_check', '1.0.2'
   gem 'rake', '~> 13.2'

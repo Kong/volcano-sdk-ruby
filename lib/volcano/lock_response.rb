@@ -27,8 +27,8 @@ module Volcano
     end
 
     def lock_held(value)
-      return true if value == true
-      return false if value == false
+      return true if value.equal?(true)
+      return false if value.equal?(false)
 
       raise Error::TransportError, 'invalid lock held flag'
     end

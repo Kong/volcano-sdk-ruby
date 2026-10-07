@@ -1,0 +1,87 @@
+version: 2
+updates:
+  # The SDK bundle: Gemfile, Gemfile.lock, and the gemspec it loads.
+  # lib/volcano/generated/Gemfile is OpenAPI Generator output with no lockfile;
+  # CI regenerates that directory and fails on any edit, so it is left out.
+  #
+  # Dependabot resolves against the lowest Ruby that the gemspec's
+  # `required_ruby_version` allows (3.3), so it skips releases that need a
+  # newer Ruby rather than raising the floor. It never edits
+  # `required_ruby_version`, and the required `test (3.3)` check backs this up.
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+    # Include transitive gems, which version updates otherwise skip. Dependabot
+    # classifies each one by the gems that pull it in, so the prefixes below
+    # still hold.
+    allow:
+      - dependency-type: "all"
+    labels: []
+    # Gemspec runtime dependencies use `fix` so Release Please cuts a release;
+    # the Gemfile's development group uses `chore`, which does not.
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+      include: "scope"
+    groups:
+      bundler-production:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      bundler-development:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # package.json only installs the OpenAPI Generator CLI wrapper used by
+  # bin/generate-openapi; nothing here ships in the gem. The generator itself
+  # (7.17.0) is pinned in openapitools.json, which Dependabot does not manage.
+  # CI's `bin/check-openapi` fails if a bump changes the committed output, so
+  # review these with `npm ci && bin/generate-openapi`, and update the versions
+  # quoted in README.md's "Generated boundary" section.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+    labels: []
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      openapi-codegen:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # GitHub Actions supports only `default-days`.
+    cooldown:
+      default-days: 5
+    labels: []
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

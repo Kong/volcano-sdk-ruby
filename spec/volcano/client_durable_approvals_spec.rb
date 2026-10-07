@@ -202,11 +202,12 @@ RSpec.describe Volcano::Client do
 
   it 'raises a permission error when a project access token decides' do
     responses[:approve_durable_approval] = transport_response(
-      403, 'error' => 'approvals are decided by a person; use a platform token or the dashboard'
+      403, 'error' => 'project access tokens cannot decide durable approvals; ' \
+                      'a person decides in the dashboard or with a platform token'
     )
 
     expect { approvals.approve('project-1', 'approval-1') }
-      .to raise_error(Volcano::Error::PermissionDeniedError, /decided by a person/) do |error|
+      .to raise_error(Volcano::Error::PermissionDeniedError, /cannot decide durable approvals/) do |error|
         expect(error).to be_a(Volcano::Error::AuthenticationError)
         expect(error).to have_attributes(status: 403, code: nil)
       end

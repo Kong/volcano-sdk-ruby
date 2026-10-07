@@ -79,8 +79,8 @@ module Volcano
     end
 
     def visibility_value(value)
-      return true if value == true
-      return false if value == false
+      return true if value.equal?(true)
+      return false if value.equal?(false)
 
       raise ArgumentError, 'public must be true or false'
     end

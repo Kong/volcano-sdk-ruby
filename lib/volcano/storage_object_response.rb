@@ -50,8 +50,8 @@ module Volcano
     end
 
     def storage_boolean(value)
-      return true if value == true
-      return false if value == false
+      return true if value.equal?(true)
+      return false if value.equal?(false)
 
       raise Error::TransportError, 'invalid storage boolean'
     end

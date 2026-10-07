@@ -9,9 +9,9 @@ RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
   let(:openapi_sha256) { '09b595274deab5b459cd5e03c6c0a4803837877a6ac6763783e90a4d553cdcf8' }
 
-  it 'accepts current plan names in project responses' do
+  it 'accepts current and legacy plan names in project responses' do
     project = described_class.const_get(:Generated).const_get(:Project)
-    %w[HOBBY SUPERAGENT].each do |plan|
+    %w[HOBBY SUPERAGENT FREE PRO].each do |plan|
       response = project.new(id: '12345678-1234-1234-1234-123456789012', name: 'example',
                              status: 'active', plan: plan, all_regions: true, selected_regions: [],
                              created_at: Time.utc(2026, 1, 1), updated_at: Time.utc(2026, 1, 1))

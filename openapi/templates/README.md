@@ -21,3 +21,8 @@ both matching the key handling of generated models' `build_from_hash`.
 `generated_transport_managed_tls_spec.rb` (undiscriminated) exercise both key
 styles. The upstream template SHA256 is
 `c6da53b56e16bc39bfaa2965c07c0d259837999b4a4673aa68cac2e3b571713f`.
+
+The generator preserves `FREE` and `PRO` in the response-only `Project.plan`
+consumer model for compatibility with earlier Hosting releases. The vendored
+producer contract stays unchanged; `bin/generate-openapi` applies this narrow
+input overlay before generation. Other enums retain the producer constraints.

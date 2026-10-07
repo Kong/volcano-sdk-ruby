@@ -67,9 +67,13 @@ module Volcano
       if ports.length > 16 || ports.uniq.length != ports.length
         raise Error::ValidationError, 'Sandbox ports must be unique and contain at most 16 entries'
       end
-      return if ports.all? { |port| port.between?(1, 65_532) }
+      return if ports.all? { |port| valid_port?(port) }
 
       raise Error::ValidationError, 'Sandbox ports must be between 1 and 65532'
+    end
+
+    def valid_port?(port)
+      port.is_a?(Integer) && port.between?(1, 65_532)
     end
   end
 end

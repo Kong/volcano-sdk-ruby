@@ -79,6 +79,7 @@ module Volcano
     private def deployment_request: (String project_id, String sandbox_id, sandbox_request_options options) -> SandboxRequest
     private def validate_source: (String source, Array[Integer] ports) -> void
     private def validate_ports: (Array[Integer] ports) -> void
+    private def valid_port?: (Integer port) -> bool
   end
 
   class Sandboxes

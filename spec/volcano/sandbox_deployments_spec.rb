@@ -90,8 +90,8 @@ RSpec.describe Volcano::SandboxDeployments do
     expect(requests).to be_empty
   end
 
-  [65_533, 65_534, 65_535].each do |port|
-    it "rejects reserved port #{port} before dispatch" do
+  [65_533, 65_534, 65_535, 8080.5, '8080', nil, []].each do |port|
+    it "rejects invalid port #{port.inspect} before dispatch" do
       expect { facade.deploy(project, template, 'archive', name: 'custom', ports: [port]) }
         .to raise_error(Volcano::Error::ValidationError, 'Sandbox ports must be between 1 and 65532')
     end

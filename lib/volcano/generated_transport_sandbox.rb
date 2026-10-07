@@ -6,7 +6,8 @@ module Volcano
     SANDBOX_OPERATIONS = {
       list_sandbox_deployments: lambda { |api, request|
         api.list_sandbox_deployments_with_http_info(request.resource_id, request.subject_id,
-                                                    cursor: request.cursor, debug_return_type: 'Object')
+                                                    cursor: request.cursor, limit: request.limit,
+                                                    debug_return_type: 'Object')
       },
       get_sandbox_deployment: lambda { |api, request|
         api.get_sandbox_deployment_with_http_info(request.resource_id, request.subject_id, request.deployment_id,

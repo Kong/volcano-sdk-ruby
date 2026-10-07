@@ -112,7 +112,7 @@ deployment = client.sandboxes.deploy(
   name: 'my-custom-sandbox', memory_mb: 1024, ports: [8080], request_id: request_id
 )
 status = client.sandboxes.deployment(project_id, template_id, deployment.id)
-history = client.sandboxes.deployments(project_id, template_id)
+history = client.sandboxes.deployments(project_id, template_id, limit: 10)
 logs = client.sandboxes.logs(project_id, template_id, deployment.id, region: 'aws-us-east-1')
 File.binwrite('exported-source.tar.gz', client.sandboxes.source(project_id, template_id, deployment.id))
 ```
@@ -121,4 +121,5 @@ Poll `deployment` until `status` is `active`; stop on `failed` or `deleted`.
 Only active versions can create sessions. `history.next_cursor` and
 `logs.next_cursor` can be passed as `cursor:` to retrieve the next page.
 `delete_template(project_id, template_id)` removes the custom template and its
-sessions. All template management uses backend service credentials.
+sessions and requires the `sandboxes.terminate` permission. History page limits
+range from 1 to 100. All template management uses backend service credentials.

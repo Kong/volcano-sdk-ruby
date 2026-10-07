@@ -15,9 +15,9 @@ module Volcano
       SandboxDeploymentResponse.deployment(@requests.service_scope.call(request, status: 202))
     end
 
-    def deployments(project_id, sandbox_id, cursor: nil)
+    def deployments(project_id, sandbox_id, cursor: nil, limit: 10)
       request = deployment_request(project_id, sandbox_id,
-                                   { operation: :list_sandbox_deployments, cursor: cursor })
+                                   { operation: :list_sandbox_deployments, cursor: cursor, limit: limit })
       SandboxDeploymentResponse.page(@requests.service_scope.call(request))
     end
 

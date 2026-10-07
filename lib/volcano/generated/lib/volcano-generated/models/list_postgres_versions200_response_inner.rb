@@ -21,8 +21,11 @@ module Volcano::Generated
     # Human-readable version name
     attr_accessor :name
 
-    # Whether this is the default version (recommended)
+    # True on the version to preselect for a new database; absent on the others
     attr_accessor :default
+
+    # True on the version recommended for new databases; absent on the others
+    attr_accessor :recommended
 
     # Whether this version is deprecated (approaching EOL)
     attr_accessor :deprecated
@@ -33,6 +36,7 @@ module Volcano::Generated
         :'version' => :'version',
         :'name' => :'name',
         :'default' => :'default',
+        :'recommended' => :'recommended',
         :'deprecated' => :'deprecated'
       }
     end
@@ -53,6 +57,7 @@ module Volcano::Generated
         :'version' => :'String',
         :'name' => :'String',
         :'default' => :'Boolean',
+        :'recommended' => :'Boolean',
         :'deprecated' => :'Boolean'
       }
     end
@@ -91,6 +96,10 @@ module Volcano::Generated
         self.default = attributes[:'default']
       end
 
+      if attributes.key?(:'recommended')
+        self.recommended = attributes[:'recommended']
+      end
+
       if attributes.key?(:'deprecated')
         self.deprecated = attributes[:'deprecated']
       end
@@ -119,6 +128,7 @@ module Volcano::Generated
           version == o.version &&
           name == o.name &&
           default == o.default &&
+          recommended == o.recommended &&
           deprecated == o.deprecated
     end
 
@@ -131,7 +141,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [version, name, default, deprecated].hash
+      [version, name, default, recommended, deprecated].hash
     end
 
     # Builds the object from hash

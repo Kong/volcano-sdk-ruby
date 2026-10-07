@@ -593,7 +593,7 @@ module Volcano::Generated
     end
 
     # List available PostgreSQL versions
-    # Returns a list of supported PostgreSQL major versions for database provisioning. This is a public endpoint that doesn't require authentication. 
+    # Returns the PostgreSQL major versions a database can be created on, newest first. Local mode lists only the version its server runs. This is a public endpoint that doesn't require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<ListPostgresVersions200ResponseInner>]
     def list_postgres_versions(opts = {})
@@ -602,7 +602,7 @@ module Volcano::Generated
     end
 
     # List available PostgreSQL versions
-    # Returns a list of supported PostgreSQL major versions for database provisioning. This is a public endpoint that doesn&#39;t require authentication. 
+    # Returns the PostgreSQL major versions a database can be created on, newest first. Local mode lists only the version its server runs. This is a public endpoint that doesn&#39;t require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<(Array<ListPostgresVersions200ResponseInner>, Integer, Hash)>] Array<ListPostgresVersions200ResponseInner> data, response status code and response headers
     def list_postgres_versions_with_http_info(opts = {})

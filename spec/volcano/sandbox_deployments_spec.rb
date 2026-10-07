@@ -46,9 +46,10 @@ RSpec.describe Volcano::SandboxDeployments do
 
   it 'reads history and deployment status' do
     reply({ data: [row], pagination: { limit: 20, has_more: true, next_cursor: 'next' } })
-    page = facade.deployments(project, template, cursor: 'current')
+    page = facade.deployments(project, template, cursor: 'current', limit: 7)
     expect(page.data.first.id).to eq(deployment)
     expect(page.next_cursor).to eq('next')
+    expect(requests.last.options[:params]).to include(cursor: 'current', limit: 7)
     reply(row)
     expect(facade.deployment(project, template, deployment).status).to eq('active')
   end
@@ -68,6 +69,7 @@ RSpec.describe Volcano::SandboxDeployments do
   it 'represents exhausted log and history pages without a cursor' do
     reply({ data: [], pagination: { limit: 20, has_more: false } })
     expect(facade.deployments(project, template).next_cursor).to be_nil
+    expect(requests.last.options[:params]).to include(limit: 10)
     reply({ data: [] })
     expect(facade.logs(project, template, deployment, region: 'aws-us-east-1').next_cursor).to be_nil
   end

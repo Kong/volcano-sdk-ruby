@@ -82,7 +82,7 @@ module Volcano
 
   module SandboxDeployments
     def deploy: (String project_id, String sandbox_id, String source, name: String, ?memory_mb: Integer, ?ports: Array[Integer], ?request_id: String?) -> SandboxDeployment
-    def deployments: (String project_id, String sandbox_id, ?cursor: String?) -> SandboxDeploymentPage
+    def deployments: (String project_id, String sandbox_id, ?cursor: String?, ?limit: Integer) -> SandboxDeploymentPage
     def deployment: (String project_id, String sandbox_id, String deployment_id) -> SandboxDeployment
     def source: (String project_id, String sandbox_id, String deployment_id) -> String
     def logs: (String project_id, String sandbox_id, String deployment_id, region: String, ?cursor: String?, ?limit: Integer) -> SandboxBuildLogPage

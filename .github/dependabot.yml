@@ -39,6 +39,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      bundler-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   # package.json only installs the OpenAPI Generator CLI wrapper used by
   # bin/generate-openapi; nothing here ships in the gem. The generator itself
@@ -64,6 +69,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      openapi-codegen-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -84,3 +94,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      github-actions-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"

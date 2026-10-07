@@ -123,3 +123,5 @@ Only active versions can create sessions. `history.next_cursor` and
 `delete_template(project_id, template_id)` removes the custom template and its
 sessions and requires the `sandboxes.terminate` permission. History page limits
 range from 1 to 100. All template management uses backend service credentials.
+
+Custom deployments accept at most 16 unique ports, from 1 through 65532.

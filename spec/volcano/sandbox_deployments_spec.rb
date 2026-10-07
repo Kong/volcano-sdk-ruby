@@ -74,11 +74,33 @@ RSpec.describe Volcano::SandboxDeployments do
     expect(facade.logs(project, template, deployment, region: 'aws-us-east-1').next_cursor).to be_nil
   end
 
+  [[1, 65_532], (1..16).to_a].each do |ports|
+    it "accepts valid port boundaries #{ports}" do
+      reply(row, status: 202)
+      expect(facade.deploy(project, template, source, name: 'custom', ports: ports).id).to eq(deployment)
+      expect(requests.last.options[:body]['ports']).to eq(JSON.generate(ports))
+    end
+  end
+
   it 'rejects oversized archives and invalid ports before dispatch' do
     expect { facade.deploy(project, template, 'x' * ((32 * 1024 * 1024) + 1), name: 'custom') }
       .to raise_error(Volcano::Error::ValidationError)
     expect { facade.deploy(project, template, source, name: 'custom', ports: [0]) }
       .to raise_error(Volcano::Error::ValidationError)
     expect(requests).to be_empty
+  end
+
+  [65_533, 65_534, 65_535].each do |port|
+    it "rejects reserved port #{port} before dispatch" do
+      expect { facade.deploy(project, template, 'archive', name: 'custom', ports: [port]) }
+        .to raise_error(Volcano::Error::ValidationError, 'Sandbox ports must be between 1 and 65532')
+    end
+  end
+
+  [[8080, 8080], (1..17).to_a].each do |ports|
+    it "rejects invalid port inventory #{ports}" do
+      expect { facade.deploy(project, template, 'archive', name: 'custom', ports: ports) }
+        .to raise_error(Volcano::Error::ValidationError, 'Sandbox ports must be unique and contain at most 16 entries')
+    end
   end
 end

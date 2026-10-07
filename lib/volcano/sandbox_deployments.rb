@@ -59,9 +59,17 @@ module Volcano
       if source.bytesize > 32 * 1024 * 1024
         raise Error::ValidationError, 'Sandbox source archives are limited to 32 MiB'
       end
-      return if ports.all? { |port| port.between?(1, 65_535) }
 
-      raise Error::ValidationError, 'Sandbox ports must be between 1 and 65535'
+      validate_ports(ports)
+    end
+
+    def validate_ports(ports)
+      if ports.length > 16 || ports.uniq.length != ports.length
+        raise Error::ValidationError, 'Sandbox ports must be unique and contain at most 16 entries'
+      end
+      return if ports.all? { |port| port.between?(1, 65_532) }
+
+      raise Error::ValidationError, 'Sandbox ports must be between 1 and 65532'
     end
   end
 end

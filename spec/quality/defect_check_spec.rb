@@ -93,4 +93,19 @@ RSpec.describe Quality::DefectCheck do
   it 'does not count a runtime crash as an assertion failure' do
     expect(check('after' => 'def self.value = missing_method')).to eq('harness_error')
   end
+
+  it 'reads a relative bundle path from this bundle, not the checkout' do
+    allow(Bundler.settings).to receive(:[]).and_call_original
+    allow(Bundler.settings).to receive(:[]).with(:path).and_return('vendor/bundle')
+    environments = []
+    process = instance_double(Quality::DefectProcess)
+    allow(process).to receive(:run) do |command, **|
+      environments << command.first
+      1
+    end
+
+    described_class.new(root: root, defect: defect, reports: reports, process: process).run
+
+    expect(environments.first).to include('BUNDLE_PATH' => File.join(Bundler.root, 'vendor/bundle'))
+  end
 end

@@ -4,6 +4,27 @@ module Volcano
   # Dispatch only the generated operations exposed by the Sandbox facade.
   class GeneratedTransport
     SANDBOX_OPERATIONS = {
+      list_sandbox_deployments: lambda { |api, request|
+        api.list_sandbox_deployments_with_http_info(request.resource_id, request.subject_id,
+                                                    cursor: request.cursor, limit: request.limit,
+                                                    debug_return_type: 'Object')
+      },
+      get_sandbox_deployment: lambda { |api, request|
+        api.get_sandbox_deployment_with_http_info(request.resource_id, request.subject_id, request.deployment_id,
+                                                  debug_return_type: 'Object')
+      },
+      get_sandbox_deployment_source: lambda { |api, request|
+        api.get_sandbox_deployment_source_with_http_info(request.resource_id, request.subject_id, request.deployment_id,
+                                                         debug_return_type: 'String')
+      },
+      get_sandbox_deployment_logs: lambda { |api, request|
+        api.get_sandbox_deployment_logs_with_http_info(request.resource_id, request.subject_id, request.deployment_id,
+                                                       request.region, cursor: request.cursor, limit: request.limit,
+                                                                       debug_return_type: 'Object')
+      },
+      delete_sandbox: lambda { |api, request|
+        api.delete_sandbox_with_http_info(request.resource_id, request.subject_id, debug_return_type: 'Object')
+      },
       list_sandbox_presets: lambda { |api, _request|
         api.list_sandbox_presets_with_http_info(debug_return_type: 'Object')
       },
@@ -53,12 +74,23 @@ module Volcano
     def sandbox_request(authorization:, request:)
       invoke do
         api = sandbox_api(authorization, request.timeout)
-        data, status, headers = SANDBOX_OPERATIONS.fetch(request.operation).call(api, request)
+        data, status, headers = sandbox_result(api, request)
         response(data, status, headers)
       end
     end
 
     private
+
+    def sandbox_result(api, request)
+      return SANDBOX_OPERATIONS.fetch(request.operation).call(api, request) unless request.operation == :deploy_sandbox
+
+      with_upload_file('source.tar.gz', request.archive) do |file|
+        body = request.deployment_body
+        options = { memory_mb: body[:memory_mb], ports: JSON.generate(body[:ports]), debug_return_type: 'Object' }
+        api.deploy_sandbox_with_http_info(request.resource_id, request.subject_id, request.request_id,
+                                          body[:name], file, options)
+      end
+    end
 
     def sandbox_api(authorization, timeout)
       configuration = generated_configuration(authorization)

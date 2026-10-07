@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,7 +20,9 @@ module Volcano::Generated
 
     attr_accessor :kind
 
-    # Function visibility for anon-key invocation
+    attr_accessor :visibility
+
+    # Deprecated alias for `visibility`: `true` means `public` and `false` means `authenticated`, not `private`, so an entry left at `false` applies `authenticated` on every apply; declare `visibility: private` to keep a function private. Declaring both with different meanings is an error. Exports write `visibility` only. 
     attr_accessor :public
 
     # Which project variables this function receives. `all` (the default) gives it the project variables marked `shared: true`. `scoped` gives it only the variables it selects: every name declared in `variables`, plus the names Volcano detects in its source that the project defines. 
@@ -65,6 +67,7 @@ module Volcano::Generated
       {
         :'name' => :'name',
         :'kind' => :'kind',
+        :'visibility' => :'visibility',
         :'public' => :'public',
         :'variable_scope' => :'variable_scope',
         :'variables' => :'variables',
@@ -90,6 +93,7 @@ module Volcano::Generated
       {
         :'name' => :'String',
         :'kind' => :'FunctionKind',
+        :'visibility' => :'FunctionVisibility',
         :'public' => :'Boolean',
         :'variable_scope' => :'String',
         :'variables' => :'Array<String>',
@@ -133,6 +137,10 @@ module Volcano::Generated
         self.kind = attributes[:'kind']
       else
         self.kind = 'standard'
+      end
+
+      if attributes.key?(:'visibility')
+        self.visibility = attributes[:'visibility']
       end
 
       if attributes.key?(:'public')
@@ -228,6 +236,7 @@ module Volcano::Generated
       self.class == o.class &&
           name == o.name &&
           kind == o.kind &&
+          visibility == o.visibility &&
           public == o.public &&
           variable_scope == o.variable_scope &&
           variables == o.variables &&
@@ -246,7 +255,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, kind, public, variable_scope, variables, invocation_mode, http_auth_mode, openapi_spec, schedulers].hash
+      [name, kind, visibility, public, variable_scope, variables, invocation_mode, http_auth_mode, openapi_spec, schedulers].hash
     end
 
     # Builds the object from hash

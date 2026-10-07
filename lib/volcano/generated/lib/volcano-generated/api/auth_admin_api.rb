@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Ban a user
-    # Bans a user temporarily or permanently. Banned users cannot sign in and all their active sessions are immediately revoked.  - Omit `banned_until` for a permanent ban - Provide `banned_until` ISO timestamp for a temporary ban 
+    # Bans a user temporarily or permanently. Banned users cannot sign in and all their active sessions are immediately revoked. Omitting banned_until clears any previous expiry. Deleted accounts cannot be banned.  - Omit `banned_until` for a permanent ban - Provide `banned_until` ISO timestamp for a temporary ban 
     # @param id [String] Project ID
     # @param user_id [String] 
     # @param [Hash] opts the optional parameters
@@ -32,7 +32,7 @@ module Volcano::Generated
     end
 
     # Ban a user
-    # Bans a user temporarily or permanently. Banned users cannot sign in and all their active sessions are immediately revoked.  - Omit &#x60;banned_until&#x60; for a permanent ban - Provide &#x60;banned_until&#x60; ISO timestamp for a temporary ban 
+    # Bans a user temporarily or permanently. Banned users cannot sign in and all their active sessions are immediately revoked. Omitting banned_until clears any previous expiry. Deleted accounts cannot be banned.  - Omit &#x60;banned_until&#x60; for a permanent ban - Provide &#x60;banned_until&#x60; ISO timestamp for a temporary ban 
     # @param id [String] Project ID
     # @param user_id [String] 
     # @param [Hash] opts the optional parameters
@@ -76,7 +76,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'BanUserResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.ban_auth_user",
@@ -143,7 +143,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.delete_all_user_sessions",
@@ -210,7 +210,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.delete_auth_user",
@@ -283,7 +283,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.delete_user_session",
@@ -303,7 +303,7 @@ module Volcano::Generated
     end
 
     # Get auth user insights
-    # Returns current auth-user totals, rolling 30-day active users, and zero-filled signup and successful sign-in counts for an inclusive UTC date range. Weeks start on Monday. Sign-in counts and active-user activity begin when collection is deployed. Historical signup counts are backfilled from users present at deployment. Token refreshes affect active users but not the sign-in series. 
+    # Returns current and deleted auth-user totals, rolling 24-hour and 30-day active users, and zero-filled signup, deletion, net-growth, and successful sign-in counts for an inclusive UTC date range. Weeks start on Monday. Signups remain counted after deletion; net growth is signups minus deletions. Deleted users contribute to active counts until their last activity leaves the rolling window. Token refreshes affect active users but not the sign-in series. Collection starts at deployment, with signup history backfilled from accounts still present then. Earlier hard-deleted accounts cannot be recovered. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Date] :from Inclusive UTC start date. Defaults to 29 days before &#x60;to&#x60;.
@@ -316,7 +316,7 @@ module Volcano::Generated
     end
 
     # Get auth user insights
-    # Returns current auth-user totals, rolling 30-day active users, and zero-filled signup and successful sign-in counts for an inclusive UTC date range. Weeks start on Monday. Sign-in counts and active-user activity begin when collection is deployed. Historical signup counts are backfilled from users present at deployment. Token refreshes affect active users but not the sign-in series. 
+    # Returns current and deleted auth-user totals, rolling 24-hour and 30-day active users, and zero-filled signup, deletion, net-growth, and successful sign-in counts for an inclusive UTC date range. Weeks start on Monday. Signups remain counted after deletion; net growth is signups minus deletions. Deleted users contribute to active counts until their last activity leaves the rolling window. Token refreshes affect active users but not the sign-in series. Collection starts at deployment, with signup history backfilled from accounts still present then. Earlier hard-deleted accounts cannot be recovered. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Date] :from Inclusive UTC start date. Defaults to 29 days before &#x60;to&#x60;.
@@ -355,7 +355,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthInsightsResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.get_auth_insights",
@@ -422,7 +422,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthUser'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.get_auth_user",
@@ -530,7 +530,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedAuthUsers'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.list_auth_users",
@@ -648,7 +648,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'AuthGetMySessions200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.list_user_sessions",
@@ -668,7 +668,7 @@ module Volcano::Generated
     end
 
     # Unban a user
-    # Removes a ban from a user, restoring their ability to sign in. The user's status is set back to 'active'. 
+    # Removes a ban from a user, restoring their ability to sign in. The user's status is set back to 'active'. Deleted accounts cannot be restored. 
     # @param id [String] Project ID
     # @param user_id [String] 
     # @param [Hash] opts the optional parameters
@@ -679,7 +679,7 @@ module Volcano::Generated
     end
 
     # Unban a user
-    # Removes a ban from a user, restoring their ability to sign in. The user&#39;s status is set back to &#39;active&#39;. 
+    # Removes a ban from a user, restoring their ability to sign in. The user&#39;s status is set back to &#39;active&#39;. Deleted accounts cannot be restored. 
     # @param id [String] Project ID
     # @param user_id [String] 
     # @param [Hash] opts the optional parameters
@@ -717,7 +717,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'UnbanUserResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"AuthAdminApi.unban_auth_user",

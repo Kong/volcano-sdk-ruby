@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,6 +15,12 @@ require 'time'
 
 module Volcano::Generated
   class Frontend < ApiModelBase
+    # All preserves access to all project variables. Shared includes the project frontend shared-variable list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
+    attr_accessor :variable_scope
+
+    # Names selected when variable_scope is scoped. Missing declared values reject deployment. Omission preserves the stored list; an empty list clears it.
+    attr_accessor :declared_variables
+
     attr_accessor :id
 
     attr_accessor :project_id
@@ -48,6 +54,9 @@ module Volcano::Generated
     # Current custom domain lifecycle status
     attr_accessor :custom_domain_status
 
+    # Paths on this frontend that forward to a public function, ordered from most to least specific. Anyone who can load the frontend can reach the target function at these paths without a credential. 
+    attr_accessor :function_routes
+
     attr_accessor :last_invoked_at
 
     attr_accessor :created_at
@@ -79,6 +88,8 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'variable_scope' => :'variable_scope',
+        :'declared_variables' => :'declared_variables',
         :'id' => :'id',
         :'project_id' => :'project_id',
         :'name' => :'name',
@@ -92,6 +103,7 @@ module Volcano::Generated
         :'site_url' => :'site_url',
         :'custom_domain' => :'custom_domain',
         :'custom_domain_status' => :'custom_domain_status',
+        :'function_routes' => :'function_routes',
         :'last_invoked_at' => :'last_invoked_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
@@ -111,6 +123,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'variable_scope' => :'String',
+        :'declared_variables' => :'Array<String>',
         :'id' => :'String',
         :'project_id' => :'String',
         :'name' => :'String',
@@ -124,6 +138,7 @@ module Volcano::Generated
         :'site_url' => :'String',
         :'custom_domain' => :'String',
         :'custom_domain_status' => :'String',
+        :'function_routes' => :'Array<FrontendFunctionRoute>',
         :'last_invoked_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
@@ -151,6 +166,16 @@ module Volcano::Generated
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'variable_scope')
+        self.variable_scope = attributes[:'variable_scope']
+      end
+
+      if attributes.key?(:'declared_variables')
+        if (value = attributes[:'declared_variables']).is_a?(Array)
+          self.declared_variables = value
+        end
+      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -218,6 +243,14 @@ module Volcano::Generated
         self.custom_domain_status = attributes[:'custom_domain_status']
       end
 
+      if attributes.key?(:'function_routes')
+        if (value = attributes[:'function_routes']).is_a?(Array)
+          self.function_routes = value
+        end
+      else
+        self.function_routes = nil
+      end
+
       if attributes.key?(:'last_invoked_at')
         self.last_invoked_at = attributes[:'last_invoked_at']
       end
@@ -277,6 +310,14 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "deployed_regions", deployed_regions cannot be nil.')
       end
 
+      if @function_routes.nil?
+        invalid_properties.push('invalid value for "function_routes", function_routes cannot be nil.')
+      end
+
+      if @function_routes.length > 64
+        invalid_properties.push('invalid value for "function_routes", number of items must be less than or equal to 64.')
+      end
+
       if @created_at.nil?
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
@@ -292,6 +333,8 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      variable_scope_validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      return false unless variable_scope_validator.valid?(@variable_scope)
       return false if @id.nil?
       return false if @project_id.nil?
       return false if @name.nil?
@@ -307,9 +350,31 @@ module Volcano::Generated
       return false if @deployed_regions.nil?
       custom_domain_status_validator = EnumAttributeValidator.new('String', ["pending_verification", "provisioning", "active", "detaching", "failed", "deleted"])
       return false unless custom_domain_status_validator.valid?(@custom_domain_status)
+      return false if @function_routes.nil?
+      return false if @function_routes.length > 64
       return false if @created_at.nil?
       return false if @updated_at.nil?
       true
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] variable_scope Object to be assigned
+    def variable_scope=(variable_scope)
+      validator = EnumAttributeValidator.new('String', ["all", "shared", "scoped"])
+      unless validator.valid?(variable_scope)
+        fail ArgumentError, "invalid value for \"variable_scope\", must be one of #{validator.allowable_values}."
+      end
+      @variable_scope = variable_scope
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] declared_variables Value to be assigned
+    def declared_variables=(declared_variables)
+      if declared_variables.nil?
+        fail ArgumentError, 'declared_variables cannot be nil'
+      end
+
+      @declared_variables = declared_variables
     end
 
     # Custom attribute writer method with validation
@@ -406,6 +471,20 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] function_routes Value to be assigned
+    def function_routes=(function_routes)
+      if function_routes.nil?
+        fail ArgumentError, 'function_routes cannot be nil'
+      end
+
+      if function_routes.length > 64
+        fail ArgumentError, 'invalid value for "function_routes", number of items must be less than or equal to 64.'
+      end
+
+      @function_routes = function_routes
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] created_at Value to be assigned
     def created_at=(created_at)
       if created_at.nil?
@@ -430,6 +509,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          variable_scope == o.variable_scope &&
+          declared_variables == o.declared_variables &&
           id == o.id &&
           project_id == o.project_id &&
           name == o.name &&
@@ -443,6 +524,7 @@ module Volcano::Generated
           site_url == o.site_url &&
           custom_domain == o.custom_domain &&
           custom_domain_status == o.custom_domain_status &&
+          function_routes == o.function_routes &&
           last_invoked_at == o.last_invoked_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
@@ -457,7 +539,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, last_invoked_at, created_at, updated_at].hash
+      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, function_routes, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

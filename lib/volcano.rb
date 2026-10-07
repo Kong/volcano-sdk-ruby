@@ -69,6 +69,8 @@ require_relative 'volcano/sandbox_request'
 require_relative 'volcano/sandbox_response'
 require_relative 'volcano/sandbox_files'
 require_relative 'volcano/sandbox_session'
+require_relative 'volcano/sandbox_deployment_response'
+require_relative 'volcano/sandbox_deployments'
 require_relative 'volcano/sandboxes'
 require_relative 'volcano/client'
 

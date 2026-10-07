@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -312,6 +312,116 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Build and deploy a custom sandbox template
+    # Upload a tar.gz context with a Dockerfile. The template ID may be new. Retries with the same Idempotency-Key and content return the same deployment. Existing sessions retain their image while the replacement builds and validates.
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param idempotency_key [String] 
+    # @param name [String] 
+    # @param code [File] Source tar.gz archive, limited to 32 MiB compressed and expanded.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :memory_mb Memory in MiB. Defaults to 1024 when omitted.
+    # @option opts [String] :ports JSON array of application ports that must become ready before activation, for example [8080].
+    # @return [SandboxDeployment]
+    def deploy_sandbox(id, sandbox_id, idempotency_key, name, code, opts = {})
+      data, _status_code, _headers = deploy_sandbox_with_http_info(id, sandbox_id, idempotency_key, name, code, opts)
+      data
+    end
+
+    # Build and deploy a custom sandbox template
+    # Upload a tar.gz context with a Dockerfile. The template ID may be new. Retries with the same Idempotency-Key and content return the same deployment. Existing sessions retain their image while the replacement builds and validates.
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param idempotency_key [String] 
+    # @param name [String] 
+    # @param code [File] Source tar.gz archive, limited to 32 MiB compressed and expanded.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :memory_mb Memory in MiB. Defaults to 1024 when omitted.
+    # @option opts [String] :ports JSON array of application ports that must become ready before activation, for example [8080].
+    # @return [Array<(SandboxDeployment, Integer, Hash)>] SandboxDeployment data, response status code and response headers
+    def deploy_sandbox_with_http_info(id, sandbox_id, idempotency_key, name, code, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.deploy_sandbox ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling SandboxesApi.deploy_sandbox"
+      end
+      # verify the required parameter 'sandbox_id' is set
+      if @api_client.config.client_side_validation && sandbox_id.nil?
+        fail ArgumentError, "Missing the required parameter 'sandbox_id' when calling SandboxesApi.deploy_sandbox"
+      end
+      # verify the required parameter 'idempotency_key' is set
+      if @api_client.config.client_side_validation && idempotency_key.nil?
+        fail ArgumentError, "Missing the required parameter 'idempotency_key' when calling SandboxesApi.deploy_sandbox"
+      end
+      # verify the required parameter 'name' is set
+      if @api_client.config.client_side_validation && name.nil?
+        fail ArgumentError, "Missing the required parameter 'name' when calling SandboxesApi.deploy_sandbox"
+      end
+      pattern = Regexp.new(/^[a-z][a-z0-9-]{0,62}$/)
+      if @api_client.config.client_side_validation && name !~ pattern
+        fail ArgumentError, "invalid value for 'name' when calling SandboxesApi.deploy_sandbox, must conform to the pattern #{pattern}."
+      end
+
+      # verify the required parameter 'code' is set
+      if @api_client.config.client_side_validation && code.nil?
+        fail ArgumentError, "Missing the required parameter 'code' when calling SandboxesApi.deploy_sandbox"
+      end
+      allowable_values = [1024, 2048]
+      if @api_client.config.client_side_validation && opts[:'memory_mb'] && !allowable_values.include?(opts[:'memory_mb'])
+        fail ArgumentError, "invalid value for \"memory_mb\", must be one of #{allowable_values}"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/sandboxes/{sandboxId}/deployments'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'sandboxId' + '}', CGI.escape(sandbox_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+      header_params[:'Idempotency-Key'] = idempotency_key
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['name'] = name
+      form_params['code'] = code
+      form_params['memory_mb'] = opts[:'memory_mb'] if !opts[:'memory_mb'].nil?
+      form_params['ports'] = opts[:'ports'] if !opts[:'ports'].nil?
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxDeployment'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.deploy_sandbox",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#deploy_sandbox\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Execute once and return after confirmed termination
     # @param id [String] 
     # @param idempotency_key [String] 
@@ -529,6 +639,255 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: SandboxesApi#get_sandbox\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get a sandbox deployment
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param [Hash] opts the optional parameters
+    # @return [SandboxDeployment]
+    def get_sandbox_deployment(id, sandbox_id, deployment_id, opts = {})
+      data, _status_code, _headers = get_sandbox_deployment_with_http_info(id, sandbox_id, deployment_id, opts)
+      data
+    end
+
+    # Get a sandbox deployment
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(SandboxDeployment, Integer, Hash)>] SandboxDeployment data, response status code and response headers
+    def get_sandbox_deployment_with_http_info(id, sandbox_id, deployment_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.get_sandbox_deployment ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling SandboxesApi.get_sandbox_deployment"
+      end
+      # verify the required parameter 'sandbox_id' is set
+      if @api_client.config.client_side_validation && sandbox_id.nil?
+        fail ArgumentError, "Missing the required parameter 'sandbox_id' when calling SandboxesApi.get_sandbox_deployment"
+      end
+      # verify the required parameter 'deployment_id' is set
+      if @api_client.config.client_side_validation && deployment_id.nil?
+        fail ArgumentError, "Missing the required parameter 'deployment_id' when calling SandboxesApi.get_sandbox_deployment"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/sandboxes/{sandboxId}/deployments/{deploymentId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'sandboxId' + '}', CGI.escape(sandbox_id.to_s)).sub('{' + 'deploymentId' + '}', CGI.escape(deployment_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxDeployment'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.get_sandbox_deployment",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#get_sandbox_deployment\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Read sandbox deployment build logs
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param region [String] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor 
+    # @option opts [Integer] :limit  (default to 100)
+    # @return [SandboxBuildLogPage]
+    def get_sandbox_deployment_logs(id, sandbox_id, deployment_id, region, opts = {})
+      data, _status_code, _headers = get_sandbox_deployment_logs_with_http_info(id, sandbox_id, deployment_id, region, opts)
+      data
+    end
+
+    # Read sandbox deployment build logs
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param region [String] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor 
+    # @option opts [Integer] :limit  (default to 100)
+    # @return [Array<(SandboxBuildLogPage, Integer, Hash)>] SandboxBuildLogPage data, response status code and response headers
+    def get_sandbox_deployment_logs_with_http_info(id, sandbox_id, deployment_id, region, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.get_sandbox_deployment_logs ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling SandboxesApi.get_sandbox_deployment_logs"
+      end
+      # verify the required parameter 'sandbox_id' is set
+      if @api_client.config.client_side_validation && sandbox_id.nil?
+        fail ArgumentError, "Missing the required parameter 'sandbox_id' when calling SandboxesApi.get_sandbox_deployment_logs"
+      end
+      # verify the required parameter 'deployment_id' is set
+      if @api_client.config.client_side_validation && deployment_id.nil?
+        fail ArgumentError, "Missing the required parameter 'deployment_id' when calling SandboxesApi.get_sandbox_deployment_logs"
+      end
+      # verify the required parameter 'region' is set
+      if @api_client.config.client_side_validation && region.nil?
+        fail ArgumentError, "Missing the required parameter 'region' when calling SandboxesApi.get_sandbox_deployment_logs"
+      end
+      pattern = Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
+      if @api_client.config.client_side_validation && region !~ pattern
+        fail ArgumentError, "invalid value for 'region' when calling SandboxesApi.get_sandbox_deployment_logs, must conform to the pattern #{pattern}."
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'cursor'].nil? && opts[:'cursor'].to_s.length > 2048
+        fail ArgumentError, 'invalid value for "opts[:"cursor"]" when calling SandboxesApi.get_sandbox_deployment_logs, the character length must be smaller than or equal to 2048.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling SandboxesApi.get_sandbox_deployment_logs, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling SandboxesApi.get_sandbox_deployment_logs, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/sandboxes/{sandboxId}/deployments/{deploymentId}/logs'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'sandboxId' + '}', CGI.escape(sandbox_id.to_s)).sub('{' + 'deploymentId' + '}', CGI.escape(deployment_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'region'] = region
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxBuildLogPage'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.get_sandbox_deployment_logs",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#get_sandbox_deployment_logs\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Download the retained custom sandbox source
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param [Hash] opts the optional parameters
+    # @return [File]
+    def get_sandbox_deployment_source(id, sandbox_id, deployment_id, opts = {})
+      data, _status_code, _headers = get_sandbox_deployment_source_with_http_info(id, sandbox_id, deployment_id, opts)
+      data
+    end
+
+    # Download the retained custom sandbox source
+    # @param id [String] 
+    # @param sandbox_id [String] 
+    # @param deployment_id [String] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(File, Integer, Hash)>] File data, response status code and response headers
+    def get_sandbox_deployment_source_with_http_info(id, sandbox_id, deployment_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.get_sandbox_deployment_source ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling SandboxesApi.get_sandbox_deployment_source"
+      end
+      # verify the required parameter 'sandbox_id' is set
+      if @api_client.config.client_side_validation && sandbox_id.nil?
+        fail ArgumentError, "Missing the required parameter 'sandbox_id' when calling SandboxesApi.get_sandbox_deployment_source"
+      end
+      # verify the required parameter 'deployment_id' is set
+      if @api_client.config.client_side_validation && deployment_id.nil?
+        fail ArgumentError, "Missing the required parameter 'deployment_id' when calling SandboxesApi.get_sandbox_deployment_source"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/sandboxes/{sandboxId}/deployments/{deploymentId}/source'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'sandboxId' + '}', CGI.escape(sandbox_id.to_s)).sub('{' + 'deploymentId' + '}', CGI.escape(deployment_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/gzip', 'application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'File'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.get_sandbox_deployment_source",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#get_sandbox_deployment_source\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

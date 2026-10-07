@@ -19,6 +19,12 @@ module Volcano
     def subject_id = @options[:subject_id]
     def body = @options[:body]
     def request_id = @options[:request_id]
+    def deployment_id = @options[:deployment_id]
+    def archive = @options.fetch(:archive)
+    def deployment_body = @options.fetch(:body)
+    def cursor = @options[:cursor]
+    def region = @options[:region]
+    def limit = @options[:limit]
     def timeout = @options.fetch(:timeout, 0)
   end
 

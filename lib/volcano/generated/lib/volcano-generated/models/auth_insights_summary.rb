@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,16 +15,24 @@ require 'time'
 
 module Volcano::Generated
   class AuthInsightsSummary < ApiModelBase
-    # Current auth-user count, matching the auth-user list total.
+    # Current auth-user count, excluding accounts with deleted status.
     attr_accessor :total_users
 
-    # Users with a successful session creation or refresh in the trailing 30 days since activity collection was deployed.
+    # Recorded deletions, excluding internal test identities. Includes soft and hard deletion, counted once per account.
+    attr_accessor :deleted_users
+
+    # Distinct users active in the trailing 24 hours, including activity before account deletion.
+    attr_accessor :active_users_1d
+
+    # Distinct users with a successful session creation or refresh in the trailing 30 days, including activity before account deletion.
     attr_accessor :active_users_30d
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'total_users' => :'total_users',
+        :'deleted_users' => :'deleted_users',
+        :'active_users_1d' => :'active_users_1d',
         :'active_users_30d' => :'active_users_30d'
       }
     end
@@ -43,6 +51,8 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'total_users' => :'Integer',
+        :'deleted_users' => :'Integer',
+        :'active_users_1d' => :'Integer',
         :'active_users_30d' => :'Integer'
       }
     end
@@ -75,6 +85,18 @@ module Volcano::Generated
         self.total_users = nil
       end
 
+      if attributes.key?(:'deleted_users')
+        self.deleted_users = attributes[:'deleted_users']
+      else
+        self.deleted_users = nil
+      end
+
+      if attributes.key?(:'active_users_1d')
+        self.active_users_1d = attributes[:'active_users_1d']
+      else
+        self.active_users_1d = nil
+      end
+
       if attributes.key?(:'active_users_30d')
         self.active_users_30d = attributes[:'active_users_30d']
       else
@@ -95,6 +117,22 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "total_users", must be greater than or equal to 0.')
       end
 
+      if @deleted_users.nil?
+        invalid_properties.push('invalid value for "deleted_users", deleted_users cannot be nil.')
+      end
+
+      if @deleted_users < 0
+        invalid_properties.push('invalid value for "deleted_users", must be greater than or equal to 0.')
+      end
+
+      if @active_users_1d.nil?
+        invalid_properties.push('invalid value for "active_users_1d", active_users_1d cannot be nil.')
+      end
+
+      if @active_users_1d < 0
+        invalid_properties.push('invalid value for "active_users_1d", must be greater than or equal to 0.')
+      end
+
       if @active_users_30d.nil?
         invalid_properties.push('invalid value for "active_users_30d", active_users_30d cannot be nil.')
       end
@@ -112,6 +150,10 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @total_users.nil?
       return false if @total_users < 0
+      return false if @deleted_users.nil?
+      return false if @deleted_users < 0
+      return false if @active_users_1d.nil?
+      return false if @active_users_1d < 0
       return false if @active_users_30d.nil?
       return false if @active_users_30d < 0
       true
@@ -129,6 +171,34 @@ module Volcano::Generated
       end
 
       @total_users = total_users
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] deleted_users Value to be assigned
+    def deleted_users=(deleted_users)
+      if deleted_users.nil?
+        fail ArgumentError, 'deleted_users cannot be nil'
+      end
+
+      if deleted_users < 0
+        fail ArgumentError, 'invalid value for "deleted_users", must be greater than or equal to 0.'
+      end
+
+      @deleted_users = deleted_users
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] active_users_1d Value to be assigned
+    def active_users_1d=(active_users_1d)
+      if active_users_1d.nil?
+        fail ArgumentError, 'active_users_1d cannot be nil'
+      end
+
+      if active_users_1d < 0
+        fail ArgumentError, 'invalid value for "active_users_1d", must be greater than or equal to 0.'
+      end
+
+      @active_users_1d = active_users_1d
     end
 
     # Custom attribute writer method with validation
@@ -151,6 +221,8 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           total_users == o.total_users &&
+          deleted_users == o.deleted_users &&
+          active_users_1d == o.active_users_1d &&
           active_users_30d == o.active_users_30d
     end
 
@@ -163,7 +235,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [total_users, active_users_30d].hash
+      [total_users, deleted_users, active_users_1d, active_users_30d].hash
     end
 
     # Builds the object from hash

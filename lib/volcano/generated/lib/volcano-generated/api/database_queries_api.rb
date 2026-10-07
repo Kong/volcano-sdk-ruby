@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -303,7 +303,7 @@ module Volcano::Generated
     end
 
     # Query database with SELECT (REST API)
-    # Query your database using a simple REST API - no SQL required!  **Authentication:** Requires auth user access token (from signup/signin)  **Row-Level Security:** Automatically enforced - you see only data you have access to  **Use Cases:** - Query from browser/mobile apps - Simple data retrieval - Filtered searches with sorting and pagination  **Note:** For complex queries (JOINs, CTEs), use Lambda functions with direct SQL  **Branch-targeted.** Runs against the named branch instead of the parent database, using the branch's own credentials. The branch must be `active` and unexpired. Nothing about this request can reach the parent's data. 
+    # Query your database using a simple REST API - no SQL required!  **Authentication:** Requires auth user access token (from signup/signin)  **Row-Level Security:** Automatically enforced - you see only data you have access to  **Use Cases:** - Query from browser/mobile apps - Simple data retrieval - Filtered searches with sorting and pagination  **Note:** For complex queries (JOINs, CTEs), use a function with direct SQL  **Branch-targeted.** Runs against the named branch instead of the parent database, using the branch's own credentials. The branch must be `active` and unexpired. Nothing about this request can reach the parent's data. 
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param branch_name [String] Branch name (unique within the parent database, lowercase letters, numbers, and underscores only)
     # @param database_select_request [DatabaseSelectRequest] 
@@ -315,7 +315,7 @@ module Volcano::Generated
     end
 
     # Query database with SELECT (REST API)
-    # Query your database using a simple REST API - no SQL required!  **Authentication:** Requires auth user access token (from signup/signin)  **Row-Level Security:** Automatically enforced - you see only data you have access to  **Use Cases:** - Query from browser/mobile apps - Simple data retrieval - Filtered searches with sorting and pagination  **Note:** For complex queries (JOINs, CTEs), use Lambda functions with direct SQL  **Branch-targeted.** Runs against the named branch instead of the parent database, using the branch&#39;s own credentials. The branch must be &#x60;active&#x60; and unexpired. Nothing about this request can reach the parent&#39;s data. 
+    # Query your database using a simple REST API - no SQL required!  **Authentication:** Requires auth user access token (from signup/signin)  **Row-Level Security:** Automatically enforced - you see only data you have access to  **Use Cases:** - Query from browser/mobile apps - Simple data retrieval - Filtered searches with sorting and pagination  **Note:** For complex queries (JOINs, CTEs), use a function with direct SQL  **Branch-targeted.** Runs against the named branch instead of the parent database, using the branch&#39;s own credentials. The branch must be &#x60;active&#x60; and unexpired. Nothing about this request can reach the parent&#39;s data. 
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param branch_name [String] Branch name (unique within the parent database, lowercase letters, numbers, and underscores only)
     # @param database_select_request [DatabaseSelectRequest] 

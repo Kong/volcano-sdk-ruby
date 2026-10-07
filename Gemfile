@@ -5,10 +5,11 @@ source 'https://rubygems.org'
 gemspec
 
 group :development do
+  gem 'bigdecimal', '~> 4.1'
   gem 'bundler-audit', '0.9.3'
   gem 'prop_check', '1.0.2'
   gem 'rake', '~> 13.2'
-  gem 'rbs', '3.10.4'
+  gem 'rbs', '4.2.0'
   gem 'rspec', '~> 3.13'
   gem 'rubocop', '~> 1.91'
   gem 'rubocop-performance', '~> 1.26'
@@ -16,5 +17,5 @@ group :development do
   gem 'rubocop-rspec', '~> 3.7'
   gem 'rubydex', '0.4.1', require: false
   gem 'simplecov', '1.3.2', require: false
-  gem 'steep', '1.10.0'
+  gem 'steep', '2.1.0'
 end

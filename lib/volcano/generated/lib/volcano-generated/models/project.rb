@@ -254,7 +254,7 @@ module Volcano::Generated
       return false if @status.nil?
       status_validator = EnumAttributeValidator.new('String', ["active", "deleting", "failed"])
       return false unless status_validator.valid?(@status)
-      plan_validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT", "FREE", "PRO"])
+      plan_validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT"])
       return false unless plan_validator.valid?(@plan)
       return false if @all_regions.nil?
       return false if @selected_regions.nil?
@@ -296,7 +296,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] plan Object to be assigned
     def plan=(plan)
-      validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT", "FREE", "PRO"])
+      validator = EnumAttributeValidator.new('String', ["HOBBY", "SUPERAGENT"])
       unless validator.valid?(plan)
         fail ArgumentError, "invalid value for \"plan\", must be one of #{validator.allowable_values}."
       end

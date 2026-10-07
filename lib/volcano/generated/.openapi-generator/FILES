@@ -37,6 +37,7 @@ lib/volcano-generated/api/storage_objects_api.rb
 lib/volcano-generated/api/storage_policies_api.rb
 lib/volcano-generated/api/system_api.rb
 lib/volcano-generated/api/variables_api.rb
+lib/volcano-generated/api/verified_domains_api.rb
 lib/volcano-generated/api_client.rb
 lib/volcano-generated/api_error.rb
 lib/volcano-generated/api_model_base.rb
@@ -450,6 +451,9 @@ lib/volcano-generated/models/upload_session_status_response.rb
 lib/volcano-generated/models/upload_storage_object201_response.rb
 lib/volcano-generated/models/usage_data_point.rb
 lib/volcano-generated/models/variable.rb
+lib/volcano-generated/models/verified_domain.rb
+lib/volcano-generated/models/verified_domains_response.rb
+lib/volcano-generated/models/verify_domain_request.rb
 lib/volcano-generated/version.rb
 spec/spec_helper.rb
 volcano-generated.gemspec

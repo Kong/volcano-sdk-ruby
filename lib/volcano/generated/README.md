@@ -384,6 +384,9 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::VariablesApi* | [**get_variable**](docs/VariablesApi.md#get_variable) | **GET** /projects/{id}/variables/{name} | Get variable by name
 *Volcano::Generated::VariablesApi* | [**list_variables**](docs/VariablesApi.md#list_variables) | **GET** /projects/{id}/variables | List all variables for a project
 *Volcano::Generated::VariablesApi* | [**update_variable**](docs/VariablesApi.md#update_variable) | **PUT** /projects/{id}/variables/{name} | Update a variable
+*Volcano::Generated::VerifiedDomainsApi* | [**delete_verified_domain**](docs/VerifiedDomainsApi.md#delete_verified_domain) | **DELETE** /user/domains/{domain} | Remove a verified domain
+*Volcano::Generated::VerifiedDomainsApi* | [**list_verified_domains**](docs/VerifiedDomainsApi.md#list_verified_domains) | **GET** /user/domains | List verified domains
+*Volcano::Generated::VerifiedDomainsApi* | [**verify_domain**](docs/VerifiedDomainsApi.md#verify_domain) | **POST** /user/domains | Verify a domain
 
 
 ## Documentation for Models
@@ -797,6 +800,9 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UploadStorageObject201Response](docs/UploadStorageObject201Response.md)
  - [Volcano::Generated::UsageDataPoint](docs/UsageDataPoint.md)
  - [Volcano::Generated::Variable](docs/Variable.md)
+ - [Volcano::Generated::VerifiedDomain](docs/VerifiedDomain.md)
+ - [Volcano::Generated::VerifiedDomainsResponse](docs/VerifiedDomainsResponse.md)
+ - [Volcano::Generated::VerifyDomainRequest](docs/VerifyDomainRequest.md)
 
 
 ## Documentation for Authorization

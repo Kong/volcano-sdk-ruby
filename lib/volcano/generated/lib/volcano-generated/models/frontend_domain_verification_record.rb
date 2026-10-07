@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # The DNS records currently required for managed TLS. Volcano may require a tenant-specific TXT ownership record before returning a CNAME that authorizes certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
+  # The DNS records currently required. Volcano may require an account-specific TXT ownership record for the hostname's domain before returning a CNAME that authorizes managed certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
   class FrontendDomainVerificationRecord < ApiModelBase
     attr_accessor :name
 

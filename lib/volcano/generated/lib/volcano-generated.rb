@@ -427,6 +427,9 @@ Volcano::Generated.autoload :UploadSessionStatusResponse, 'volcano-generated/mod
 Volcano::Generated.autoload :UploadStorageObject201Response, 'volcano-generated/models/upload_storage_object201_response'
 Volcano::Generated.autoload :UsageDataPoint, 'volcano-generated/models/usage_data_point'
 Volcano::Generated.autoload :Variable, 'volcano-generated/models/variable'
+Volcano::Generated.autoload :VerifiedDomain, 'volcano-generated/models/verified_domain'
+Volcano::Generated.autoload :VerifiedDomainsResponse, 'volcano-generated/models/verified_domains_response'
+Volcano::Generated.autoload :VerifyDomainRequest, 'volcano-generated/models/verify_domain_request'
 
 # APIs
 Volcano::Generated.autoload :AnonKeysApi, 'volcano-generated/api/anon_keys_api'
@@ -457,6 +460,7 @@ Volcano::Generated.autoload :StorageObjectsApi, 'volcano-generated/api/storage_o
 Volcano::Generated.autoload :StoragePoliciesApi, 'volcano-generated/api/storage_policies_api'
 Volcano::Generated.autoload :SystemApi, 'volcano-generated/api/system_api'
 Volcano::Generated.autoload :VariablesApi, 'volcano-generated/api/variables_api'
+Volcano::Generated.autoload :VerifiedDomainsApi, 'volcano-generated/api/verified_domains_api'
 
 module Volcano::Generated
   class << self

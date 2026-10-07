@@ -403,7 +403,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxDeployment'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.deploy_sandbox",
@@ -697,7 +697,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxDeployment'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.get_sandbox_deployment",
@@ -800,7 +800,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxBuildLogPage'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.get_sandbox_deployment_logs",
@@ -873,7 +873,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'File'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.get_sandbox_deployment_source",

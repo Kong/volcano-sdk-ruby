@@ -14,21 +14,18 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Domain ownership conflict. With `code: ownership_verification_required`, the account has not proven it owns the domain: publish `required_record` in DNS and send the same request again. The retry succeeds once Volcano can see the record. Other conflicts omit both fields.
-  class FrontendCustomDomainConflictError < ApiModelBase
-    attr_accessor :error
+  # A domain the account owns, along with every name below it.
+  class VerifiedDomain < ApiModelBase
+    attr_accessor :domain
 
-    # Stable machine-readable error code when a specific recovery path is available.
-    attr_accessor :code
-
-    attr_accessor :required_record
+    # When the account last proved ownership.
+    attr_accessor :verified_at
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'error' => :'error',
-        :'code' => :'code',
-        :'required_record' => :'required_record'
+        :'domain' => :'domain',
+        :'verified_at' => :'verified_at'
       }
     end
 
@@ -45,9 +42,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'error' => :'String',
-        :'code' => :'String',
-        :'required_record' => :'FrontendDomainVerificationRecord'
+        :'domain' => :'String',
+        :'verified_at' => :'Time'
       }
     end
 
@@ -57,41 +53,32 @@ module Volcano::Generated
       ])
     end
 
-    # List of class defined in allOf (OpenAPI v3)
-    def self.openapi_all_of
-      [
-      :'Error'
-      ]
-    end
-
     # Initializes the object
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::FrontendCustomDomainConflictError` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::VerifiedDomain` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::FrontendCustomDomainConflictError`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::VerifiedDomain`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'error')
-        self.error = attributes[:'error']
+      if attributes.key?(:'domain')
+        self.domain = attributes[:'domain']
       else
-        self.error = nil
+        self.domain = nil
       end
 
-      if attributes.key?(:'code')
-        self.code = attributes[:'code']
-      end
-
-      if attributes.key?(:'required_record')
-        self.required_record = attributes[:'required_record']
+      if attributes.key?(:'verified_at')
+        self.verified_at = attributes[:'verified_at']
+      else
+        self.verified_at = nil
       end
     end
 
@@ -100,8 +87,12 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @error.nil?
-        invalid_properties.push('invalid value for "error", error cannot be nil.')
+      if @domain.nil?
+        invalid_properties.push('invalid value for "domain", domain cannot be nil.')
+      end
+
+      if @verified_at.nil?
+        invalid_properties.push('invalid value for "verified_at", verified_at cannot be nil.')
       end
 
       invalid_properties
@@ -111,18 +102,29 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @error.nil?
+      return false if @domain.nil?
+      return false if @verified_at.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] error Value to be assigned
-    def error=(error)
-      if error.nil?
-        fail ArgumentError, 'error cannot be nil'
+    # @param [Object] domain Value to be assigned
+    def domain=(domain)
+      if domain.nil?
+        fail ArgumentError, 'domain cannot be nil'
       end
 
-      @error = error
+      @domain = domain
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] verified_at Value to be assigned
+    def verified_at=(verified_at)
+      if verified_at.nil?
+        fail ArgumentError, 'verified_at cannot be nil'
+      end
+
+      @verified_at = verified_at
     end
 
     # Checks equality by comparing each attribute.
@@ -130,9 +132,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          error == o.error &&
-          code == o.code &&
-          required_record == o.required_record
+          domain == o.domain &&
+          verified_at == o.verified_at
     end
 
     # @see the `==` method
@@ -144,7 +145,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [error, code, required_record].hash
+      [domain, verified_at].hash
     end
 
     # Builds the object from hash

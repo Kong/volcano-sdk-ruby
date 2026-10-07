@@ -28,6 +28,9 @@ and update the versions in the README's "Generated boundary" section. If the
 generated client changed, edit the squash commit title to `fix(deps): ...` when
 merging, because the gem ships it.
 
+Dependabot stops rebasing a pull request once someone else pushes to it, so
+merge it soon after. `@dependabot recreate` starts over and drops those commits.
+
 ## Before publication
 
 1. Identify the release PR, exact source commit, version, tag and intended registry account. Inspect the generated changelog and package metadata.

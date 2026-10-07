@@ -115,7 +115,7 @@ module Volcano
     def function_json?(text, headers)
       return true if text.start_with?('{', '[')
 
-      headers.to_h.any? do |key, value|
+      (headers || {}).any? do |key, value|
         key.casecmp?('Content-Type') && value.to_s.downcase.include?('application/json')
       end
     end

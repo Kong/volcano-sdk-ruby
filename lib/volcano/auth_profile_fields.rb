@@ -80,8 +80,8 @@ module Volcano
 
     def profile_optional_boolean(value)
       return if value.nil?
-      return true if value == true
-      return false if value == false
+      return true if value.equal?(true)
+      return false if value.equal?(false)
 
       raise Error::AuthenticationError, INVALID_USER
     end

@@ -269,6 +269,14 @@ RSpec.describe Volcano::Client do
     expect(calls).to be_empty
   end
 
+  it 'refuses a filter it does not know, as an unknown keyword', :aggregate_failures do
+    expect { approvals.list('project-1', state: 'pending') }.to raise_error(ArgumentError, 'unknown keywords: state')
+    expect { approvals.list('project-1', { status: 'pending', fn: 'x' }) }
+      .to raise_error(ArgumentError, 'unknown keywords: fn')
+    expect { approvals.list('project-1', 'pending') }.to raise_error(TypeError, 'filters must be a Hash')
+    expect(calls).to be_empty
+  end
+
   it 'accepts a comment at the length limit' do
     responses[:approve_durable_approval] = transport_response(200, decided('approved', ''))
 

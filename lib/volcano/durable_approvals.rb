@@ -23,18 +23,17 @@ module Volcano
       @transport = transport
     end
 
-    # Lists approvals, newest first. +function+ is a durable function's id or
-    # name; a name also matches approvals from a deleted function of that name.
-    # +from+ is inclusive and +to+ exclusive, each a Time or an ISO 8601 string.
-    def list( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.
-      project_id, status: nil, function: nil, execution_id: nil, from: nil, to: nil, page: nil, limit: nil
-    )
+    LIST_FILTERS = %i[status function execution_id from to page limit].freeze
+    private_constant :LIST_FILTERS
+
+    # Lists approvals, newest first, filtered by any of +status+, +function+,
+    # +execution_id+, +from+, +to+, +page+, and +limit+, given as keywords.
+    # +function+ is a durable function's id or name; a name also matches
+    # approvals from a deleted function of that name. +from+ is inclusive and
+    # +to+ exclusive, each a Time or an ISO 8601 string.
+    def list(project_id, filters = {})
       project = identifier(project_id, 'project_id')
-      validate_paging(page, limit)
-      options = window(function, from, to).merge(
-        status: optional_identifier(status, 'status'),
-        execution_id: optional_identifier(execution_id, 'execution_id'), page: page, limit: limit
-      ).compact
+      options = list_options(filters)
       response = Transport.invoke do
         @transport.list_durable_approvals(authorization: @client.session_token, project_id: project, options: options)
       end
@@ -96,6 +95,25 @@ module Volcano
       note = comment_argument(comment)
       response = Transport.invoke { yield(@client.session_token, project, approval, note) }
       durable_approval(Transport.body(response, 200))
+    end
+
+    def list_options(filters)
+      status, function, execution_id, from, to, page, limit = list_filters(filters).values_at(*LIST_FILTERS)
+      validate_paging(page, limit)
+      window(function, from, to).merge(
+        status: optional_identifier(status, 'status'),
+        execution_id: optional_identifier(execution_id, 'execution_id'), page: page, limit: limit
+      ).compact
+    end
+
+    # Refuses a misspelled filter, as an unknown keyword would be.
+    def list_filters(filters)
+      raise TypeError, 'filters must be a Hash' unless filters.is_a?(Hash)
+
+      unknown = filters.keys - LIST_FILTERS
+      raise ArgumentError, "unknown keywords: #{unknown.join(', ')}" unless unknown.empty?
+
+      filters
     end
 
     def window(function, from, to)

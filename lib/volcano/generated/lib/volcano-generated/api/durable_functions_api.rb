@@ -513,6 +513,7 @@ module Volcano::Generated
     end
 
     # Get a durable approval
+    # Returns one approval: what the workflow asked, the durable function and execution that asked it, its deadline, and the decision once one is made.  Project access tokens can read approvals, including read-only ones. 
     # @param id [String] Project ID
     # @param approval_id [String] Durable approval ID
     # @param [Hash] opts the optional parameters
@@ -523,6 +524,7 @@ module Volcano::Generated
     end
 
     # Get a durable approval
+    # Returns one approval: what the workflow asked, the durable function and execution that asked it, its deadline, and the decision once one is made.  Project access tokens can read approvals, including read-only ones. 
     # @param id [String] Project ID
     # @param approval_id [String] Durable approval ID
     # @param [Hash] opts the optional parameters

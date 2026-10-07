@@ -16,6 +16,18 @@ release gate is required.
 The checked-in release and publish workflows own versioning and publication.
 This checklist does not authorize a release, a registry mutation or an environment approval.
 
+## Dependabot updates
+
+Dependabot titles updates to the gemspec's runtime gems, and to the gems they
+pull in, `fix(deps)`, so Release Please releases them. Development gems, GitHub
+Actions and the npm generator wrapper use `chore`, which does not.
+
+For an `openapi-codegen` update to `@openapitools/openapi-generator-cli`, run
+`npm ci && bin/generate-openapi`, commit any change under `lib/volcano/generated`,
+and update the versions in the README's "Generated boundary" section. If the
+generated client changed, edit the squash commit title to `fix(deps): ...` when
+merging, because the gem ships it.
+
 ## Before publication
 
 1. Identify the release PR, exact source commit, version, tag and intended registry account. Inspect the generated changelog and package metadata.

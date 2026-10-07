@@ -43,9 +43,8 @@ updates:
   # package.json only installs the OpenAPI Generator CLI wrapper used by
   # bin/generate-openapi; nothing here ships in the gem. The generator itself
   # (7.17.0) is pinned in openapitools.json, which Dependabot does not manage.
-  # CI's `bin/check-openapi` fails if a bump changes the committed output, so
-  # review these with `npm ci && bin/generate-openapi`, and update the versions
-  # quoted in README.md's "Generated boundary" section.
+  # CI's `bin/check-openapi` fails if a bump changes the committed output; see
+  # maintainers/releasing.md for regenerating and the README versions.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

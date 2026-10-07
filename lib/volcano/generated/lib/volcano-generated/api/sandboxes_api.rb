@@ -759,7 +759,7 @@ module Volcano::Generated
       if @api_client.config.client_side_validation && region.nil?
         fail ArgumentError, "Missing the required parameter 'region' when calling SandboxesApi.get_sandbox_deployment_logs"
       end
-      pattern = Regexp.new(/^aws-[a-z]+-[a-z]+-[0-9]+$/)
+      pattern = Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
       if @api_client.config.client_side_validation && region !~ pattern
         fail ArgumentError, "invalid value for 'region' when calling SandboxesApi.get_sandbox_deployment_logs, must conform to the pattern #{pattern}."
       end

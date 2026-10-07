@@ -22,7 +22,7 @@ approval = Volcano::DurableApproval.new(
   decision: decision
 )
 raise 'Wrong approval' unless approval.decision == decision && approval.expires_at.nil?
-raise 'Wrong approval members' unless Volcano::DurableApproval.members.first == :id
+raise 'Wrong approval members' unless Volcano::DurableApproval.members.first.equal?(:id)
 raise 'Wrong approval tuple' unless approval.deconstruct[1] == 'approved'
 
 page = Volcano::DurableApprovalPage.new(approvals: [approval], page: 1, limit: 20, total: 1, has_more: false)

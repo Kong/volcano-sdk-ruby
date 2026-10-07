@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -27,7 +27,8 @@ module Volcano::Generated
     # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for these runtimes only; any other runtime is rejected with 400 and the response names the ones that work. Note that a durable Python function needs a newer runtime than a standard one defaults to. &#x60;GET /functions/runtimes&#x60; reports &#x60;durable_capable&#x60; per runtime. 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. (default to 'handler')
-    # @option opts [Boolean] :is_public Whether anon keys with &#x60;functions.invoke&#x60; may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts private.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
+    # @option opts [FunctionVisibility] :visibility Who may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts &#x60;private&#x60;.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
+    # @option opts [Boolean] :is_public Deprecated alias for &#x60;visibility&#x60;: &#x60;true&#x60; means &#x60;public&#x60; and &#x60;false&#x60; means &#x60;authenticated&#x60;. Sending both with different meanings returns 400. 
     # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it every project variable; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
     # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
     # @return [DurableFunction]
@@ -44,7 +45,8 @@ module Volcano::Generated
     # @param runtime [String] Runtime environment. Required. Durable execution needs the durable authoring API, which ships for these runtimes only; any other runtime is rejected with 400 and the response names the ones that work. Note that a durable Python function needs a newer runtime than a standard one defaults to. &#x60;GET /functions/runtimes&#x60; reports &#x60;durable_capable&#x60; per runtime. 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. (default to 'handler')
-    # @option opts [Boolean] :is_public Whether anon keys with &#x60;functions.invoke&#x60; may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts private.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
+    # @option opts [FunctionVisibility] :visibility Who may start an execution. Redeploying is the only way to change it, since the collection has no update endpoint; omit it to keep the current visibility, and a new function starts &#x60;private&#x60;.  The standard collection&#39;s synchronous invocation fields — &#x60;invocation_mode&#x60;, &#x60;http_auth_mode&#x60;, &#x60;openapi_spec&#x60; — configure a request path no durable route serves, and are rejected with 400 rather than ignored. 
+    # @option opts [Boolean] :is_public Deprecated alias for &#x60;visibility&#x60;: &#x60;true&#x60; means &#x60;public&#x60; and &#x60;false&#x60; means &#x60;authenticated&#x60;. Sending both with different meanings returns 400. 
     # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it every project variable; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
     # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
     # @return [Array<(DurableFunction, Integer, Hash)>] DurableFunction data, response status code and response headers
@@ -108,6 +110,7 @@ module Volcano::Generated
       form_params['code'] = code
       form_params['runtime'] = runtime
       form_params['handler'] = opts[:'handler'] if !opts[:'handler'].nil?
+      form_params['visibility'] = opts[:'visibility'] if !opts[:'visibility'].nil?
       form_params['is_public'] = opts[:'is_public'] if !opts[:'is_public'].nil?
       form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
       form_params['variables'] = opts[:'variables'] if !opts[:'variables'].nil?
@@ -219,7 +222,7 @@ module Volcano::Generated
     end
 
     # Delete a durable function
-    # Accepted for asynchronous teardown; the work continues after the response. The function's executions go with it: history stops being readable whatever `retention_days` had left, and the executions still running stop counting against the project's concurrency cap. Stop an execution first if you need it to end before the function does. 
+    # Accepted for asynchronous teardown; the work continues after the response. The function's executions go with it: executions still in flight are stopped, and history stops being readable whatever `retention_days` had left.  Stopping is asynchronous at the platform, and it does not interrupt a step already running -- that step runs to its next checkpoint. So a delete ends an execution rather than halting it mid-step; stop the execution yourself first if you need to observe it ending. 
     # @param id [String] Project ID
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
@@ -230,7 +233,7 @@ module Volcano::Generated
     end
 
     # Delete a durable function
-    # Accepted for asynchronous teardown; the work continues after the response. The function&#39;s executions go with it: history stops being readable whatever &#x60;retention_days&#x60; had left, and the executions still running stop counting against the project&#39;s concurrency cap. Stop an execution first if you need it to end before the function does. 
+    # Accepted for asynchronous teardown; the work continues after the response. The function&#39;s executions go with it: executions still in flight are stopped, and history stops being readable whatever &#x60;retention_days&#x60; had left.  Stopping is asynchronous at the platform, and it does not interrupt a step already running -- that step runs to its next checkpoint. So a delete ends an execution rather than halting it mid-step; stop the execution yourself first if you need to observe it ending. 
     # @param id [String] Project ID
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
@@ -571,6 +574,81 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_function_scheduler\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a durable execution's operations
+    # Returns the execution's trace: every operation it began — each step, wait, poll, child context, map item and parallel branch — with when it started and ended, how it ended, and each attempt of a retried step. `invocations` are the windows the function's code was actually running; the gaps between them are time the execution spent suspended, which is not charged.  A finished execution's trace is final and `complete` is `true`. A running one is refreshed when it is read, and can be up to about ten seconds behind; `synced_at` says when it was last refreshed. Inputs, results and other payloads are never included.  The list is not paginated: an execution is limited to 3,000 operations, and a trace is read whole. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [DurableExecutionOperationList]
+    def list_durable_execution_operations(id, function_id, execution_id, opts = {})
+      data, _status_code, _headers = list_durable_execution_operations_with_http_info(id, function_id, execution_id, opts)
+      data
+    end
+
+    # List a durable execution&#39;s operations
+    # Returns the execution&#39;s trace: every operation it began — each step, wait, poll, child context, map item and parallel branch — with when it started and ended, how it ended, and each attempt of a retried step. &#x60;invocations&#x60; are the windows the function&#39;s code was actually running; the gaps between them are time the execution spent suspended, which is not charged.  A finished execution&#39;s trace is final and &#x60;complete&#x60; is &#x60;true&#x60;. A running one is refreshed when it is read, and can be up to about ten seconds behind; &#x60;synced_at&#x60; says when it was last refreshed. Inputs, results and other payloads are never included.  The list is not paginated: an execution is limited to 3,000 operations, and a trace is read whole. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableExecutionOperationList, Integer, Hash)>] DurableExecutionOperationList data, response status code and response headers
+    def list_durable_execution_operations_with_http_info(id, function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_execution_operations ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.list_durable_execution_operations"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-functions/{functionId}/executions/{executionId}/operations'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableExecutionOperationList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_execution_operations",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_execution_operations\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -996,7 +1074,7 @@ module Volcano::Generated
     end
 
     # Start a durable execution from an application
-    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of `POST /functions/{functionId}/invoke`, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under `/projects/{id}/durable-functions/...` remains the owner's management surface.  **With a service key or an auth user token:** any durable function in the project.  **With an anon key:** requires the `functions.invoke` permission, and the function must have `is_public: true`.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner's token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send `X-Volcano-Execution-Name` to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project's durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
+    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of `POST /functions/{functionId}/invoke`, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under `/projects/{id}/durable-functions/...` remains the owner's management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** requires the `functions.invoke` permission, and the function must have `visibility: public`.  A `private` durable function answers every credential but a service key exactly as a missing one, with 404.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner's token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send `X-Volcano-Execution-Name` to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project's durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
     # @option opts [String] :x_volcano_execution_name Idempotency key for this execution. Generated when omitted. A repeat under a name that already names a running execution returns that execution and is not charged again.  Letters, digits, &#x60;-&#x60;, &#x60;_&#x60; and &#x60;.&#x60;, up to 255 characters. Anything else is rejected with &#x60;400&#x60;. 
@@ -1008,7 +1086,7 @@ module Volcano::Generated
     end
 
     # Start a durable execution from an application
-    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of &#x60;POST /functions/{functionId}/invoke&#x60;, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under &#x60;/projects/{id}/durable-functions/...&#x60; remains the owner&#39;s management surface.  **With a service key or an auth user token:** any durable function in the project.  **With an anon key:** requires the &#x60;functions.invoke&#x60; permission, and the function must have &#x60;is_public: true&#x60;.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner&#39;s token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send &#x60;X-Volcano-Execution-Name&#x60; to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project&#39;s durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
+    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of &#x60;POST /functions/{functionId}/invoke&#x60;, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under &#x60;/projects/{id}/durable-functions/...&#x60; remains the owner&#39;s management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** requires the &#x60;functions.invoke&#x60; permission, and the function must have &#x60;visibility: public&#x60;.  A &#x60;private&#x60; durable function answers every credential but a service key exactly as a missing one, with 404.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner&#39;s token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send &#x60;X-Volcano-Execution-Name&#x60; to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project&#39;s durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
     # @option opts [String] :x_volcano_execution_name Idempotency key for this execution. Generated when omitted. A repeat under a name that already names a running execution returns that execution and is not charged again.  Letters, digits, &#x60;-&#x60;, &#x60;_&#x60; and &#x60;.&#x60;, up to 255 characters. Anything else is rejected with &#x60;400&#x60;. 

@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -21,6 +21,9 @@ module Volcano::Generated
 
     # Optional function identifiers. Omit or send an empty array to include every function in the project.
     attr_accessor :ids
+
+    # Read only functions of this kind. Omit to include standard and durable functions. With `ids`, the listed functions of other kinds are left out, so an ID of the other kind returns no logs. Search, stream, and activity cursors are bound to the kind. 
+    attr_accessor :kind
 
     attr_accessor :deployments
 
@@ -51,6 +54,7 @@ module Volcano::Generated
       {
         :'type' => :'type',
         :'ids' => :'ids',
+        :'kind' => :'kind',
         :'deployments' => :'deployments'
       }
     end
@@ -70,6 +74,7 @@ module Volcano::Generated
       {
         :'type' => :'String',
         :'ids' => :'Array<String>',
+        :'kind' => :'FunctionKindFilter',
         :'deployments' => :'LogDeploymentRequestSelector'
       }
     end
@@ -106,6 +111,10 @@ module Volcano::Generated
         if (value = attributes[:'ids']).is_a?(Array)
           self.ids = value
         end
+      end
+
+      if attributes.key?(:'kind')
+        self.kind = attributes[:'kind']
       end
 
       if attributes.key?(:'deployments')
@@ -171,6 +180,7 @@ module Volcano::Generated
       self.class == o.class &&
           type == o.type &&
           ids == o.ids &&
+          kind == o.kind &&
           deployments == o.deployments
     end
 
@@ -183,7 +193,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [type, ids, deployments].hash
+      [type, ids, kind, deployments].hash
     end
 
     # Builds the object from hash

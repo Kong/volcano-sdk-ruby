@@ -48,7 +48,49 @@ module Volcano
     def inspect: () -> String
   end
 
+  class SandboxDeployment < Data
+    attr_reader id: String
+    attr_reader status: String
+    attr_reader created_at: String
+    attr_reader updated_at: String
+    def self.new: (id: String, status: String, created_at: String, updated_at: String) -> SandboxDeployment
+    def initialize: (id: String, status: String, created_at: String, updated_at: String) -> void
+  end
+
+  class SandboxDeploymentPage < Data
+    attr_reader data: Array[SandboxDeployment]
+    attr_reader limit: Integer
+    attr_reader has_more: bool
+    attr_reader next_cursor: String?
+    def self.new: (data: Array[SandboxDeployment], limit: Integer, has_more: bool, next_cursor: String?) -> SandboxDeploymentPage
+    def initialize: (data: Array[SandboxDeployment], limit: Integer, has_more: bool, next_cursor: String?) -> void
+  end
+
+  class SandboxBuildLog < Data
+    attr_reader timestamp: String
+    attr_reader message: String
+    def self.new: (timestamp: String, message: String) -> SandboxBuildLog
+    def initialize: (timestamp: String, message: String) -> void
+  end
+
+  class SandboxBuildLogPage < Data
+    attr_reader data: Array[SandboxBuildLog]
+    attr_reader next_cursor: String?
+    def self.new: (data: Array[SandboxBuildLog], next_cursor: String?) -> SandboxBuildLogPage
+    def initialize: (data: Array[SandboxBuildLog], next_cursor: String?) -> void
+  end
+
+  module SandboxDeployments
+    def deploy: (String project_id, String sandbox_id, String source, name: String, ?memory_mb: Integer, ?ports: Array[Integer], ?request_id: String?) -> SandboxDeployment
+    def deployments: (String project_id, String sandbox_id, ?cursor: String?) -> SandboxDeploymentPage
+    def deployment: (String project_id, String sandbox_id, String deployment_id) -> SandboxDeployment
+    def source: (String project_id, String sandbox_id, String deployment_id) -> String
+    def logs: (String project_id, String sandbox_id, String deployment_id, region: String, ?cursor: String?, ?limit: Integer) -> SandboxBuildLogPage
+    def delete_template: (String project_id, String sandbox_id) -> nil
+  end
+
   class Sandboxes
+    include SandboxDeployments
     def inspect: () -> String
     def presets: () -> Array[SandboxPreset]
     def create: (String project_id, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?max_duration_seconds: Integer?, ?idle_timeout_seconds: Integer?, ?request_id: String?) -> SandboxSession

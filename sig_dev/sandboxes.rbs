@@ -1,5 +1,5 @@
 module Volcano
-  type sandbox_request_options = { operation: Symbol, ?resource_id: String, ?subject_id: String, ?body: Hash[Symbol, json_value], ?request_id: String, ?timeout: Integer }
+  type sandbox_request_options = { operation: Symbol, ?resource_id: String, ?subject_id: String, ?body: Hash[Symbol, json_value], ?request_id: String, ?timeout: Integer, ?deployment_id: String, ?archive: String, ?cursor: String?, ?region: String, ?limit: Integer }
 
   class SandboxRequest
     @options: sandbox_request_options
@@ -8,6 +8,12 @@ module Volcano
     attr_reader subject_id: String?
     attr_reader body: Hash[Symbol, json_value]?
     attr_reader request_id: String?
+    attr_reader deployment_id: String?
+    attr_reader archive: String
+    attr_reader deployment_body: Hash[Symbol, json_value]
+    attr_reader cursor: String?
+    attr_reader region: String?
+    attr_reader limit: Integer?
     attr_reader timeout: Integer
     def initialize: (sandbox_request_options options) -> void
   end
@@ -58,6 +64,20 @@ module Volcano
     def self.access: (Object? value) -> SandboxAccess
     def self.preset: (Object? value) -> SandboxPreset
     def self.array: (Object? value) -> Array[Object?]
+  end
+
+  module SandboxDeploymentResponse
+    def self.deployment: (Object? value) -> SandboxDeployment
+    def self.page: (Object? value) -> SandboxDeploymentPage
+    def self.logs: (Object? value) -> SandboxBuildLogPage
+    def self.log: (Object? value) -> SandboxBuildLog
+    def self.optional_text: (Object? value) -> String?
+  end
+
+  module SandboxDeployments
+    @requests: SandboxRequests
+    private def deployment_request: (String project_id, String sandbox_id, sandbox_request_options options) -> SandboxRequest
+    private def validate_source: (String source, Array[Integer] ports) -> void
   end
 
   class Sandboxes

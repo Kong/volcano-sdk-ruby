@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,7 +15,9 @@ require 'time'
 
 module Volcano::Generated
   class UpdateFunctionRequest < ApiModelBase
-    # Function visibility for anon-key invocation. - `false` (default): private function - `true`: public function (anon keys with `functions.invoke` can invoke) 
+    attr_accessor :visibility
+
+    # Deprecated alias for `visibility`: `true` means `public` and `false` means `authenticated`. Sending both with different meanings returns 400. 
     attr_accessor :is_public
 
     attr_accessor :invocation_mode
@@ -50,6 +52,7 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'visibility' => :'visibility',
         :'is_public' => :'is_public',
         :'invocation_mode' => :'invocation_mode',
         :'http_auth_mode' => :'http_auth_mode',
@@ -70,6 +73,7 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'visibility' => :'FunctionVisibility',
         :'is_public' => :'Boolean',
         :'invocation_mode' => :'FunctionInvocationMode',
         :'http_auth_mode' => :'FunctionHTTPAuthMode',
@@ -99,6 +103,10 @@ module Volcano::Generated
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'visibility')
+        self.visibility = attributes[:'visibility']
+      end
 
       if attributes.key?(:'is_public')
         self.is_public = attributes[:'is_public']
@@ -139,6 +147,7 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          visibility == o.visibility &&
           is_public == o.is_public &&
           invocation_mode == o.invocation_mode &&
           http_auth_mode == o.http_auth_mode &&
@@ -154,7 +163,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [is_public, invocation_mode, http_auth_mode, openapi_spec].hash
+      [visibility, is_public, invocation_mode, http_auth_mode, openapi_spec].hash
     end
 
     # Builds the object from hash

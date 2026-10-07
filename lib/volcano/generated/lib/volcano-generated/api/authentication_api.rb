@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -1194,7 +1194,7 @@ module Volcano::Generated
     end
 
     # Sign in an auth user
-    # Authenticate with email and password. Requires an anon key.  Set `session_mode` to `cookie` to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. 
+    # Authenticate with email and password. Requires an anon key.  Set `session_mode` to `cookie` to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. A frontend on its default Volcano URL is cross-site with this API and so always gets the body token. 
     # @param auth_signin_request [AuthSigninRequest] 
     # @param [Hash] opts the optional parameters
     # @return [AuthTokenResponse]
@@ -1204,7 +1204,7 @@ module Volcano::Generated
     end
 
     # Sign in an auth user
-    # Authenticate with email and password. Requires an anon key.  Set &#x60;session_mode&#x60; to &#x60;cookie&#x60; to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. 
+    # Authenticate with email and password. Requires an anon key.  Set &#x60;session_mode&#x60; to &#x60;cookie&#x60; to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. A frontend on its default Volcano URL is cross-site with this API and so always gets the body token. 
     # @param auth_signin_request [AuthSigninRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Array<(AuthTokenResponse, Integer, Hash)>] AuthTokenResponse data, response status code and response headers

@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,13 +15,15 @@ require 'time'
 
 module Volcano::Generated
   class Project < ApiModelBase
+    attr_accessor :template_installation
+
     attr_accessor :id
 
     attr_accessor :name
 
     attr_accessor :status
 
-    # Public plan name; FREE and PRO are accepted from older Hosting responses.
+    # Plan name applied to the project when available.
     attr_accessor :plan
 
     # Region policy for function deployment. - `true`: deploy functions to all configured platform regions - `false`: deploy only to `selected_regions` 
@@ -29,8 +31,6 @@ module Volcano::Generated
 
     # Effective region set for this project (normalized and deduplicated)
     attr_accessor :selected_regions
-
-    attr_accessor :aws_application_name
 
     # Most recent activity timestamp across project resources
     attr_accessor :last_invoked_at
@@ -73,13 +73,13 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
+        :'template_installation' => :'template_installation',
         :'id' => :'id',
         :'name' => :'name',
         :'status' => :'status',
         :'plan' => :'plan',
         :'all_regions' => :'all_regions',
         :'selected_regions' => :'selected_regions',
-        :'aws_application_name' => :'aws_application_name',
         :'last_invoked_at' => :'last_invoked_at',
         :'logo_url' => :'logo_url',
         :'git_connection' => :'git_connection',
@@ -102,13 +102,13 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
+        :'template_installation' => :'ProjectTemplateInstallation',
         :'id' => :'String',
         :'name' => :'String',
         :'status' => :'String',
         :'plan' => :'String',
         :'all_regions' => :'Boolean',
         :'selected_regions' => :'Array<String>',
-        :'aws_application_name' => :'String',
         :'last_invoked_at' => :'Time',
         :'logo_url' => :'String',
         :'git_connection' => :'ProjectGitConnectionSummary',
@@ -139,6 +139,10 @@ module Volcano::Generated
         end
         h[k.to_sym] = v
       }
+
+      if attributes.key?(:'template_installation')
+        self.template_installation = attributes[:'template_installation']
+      end
 
       if attributes.key?(:'id')
         self.id = attributes[:'id']
@@ -174,10 +178,6 @@ module Volcano::Generated
         end
       else
         self.selected_regions = nil
-      end
-
-      if attributes.key?(:'aws_application_name')
-        self.aws_application_name = attributes[:'aws_application_name']
       end
 
       if attributes.key?(:'last_invoked_at')
@@ -348,13 +348,13 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
+          template_installation == o.template_installation &&
           id == o.id &&
           name == o.name &&
           status == o.status &&
           plan == o.plan &&
           all_regions == o.all_regions &&
           selected_regions == o.selected_regions &&
-          aws_application_name == o.aws_application_name &&
           last_invoked_at == o.last_invoked_at &&
           logo_url == o.logo_url &&
           git_connection == o.git_connection &&
@@ -372,7 +372,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, name, status, plan, all_regions, selected_regions, aws_application_name, last_invoked_at, logo_url, git_connection, health, created_at, updated_at].hash
+      [template_installation, id, name, status, plan, all_regions, selected_regions, last_invoked_at, logo_url, git_connection, health, created_at, updated_at].hash
     end
 
     # Builds the object from hash

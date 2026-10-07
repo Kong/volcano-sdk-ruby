@@ -219,7 +219,7 @@ jobs:
           ruby-version: '3.4.10'
           bundler-cache: false
       - run: sha256sum --check SHA256SUMS
-      - uses: rubygems/configure-rubygems-credentials@2a7221c7c44c30ebc68eda38fa25c60b918245c7
+      - uses: rubygems/configure-rubygems-credentials@8674aee7f9f9055a8b771794d6f1e66b5fad36a9
         with:
           trusted-publisher: true
       - name: Push the validated gem

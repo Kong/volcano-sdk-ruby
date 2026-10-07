@@ -8,7 +8,7 @@ module Volcano
   # Every operation takes the project id and the client's platform token.
   # Reads also accept a project access token, including a read-only one.
   # Deciding takes a person: a project access token is refused with
-  # Error::PermissionError.
+  # Error::PermissionDeniedError.
   class DurableApprovals
     include DurableArguments
     include DurableApprovalResponses

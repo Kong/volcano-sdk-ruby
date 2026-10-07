@@ -587,16 +587,16 @@ with the rest summed in `other_functions`, and returns `daily` counts keyed by
 `YYYY-MM-DD` UTC dates, omitting days without approvals.
 
 An approval keeps its function and execution names after they are deleted;
-their ids become nil. `decision` is nil until someone decides, and its
-`decided_by` is nil once that person's account is deleted.
+their ids become nil. `decision` is nil unless the approval was approved or
+denied, and its `decided_by` is nil once the deciding account is deleted.
 
 Reading approvals accepts the project owner's platform user token or a project
 access token. Approving and denying require a person: a project access token
-raises `Volcano::Error::PermissionError` (HTTP 403, a subclass of
-`AuthenticationError`, so existing rescues still apply). Repeating the same decision
-returns the approval unchanged; a conflicting decision, or deciding an expired
-or cancelled approval, raises `Volcano::Error::ConflictError` (HTTP 409). An
-unknown approval, or one in another project, raises
+raises `Volcano::Error::PermissionDeniedError` (HTTP 403, a subclass of
+`AuthenticationError`, so existing rescues still apply). Repeating the same
+decision returns the approval unchanged; a conflicting decision, or deciding an
+expired or cancelled approval, raises `Volcano::Error::ConflictError` (HTTP
+409). An unknown approval, or one in another project, raises
 `Volcano::Error::NotFoundError`. A `comment` is optional, up to 2,000
 characters.
 

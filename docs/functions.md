@@ -105,4 +105,6 @@ stats = approvals.stats(project_id, from: Time.now - (7 * 86_400))
 
 `list` and `get` return `DurableApproval` records; `stats` returns counts by status, the approval rate, and decision times for a window that defaults to the last 30 days. `daily` entries carry `YYYY-MM-DD` UTC dates.
 
-Reads accept the project owner's platform user token or a project access token. Decisions require a person, so a project access token raises `Volcano::Error::PermissionError`. A conflicting decision, or deciding an expired or cancelled approval, raises `Volcano::Error::ConflictError` with `code` set to `approval_decided`, `approval_expired`, or `approval_cancelled`; repeating the same decision returns the approval unchanged. An unknown approval raises `Volcano::Error::NotFoundError`. Malformed responses raise `TypeError`.
+An approval's `decision` is nil unless it was approved or denied. `decision.decided_by` is nil once the deciding account is deleted, so read it with `decided_by&.email`.
+
+Reads accept the project owner's platform user token or a project access token. Decisions require a person, so a project access token raises `Volcano::Error::PermissionDeniedError`, a subclass of `Volcano::Error::AuthenticationError`. A conflicting decision, or deciding an expired or cancelled approval, raises `Volcano::Error::ConflictError` with `code` set to `approval_decided`, `approval_expired`, or `approval_cancelled`; repeating the same decision returns the approval unchanged. An unknown approval raises `Volcano::Error::NotFoundError`. Malformed responses raise `TypeError`.

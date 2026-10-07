@@ -95,7 +95,7 @@ RSpec.describe Volcano::DurableApprovals do
     expect(sent).to eq(["#{base}/#{approval_id}/deny", :post, {}, '{}', 'Bearer platform-token'])
   end
 
-  { 403 => Volcano::Error::PermissionError, 404 => Volcano::Error::NotFoundError,
+  { 403 => Volcano::Error::PermissionDeniedError, 404 => Volcano::Error::NotFoundError,
     409 => Volcano::Error::ConflictError }.each do |code, error|
     it "raises #{error} for an HTTP #{code} decision" do
       respond({ 'error' => 'refused', 'code' => 'approval_decided' }, code: code)

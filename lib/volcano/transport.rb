@@ -11,7 +11,7 @@ module Volcano
     ERROR_TYPES = {
       400 => Error::ValidationError,
       401 => Error::AuthenticationError,
-      403 => Error::PermissionError,
+      403 => Error::PermissionDeniedError,
       404 => Error::NotFoundError,
       409 => Error::ConflictError,
       422 => Error::ValidationError,

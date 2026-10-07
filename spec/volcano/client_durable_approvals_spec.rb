@@ -206,7 +206,7 @@ RSpec.describe Volcano::Client do
     )
 
     expect { approvals.approve('project-1', 'approval-1') }
-      .to raise_error(Volcano::Error::PermissionError, /decided by a person/) do |error|
+      .to raise_error(Volcano::Error::PermissionDeniedError, /decided by a person/) do |error|
         expect(error).to be_a(Volcano::Error::AuthenticationError)
         expect(error).to have_attributes(status: 403, code: nil)
       end

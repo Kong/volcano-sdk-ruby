@@ -15,7 +15,7 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (8.1.3.1)
+    activesupport (8.1.4)
       base64
       bigdecimal
       concurrent-ruby (~> 1.0, >= 1.3.1)
@@ -85,7 +85,7 @@ GEM
     json (2.21.2)
     language_server-protocol (3.17.0.6)
     lint_roller (1.1.0)
-    listen (3.10.0)
+    listen (3.10.1)
       logger
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
@@ -95,7 +95,7 @@ GEM
       drb (~> 2.0)
       prism (~> 1.5)
     mutex_m (0.3.0)
-    parallel (1.28.0)
+    parallel (2.3.0)
     parser (3.3.12.0)
       ast (~> 2.4.1)
       racc
@@ -125,7 +125,7 @@ GEM
     rbs (3.10.4)
       logger
       tsort
-    regexp_parser (2.12.0)
+    regexp_parser (2.13.1)
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)
@@ -139,7 +139,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-support (3.13.7)
-    rubocop (1.90.0)
+    rubocop (1.91.0)
       json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -170,7 +170,7 @@ GEM
     rubydex (0.4.1-arm64-darwin)
     rubydex (0.4.1-x86_64-linux)
     securerandom (0.4.1)
-    simplecov (1.2.0)
+    simplecov (1.3.2)
     steep (1.10.0)
       activesupport (>= 5.1)
       concurrent-ruby (>= 1.1.10)
@@ -198,9 +198,9 @@ GEM
       ethon (>= 0.18.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
-    unicode-display_width (3.2.0)
-      unicode-emoji (~> 4.1)
-    unicode-emoji (4.2.0)
+    unicode-display_width (3.3.0)
+      unicode-emoji (~> 4.3)
+    unicode-emoji (4.3.0)
     uri (1.1.1)
 
 PLATFORMS
@@ -215,12 +215,12 @@ DEPENDENCIES
   rake (~> 13.2)
   rbs (= 3.10.4)
   rspec (~> 3.13)
-  rubocop (~> 1.70)
+  rubocop (~> 1.91)
   rubocop-performance (~> 1.26)
   rubocop-rake (~> 0.7)
   rubocop-rspec (~> 3.7)
   rubydex (= 0.4.1)
-  simplecov (= 1.2.0)
+  simplecov (= 1.3.2)
   steep (= 1.10.0)
   volcano-sdk!
 

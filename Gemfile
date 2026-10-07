@@ -10,11 +10,11 @@ group :development do
   gem 'rake', '~> 13.2'
   gem 'rbs', '3.10.4'
   gem 'rspec', '~> 3.13'
-  gem 'rubocop', '~> 1.70'
+  gem 'rubocop', '~> 1.91'
   gem 'rubocop-performance', '~> 1.26'
   gem 'rubocop-rake', '~> 0.7'
   gem 'rubocop-rspec', '~> 3.7'
   gem 'rubydex', '0.4.1', require: false
-  gem 'simplecov', '1.2.0', require: false
+  gem 'simplecov', '1.3.2', require: false
   gem 'steep', '1.10.0'
 end

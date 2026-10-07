@@ -320,7 +320,7 @@ module Volcano::Generated
     # @param name [String] 
     # @param code [File] Source tar.gz archive, limited to 32 MiB compressed and expanded.
     # @param [Hash] opts the optional parameters
-    # @option opts [Integer] :memory_mb  (default to 1024)
+    # @option opts [Integer] :memory_mb Memory in MiB. Defaults to 1024 when omitted.
     # @option opts [String] :ports JSON array of application ports that must become ready before activation, for example [8080].
     # @return [SandboxDeployment]
     def deploy_sandbox(id, sandbox_id, idempotency_key, name, code, opts = {})
@@ -336,7 +336,7 @@ module Volcano::Generated
     # @param name [String] 
     # @param code [File] Source tar.gz archive, limited to 32 MiB compressed and expanded.
     # @param [Hash] opts the optional parameters
-    # @option opts [Integer] :memory_mb  (default to 1024)
+    # @option opts [Integer] :memory_mb Memory in MiB. Defaults to 1024 when omitted.
     # @option opts [String] :ports JSON array of application ports that must become ready before activation, for example [8080].
     # @return [Array<(SandboxDeployment, Integer, Hash)>] SandboxDeployment data, response status code and response headers
     def deploy_sandbox_with_http_info(id, sandbox_id, idempotency_key, name, code, opts = {})

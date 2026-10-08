@@ -53,7 +53,10 @@ RSpec.describe Volcano::DurableApprovals do
     { 'execution' => { 'id' => nil, 'name' => 'run', 'status' => 5 } }, { 'requested_at' => nil },
     { 'requested_at' => 'yesterday' }, { 'requested_at' => 12 }, { 'expires_at' => 12 }, { 'decision' => 'approved' },
     { 'decision' => decision(comment: nil) }, { 'decision' => decision(decided_by: 'user') },
-    { 'decision' => decision(decided_by: { 'id' => 'user' }) }, { 'decision' => decision(decided_at: nil) }
+    { 'decision' => decision(decided_by: { 'id' => 'user' }) },
+    { 'decision' => decision(decided_by: { 'id' => '', 'email' => 'ops@example.com' }) },
+    { 'decision' => decision(decided_by: { 'id' => 'user', 'email' => 7 }) },
+    { 'decision' => decision(decided_at: nil) }
   ].each do |fields|
     it "rejects malformed approval fields #{fields.inspect}" do
       allow(transport).to receive(:get_durable_approval).and_return(response(approval.merge(fields)))

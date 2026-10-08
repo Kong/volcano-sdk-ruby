@@ -91,6 +91,15 @@ RSpec.describe Volcano::Client do
     expect(result.decision).to have_attributes(comment: 'ok', decided_by: nil, decided_at: Time.utc(2026, 10, 6, 12, 5))
   end
 
+  it 'keeps a decider who has no email address' do
+    decision = { 'comment' => '', 'decided_by' => { 'id' => 'user-1', 'email' => '' },
+                 'decided_at' => '2026-10-06T12:05:00Z' }
+    responses[:get_durable_approval] = transport_response(200, approval(status: 'approved', decision: decision))
+
+    expect(approvals.get('project-1', 'approval-1').decision.decided_by)
+      .to eq(Volcano::DurableApprovalDecider.new(id: 'user-1', email: ''))
+  end
+
   it 'lists approvals with every filter as query options', :aggregate_failures do
     responses[:list_durable_approvals] = transport_response(
       200, 'data' => [approval], 'page' => 2, 'limit' => 10, 'total' => 11, 'has_more' => false
@@ -286,12 +295,23 @@ RSpec.describe Volcano::Client do
     expect(calls.first.last.fetch(:comment)).to eq('é' * 2000)
   end
 
-  [12, 'yesterday', '2026-13-01T00:00:00Z'].each do |value|
+  [12, 'yesterday', '2026-13-01T00:00:00Z', '2026-10-01T00:00:00', '2026-10-01T00:00:00+0200'].each do |value|
     it "refuses a window bound of #{value.inspect}" do
       expect { approvals.list('project-1', from: value) }
-        .to raise_error(ArgumentError, 'from must be a Time or an ISO 8601 timestamp')
+        .to raise_error(ArgumentError, 'from must be a Time or an ISO 8601 timestamp with an offset')
       expect { approvals.stats('project-1', to: value) }
-        .to raise_error(ArgumentError, 'to must be a Time or an ISO 8601 timestamp')
+        .to raise_error(ArgumentError, 'to must be a Time or an ISO 8601 timestamp with an offset')
+      expect(calls).to be_empty
     end
+  end
+
+  it 'accepts a lowercase UTC designator in a window bound' do
+    responses[:list_durable_approvals] = transport_response(
+      200, 'data' => [], 'page' => 1, 'limit' => 20, 'total' => 0, 'has_more' => false
+    )
+
+    approvals.list('project-1', from: '2026-10-01T00:00:00z')
+
+    expect(calls.first.last.fetch(:options)).to eq(from: '2026-10-01T00:00:00.000000000Z')
   end
 end

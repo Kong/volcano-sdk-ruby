@@ -579,7 +579,8 @@ puts [stats.counts.pending, stats.approval_rate, stats.median_seconds_to_decisio
 `list` returns the newest approvals first. Filter by `status` (`pending`,
 `approved`, `denied`, `expired`, or `cancelled`), `function` (a durable
 function's id or name), `execution_id`, and a `from`/`to` window given as a
-`Time` or an ISO 8601 string. `stats` covers the last 30 days unless you pass a
+`Time` or an ISO 8601 string with an offset, such as `2026-10-01T00:00:00Z`.
+`stats` covers the last 30 days unless you pass a
 window, up to 366 days. It counts approvals by status, gives the approval rate
 and the median and 90th-percentile time to a decision (nil when nothing in the
 window was decided), lists the ten functions that requested the most approvals

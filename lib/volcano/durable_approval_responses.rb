@@ -145,7 +145,9 @@ module Volcano
       return if payload.nil?
 
       values = approval_object(payload, INCOMPLETE_APPROVAL)
-      DurableApprovalDecider.new(id: approval_text(values['id']), email: approval_text(values['email']))
+      DurableApprovalDecider.new(
+        id: approval_text(values['id']), email: approval_string(values['email'], INCOMPLETE_APPROVAL)
+      )
     end
 
     def approval_details(value)

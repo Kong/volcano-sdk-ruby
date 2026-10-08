@@ -108,17 +108,19 @@ module Volcano
     private def window: (String? function, (Time | String)? from, (Time | String)? to) -> Hash[Symbol, String?]
     private def optional_identifier: (Object? value, String field) -> String?
     private def function_filter: (Object? value) -> String?
-    private def timestamp: ((Time | String)? value, String field) -> String?
     private def comment_argument: (Object? value) -> String?
   end
 
   module DurableArguments : Object
     MAX_PAGE_SIZE: Integer
+    RFC3339_OFFSET: Regexp
 
     private def identifier: (Object? value, String field) -> String
     private def validate_paging: (Object? page, Object? limit) -> void
     private def validate_page_limit: (Object? limit) -> void
     private def positive_integer?: (Object? value) -> bool
+    private def timestamp_argument: ((Time | String)? value, String field) -> String?
+    private def offset_time: (Object? value) -> Time
   end
 
   class Durable

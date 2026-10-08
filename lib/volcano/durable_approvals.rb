@@ -30,7 +30,7 @@ module Volcano
     # +execution_id+, +from+, +to+, +page+, and +limit+, given as keywords.
     # +function+ is a durable function's id or name; a name also matches
     # approvals from a deleted function of that name. +from+ is inclusive and
-    # +to+ exclusive, each a Time or an ISO 8601 string.
+    # +to+ exclusive, each a Time or an ISO 8601 string with an offset.
     def list(project_id, filters = {})
       project = identifier(project_id, 'project_id')
       options = list_options(filters)
@@ -117,7 +117,7 @@ module Volcano
     end
 
     def window(function, from, to)
-      { function: function_filter(function), from: timestamp(from, 'from'), to: timestamp(to, 'to') }
+      { function: function_filter(function), from: timestamp_argument(from, 'from'), to: timestamp_argument(to, 'to') }
     end
 
     def optional_identifier(value, field)
@@ -131,15 +131,6 @@ module Volcano
       return name.freeze if !name.empty? && name.length <= MAX_FUNCTION_LENGTH
 
       raise ArgumentError, "function must be a durable function id or name of 1 to #{MAX_FUNCTION_LENGTH} characters"
-    end
-
-    # Sent in UTC with nanoseconds, so a bound keeps the caller's precision.
-    def timestamp(value, field)
-      return if value.nil?
-
-      (value.is_a?(Time) ? value : Time.iso8601(value)).getutc.iso8601(9)
-    rescue ArgumentError, TypeError
-      raise ArgumentError, "#{field} must be a Time or an ISO 8601 timestamp", cause: nil
     end
 
     def comment_argument(value)

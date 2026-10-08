@@ -14,22 +14,29 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class DatabaseUpdateRequest < ApiModelBase
-    # Table name
-    attr_accessor :table
+  # Approvals by status. `requested` is every approval, whatever its status.
+  class DurableApprovalCounts < ApiModelBase
+    attr_accessor :requested
 
-    # Column values to update. JSON objects and arrays are stored as JSON, so send them to `json` or `jsonb` columns. For a Postgres array column, send an array literal string such as `\"{a,b}\"`. 
-    attr_accessor :values
+    attr_accessor :pending
 
-    # WHERE conditions for which rows to update. At least one filter is required; a filterless update is rejected to avoid rewriting every row. 
-    attr_accessor :filters
+    attr_accessor :approved
+
+    attr_accessor :denied
+
+    attr_accessor :expired
+
+    attr_accessor :cancelled
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'table' => :'table',
-        :'values' => :'values',
-        :'filters' => :'filters'
+        :'requested' => :'requested',
+        :'pending' => :'pending',
+        :'approved' => :'approved',
+        :'denied' => :'denied',
+        :'expired' => :'expired',
+        :'cancelled' => :'cancelled'
       }
     end
 
@@ -46,9 +53,12 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'table' => :'String',
-        :'values' => :'Hash<String, Object>',
-        :'filters' => :'Array<DatabaseQueryFilter>'
+        :'requested' => :'Integer',
+        :'pending' => :'Integer',
+        :'approved' => :'Integer',
+        :'denied' => :'Integer',
+        :'expired' => :'Integer',
+        :'cancelled' => :'Integer'
       }
     end
 
@@ -62,38 +72,52 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DatabaseUpdateRequest` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableApprovalCounts` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DatabaseUpdateRequest`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableApprovalCounts`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'table')
-        self.table = attributes[:'table']
+      if attributes.key?(:'requested')
+        self.requested = attributes[:'requested']
       else
-        self.table = nil
+        self.requested = nil
       end
 
-      if attributes.key?(:'values')
-        if (value = attributes[:'values']).is_a?(Hash)
-          self.values = value
-        end
+      if attributes.key?(:'pending')
+        self.pending = attributes[:'pending']
       else
-        self.values = nil
+        self.pending = nil
       end
 
-      if attributes.key?(:'filters')
-        if (value = attributes[:'filters']).is_a?(Array)
-          self.filters = value
-        end
+      if attributes.key?(:'approved')
+        self.approved = attributes[:'approved']
       else
-        self.filters = nil
+        self.approved = nil
+      end
+
+      if attributes.key?(:'denied')
+        self.denied = attributes[:'denied']
+      else
+        self.denied = nil
+      end
+
+      if attributes.key?(:'expired')
+        self.expired = attributes[:'expired']
+      else
+        self.expired = nil
+      end
+
+      if attributes.key?(:'cancelled')
+        self.cancelled = attributes[:'cancelled']
+      else
+        self.cancelled = nil
       end
     end
 
@@ -102,20 +126,28 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @table.nil?
-        invalid_properties.push('invalid value for "table", table cannot be nil.')
+      if @requested.nil?
+        invalid_properties.push('invalid value for "requested", requested cannot be nil.')
       end
 
-      if @values.nil?
-        invalid_properties.push('invalid value for "values", values cannot be nil.')
+      if @pending.nil?
+        invalid_properties.push('invalid value for "pending", pending cannot be nil.')
       end
 
-      if @filters.nil?
-        invalid_properties.push('invalid value for "filters", filters cannot be nil.')
+      if @approved.nil?
+        invalid_properties.push('invalid value for "approved", approved cannot be nil.')
       end
 
-      if @filters.length < 1
-        invalid_properties.push('invalid value for "filters", number of items must be greater than or equal to 1.')
+      if @denied.nil?
+        invalid_properties.push('invalid value for "denied", denied cannot be nil.')
+      end
+
+      if @expired.nil?
+        invalid_properties.push('invalid value for "expired", expired cannot be nil.')
+      end
+
+      if @cancelled.nil?
+        invalid_properties.push('invalid value for "cancelled", cancelled cannot be nil.')
       end
 
       invalid_properties
@@ -125,45 +157,73 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @table.nil?
-      return false if @values.nil?
-      return false if @filters.nil?
-      return false if @filters.length < 1
+      return false if @requested.nil?
+      return false if @pending.nil?
+      return false if @approved.nil?
+      return false if @denied.nil?
+      return false if @expired.nil?
+      return false if @cancelled.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] table Value to be assigned
-    def table=(table)
-      if table.nil?
-        fail ArgumentError, 'table cannot be nil'
+    # @param [Object] requested Value to be assigned
+    def requested=(requested)
+      if requested.nil?
+        fail ArgumentError, 'requested cannot be nil'
       end
 
-      @table = table
+      @requested = requested
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] values Value to be assigned
-    def values=(values)
-      if values.nil?
-        fail ArgumentError, 'values cannot be nil'
+    # @param [Object] pending Value to be assigned
+    def pending=(pending)
+      if pending.nil?
+        fail ArgumentError, 'pending cannot be nil'
       end
 
-      @values = values
+      @pending = pending
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] filters Value to be assigned
-    def filters=(filters)
-      if filters.nil?
-        fail ArgumentError, 'filters cannot be nil'
+    # @param [Object] approved Value to be assigned
+    def approved=(approved)
+      if approved.nil?
+        fail ArgumentError, 'approved cannot be nil'
       end
 
-      if filters.length < 1
-        fail ArgumentError, 'invalid value for "filters", number of items must be greater than or equal to 1.'
+      @approved = approved
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] denied Value to be assigned
+    def denied=(denied)
+      if denied.nil?
+        fail ArgumentError, 'denied cannot be nil'
       end
 
-      @filters = filters
+      @denied = denied
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] expired Value to be assigned
+    def expired=(expired)
+      if expired.nil?
+        fail ArgumentError, 'expired cannot be nil'
+      end
+
+      @expired = expired
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] cancelled Value to be assigned
+    def cancelled=(cancelled)
+      if cancelled.nil?
+        fail ArgumentError, 'cancelled cannot be nil'
+      end
+
+      @cancelled = cancelled
     end
 
     # Checks equality by comparing each attribute.
@@ -171,9 +231,12 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          table == o.table &&
-          values == o.values &&
-          filters == o.filters
+          requested == o.requested &&
+          pending == o.pending &&
+          approved == o.approved &&
+          denied == o.denied &&
+          expired == o.expired &&
+          cancelled == o.cancelled
     end
 
     # @see the `==` method
@@ -185,7 +248,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [table, values, filters].hash
+      [requested, pending, approved, denied, expired, cancelled].hash
     end
 
     # Builds the object from hash

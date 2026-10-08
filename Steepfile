@@ -34,6 +34,7 @@ target :core_facades do
   check 'lib/volcano.rb'
   check 'lib/volcano/database.rb'
   check 'lib/volcano/durable.rb'
+  check 'lib/volcano/durable_arguments.rb'
   check 'lib/volcano/durable_models.rb'
   check 'lib/volcano/function_auth.rb'
   check 'lib/volcano/functions.rb'
@@ -167,6 +168,16 @@ target :consumers do
   check 'tests/types'
   library 'stringio'
   library 'tempfile'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
+target :durable_approvals do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/durable_approvals.rb'
+  check 'lib/volcano/durable_approval_models.rb'
+  check 'lib/volcano/durable_approval_responses.rb'
+  library 'json'
+  library 'time'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 

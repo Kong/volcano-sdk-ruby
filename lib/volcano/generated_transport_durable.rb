@@ -46,5 +46,64 @@ module Volcano
         response(data, status, headers)
       end
     end
+
+    def list_durable_approvals(authorization:, project_id:, options:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.durable.list_durable_approvals_with_http_info(
+          project_id, options.merge(debug_return_type: 'Object')
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def get_durable_approval(authorization:, project_id:, approval_id:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.durable.get_durable_approval_with_http_info(
+          project_id, approval_id, debug_return_type: 'Object'
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def get_durable_approval_stats(authorization:, project_id:, options:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.durable.get_durable_approval_stats_with_http_info(
+          project_id, options.merge(debug_return_type: 'Object')
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def approve_durable_approval(authorization:, project_id:, approval_id:, comment:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.durable.approve_durable_approval_with_http_info(
+          project_id, approval_id, durable_approval_decision(comment)
+        )
+        response(data, status, headers)
+      end
+    end
+
+    def deny_durable_approval(authorization:, project_id:, approval_id:, comment:)
+      invoke do
+        apis = @api_factory.call(authorization)
+        data, status, headers = apis.durable.deny_durable_approval_with_http_info(
+          project_id, approval_id, durable_approval_decision(comment)
+        )
+        response(data, status, headers)
+      end
+    end
+
+    private
+
+    # The body is optional on the wire, but an empty object is valid whether
+    # or not the server tolerates a missing one.
+    def durable_approval_decision(comment)
+      body = Generated::DurableApprovalDecisionRequest.new(comment.nil? ? {} : { comment: comment })
+      { durable_approval_decision_request: body, debug_return_type: 'Object' }
+    end
   end
 end

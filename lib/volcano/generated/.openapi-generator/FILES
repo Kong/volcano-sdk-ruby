@@ -167,6 +167,18 @@ lib/volcano-generated/models/deployment_phase.rb
 lib/volcano-generated/models/deployment_progress.rb
 lib/volcano-generated/models/deployment_reference.rb
 lib/volcano-generated/models/device_authorization_response.rb
+lib/volcano-generated/models/durable_approval.rb
+lib/volcano-generated/models/durable_approval_counts.rb
+lib/volcano-generated/models/durable_approval_daily_counts.rb
+lib/volcano-generated/models/durable_approval_decider.rb
+lib/volcano-generated/models/durable_approval_decision.rb
+lib/volcano-generated/models/durable_approval_decision_request.rb
+lib/volcano-generated/models/durable_approval_execution.rb
+lib/volcano-generated/models/durable_approval_function.rb
+lib/volcano-generated/models/durable_approval_function_counts.rb
+lib/volcano-generated/models/durable_approval_registration.rb
+lib/volcano-generated/models/durable_approval_stats.rb
+lib/volcano-generated/models/durable_approval_status.rb
 lib/volcano-generated/models/durable_execution.rb
 lib/volcano-generated/models/durable_execution_error.rb
 lib/volcano-generated/models/durable_execution_invocation.rb
@@ -262,6 +274,7 @@ lib/volcano-generated/models/o_auth_config.rb
 lib/volcano-generated/models/o_auth_error_response.rb
 lib/volcano-generated/models/paginated_auth_users.rb
 lib/volcano-generated/models/paginated_databases.rb
+lib/volcano-generated/models/paginated_durable_approvals.rb
 lib/volcano-generated/models/paginated_durable_executions.rb
 lib/volcano-generated/models/paginated_durable_functions.rb
 lib/volcano-generated/models/paginated_frontend_deployments.rb
@@ -389,6 +402,7 @@ lib/volcano-generated/models/realtime_stats.rb
 lib/volcano-generated/models/refresh_o_auth_provider_token200_response.rb
 lib/volcano-generated/models/replace_frontend_shared_variables_request.rb
 lib/volcano-generated/models/replace_shared_variables_request.rb
+lib/volcano-generated/models/request_durable_approval_request.rb
 lib/volcano-generated/models/reset_database_password200_response.rb
 lib/volcano-generated/models/resolve_function_response.rb
 lib/volcano-generated/models/resource_reference.rb

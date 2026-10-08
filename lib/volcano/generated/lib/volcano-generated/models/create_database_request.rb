@@ -165,7 +165,7 @@ module Volcano::Generated
       return false if @name !~ Regexp.new(/^[a-z0-9_]+$/)
       return false if @region.nil?
       return false if @pg_version.nil?
-      pg_version_validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
+      pg_version_validator = EnumAttributeValidator.new('String', ["16", "17", "18"])
       return false unless pg_version_validator.valid?(@pg_version)
       database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
       return false unless database_type_validator.valid?(@database_type)
@@ -204,7 +204,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] pg_version Object to be assigned
     def pg_version=(pg_version)
-      validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
+      validator = EnumAttributeValidator.new('String', ["16", "17", "18"])
       unless validator.valid?(pg_version)
         fail ArgumentError, "invalid value for \"pg_version\", must be one of #{validator.allowable_values}."
       end

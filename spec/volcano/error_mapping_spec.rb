@@ -11,7 +11,7 @@ RSpec.describe Volcano::Error do
     400 => 'Volcano::Error::ValidationError',
     422 => 'Volcano::Error::ValidationError',
     401 => 'Volcano::Error::AuthenticationError',
-    403 => 'Volcano::Error::AuthenticationError',
+    403 => 'Volcano::Error::PermissionDeniedError',
     404 => 'Volcano::Error::NotFoundError',
     409 => 'Volcano::Error::ConflictError',
     429 => 'Volcano::Error::RateLimitedError',

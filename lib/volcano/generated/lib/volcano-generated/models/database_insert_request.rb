@@ -18,7 +18,7 @@ module Volcano::Generated
     # Table name
     attr_accessor :table
 
-    # Column values to insert
+    # Column values to insert. JSON objects and arrays are stored as JSON, so send them to `json` or `jsonb` columns. For a Postgres array column, send an array literal string such as `\"{a,b}\"`. 
     attr_accessor :values
 
     # Attribute mapping from ruby-style variable name to JSON key.

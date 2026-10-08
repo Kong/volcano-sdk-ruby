@@ -28,26 +28,114 @@ module Volcano
     private def durable_execution_page: (Object? payload) -> DurableExecutionPage
     private def page_payload: (Object? payload) -> [Hash[String, Object?], Array[Object?], bool]
     private def count: (Object? value) -> Integer
-    private def present_string?: (Object? value) -> bool
     private def parse_time: (Object? value) -> Time?
   end
 
-  class Durable
-    include DurableResponses
+  DURABLE_APPROVAL_ATTRIBUTES: Array[Symbol]
+  DURABLE_APPROVAL_STATS_ATTRIBUTES: Array[Symbol]
+
+  interface _DurableApprovalsTransport
+    def list_durable_approvals: (authorization: String, project_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
+    def get_durable_approval: (authorization: String, project_id: String, approval_id: String) -> Transport::Response
+    def get_durable_approval_stats: (authorization: String, project_id: String, options: Hash[Symbol, String]) -> Transport::Response
+    def approve_durable_approval: (authorization: String, project_id: String, approval_id: String, comment: String?) -> Transport::Response
+    def deny_durable_approval: (authorization: String, project_id: String, approval_id: String, comment: String?) -> Transport::Response
+  end
+
+  module DurableApprovalAttributes
+    def self.capture: (Hash[Symbol, Object?] attributes, Array[Symbol] names, optional: Array[Symbol]) -> Hash[Symbol, Object?]
+    def self.immutable_value: (Object? value) -> Object?
+  end
+
+  module DurableApprovalFields : Object
+    INCOMPLETE_APPROVAL: String
+    INCOMPLETE_PAGE: String
+    INCOMPLETE_STATS: String
+
+    private def approval_function: (Object? payload, String message) -> DurableApprovalFunction
+    private def approval_object: (Object? payload, String message) -> Hash[String, Object?]
+    private def approval_list: (Object? value) -> Array[Object?]
+    private def approval_text: (Object? value, ?String message) -> String
+    private def optional_approval_text: (Object? value, String message) -> String?
+    private def approval_string: (Object? value, String message) -> String
+    private def approval_time: (Object? value, String message) -> Time
+    private def approval_count: (Object? value, ?String message) -> Integer
+    private def approval_flag: (Object? value) -> bool
+    private def approval_number: (Object? value) -> Float?
+  end
+
+  module DurableApprovalResponses : Object
+    include DurableApprovalFields
+
+    private def durable_approval: (Object? payload) -> DurableApproval
+    private def durable_approval_page: (Object? payload) -> DurableApprovalPage
+    private def approval_labels: (Hash[String, Object?] values) -> [String, String, String, String]
+    private def approval_schedule: (Hash[String, Object?] values) -> [Time, Time?]
+    private def approval_execution: (Object? payload) -> DurableApprovalExecution
+    private def approval_decision: (Object? payload) -> DurableApprovalDecision?
+    private def approval_decider: (Object? payload) -> DurableApprovalDecider?
+    private def approval_details: (Object? value) -> json_value
+  end
+
+  module DurableApprovalStatsResponses : Object
+    include DurableApprovalFields
+
+    DAY: Regexp
+
+    private def durable_approval_stats: (Object? payload) -> DurableApprovalStats
+    private def approval_window: (Hash[String, Object?] values) -> [Time, Time]
+    private def approval_timings: (Hash[String, Object?] values) -> [Float?, Float?, Float?]
+    private def approval_breakdown: (Hash[String, Object?] values) -> [Array[DurableApprovalFunctionCounts], Array[DurableApprovalDailyCounts]]
+    private def approval_counts: (Object? payload) -> DurableApprovalCounts
+    private def approval_function_counts: (Object? payload) -> DurableApprovalFunctionCounts
+    private def approval_daily_counts: (Object? payload) -> DurableApprovalDailyCounts
+  end
+
+  class DurableApprovals
+    include DurableArguments
+    include DurableApprovalResponses
+    include DurableApprovalStatsResponses
     @client: _DurableClient
-    @transport: _DurableTransport
+    @transport: _DurableApprovalsTransport
 
-    EXECUTION_NAME: Regexp
+    def initialize: (_DurableClient client, _DurableApprovalsTransport transport) -> void
+
+    private def decide: (String project_id, String approval_id, String? comment) { (String token, String project, String approval, String? note) -> Transport::Response } -> DurableApproval
+    LIST_FILTERS: Array[Symbol]
+
+    private def list_options: (Object? filters) -> Hash[Symbol, String | Integer]
+    private def list_filters: (Object? filters) -> Hash[untyped, untyped]
+    private def window: (String? function, (Time | String)? from, (Time | String)? to) -> Hash[Symbol, String?]
+    private def optional_identifier: (Object? value, String field) -> String?
+    private def function_filter: (Object? value) -> String?
+    private def comment_argument: (Object? value) -> String?
+  end
+
+  module DurableArguments : Object
     MAX_PAGE_SIZE: Integer
+    RFC3339_OFFSET: Regexp
 
-    def initialize: (_DurableClient client, _DurableTransport transport) -> void
-
-    private def execution_path: (String project_id, String function_name, String execution_id) -> [String, String, String]
     private def identifier: (Object? value, String field) -> String
-    private def execution_name_argument: (Object? value) -> String
     private def validate_paging: (Object? page, Object? limit) -> void
     private def validate_page_limit: (Object? limit) -> void
     private def positive_integer?: (Object? value) -> bool
+    private def timestamp_argument: ((Time | String)? value, String field) -> String?
+    private def offset_time: (Object? value) -> Time
+  end
+
+  class Durable
+    include DurableArguments
+    include DurableResponses
+    @client: _DurableClient
+    @transport: _DurableTransport
+    @approvals: DurableApprovals
+
+    EXECUTION_NAME: Regexp
+
+    def initialize: (_DurableClient client, _DurableTransport & _DurableApprovalsTransport transport) -> void
+
+    private def execution_path: (String project_id, String function_name, String execution_id) -> [String, String, String]
+    private def execution_name_argument: (Object? value) -> String
   end
 
   class DurableExecution

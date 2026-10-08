@@ -550,6 +550,57 @@ caller needs.
 Ruby remains a fully supported runtime for [standard
 functions](https://volcano.dev/platform/functions/overview).
 
+### Decide durable approvals
+
+A durable function written in JavaScript or Python can pause until a person
+approves or denies a request. Ruby lists those requests and decides them:
+
+```ruby
+approvals = owner_client.durable.approvals
+
+page = approvals.list(project_id, status: "pending", function: "refunds", limit: 20)
+page.approvals.each do |approval|
+  puts [approval.id, approval.title, approval.details, approval.expires_at]
+end
+
+begin
+  approval = approvals.approve(project_id, page.approvals.first.id, comment: "Matches the invoice")
+  puts approval.decision.decided_at
+rescue Volcano::Error::ConflictError => e
+  puts e.code # approval_decided, approval_expired, or approval_cancelled
+end
+
+approvals.deny(project_id, "00000000-0000-4000-8000-000000000051")
+
+stats = approvals.stats(project_id, from: Time.now - (7 * 86_400))
+puts [stats.counts.pending, stats.approval_rate, stats.median_seconds_to_decision]
+```
+
+`list` returns the newest approvals first. Filter by `status` (`pending`,
+`approved`, `denied`, `expired`, or `cancelled`), `function` (a durable
+function's id or name), `execution_id`, and a `from`/`to` window given as a
+`Time` or an ISO 8601 string with an offset, such as `2026-10-01T00:00:00Z`.
+`stats` covers the last 30 days unless you pass a
+window, up to 366 days. It counts approvals by status, gives the approval rate
+and the median and 90th-percentile time to a decision (nil when nothing in the
+window was decided), lists the ten functions that requested the most approvals
+with the rest summed in `other_functions`, and returns `daily` counts keyed by
+`YYYY-MM-DD` UTC dates, omitting days without approvals.
+
+An approval keeps its function and execution names after they are deleted;
+their ids become nil. `decision` is nil unless the approval was approved or
+denied, and its `decided_by` is nil once the deciding account is deleted.
+
+Reading approvals accepts the project owner's platform user token or a project
+access token. Approving and denying require a person: a project access token
+raises `Volcano::Error::PermissionDeniedError` (HTTP 403, a subclass of
+`AuthenticationError`, so existing rescues still apply). Repeating the same
+decision returns the approval unchanged; a conflicting decision, or deciding an
+expired or cancelled approval, raises `Volcano::Error::ConflictError` (HTTP
+409). An unknown approval, or one in another project, raises
+`Volcano::Error::NotFoundError`. A `comment` is optional, up to 2,000
+characters.
+
 ### Read project logs
 
 ```ruby

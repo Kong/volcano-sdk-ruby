@@ -14,18 +14,14 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with managed or BYOC TLS. `tls` is required when the domain is first created and optional afterwards. For an existing domain, omitting `tls` or sending only `tls.mode` keeps the stored certificate; new BYOC material for the same domain rotates the certificate in place (zero downtime). Changing `tls.mode` for the same hostname, or the hostname of a managed domain, requires deleting the domain first. BYOC TLS material is write-only; exports render only `tls.mode`. 
-  class ProjectConfigCustomDomain < ApiModelBase
-    # Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.
-    attr_accessor :domain
-
-    attr_accessor :tls
+  class DurableApprovalDecisionRequest < ApiModelBase
+    # A note for the workflow and the approval's history.
+    attr_accessor :comment
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'domain' => :'domain',
-        :'tls' => :'tls'
+        :'comment' => :'comment'
       }
     end
 
@@ -42,8 +38,7 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'domain' => :'String',
-        :'tls' => :'ProjectConfigFrontendCustomDomainTLSConfig'
+        :'comment' => :'String'
       }
     end
 
@@ -57,26 +52,20 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigCustomDomain` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableApprovalDecisionRequest` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigCustomDomain`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableApprovalDecisionRequest`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'domain')
-        self.domain = attributes[:'domain']
-      else
-        self.domain = nil
-      end
-
-      if attributes.key?(:'tls')
-        self.tls = attributes[:'tls']
+      if attributes.key?(:'comment')
+        self.comment = attributes[:'comment']
       end
     end
 
@@ -85,12 +74,8 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @domain.nil?
-        invalid_properties.push('invalid value for "domain", domain cannot be nil.')
-      end
-
-      if @domain.to_s.length > 253
-        invalid_properties.push('invalid value for "domain", the character length must be smaller than or equal to 253.')
+      if !@comment.nil? && @comment.to_s.length > 2000
+        invalid_properties.push('invalid value for "comment", the character length must be smaller than or equal to 2000.')
       end
 
       invalid_properties
@@ -100,23 +85,22 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @domain.nil?
-      return false if @domain.to_s.length > 253
+      return false if !@comment.nil? && @comment.to_s.length > 2000
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] domain Value to be assigned
-    def domain=(domain)
-      if domain.nil?
-        fail ArgumentError, 'domain cannot be nil'
+    # @param [Object] comment Value to be assigned
+    def comment=(comment)
+      if comment.nil?
+        fail ArgumentError, 'comment cannot be nil'
       end
 
-      if domain.to_s.length > 253
-        fail ArgumentError, 'invalid value for "domain", the character length must be smaller than or equal to 253.'
+      if comment.to_s.length > 2000
+        fail ArgumentError, 'invalid value for "comment", the character length must be smaller than or equal to 2000.'
       end
 
-      @domain = domain
+      @comment = comment
     end
 
     # Checks equality by comparing each attribute.
@@ -124,8 +108,7 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          domain == o.domain &&
-          tls == o.tls
+          comment == o.comment
     end
 
     # @see the `==` method
@@ -137,7 +120,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls].hash
+      [comment].hash
     end
 
     # Builds the object from hash

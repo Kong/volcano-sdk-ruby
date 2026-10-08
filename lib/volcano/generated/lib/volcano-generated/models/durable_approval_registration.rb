@@ -14,18 +14,13 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Assertion-only entry for an existing database. No database property is mutable through the manifest; declared values are compared against the deployed database and any mismatch fails validation. Databases are never created or deleted here. 
-  class ProjectConfigDatabase < ApiModelBase
-    attr_accessor :name
+  # The registered approval, as the requesting workflow sees it.
+  class DurableApprovalRegistration < ApiModelBase
+    attr_accessor :id
 
-    # Deployed region ID (e.g. us-east-1). Asserted, never written; region IDs issued by earlier versions of the API match too.
-    attr_accessor :region
+    attr_accessor :status
 
-    # PostgreSQL major version. Asserted, never written. Also accepts versions new databases can no longer be created on, so an export of an existing database re-applies. 
-    attr_accessor :pg_version
-
-    # Compute tier. Asserted, never written - tier changes are not supported via the manifest; use the databases API/CLI/GUI instead. 
-    attr_accessor :database_type
+    attr_accessor :expires_at
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -52,10 +47,9 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'name' => :'name',
-        :'region' => :'region',
-        :'pg_version' => :'pg_version',
-        :'database_type' => :'database_type'
+        :'id' => :'id',
+        :'status' => :'status',
+        :'expires_at' => :'expires_at'
       }
     end
 
@@ -72,16 +66,16 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'name' => :'String',
-        :'region' => :'String',
-        :'pg_version' => :'String',
-        :'database_type' => :'String'
+        :'id' => :'String',
+        :'status' => :'DurableApprovalStatus',
+        :'expires_at' => :'Time'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'expires_at'
       ])
     end
 
@@ -89,38 +83,34 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigDatabase` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableApprovalRegistration` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigDatabase`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableApprovalRegistration`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'name')
-        self.name = attributes[:'name']
+      if attributes.key?(:'id')
+        self.id = attributes[:'id']
       else
-        self.name = nil
+        self.id = nil
       end
 
-      if attributes.key?(:'region')
-        self.region = attributes[:'region']
+      if attributes.key?(:'status')
+        self.status = attributes[:'status']
       else
-        self.region = nil
+        self.status = nil
       end
 
-      if attributes.key?(:'pg_version')
-        self.pg_version = attributes[:'pg_version']
+      if attributes.key?(:'expires_at')
+        self.expires_at = attributes[:'expires_at']
       else
-        self.pg_version = nil
-      end
-
-      if attributes.key?(:'database_type')
-        self.database_type = attributes[:'database_type']
+        self.expires_at = nil
       end
     end
 
@@ -129,20 +119,12 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @name.nil?
-        invalid_properties.push('invalid value for "name", name cannot be nil.')
+      if @id.nil?
+        invalid_properties.push('invalid value for "id", id cannot be nil.')
       end
 
-      if @name.to_s.length < 1
-        invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
-      end
-
-      if @region.nil?
-        invalid_properties.push('invalid value for "region", region cannot be nil.')
-      end
-
-      if @pg_version.nil?
-        invalid_properties.push('invalid value for "pg_version", pg_version cannot be nil.')
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
       invalid_properties
@@ -152,59 +134,29 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @name.nil?
-      return false if @name.to_s.length < 1
-      return false if @region.nil?
-      return false if @pg_version.nil?
-      pg_version_validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
-      return false unless pg_version_validator.valid?(@pg_version)
-      database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
-      return false unless database_type_validator.valid?(@database_type)
+      return false if @id.nil?
+      return false if @status.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] name Value to be assigned
-    def name=(name)
-      if name.nil?
-        fail ArgumentError, 'name cannot be nil'
+    # @param [Object] id Value to be assigned
+    def id=(id)
+      if id.nil?
+        fail ArgumentError, 'id cannot be nil'
       end
 
-      if name.to_s.length < 1
-        fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
-      end
-
-      @name = name
+      @id = id
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] region Value to be assigned
-    def region=(region)
-      if region.nil?
-        fail ArgumentError, 'region cannot be nil'
+    # @param [Object] status Value to be assigned
+    def status=(status)
+      if status.nil?
+        fail ArgumentError, 'status cannot be nil'
       end
 
-      @region = region
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] pg_version Object to be assigned
-    def pg_version=(pg_version)
-      validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
-      unless validator.valid?(pg_version)
-        fail ArgumentError, "invalid value for \"pg_version\", must be one of #{validator.allowable_values}."
-      end
-      @pg_version = pg_version
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] database_type Object to be assigned
-    def database_type=(database_type)
-      validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
-      unless validator.valid?(database_type)
-        fail ArgumentError, "invalid value for \"database_type\", must be one of #{validator.allowable_values}."
-      end
-      @database_type = database_type
+      @status = status
     end
 
     # Checks equality by comparing each attribute.
@@ -212,10 +164,9 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          name == o.name &&
-          region == o.region &&
-          pg_version == o.pg_version &&
-          database_type == o.database_type
+          id == o.id &&
+          status == o.status &&
+          expires_at == o.expires_at
     end
 
     # @see the `==` method
@@ -227,7 +178,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, region, pg_version, database_type].hash
+      [id, status, expires_at].hash
     end
 
     # Builds the object from hash

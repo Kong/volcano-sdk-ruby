@@ -78,10 +78,12 @@ module Quality
        '--seed', '12345', '--format', 'json', '--out', report]
     end
 
+    # A relative bundle path is relative to the bundle running this check, as
+    # Bundler reads it; the checkout has no gems of its own.
     def environment(directory)
       path = Bundler.settings[:path]
       { 'BUNDLE_GEMFILE' => File.join(directory, 'Gemfile'),
-        'BUNDLE_PATH' => path && File.expand_path(path, @root), 'BUNDLE_PATH__SYSTEM' => path ? nil : 'true' }
+        'BUNDLE_PATH' => path && File.expand_path(path, Bundler.root), 'BUNDLE_PATH__SYSTEM' => path ? nil : 'true' }
     end
 
     def report_path(phase, extension)

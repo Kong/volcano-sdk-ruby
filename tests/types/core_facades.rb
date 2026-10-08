@@ -25,6 +25,15 @@ def typed_timestamp_calls(client)
   client.logs.search('project', resource: { id: 'worker' }, start_time: Time.utc(2026), end_time: Time.utc(2026, 2))
 end
 
+# @type method typed_approval_calls: (Volcano::Client) -> Volcano::DurableApproval
+def typed_approval_calls(client)
+  approvals = client.durable.approvals
+  approvals.list('project', status: 'pending', from: Time.utc(2026), to: '2026-02-01T00:00:00Z', limit: 20)
+  approvals.stats('project', function: 'refunds').counts.pending
+  approvals.deny('project', 'approval')
+  approvals.approve('project', 'approval', comment: 'Looks right')
+end
+
 # @type method typed_lock_result: (Volcano::Client) -> String
 def typed_lock_result(client)
   client.locks.with_lock('job', ttl: 30) { |guard| guard.lease.key }

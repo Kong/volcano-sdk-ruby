@@ -3,16 +3,19 @@
 module Volcano
   # Starts and follows executions of deployed durable functions.
   class Durable
-    # What the platform accepts as an execution name, and the page size it
-    # serves at most. Mirrored from the wire contract so a refusal is the
-    # facade's rather than the generated client's.
+    # What the platform accepts as an execution name. Mirrored from the wire
+    # contract so a refusal is the facade's rather than the generated client's.
     EXECUTION_NAME = /\A[A-Za-z0-9._-]{1,255}\z/
-    MAX_PAGE_SIZE = 100
+    include DurableArguments
     include DurableResponses
+
+    # Lists, reads, and decides the approvals durable workflows request.
+    attr_reader :approvals
 
     def initialize(client, transport)
       @client = client
       @transport = transport
+      @approvals = DurableApprovals.new(client, transport)
     end
 
     # Starts an execution and returns its handle. A durable function is never
@@ -99,18 +102,6 @@ module Volcano
       ]
     end
 
-    # An empty path segment would address the collection instead of the
-    # execution, which is a different request rather than a failed one.
-    def identifier(value, field)
-      raise ArgumentError, "#{field} must be a non-empty String" unless value.is_a?(String) && present_string?(value)
-
-      value.strip.freeze
-    end
-
-    # The generated client validates this header against the same pattern and
-    # raises its own message, naming the operation and the option key it knows
-    # the header by. Checked here first so the caller reads a message about the
-    # argument they passed, the way Functions#invoke does for a function name.
     def execution_name_argument(value)
       name = identifier(value, 'execution_name')
       unless EXECUTION_NAME.match?(name)
@@ -119,24 +110,6 @@ module Volcano
       end
 
       name
-    end
-
-    # Same reason: the generated client enforces the page and limit bounds and
-    # answers with its own vocabulary.
-    def validate_paging(page, limit)
-      raise ArgumentError, 'page must be a positive Integer' unless page.nil? || positive_integer?(page)
-
-      validate_page_limit(limit)
-    end
-
-    def validate_page_limit(limit)
-      return if limit.nil? || (limit.is_a?(Integer) && positive_integer?(limit) && limit <= MAX_PAGE_SIZE)
-
-      raise ArgumentError, "limit must be an Integer between 1 and #{MAX_PAGE_SIZE}"
-    end
-
-    def positive_integer?(value)
-      value.is_a?(Integer) && value.positive?
     end
   end
 end

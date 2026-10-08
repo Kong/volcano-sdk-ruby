@@ -16,7 +16,7 @@ servers:
     description: Development API server (use VOLCANO_API_URL env var)
 tags:
   - name: Sandboxes
-    description: Isolated Linux sessions and reusable templates.
+    description: 'Preview, not generally available: isolated Linux sessions and reusable templates. Where Sandboxes are not available, every endpoint answers `404` with code `feature_unavailable`. Where they are turned off after use, only creating or starting a session, template, execution, or deployment, and listing presets, answer that `404`, so existing ones can still be read and deleted. A `503` means the Sandbox service is temporarily unavailable.'
   - name: Projects
     description: Project management operations
   - name: Logs
@@ -101,7 +101,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxPresetList'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -132,7 +132,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxTemplatePage'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -172,7 +172,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxTemplate'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -207,7 +207,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxTemplate'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -247,7 +247,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxTemplate'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -277,7 +277,7 @@ paths:
         '202':
           description: Retire a template and terminate its sessions
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -345,7 +345,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxDeployment'
         default:
-          description: Invalid source, conflicting retry, denied access, or unavailable deployment service
+          description: Invalid source (400), denied access (401, 403), conflicting retry (409), or a temporarily unavailable deployment service (503). Code `feature_unavailable` with 404 means sandboxes or custom templates are not available in this environment.
           content:
             application/json:
               schema:
@@ -381,7 +381,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxDeploymentPage'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -422,7 +422,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxDeployment'
         default:
-          description: Denied access, missing resource, or unavailable deployment service
+          description: Denied access (401, 403), missing resource (404), or a temporarily unavailable deployment service (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -481,7 +481,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxBuildLogPage'
         default:
-          description: Denied access, missing resource, or unavailable deployment service
+          description: Denied access (401, 403), missing resource (404), or a temporarily unavailable deployment service (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -523,7 +523,7 @@ paths:
                 type: string
                 format: binary
         default:
-          description: Denied access, missing resource, or unavailable deployment service
+          description: Denied access (401, 403), missing resource (404), or a temporarily unavailable deployment service (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -554,7 +554,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSessionPage'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -594,7 +594,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSession'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -635,7 +635,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxExecutionResult'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -665,7 +665,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSession'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -693,7 +693,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSession'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -722,7 +722,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSession'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -751,7 +751,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxSession'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -793,7 +793,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxCommandResult'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -829,7 +829,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxFileResult'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -861,7 +861,7 @@ paths:
         '204':
           description: Write a workspace file
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -898,7 +898,7 @@ paths:
         '204':
           description: Authorize an authenticated project user for this session
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -928,7 +928,7 @@ paths:
         '204':
           description: Revoke a project user session grant
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -964,7 +964,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SandboxAccess'
         default:
-          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and disabled or unavailable (503).
+          description: Request refused or unavailable. Errors include invalid input (400), unauthenticated (401), forbidden (403), not found (404), conflicting retry (409), capacity exhausted (429), and temporarily unavailable (503). Code `feature_unavailable` with 404 means sandboxes are not available in this environment.
           content:
             application/json:
               schema:
@@ -5799,6 +5799,361 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /durable-approvals:
+    post:
+      tags:
+        - Durable Functions
+      summary: Request an approval from inside a workflow
+      description: |
+        Registers an approval request for a running durable execution. The
+        Volcano SDK calls this from `ctx.waitForApproval`; applications do not
+        call it directly.
+
+        `execution_ref` and `callback_id` are opaque values the SDK reads from
+        the running workflow. Together they are the request's credential, so
+        the operation takes no other authentication. The approval belongs to
+        the project that owns the execution, and expires when the workflow's
+        own approval timeout does.
+
+        Retrying is safe: a request for an approval that is already registered
+        returns it with `200`.
+      operationId: requestDurableApproval
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestDurableApprovalRequest'
+      responses:
+        '200':
+          description: The approval was already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApprovalRegistration'
+        '201':
+          description: Approval registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApprovalRegistration'
+        '400':
+          description: The request body is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No running durable execution matches `execution_ref`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The approval cannot be registered now. `code` says why:
+
+            - `approval_not_ready`: the workflow has not finished opening the
+              approval yet. Retry with a short backoff; the SDK does.
+            - `approval_closed`: the workflow is no longer waiting on it.
+            - `execution_ended`: the execution has finished.
+            - `too_many_pending_approvals`: the execution already has the
+              maximum number of pending approvals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: The request body is larger than 64 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many approval requests from this execution or address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            The approval could not be confirmed with the workflow right now.
+            Retry with backoff.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-approvals:
+    get:
+      tags:
+        - Durable Functions
+      summary: List durable approvals
+      description: |
+        Lists the approvals durable workflows in the project have requested,
+        newest first. Pending approvals are the ones a workflow is waiting on;
+        decided, expired, and cancelled ones are kept for a year.
+
+        Project access tokens can list approvals, including read-only ones.
+      operationId: listDurableApprovals
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          required: false
+          description: Return only approvals in this status.
+          schema:
+            $ref: '#/components/schemas/DurableApprovalStatus'
+        - $ref: '#/components/parameters/DurableApprovalFunctionFilter'
+        - name: execution_id
+          in: query
+          required: false
+          description: Return only approvals requested by this durable execution.
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          description: Return only approvals requested at or after this time.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Return only approvals requested before this time.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDurableApprovals'
+        '400':
+          description: A filter is invalid, or `from` is after `to`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-approvals/stats:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get durable approval statistics
+      description: |
+        Counts the project's approvals by outcome over a time window, overall,
+        per workflow, and per day. The window defaults to the last 30 days and
+        can cover up to a year. An approval is counted on the day it was
+        requested.
+
+        Project access tokens can read statistics, including read-only ones.
+      operationId: getDurableApprovalStats
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableApprovalFunctionFilter'
+        - name: from
+          in: query
+          required: false
+          description: Start of the window. Defaults to 30 days before `to`.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: End of the window. Defaults to now.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApprovalStats'
+        '400':
+          description: The window is invalid or longer than 366 days
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-approvals/{approvalId}:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get a durable approval
+      description: |
+        Returns one approval: what the workflow asked, the durable function
+        and execution that asked it, its deadline, and the decision once one
+        is made.
+
+        Project access tokens can read approvals, including read-only ones.
+      operationId: getDurableApproval
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableApprovalId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApproval'
+        '404':
+          description: Approval not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-approvals/{approvalId}/approve:
+    post:
+      tags:
+        - Durable Functions
+      summary: Approve a durable approval
+      description: |
+        Approves a pending approval. The workflow resumes with the decision.
+
+        Only a person can decide: use the dashboard or a platform token from
+        `volcano login`. Project access tokens are refused with `403`.
+
+        Approving an approval that is already approved returns it unchanged.
+        If the workflow cannot be reached right away, the decision still
+        stands and Volcano keeps delivering it.
+      operationId: approveDurableApproval
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableApprovalId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DurableApprovalDecisionRequest'
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApproval'
+        '400':
+          description: The request body is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: The credential is not a person's
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Approval not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The approval was already denied, or has expired or been cancelled.
+            `code` is `approval_decided`, `approval_expired`, or
+            `approval_cancelled`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: The request body is larger than 16 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/durable-approvals/{approvalId}/deny:
+    post:
+      tags:
+        - Durable Functions
+      summary: Deny a durable approval
+      description: |
+        Denies a pending approval. The workflow resumes with the decision; a
+        denial is a value the workflow branches on, not an error.
+
+        Only a person can decide: use the dashboard or a platform token from
+        `volcano login`. Project access tokens are refused with `403`.
+
+        Denying an approval that is already denied returns it unchanged.
+        If the workflow cannot be reached right away, the decision still
+        stands and Volcano keeps delivering it.
+      operationId: denyDurableApproval
+      security:
+        - UserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/DurableApprovalId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DurableApprovalDecisionRequest'
+      responses:
+        '200':
+          description: Denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableApproval'
+        '400':
+          description: The request body is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: The credential is not a person's
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Approval not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The approval was already approved, or has expired or been
+            cancelled. `code` is `approval_decided`, `approval_expired`, or
+            `approval_cancelled`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: The request body is larger than 16 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/frontends:
     get:
       tags:
@@ -6222,7 +6577,7 @@ paths:
     post:
       tags:
         - Frontends
-      summary: Configure frontend custom domain (SUPERAGENT)
+      summary: Configure frontend custom domain
       description: |
         Configures one custom domain for a frontend.
         The default Volcano-generated frontend URL remains active.
@@ -6270,7 +6625,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden - custom domains require SUPERAGENT plan, or a managed TLS request would exceed the account's managed TLS certificate limit
+          description: Forbidden - the plan does not include custom domains, or a managed TLS request would exceed the account's managed TLS certificate limit
           content:
             application/json:
               schema:
@@ -14685,6 +15040,26 @@ components:
         type: string
         format: uuid
       description: Durable execution ID
+    DurableApprovalId:
+      name: approvalId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Durable approval ID
+    DurableApprovalFunctionFilter:
+      name: function
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      description: |
+        Only approvals requested by this durable function, given by id or by
+        name. A name also matches approvals from a deleted function of that
+        name.
     Limit:
       name: limit
       in: query
@@ -15109,12 +15484,12 @@ components:
           type: integer
           minimum: 30
           maximum: 28800
-          default: 3600
+          description: Inherits the template TTL when omitted (3600 seconds for a new template).
         idle_timeout_seconds:
           type: integer
           minimum: 0
           maximum: 28800
-          default: 0
+          description: Inherits the template idle timeout when omitted, capped at the session duration. Set zero to disable idle timeout.
       required:
         - region
       oneOf:
@@ -16415,7 +16790,6 @@ components:
             version its server runs. Any other value is rejected with 400.
           example: '18'
           enum:
-            - '15'
             - '16'
             - '17'
             - '18'
@@ -17083,7 +17457,10 @@ components:
         values:
           type: object
           additionalProperties: true
-          description: Column values to insert
+          description: |
+            Column values to insert. JSON objects and arrays are stored as JSON,
+            so send them to `json` or `jsonb` columns. For a Postgres array
+            column, send an array literal string such as `"{a,b}"`.
           example:
             title: My New Post
             content: This is the content
@@ -17101,7 +17478,10 @@ components:
         values:
           type: object
           additionalProperties: true
-          description: Column values to update
+          description: |
+            Column values to update. JSON objects and arrays are stored as JSON,
+            so send them to `json` or `jsonb` columns. For a Postgres array
+            column, send an array literal string such as `"{a,b}"`.
           example:
             title: Updated Title
             status: published
@@ -20315,6 +20695,207 @@ components:
         - limit
         - total
         - has_more
+    DurableApproval:
+      type: object
+      description: An approval a durable workflow requested.
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DurableApprovalStatus'
+        name:
+          type: string
+          description: |
+            The name the workflow gave the approval in `ctx.waitForApproval`.
+        title:
+          type: string
+        description:
+          type: string
+        details:
+          description: |
+            The JSON value the workflow attached for the person deciding, as
+            given.
+        function:
+          $ref: '#/components/schemas/DurableApprovalFunction'
+        execution:
+          $ref: '#/components/schemas/DurableApprovalExecution'
+        requested_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            When the approval expires if nobody decides. Null when the
+            workflow set no timeout; the approval then lasts as long as its
+            execution.
+        decision:
+          $ref: '#/components/schemas/DurableApprovalDecision'
+      required:
+        - id
+        - status
+        - name
+        - title
+        - description
+        - function
+        - execution
+        - requested_at
+        - expires_at
+        - decision
+    DurableApprovalStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - denied
+        - expired
+        - cancelled
+      description: |
+        `pending` means the workflow is waiting for a decision. `approved` and
+        `denied` are decisions a person made. `expired` means the workflow's
+        approval timeout passed first, and `cancelled` means the execution
+        ended while the approval was still pending. Every status but `pending`
+        is final.
+    DurableApprovalRegistration:
+      type: object
+      description: The registered approval, as the requesting workflow sees it.
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DurableApprovalStatus'
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - status
+        - expires_at
+    DurableApprovalStats:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        counts:
+          $ref: '#/components/schemas/DurableApprovalCounts'
+        approval_rate:
+          type: number
+          format: double
+          nullable: true
+          description: |
+            `approved / (approved + denied)`, from 0 to 1. Null when nothing in
+            the window was decided.
+        median_seconds_to_decision:
+          type: number
+          format: double
+          nullable: true
+          description: Median time from request to decision. Null when nothing was decided.
+        p90_seconds_to_decision:
+          type: number
+          format: double
+          nullable: true
+          description: 90th percentile time from request to decision. Null when nothing was decided.
+        functions:
+          type: array
+          description: |
+            The ten workflows that requested the most approvals, most first.
+            The rest are summed in `other_functions`.
+          items:
+            $ref: '#/components/schemas/DurableApprovalFunctionCounts'
+        other_functions:
+          $ref: '#/components/schemas/DurableApprovalCounts'
+        daily:
+          type: array
+          description: |
+            One entry per UTC day in the window that has approvals, oldest
+            first. Days with none are omitted.
+          items:
+            $ref: '#/components/schemas/DurableApprovalDailyCounts'
+      required:
+        - from
+        - to
+        - counts
+        - approval_rate
+        - median_seconds_to_decision
+        - p90_seconds_to_decision
+        - functions
+        - other_functions
+        - daily
+    DurableApprovalDecisionRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          maxLength: 2000
+          description: A note for the workflow and the approval's history.
+      additionalProperties: false
+    RequestDurableApprovalRequest:
+      type: object
+      properties:
+        execution_ref:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: Opaque reference to the running execution, supplied by the SDK.
+        callback_id:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: Opaque approval reference, supplied by the SDK.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 4000
+        details:
+          description: |
+            Any JSON value to show the person deciding. The whole request is
+            limited to 64 KiB.
+      required:
+        - execution_ref
+        - callback_id
+        - name
+        - title
+      additionalProperties: false
+    PaginatedDurableApprovals:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DurableApproval'
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+        limit:
+          type: integer
+          description: Number of items per page
+        total:
+          type: integer
+          description: Total number of items across all pages
+        has_more:
+          type: boolean
+          description: Whether there are more pages available
+      required:
+        - data
+        - page
+        - limit
+        - total
+        - has_more
     PaginatedProjectCustomDomains:
       type: object
       properties:
@@ -21055,7 +21636,7 @@ components:
       type: object
       additionalProperties: false
       description: |
-        Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required
+        Custom domain with managed or BYOC TLS. `tls` is required
         when the domain is first created and optional afterwards. For an existing
         domain, omitting `tls` or sending only `tls.mode` keeps the stored
         certificate; new BYOC material for the same domain rotates the
@@ -21094,7 +21675,10 @@ components:
             - '16'
             - '17'
             - '18'
-          description: PostgreSQL major version. Asserted, never written.
+          description: |
+            PostgreSQL major version. Asserted, never written. Also accepts
+            versions new databases can no longer be created on, so an export
+            of an existing database re-applies.
         database_type:
           type: string
           enum:
@@ -23358,6 +23942,119 @@ components:
           description: Deployment stage that produced the log event, when available.
       required:
         - id
+    DurableApprovalFunction:
+      type: object
+      description: |
+        The durable function that requested the approval. `id` is null once the
+        function has been deleted; `name` is kept.
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+      required:
+        - id
+        - name
+    DurableApprovalExecution:
+      type: object
+      description: |
+        The durable execution that requested the approval. `id` and `status`
+        are null once the execution is no longer retained; `name` is kept.
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        status:
+          allOf:
+            - $ref: '#/components/schemas/DurableExecutionStatus'
+          nullable: true
+      required:
+        - id
+        - name
+        - status
+    DurableApprovalDecider:
+      type: object
+      nullable: true
+      description: The person who decided. Null once their account is deleted.
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+      required:
+        - id
+        - email
+    DurableApprovalDecision:
+      type: object
+      nullable: true
+      description: Who decided and when. Null unless the approval was approved or denied.
+      properties:
+        comment:
+          type: string
+        decided_by:
+          $ref: '#/components/schemas/DurableApprovalDecider'
+        decided_at:
+          type: string
+          format: date-time
+      required:
+        - comment
+        - decided_by
+        - decided_at
+    DurableApprovalCounts:
+      type: object
+      description: Approvals by status. `requested` is every approval, whatever its status.
+      properties:
+        requested:
+          type: integer
+          format: int64
+        pending:
+          type: integer
+          format: int64
+        approved:
+          type: integer
+          format: int64
+        denied:
+          type: integer
+          format: int64
+        expired:
+          type: integer
+          format: int64
+        cancelled:
+          type: integer
+          format: int64
+      required:
+        - requested
+        - pending
+        - approved
+        - denied
+        - expired
+        - cancelled
+    DurableApprovalFunctionCounts:
+      type: object
+      properties:
+        function:
+          $ref: '#/components/schemas/DurableApprovalFunction'
+        counts:
+          $ref: '#/components/schemas/DurableApprovalCounts'
+      required:
+        - function
+        - counts
+    DurableApprovalDailyCounts:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        counts:
+          $ref: '#/components/schemas/DurableApprovalCounts'
+      required:
+        - date
+        - counts
     DatabaseQueryFilter:
       type: object
       description: One WHERE condition. Conditions are combined with AND.

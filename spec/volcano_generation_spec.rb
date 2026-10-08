@@ -7,7 +7,7 @@ require 'tmpdir'
 
 RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
-  let(:openapi_sha256) { '09b595274deab5b459cd5e03c6c0a4803837877a6ac6763783e90a4d553cdcf8' }
+  let(:openapi_sha256) { 'f03633d398ec0c4cdaa0894fa807b20cd3c072440070b1201459b529d0d63bcc' }
 
   it 'accepts current and legacy plan names in project responses' do
     project = described_class.const_get(:Generated).const_get(:Project)
@@ -78,7 +78,10 @@ RSpec.describe Volcano do
         'execute_sandbox_session',
         'deploy_sandbox',
         'get_sandbox_deployment_source',
-        'get_sandbox_deployment_logs'
+        'get_sandbox_deployment_logs',
+        'list_durable_approvals',
+        'approve_durable_approval',
+        'deny_durable_approval'
       )
       model_base = File.binread(
         File.join(output, 'lib/volcano-generated/api_model_base.rb')

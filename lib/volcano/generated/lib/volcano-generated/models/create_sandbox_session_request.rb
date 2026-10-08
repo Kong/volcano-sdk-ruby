@@ -25,8 +25,10 @@ module Volcano::Generated
     # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
     attr_accessor :region
 
+    # Inherits the template TTL when omitted (3600 seconds for a new template).
     attr_accessor :max_duration_seconds
 
+    # Inherits the template idle timeout when omitted, capped at the session duration. Set zero to disable idle timeout.
     attr_accessor :idle_timeout_seconds
 
     # Attribute mapping from ruby-style variable name to JSON key.
@@ -105,14 +107,10 @@ module Volcano::Generated
 
       if attributes.key?(:'max_duration_seconds')
         self.max_duration_seconds = attributes[:'max_duration_seconds']
-      else
-        self.max_duration_seconds = 3600
       end
 
       if attributes.key?(:'idle_timeout_seconds')
         self.idle_timeout_seconds = attributes[:'idle_timeout_seconds']
-      else
-        self.idle_timeout_seconds = 0
       end
     end
 

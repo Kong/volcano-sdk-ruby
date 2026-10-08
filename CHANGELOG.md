@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.34.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.33.0...v0.34.0) (2026-10-08)
+
+
+### Features
+
+* **api:** add managed custom-domain TLS types ([#12](https://github.com/Kong/volcano-sdk-ruby/issues/12)) ([308c401](https://github.com/Kong/volcano-sdk-ruby/commit/308c401c47702768242eec1f1e81a281a3794475))
+* **durable:** list, read, and decide durable approvals ([#341](https://github.com/Kong/volcano-sdk-ruby/issues/341)) ([66d0076](https://github.com/Kong/volcano-sdk-ruby/commit/66d0076395201fe69cc736d3b965ba7e39187c6c))
+* **sandboxes:** expose custom deployments and build logs ([#338](https://github.com/Kong/volcano-sdk-ruby/issues/338)) ([427bb0f](https://github.com/Kong/volcano-sdk-ruby/commit/427bb0f30fc554706199661dfb440b0f2339fdd4))
+
+
+### Bug Fixes
+
+* **deps:** bump the bundler-production group across 1 directory with 13 updates ([#328](https://github.com/Kong/volcano-sdk-ruby/issues/328)) ([774b6ac](https://github.com/Kong/volcano-sdk-ruby/commit/774b6ac1c144b91da08cba46575be332f3cac0aa))
+
 ## [0.33.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.32.7...v0.33.0) (2026-10-06)
 
 

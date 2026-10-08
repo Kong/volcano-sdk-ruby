@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,10 +19,10 @@ module Volcano::Generated
     # Database name (must be unique within project)
     attr_accessor :name
 
-    # Region for database hosting. The accepted values are the regions this environment runs in, so read them from `GET /databases/regions` rather than hardcoding a list. A region the environment does not offer is rejected with 400. 
+    # Region for database hosting, such as `us-east-1`. The accepted values are the regions this environment runs in, so read them from `GET /databases/regions` rather than hardcoding a list. A region the environment does not offer is rejected with 400. Region IDs issued by earlier versions of the API are still accepted. 
     attr_accessor :region
 
-    # PostgreSQL major version
+    # PostgreSQL major version. `GET /databases/postgres-versions` lists the versions this environment accepts; local mode accepts only the version its server runs. Any other value is rejected with 400. 
     attr_accessor :pg_version
 
     # Compute size tier (optional, defaults to volcano-db-xs). Determines autoscaling limits for the database. 
@@ -165,7 +165,7 @@ module Volcano::Generated
       return false if @name !~ Regexp.new(/^[a-z0-9_]+$/)
       return false if @region.nil?
       return false if @pg_version.nil?
-      pg_version_validator = EnumAttributeValidator.new('String', ["15", "16"])
+      pg_version_validator = EnumAttributeValidator.new('String', ["16", "17", "18"])
       return false unless pg_version_validator.valid?(@pg_version)
       database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
       return false unless database_type_validator.valid?(@database_type)
@@ -204,7 +204,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] pg_version Object to be assigned
     def pg_version=(pg_version)
-      validator = EnumAttributeValidator.new('String', ["15", "16"])
+      validator = EnumAttributeValidator.new('String', ["16", "17", "18"])
       unless validator.valid?(pg_version)
         fail ArgumentError, "invalid value for \"pg_version\", must be one of #{validator.allowable_values}."
       end

@@ -8,6 +8,14 @@ module Volcano
                                        :stderr_truncated, :session_id, :region, :duration_ms)
   # A published preset and its available memory and regions.
   SandboxPreset = Data.define(:id, :memory_mb, :regions)
+  # Immutable build status for a custom template version.
+  SandboxDeployment = Data.define(:id, :status, :created_at, :updated_at)
+  # A page of custom template versions.
+  SandboxDeploymentPage = Data.define(:data, :limit, :has_more, :next_cursor)
+  # One regional build message.
+  SandboxBuildLog = Data.define(:timestamp, :message)
+  # A page of regional build output.
+  SandboxBuildLogPage = Data.define(:data, :next_cursor)
   # Expiring HTTP access credentials are redacted from inspection.
   class SandboxAccess
     attr_reader :url, :token, :expires_at

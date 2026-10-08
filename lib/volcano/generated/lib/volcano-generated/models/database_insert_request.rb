@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -18,7 +18,7 @@ module Volcano::Generated
     # Table name
     attr_accessor :table
 
-    # Column values to insert
+    # Column values to insert. JSON objects and arrays are stored as JSON, so send them to `json` or `jsonb` columns. For a Postgres array column, send an array literal string such as `\"{a,b}\"`. 
     attr_accessor :values
 
     # Attribute mapping from ruby-style variable name to JSON key.

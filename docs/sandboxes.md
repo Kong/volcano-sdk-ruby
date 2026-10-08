@@ -94,3 +94,34 @@ and HTTP access.
 
 Creation and execution use explicit keyword arguments. Unknown keywords raise
 `ArgumentError`; pass a keyword options hash with `**options`.
+
+## Deploy a custom image from source
+
+Package the Dockerfile fragment and its files as a `tar.gz` archive, up to 32 MiB.
+The platform supplies the Amazon Linux base; fragments cannot use `FROM`, `USER`,
+or `ENTRYPOINT`. Use `RUN`, `COPY`, and `CMD` to install and launch your service.
+Keep the template ID, request ID, archive, and options unchanged when retrying an
+uncertain upload. A new request ID creates another version of the same template.
+
+```ruby
+template_id = SecureRandom.uuid
+request_id = SecureRandom.uuid
+archive = File.binread('sandbox-source.tar.gz')
+deployment = client.sandboxes.deploy(
+  project_id, template_id, archive,
+  name: 'my-custom-sandbox', memory_mb: 1024, ports: [8080], request_id: request_id
+)
+status = client.sandboxes.deployment(project_id, template_id, deployment.id)
+history = client.sandboxes.deployments(project_id, template_id, limit: 10)
+logs = client.sandboxes.logs(project_id, template_id, deployment.id, region: 'aws-us-east-1')
+File.binwrite('exported-source.tar.gz', client.sandboxes.source(project_id, template_id, deployment.id))
+```
+
+Poll `deployment` until `status` is `active`; stop on `failed` or `deleted`.
+Only active versions can create sessions. `history.next_cursor` and
+`logs.next_cursor` can be passed as `cursor:` to retrieve the next page.
+`delete_template(project_id, template_id)` removes the custom template and its
+sessions and requires the `sandboxes.terminate` permission. History page limits
+range from 1 to 100. All template management uses backend service credentials.
+
+Custom deployments accept at most 16 unique ports, from 1 through 65532.

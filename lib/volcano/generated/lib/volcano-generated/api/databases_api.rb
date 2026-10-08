@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,8 +19,8 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
-    # Create a new serverless PostgreSQL database
-    # Creates a serverless PostgreSQL database in the project. Each project can hold 1 database on Hobby and up to 10,000 on Superagent. Requests over the plan's cap return 403. 
+    # Create a new PostgreSQL database
+    # Creates a PostgreSQL database in the project. Each project can hold 1 database on HOBBY and up to 10,000 on SUPERAGENT. Requests over the plan's cap return 403. 
     # @param id [String] Project ID
     # @param create_database_request [CreateDatabaseRequest] 
     # @param [Hash] opts the optional parameters
@@ -30,8 +30,8 @@ module Volcano::Generated
       data
     end
 
-    # Create a new serverless PostgreSQL database
-    # Creates a serverless PostgreSQL database in the project. Each project can hold 1 database on Hobby and up to 10,000 on Superagent. Requests over the plan&#39;s cap return 403. 
+    # Create a new PostgreSQL database
+    # Creates a PostgreSQL database in the project. Each project can hold 1 database on HOBBY and up to 10,000 on SUPERAGENT. Requests over the plan&#39;s cap return 403. 
     # @param id [String] Project ID
     # @param create_database_request [CreateDatabaseRequest] 
     # @param [Hash] opts the optional parameters
@@ -74,7 +74,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.create_database",
@@ -152,7 +152,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DeleteDatabase202Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.delete_database",
@@ -228,7 +228,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_database",
@@ -319,7 +319,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseStats'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_database_stats",
@@ -339,7 +339,7 @@ module Volcano::Generated
     end
 
     # Get database queries
-    # Returns the database's current top queries from pg_stat_statements ranked by total execution time.  **SUPERAGENT plan required.** This endpoint is only available to projects owned by users on the SUPERAGENT billing plan. 
+    # Returns the database's current top queries from pg_stat_statements ranked by total execution time. Only data statements (SELECT, INSERT, UPDATE, DELETE, MERGE) are listed; statements Volcano runs to operate the database are left out.  **SUPERAGENT plan required.** This endpoint is only available to projects owned by users on the SUPERAGENT billing plan. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters
@@ -351,7 +351,7 @@ module Volcano::Generated
     end
 
     # Get database queries
-    # Returns the database&#39;s current top queries from pg_stat_statements ranked by total execution time.  **SUPERAGENT plan required.** This endpoint is only available to projects owned by users on the SUPERAGENT billing plan. 
+    # Returns the database&#39;s current top queries from pg_stat_statements ranked by total execution time. Only data statements (SELECT, INSERT, UPDATE, DELETE, MERGE) are listed; statements Volcano runs to operate the database are left out.  **SUPERAGENT plan required.** This endpoint is only available to projects owned by users on the SUPERAGENT billing plan. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters
@@ -408,7 +408,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DatabaseQueryPerformanceResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.get_project_database_queries",
@@ -573,7 +573,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedDatabases'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.list_databases",
@@ -593,7 +593,7 @@ module Volcano::Generated
     end
 
     # List available PostgreSQL versions
-    # Returns a list of supported PostgreSQL major versions for database provisioning. This is a public endpoint that doesn't require authentication. 
+    # Returns the PostgreSQL major versions a database can be created on, newest first. Local mode lists only the version its server runs. This is a public endpoint that doesn't require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<ListPostgresVersions200ResponseInner>]
     def list_postgres_versions(opts = {})
@@ -602,7 +602,7 @@ module Volcano::Generated
     end
 
     # List available PostgreSQL versions
-    # Returns a list of supported PostgreSQL major versions for database provisioning. This is a public endpoint that doesn&#39;t require authentication. 
+    # Returns the PostgreSQL major versions a database can be created on, newest first. Local mode lists only the version its server runs. This is a public endpoint that doesn&#39;t require authentication. 
     # @param [Hash] opts the optional parameters
     # @return [Array<(Array<ListPostgresVersions200ResponseInner>, Integer, Hash)>] Array<ListPostgresVersions200ResponseInner> data, response status code and response headers
     def list_postgres_versions_with_http_info(opts = {})
@@ -708,7 +708,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ResetDatabasePassword200Response'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.reset_database_password",
@@ -797,7 +797,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Database'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DatabasesApi.update_database_type",

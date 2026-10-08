@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -18,10 +18,10 @@ module Volcano::Generated
   class ProjectConfigDatabase < ApiModelBase
     attr_accessor :name
 
-    # Deployed region ID (e.g. aws-us-east-1). Asserted, never written.
+    # Deployed region ID (e.g. us-east-1). Asserted, never written; region IDs issued by earlier versions of the API match too.
     attr_accessor :region
 
-    # PostgreSQL major version. Asserted, never written.
+    # PostgreSQL major version. Asserted, never written. Also accepts versions new databases can no longer be created on, so an export of an existing database re-applies. 
     attr_accessor :pg_version
 
     # Compute tier. Asserted, never written - tier changes are not supported via the manifest; use the databases API/CLI/GUI instead. 
@@ -156,7 +156,7 @@ module Volcano::Generated
       return false if @name.to_s.length < 1
       return false if @region.nil?
       return false if @pg_version.nil?
-      pg_version_validator = EnumAttributeValidator.new('String', ["15", "16"])
+      pg_version_validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
       return false unless pg_version_validator.valid?(@pg_version)
       database_type_validator = EnumAttributeValidator.new('String', ["volcano-db-xs", "volcano-db-s", "volcano-db-m", "volcano-db-l", "volcano-db-xl", "volcano-db-2xl"])
       return false unless database_type_validator.valid?(@database_type)
@@ -190,7 +190,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] pg_version Object to be assigned
     def pg_version=(pg_version)
-      validator = EnumAttributeValidator.new('String', ["15", "16"])
+      validator = EnumAttributeValidator.new('String', ["15", "16", "17", "18"])
       unless validator.valid?(pg_version)
         fail ArgumentError, "invalid value for \"pg_version\", must be one of #{validator.allowable_values}."
       end

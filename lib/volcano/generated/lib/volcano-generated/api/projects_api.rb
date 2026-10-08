@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -77,7 +77,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectConfigApplyResult'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.apply_project_config",
@@ -140,7 +140,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.cancel_project_source_export",
@@ -214,7 +214,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.connect_project_git",
@@ -345,7 +345,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.delete_project",
@@ -408,7 +408,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Project'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.delete_project_logo",
@@ -469,7 +469,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.disconnect_project_git",
@@ -543,7 +543,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExport'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.export_project_source",
@@ -604,7 +604,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Project'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project",
@@ -624,7 +624,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project's current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with `Accept: application/yaml` or `?format=yaml`; the YAML is returned verbatim as the raw response body (`Content-Type: application/yaml`) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables and frontend_shared_variables contain names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -635,7 +635,7 @@ module Volcano::Generated
     end
 
     # Export project configuration
-    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables contains names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
+    # Exports the project&#39;s current user-facing configuration as a declarative manifest. Returns JSON by default. Request the canonical volcano-config.yaml rendering with &#x60;Accept: application/yaml&#x60; or &#x60;?format&#x3D;yaml&#x60;; the YAML is returned verbatim as the raw response body (&#x60;Content-Type: application/yaml&#x60;) and is meant to be saved as-is. Variable values and write-only secrets (SMTP password, OAuth client secrets, TLS material) are omitted from the export; shared_variables and frontend_shared_variables contain names only; the YAML rendering adds a header comment describing how to set them via CLI environment interpolation. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [String] :format Response format override. Takes precedence over the Accept header.
@@ -674,7 +674,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectConfig'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_config",
@@ -735,7 +735,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_git_connection",
@@ -796,7 +796,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_git_deploy_settings",
@@ -859,7 +859,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectHealthResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_health",
@@ -985,7 +985,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectSourceExportState'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_source_export",
@@ -1048,7 +1048,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectUsageResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.get_project_usage",
@@ -1197,7 +1197,7 @@ module Volcano::Generated
     end
 
     # List deployments in a project
-    # Lists Function and Frontend deployment attempts across the project, ordered most-recent first. Each item includes a normalized resource reference so clients can render both resource types without extra fetches. 
+    # Lists Function and Frontend deployment attempts across the project, ordered most-recent first. Each item includes a normalized resource reference so clients can render both resource types without extra fetches.  Standard and durable function deployments both appear under `resource.type: function`, and `resource.kind` tells them apart. Pass `function_kind` to list one kind only; frontends are then excluded. Combining `function_kind` with `resource_type=frontend` is rejected. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
@@ -1208,6 +1208,7 @@ module Volcano::Generated
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
     # @option opts [Time] :created_after Restrict results to attempts created at or after this timestamp.
     # @option opts [String] :resource_type Restrict the feed to a single resource type. Omit to return both Function and Frontend deployments. 
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @return [PaginatedProjectDeployments]
     def list_project_deployments(id, opts = {})
       data, _status_code, _headers = list_project_deployments_with_http_info(id, opts)
@@ -1215,7 +1216,7 @@ module Volcano::Generated
     end
 
     # List deployments in a project
-    # Lists Function and Frontend deployment attempts across the project, ordered most-recent first. Each item includes a normalized resource reference so clients can render both resource types without extra fetches. 
+    # Lists Function and Frontend deployment attempts across the project, ordered most-recent first. Each item includes a normalized resource reference so clients can render both resource types without extra fetches.  Standard and durable function deployments both appear under &#x60;resource.type: function&#x60;, and &#x60;resource.kind&#x60; tells them apart. Pass &#x60;function_kind&#x60; to list one kind only; frontends are then excluded. Combining &#x60;function_kind&#x60; with &#x60;resource_type&#x3D;frontend&#x60; is rejected. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
@@ -1226,6 +1227,7 @@ module Volcano::Generated
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
     # @option opts [Time] :created_after Restrict results to attempts created at or after this timestamp.
     # @option opts [String] :resource_type Restrict the feed to a single resource type. Omit to return both Function and Frontend deployments. 
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @return [Array<(PaginatedProjectDeployments, Integer, Hash)>] PaginatedProjectDeployments data, response status code and response headers
     def list_project_deployments_with_http_info(id, opts = {})
       if @api_client.config.debugging
@@ -1272,6 +1274,7 @@ module Volcano::Generated
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
       query_params[:'created_after'] = opts[:'created_after'] if !opts[:'created_after'].nil?
       query_params[:'resource_type'] = opts[:'resource_type'] if !opts[:'resource_type'].nil?
+      query_params[:'function_kind'] = opts[:'function_kind'] if !opts[:'function_kind'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -1288,7 +1291,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedProjectDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.list_project_deployments",
@@ -1464,7 +1467,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectMetricsQueryResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.query_project_metrics",
@@ -1479,6 +1482,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#query_project_metrics\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Replace frontend shared variable names
+    # Atomically replaces the complete shared frontend-variable list without changing values. Names must already exist. Validates final affected frontend environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored outside the frontend shared list. 
+    # @param id [String] Project ID
+    # @param replace_frontend_shared_variables_request [ReplaceFrontendSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def replace_frontend_shared_variables(id, replace_frontend_shared_variables_request, opts = {})
+      replace_frontend_shared_variables_with_http_info(id, replace_frontend_shared_variables_request, opts)
+      nil
+    end
+
+    # Replace frontend shared variable names
+    # Atomically replaces the complete shared frontend-variable list without changing values. Names must already exist. Validates final affected frontend environments before membership or propagation side effects. An empty list clears membership. Omitted names remain stored outside the frontend shared list. 
+    # @param id [String] Project ID
+    # @param replace_frontend_shared_variables_request [ReplaceFrontendSharedVariablesRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def replace_frontend_shared_variables_with_http_info(id, replace_frontend_shared_variables_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.replace_frontend_shared_variables ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.replace_frontend_shared_variables"
+      end
+      # verify the required parameter 'replace_frontend_shared_variables_request' is set
+      if @api_client.config.client_side_validation && replace_frontend_shared_variables_request.nil?
+        fail ArgumentError, "Missing the required parameter 'replace_frontend_shared_variables_request' when calling ProjectsApi.replace_frontend_shared_variables"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontend-shared-variables'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(replace_frontend_shared_variables_request)
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.replace_frontend_shared_variables",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#replace_frontend_shared_variables\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1538,7 +1615,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.replace_shared_variables",
@@ -1612,7 +1689,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.set_project_git_production_branch",
@@ -1632,11 +1709,12 @@ module Volcano::Generated
     end
 
     # Summarize deployments in a project
-    # Summarizes deployment attempts for one comparable resource pipeline. Success rate uses conclusive outcomes only: active and deleted attempts are successful; failed and degraded attempts are failures; in-progress and superseded attempts are excluded. Median build duration includes completed, non-superseded attempts with recorded build work, including failed builds. 
+    # Summarizes deployment attempts for one comparable resource pipeline. Success rate uses conclusive outcomes only: active and deleted attempts are successful; failed and degraded attempts are failures; in-progress and superseded attempts are excluded. Median build duration includes completed, non-superseded attempts with recorded build work, including failed builds.  With `resource_type=function`, pass `function_kind` to summarize one kind of function only. It is rejected with `resource_type=frontend`. 
     # @param id [String] Project ID
     # @param resource_type [String] Restrict the summary to one comparable deployment pipeline.
     # @param [Hash] opts the optional parameters
     # @option opts [String] :search Restrict the summary to resource names containing this value.
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @option opts [Time] :created_after Restrict results to attempts created at or after this timestamp.
     # @return [ProjectDeploymentSummary]
     def summarize_project_deployments(id, resource_type, opts = {})
@@ -1645,11 +1723,12 @@ module Volcano::Generated
     end
 
     # Summarize deployments in a project
-    # Summarizes deployment attempts for one comparable resource pipeline. Success rate uses conclusive outcomes only: active and deleted attempts are successful; failed and degraded attempts are failures; in-progress and superseded attempts are excluded. Median build duration includes completed, non-superseded attempts with recorded build work, including failed builds. 
+    # Summarizes deployment attempts for one comparable resource pipeline. Success rate uses conclusive outcomes only: active and deleted attempts are successful; failed and degraded attempts are failures; in-progress and superseded attempts are excluded. Median build duration includes completed, non-superseded attempts with recorded build work, including failed builds.  With &#x60;resource_type&#x3D;function&#x60;, pass &#x60;function_kind&#x60; to summarize one kind of function only. It is rejected with &#x60;resource_type&#x3D;frontend&#x60;. 
     # @param id [String] Project ID
     # @param resource_type [String] Restrict the summary to one comparable deployment pipeline.
     # @param [Hash] opts the optional parameters
     # @option opts [String] :search Restrict the summary to resource names containing this value.
+    # @option opts [FunctionKindFilter] :function_kind Restrict results to functions of one kind. Omit to include both standard and durable functions. 
     # @option opts [Time] :created_after Restrict results to attempts created at or after this timestamp.
     # @return [Array<(ProjectDeploymentSummary, Integer, Hash)>] ProjectDeploymentSummary data, response status code and response headers
     def summarize_project_deployments_with_http_info(id, resource_type, opts = {})
@@ -1676,6 +1755,7 @@ module Volcano::Generated
       query_params = opts[:query_params] || {}
       query_params[:'resource_type'] = resource_type
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
+      query_params[:'function_kind'] = opts[:'function_kind'] if !opts[:'function_kind'].nil?
       query_params[:'created_after'] = opts[:'created_after'] if !opts[:'created_after'].nil?
 
       # header parameters
@@ -1693,7 +1773,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectDeploymentSummary'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.summarize_project_deployments",
@@ -1765,7 +1845,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Project'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.update_project",
@@ -1839,7 +1919,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitDeploySettings'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.update_project_git_deploy_settings",
@@ -1914,7 +1994,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'Project'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.upload_project_logo",

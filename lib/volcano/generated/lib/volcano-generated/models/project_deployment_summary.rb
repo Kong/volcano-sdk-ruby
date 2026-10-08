@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -31,7 +31,7 @@ module Volcano::Generated
     # Successful attempts divided by successful plus failed attempts.
     attr_accessor :success_rate
 
-    # Median CodeBuild duration across eligible completed attempts.
+    # Median build duration across eligible completed attempts.
     attr_accessor :median_build_duration_seconds
 
     # Attribute mapping from ruby-style variable name to JSON key.

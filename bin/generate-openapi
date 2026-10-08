@@ -38,8 +38,18 @@ else
 fi
 
 cd "$repo_root"
+# Project.plan is response-only. Older Hosting releases still return FREE/PRO.
+# Keep the vendored producer contract exact and widen only this consumer model.
+consumer_spec=$(mktemp "${TMPDIR:-/tmp}/volcano-ruby-contract.XXXXXX.json")
+trap 'rm -f "$consumer_spec"' EXIT
+ruby -ryaml -rjson -e '
+  contract = YAML.safe_load(File.read(ARGV.fetch(0)))
+  plan = contract.fetch("components").fetch("schemas").fetch("Project").fetch("properties").fetch("plan")
+  plan["enum"] = (plan.fetch("enum") + %w[FREE PRO]).uniq
+  File.write(ARGV.fetch(1), JSON.generate(contract))
+' openapi/openapi.yaml "$consumer_spec"
 npx --no-install openapi-generator-cli generate \
-  -i openapi/openapi.yaml \
+  -i "$consumer_spec" \
   -g ruby \
   -c openapi-generator.yaml \
   -t openapi/templates \

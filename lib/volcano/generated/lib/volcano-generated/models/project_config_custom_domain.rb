@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Custom domain with managed or BYOC TLS (SUPERAGENT plan). `tls` is required when the domain is first created and optional afterwards. For an existing domain, omitting `tls` or sending only `tls.mode` keeps the stored certificate; new BYOC material for the same domain rotates the certificate in place (zero downtime). Changing `tls.mode` for the same hostname, or the hostname of a managed domain, requires deleting the domain first. BYOC TLS material is write-only; exports render only `tls.mode`. 
+  # Custom domain with managed or BYOC TLS. `tls` is required when the domain is first created and optional afterwards. For an existing domain, omitting `tls` or sending only `tls.mode` keeps the stored certificate; new BYOC material for the same domain rotates the certificate in place (zero downtime). Changing `tls.mode` for the same hostname, or the hostname of a managed domain, requires deleting the domain first. BYOC TLS material is write-only; exports render only `tls.mode`. 
   class ProjectConfigCustomDomain < ApiModelBase
     # Fully-qualified domain name (hostname only, no scheme/path). Managed TLS (`tls.mode: managed`) accepts at most 219 characters; BYOC accepts 253.
     attr_accessor :domain

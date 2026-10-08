@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -33,19 +33,14 @@ module Volcano::Generated
     # Platform user that triggered a request-initiated deployment; absent for git and system deployments.
     attr_accessor :initiated_by
 
-    attr_accessor :artifact_bucket
+    # Total build time recorded for this deployment, in seconds.
+    attr_accessor :build_duration_seconds
 
-    attr_accessor :artifact_key
+    # Number of completed builds included in build_duration_seconds.
+    attr_accessor :build_count
 
-    attr_accessor :artifact_version
-
-    # Total CodeBuild build duration recorded for this deployment, in seconds.
-    attr_accessor :codebuild_duration_seconds
-
-    # Number of completed CodeBuild builds included in codebuild_duration_seconds.
-    attr_accessor :codebuild_build_count
-
-    attr_accessor :codebuild_duration_recorded_at
+    # When the build time was last recorded.
+    attr_accessor :build_duration_recorded_at
 
     attr_accessor :progress
 
@@ -90,12 +85,9 @@ module Volcano::Generated
         :'status' => :'status',
         :'deploy_source' => :'deploy_source',
         :'initiated_by' => :'initiated_by',
-        :'artifact_bucket' => :'artifact_bucket',
-        :'artifact_key' => :'artifact_key',
-        :'artifact_version' => :'artifact_version',
-        :'codebuild_duration_seconds' => :'codebuild_duration_seconds',
-        :'codebuild_build_count' => :'codebuild_build_count',
-        :'codebuild_duration_recorded_at' => :'codebuild_duration_recorded_at',
+        :'build_duration_seconds' => :'build_duration_seconds',
+        :'build_count' => :'build_count',
+        :'build_duration_recorded_at' => :'build_duration_recorded_at',
         :'progress' => :'progress',
         :'error_message' => :'error_message',
         :'completed_at' => :'completed_at',
@@ -125,12 +117,9 @@ module Volcano::Generated
         :'status' => :'String',
         :'deploy_source' => :'String',
         :'initiated_by' => :'String',
-        :'artifact_bucket' => :'String',
-        :'artifact_key' => :'String',
-        :'artifact_version' => :'String',
-        :'codebuild_duration_seconds' => :'Integer',
-        :'codebuild_build_count' => :'Integer',
-        :'codebuild_duration_recorded_at' => :'Time',
+        :'build_duration_seconds' => :'Integer',
+        :'build_count' => :'Integer',
+        :'build_duration_recorded_at' => :'Time',
         :'progress' => :'DeploymentProgress',
         :'error_message' => :'String',
         :'completed_at' => :'Time',
@@ -205,28 +194,16 @@ module Volcano::Generated
         self.initiated_by = attributes[:'initiated_by']
       end
 
-      if attributes.key?(:'artifact_bucket')
-        self.artifact_bucket = attributes[:'artifact_bucket']
+      if attributes.key?(:'build_duration_seconds')
+        self.build_duration_seconds = attributes[:'build_duration_seconds']
       end
 
-      if attributes.key?(:'artifact_key')
-        self.artifact_key = attributes[:'artifact_key']
+      if attributes.key?(:'build_count')
+        self.build_count = attributes[:'build_count']
       end
 
-      if attributes.key?(:'artifact_version')
-        self.artifact_version = attributes[:'artifact_version']
-      end
-
-      if attributes.key?(:'codebuild_duration_seconds')
-        self.codebuild_duration_seconds = attributes[:'codebuild_duration_seconds']
-      end
-
-      if attributes.key?(:'codebuild_build_count')
-        self.codebuild_build_count = attributes[:'codebuild_build_count']
-      end
-
-      if attributes.key?(:'codebuild_duration_recorded_at')
-        self.codebuild_duration_recorded_at = attributes[:'codebuild_duration_recorded_at']
+      if attributes.key?(:'build_duration_recorded_at')
+        self.build_duration_recorded_at = attributes[:'build_duration_recorded_at']
       end
 
       if attributes.key?(:'progress')
@@ -408,12 +385,9 @@ module Volcano::Generated
           status == o.status &&
           deploy_source == o.deploy_source &&
           initiated_by == o.initiated_by &&
-          artifact_bucket == o.artifact_bucket &&
-          artifact_key == o.artifact_key &&
-          artifact_version == o.artifact_version &&
-          codebuild_duration_seconds == o.codebuild_duration_seconds &&
-          codebuild_build_count == o.codebuild_build_count &&
-          codebuild_duration_recorded_at == o.codebuild_duration_recorded_at &&
+          build_duration_seconds == o.build_duration_seconds &&
+          build_count == o.build_count &&
+          build_duration_recorded_at == o.build_duration_recorded_at &&
           progress == o.progress &&
           error_message == o.error_message &&
           completed_at == o.completed_at &&
@@ -430,7 +404,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, function_id, project_id, batch_id, operation, status, deploy_source, initiated_by, artifact_bucket, artifact_key, artifact_version, codebuild_duration_seconds, codebuild_build_count, codebuild_duration_recorded_at, progress, error_message, completed_at, created_at, updated_at].hash
+      [id, function_id, project_id, batch_id, operation, status, deploy_source, initiated_by, build_duration_seconds, build_count, build_duration_recorded_at, progress, error_message, completed_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

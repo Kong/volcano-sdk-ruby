@@ -3,6 +3,8 @@
 module Volcano
   # Create isolated sessions or execute a command to completion.
   class Sandboxes
+    include SandboxDeployments
+
     def initialize(client, transport)
       @requests = SandboxRequests.new(client, transport)
     end

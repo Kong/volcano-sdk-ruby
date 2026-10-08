@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -17,11 +17,17 @@ module Volcano::Generated
   class AuthInsightsSeriesPoint < ApiModelBase
     attr_accessor :bucket_start
 
-    # Accounts created during the bucket.
+    # Registrations during the bucket. Subsequent deletion does not subtract from this count. Historical counts removed before deletion-history collection cannot be reconstructed.
     attr_accessor :signups
 
     # Successful session creations during the bucket.
     attr_accessor :signins
+
+    # Accounts deleted during this bucket, counted once across soft and hard deletion.
+    attr_accessor :deletions
+
+    # Registrations minus deletions during this bucket. May be negative.
+    attr_accessor :net_growth
 
     # Whether the requested window or observation time clips this bucket.
     attr_accessor :is_partial
@@ -32,6 +38,8 @@ module Volcano::Generated
         :'bucket_start' => :'bucket_start',
         :'signups' => :'signups',
         :'signins' => :'signins',
+        :'deletions' => :'deletions',
+        :'net_growth' => :'net_growth',
         :'is_partial' => :'is_partial'
       }
     end
@@ -52,6 +60,8 @@ module Volcano::Generated
         :'bucket_start' => :'Date',
         :'signups' => :'Integer',
         :'signins' => :'Integer',
+        :'deletions' => :'Integer',
+        :'net_growth' => :'Integer',
         :'is_partial' => :'Boolean'
       }
     end
@@ -96,6 +106,18 @@ module Volcano::Generated
         self.signins = nil
       end
 
+      if attributes.key?(:'deletions')
+        self.deletions = attributes[:'deletions']
+      else
+        self.deletions = nil
+      end
+
+      if attributes.key?(:'net_growth')
+        self.net_growth = attributes[:'net_growth']
+      else
+        self.net_growth = nil
+      end
+
       if attributes.key?(:'is_partial')
         self.is_partial = attributes[:'is_partial']
       else
@@ -128,6 +150,18 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "signins", must be greater than or equal to 0.')
       end
 
+      if @deletions.nil?
+        invalid_properties.push('invalid value for "deletions", deletions cannot be nil.')
+      end
+
+      if @deletions < 0
+        invalid_properties.push('invalid value for "deletions", must be greater than or equal to 0.')
+      end
+
+      if @net_growth.nil?
+        invalid_properties.push('invalid value for "net_growth", net_growth cannot be nil.')
+      end
+
       if @is_partial.nil?
         invalid_properties.push('invalid value for "is_partial", is_partial cannot be nil.')
       end
@@ -144,6 +178,9 @@ module Volcano::Generated
       return false if @signups < 0
       return false if @signins.nil?
       return false if @signins < 0
+      return false if @deletions.nil?
+      return false if @deletions < 0
+      return false if @net_growth.nil?
       return false if @is_partial.nil?
       true
     end
@@ -187,6 +224,30 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] deletions Value to be assigned
+    def deletions=(deletions)
+      if deletions.nil?
+        fail ArgumentError, 'deletions cannot be nil'
+      end
+
+      if deletions < 0
+        fail ArgumentError, 'invalid value for "deletions", must be greater than or equal to 0.'
+      end
+
+      @deletions = deletions
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] net_growth Value to be assigned
+    def net_growth=(net_growth)
+      if net_growth.nil?
+        fail ArgumentError, 'net_growth cannot be nil'
+      end
+
+      @net_growth = net_growth
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] is_partial Value to be assigned
     def is_partial=(is_partial)
       if is_partial.nil?
@@ -204,6 +265,8 @@ module Volcano::Generated
           bucket_start == o.bucket_start &&
           signups == o.signups &&
           signins == o.signins &&
+          deletions == o.deletions &&
+          net_growth == o.net_growth &&
           is_partial == o.is_partial
     end
 
@@ -216,7 +279,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [bucket_start, signups, signins, is_partial].hash
+      [bucket_start, signups, signins, deletions, net_growth, is_partial].hash
     end
 
     # Builds the object from hash

@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # The DNS records currently required for managed TLS. Volcano may require a tenant-specific TXT ownership record before returning a CNAME that authorizes certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
+  # The DNS records currently required. Volcano may require an account-specific TXT ownership record for the hostname's domain before returning a CNAME that authorizes managed certificate issuance and renewal. Clients must follow the records returned for the current lifecycle state instead of assuming a fixed sequence.
   class FrontendDomainVerificationRecord < ApiModelBase
     attr_accessor :name
 

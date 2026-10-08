@@ -186,6 +186,8 @@ target :sandboxes do
   check 'lib/volcano/sandbox_models.rb'
   check 'lib/volcano/sandbox_request.rb'
   check 'lib/volcano/sandbox_response.rb'
+  check 'lib/volcano/sandbox_deployment_response.rb'
+  check 'lib/volcano/sandbox_deployments.rb'
   check 'lib/volcano/sandboxes.rb'
   check 'lib/volcano/sandbox_session.rb'
   check 'lib/volcano/sandbox_files.rb'

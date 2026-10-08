@@ -1,9 +1,9 @@
 # -*- encoding: utf-8 -*-
 
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.email       = ["support@volcano.dev"]
   s.homepage    = "https://github.com/Kong/volcano-sdk-ruby"
   s.summary     = "Generated internal HTTP boundary for the Volcano Ruby SDK"
-  s.description = "Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations."
+  s.description = "Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations."
   s.license     = "Apache-2.0"
   s.required_ruby_version = ">= 2.7"
   s.metadata    = {}

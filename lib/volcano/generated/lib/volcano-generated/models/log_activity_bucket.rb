@@ -1,7 +1,7 @@
 =begin
-#Volcano Hosting API
+#Volcano API
 
-#Public API for Volcano Hosting clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -14,12 +14,12 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Log-event counts for one activity time bucket.
+  # Log-event counts for one activity time bucket. The first and last buckets can extend past the requested window; they count only events inside it.
   class LogActivityBucket < ApiModelBase
-    # Bucket start time.
+    # Bucket start time, inclusive.
     attr_accessor :start_time
 
-    # Bucket end time.
+    # Bucket end time, exclusive.
     attr_accessor :end_time
 
     attr_accessor :counts

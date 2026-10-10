@@ -14,64 +14,30 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class SandboxSession < ApiModelBase
+  # Stable identity for a Project-owned variable Environment.
+  class VariableEnvironment < ApiModelBase
     attr_accessor :id
 
     attr_accessor :project_id
 
-    # Explicit template used to create the session. Null when created directly from a preset.
-    attr_accessor :sandbox_id
+    attr_accessor :name
 
-    attr_accessor :state
-
-    attr_accessor :desired_state
-
-    attr_accessor :region
-
-    attr_accessor :memory_mb
+    # Whether this is the reserved Global Environment.
+    attr_accessor :is_global
 
     attr_accessor :created_at
 
-    attr_accessor :started_at
-
-    # Absolute VM expiry. Null means unlimited in local mode.
-    attr_accessor :expires_at
-
-    class EnumAttributeValidator
-      attr_reader :datatype
-      attr_reader :allowable_values
-
-      def initialize(datatype, allowable_values)
-        @allowable_values = allowable_values.map do |value|
-          case datatype.to_s
-          when /Integer/i
-            value.to_i
-          when /Float/i
-            value.to_f
-          else
-            value
-          end
-        end
-      end
-
-      def valid?(value)
-        !value || allowable_values.include?(value)
-      end
-    end
+    attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'id' => :'id',
         :'project_id' => :'project_id',
-        :'sandbox_id' => :'sandbox_id',
-        :'state' => :'state',
-        :'desired_state' => :'desired_state',
-        :'region' => :'region',
-        :'memory_mb' => :'memory_mb',
+        :'name' => :'name',
+        :'is_global' => :'is_global',
         :'created_at' => :'created_at',
-        :'started_at' => :'started_at',
-        :'expires_at' => :'expires_at'
+        :'updated_at' => :'updated_at'
       }
     end
 
@@ -90,22 +56,16 @@ module Volcano::Generated
       {
         :'id' => :'String',
         :'project_id' => :'String',
-        :'sandbox_id' => :'String',
-        :'state' => :'String',
-        :'desired_state' => :'String',
-        :'region' => :'String',
-        :'memory_mb' => :'Integer',
+        :'name' => :'String',
+        :'is_global' => :'Boolean',
         :'created_at' => :'Time',
-        :'started_at' => :'Time',
-        :'expires_at' => :'Time'
+        :'updated_at' => :'Time'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
-        :'sandbox_id',
-        :'expires_at'
       ])
     end
 
@@ -113,14 +73,14 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::SandboxSession` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::VariableEnvironment` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::SandboxSession`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::VariableEnvironment`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
@@ -137,34 +97,16 @@ module Volcano::Generated
         self.project_id = nil
       end
 
-      if attributes.key?(:'sandbox_id')
-        self.sandbox_id = attributes[:'sandbox_id']
+      if attributes.key?(:'name')
+        self.name = attributes[:'name']
       else
-        self.sandbox_id = nil
+        self.name = nil
       end
 
-      if attributes.key?(:'state')
-        self.state = attributes[:'state']
+      if attributes.key?(:'is_global')
+        self.is_global = attributes[:'is_global']
       else
-        self.state = nil
-      end
-
-      if attributes.key?(:'desired_state')
-        self.desired_state = attributes[:'desired_state']
-      else
-        self.desired_state = nil
-      end
-
-      if attributes.key?(:'region')
-        self.region = attributes[:'region']
-      else
-        self.region = nil
-      end
-
-      if attributes.key?(:'memory_mb')
-        self.memory_mb = attributes[:'memory_mb']
-      else
-        self.memory_mb = nil
+        self.is_global = nil
       end
 
       if attributes.key?(:'created_at')
@@ -173,14 +115,10 @@ module Volcano::Generated
         self.created_at = nil
       end
 
-      if attributes.key?(:'started_at')
-        self.started_at = attributes[:'started_at']
-      end
-
-      if attributes.key?(:'expires_at')
-        self.expires_at = attributes[:'expires_at']
+      if attributes.key?(:'updated_at')
+        self.updated_at = attributes[:'updated_at']
       else
-        self.expires_at = nil
+        self.updated_at = nil
       end
     end
 
@@ -197,24 +135,33 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "project_id", project_id cannot be nil.')
       end
 
-      if @state.nil?
-        invalid_properties.push('invalid value for "state", state cannot be nil.')
+      if @name.nil?
+        invalid_properties.push('invalid value for "name", name cannot be nil.')
       end
 
-      if @desired_state.nil?
-        invalid_properties.push('invalid value for "desired_state", desired_state cannot be nil.')
+      if @name.to_s.length > 64
+        invalid_properties.push('invalid value for "name", the character length must be smaller than or equal to 64.')
       end
 
-      if @region.nil?
-        invalid_properties.push('invalid value for "region", region cannot be nil.')
+      if @name.to_s.length < 1
+        invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
       end
 
-      if @memory_mb.nil?
-        invalid_properties.push('invalid value for "memory_mb", memory_mb cannot be nil.')
+      pattern = Regexp.new(/^[A-Za-z0-9_-]{1,64}$/)
+      if @name !~ pattern
+        invalid_properties.push("invalid value for \"name\", must conform to the pattern #{pattern}.")
+      end
+
+      if @is_global.nil?
+        invalid_properties.push('invalid value for "is_global", is_global cannot be nil.')
       end
 
       if @created_at.nil?
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
+      end
+
+      if @updated_at.nil?
+        invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
       end
 
       invalid_properties
@@ -226,15 +173,13 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @id.nil?
       return false if @project_id.nil?
-      return false if @state.nil?
-      state_validator = EnumAttributeValidator.new('String', ["starting", "running", "suspending", "suspended", "resuming", "terminating", "terminated", "unknown"])
-      return false unless state_validator.valid?(@state)
-      return false if @desired_state.nil?
-      desired_state_validator = EnumAttributeValidator.new('String', ["running", "suspended", "terminated"])
-      return false unless desired_state_validator.valid?(@desired_state)
-      return false if @region.nil?
-      return false if @memory_mb.nil?
+      return false if @name.nil?
+      return false if @name.to_s.length > 64
+      return false if @name.to_s.length < 1
+      return false if @name !~ Regexp.new(/^[A-Za-z0-9_-]{1,64}$/)
+      return false if @is_global.nil?
       return false if @created_at.nil?
+      return false if @updated_at.nil?
       true
     end
 
@@ -258,44 +203,37 @@ module Volcano::Generated
       @project_id = project_id
     end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] state Object to be assigned
-    def state=(state)
-      validator = EnumAttributeValidator.new('String', ["starting", "running", "suspending", "suspended", "resuming", "terminating", "terminated", "unknown"])
-      unless validator.valid?(state)
-        fail ArgumentError, "invalid value for \"state\", must be one of #{validator.allowable_values}."
+    # Custom attribute writer method with validation
+    # @param [Object] name Value to be assigned
+    def name=(name)
+      if name.nil?
+        fail ArgumentError, 'name cannot be nil'
       end
-      @state = state
-    end
 
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] desired_state Object to be assigned
-    def desired_state=(desired_state)
-      validator = EnumAttributeValidator.new('String', ["running", "suspended", "terminated"])
-      unless validator.valid?(desired_state)
-        fail ArgumentError, "invalid value for \"desired_state\", must be one of #{validator.allowable_values}."
+      if name.to_s.length > 64
+        fail ArgumentError, 'invalid value for "name", the character length must be smaller than or equal to 64.'
       end
-      @desired_state = desired_state
+
+      if name.to_s.length < 1
+        fail ArgumentError, 'invalid value for "name", the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[A-Za-z0-9_-]{1,64}$/)
+      if name !~ pattern
+        fail ArgumentError, "invalid value for \"name\", must conform to the pattern #{pattern}."
+      end
+
+      @name = name
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] region Value to be assigned
-    def region=(region)
-      if region.nil?
-        fail ArgumentError, 'region cannot be nil'
+    # @param [Object] is_global Value to be assigned
+    def is_global=(is_global)
+      if is_global.nil?
+        fail ArgumentError, 'is_global cannot be nil'
       end
 
-      @region = region
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] memory_mb Value to be assigned
-    def memory_mb=(memory_mb)
-      if memory_mb.nil?
-        fail ArgumentError, 'memory_mb cannot be nil'
-      end
-
-      @memory_mb = memory_mb
+      @is_global = is_global
     end
 
     # Custom attribute writer method with validation
@@ -308,6 +246,16 @@ module Volcano::Generated
       @created_at = created_at
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] updated_at Value to be assigned
+    def updated_at=(updated_at)
+      if updated_at.nil?
+        fail ArgumentError, 'updated_at cannot be nil'
+      end
+
+      @updated_at = updated_at
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -315,14 +263,10 @@ module Volcano::Generated
       self.class == o.class &&
           id == o.id &&
           project_id == o.project_id &&
-          sandbox_id == o.sandbox_id &&
-          state == o.state &&
-          desired_state == o.desired_state &&
-          region == o.region &&
-          memory_mb == o.memory_mb &&
+          name == o.name &&
+          is_global == o.is_global &&
           created_at == o.created_at &&
-          started_at == o.started_at &&
-          expires_at == o.expires_at
+          updated_at == o.updated_at
     end
 
     # @see the `==` method
@@ -334,7 +278,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, sandbox_id, state, desired_state, region, memory_mb, created_at, started_at, expires_at].hash
+      [id, project_id, name, is_global, created_at, updated_at].hash
     end
 
     # Builds the object from hash

@@ -383,5 +383,62 @@ module Volcano::Generated
       end
       return data, status_code, headers
     end
+
+    # List capabilities
+    # Lists which product capabilities accept new work in this environment. Check it to decide what to offer, instead of calling a route to see whether it fails.  | ID | Covers | | --- | --- | | `sandboxes` | The Sandbox API: presets, templates, sessions, and executions | | `sandboxes.sessions` | Starting and resuming sessions, and one-shot executions | | `sandboxes.custom_templates` | Deploying a custom template; its validation waits while `sandboxes.sessions` is unavailable |  A capability missing from the list is unavailable, and a capability under another, such as `sandboxes.sessions`, is unavailable whenever its parent is. While a capability is unavailable, requests that start new work answer `404` or `400` with code `feature_unavailable`; refresh this list when you receive that code. Reading, deleting, and terminating what already exists keep working unless the whole feature is absent from the environment. Every caller in an environment gets the same answer. 
+    # @param [Hash] opts the optional parameters
+    # @return [CapabilityList]
+    def list_capabilities(opts = {})
+      data, _status_code, _headers = list_capabilities_with_http_info(opts)
+      data
+    end
+
+    # List capabilities
+    # Lists which product capabilities accept new work in this environment. Check it to decide what to offer, instead of calling a route to see whether it fails.  | ID | Covers | | --- | --- | | &#x60;sandboxes&#x60; | The Sandbox API: presets, templates, sessions, and executions | | &#x60;sandboxes.sessions&#x60; | Starting and resuming sessions, and one-shot executions | | &#x60;sandboxes.custom_templates&#x60; | Deploying a custom template; its validation waits while &#x60;sandboxes.sessions&#x60; is unavailable |  A capability missing from the list is unavailable, and a capability under another, such as &#x60;sandboxes.sessions&#x60;, is unavailable whenever its parent is. While a capability is unavailable, requests that start new work answer &#x60;404&#x60; or &#x60;400&#x60; with code &#x60;feature_unavailable&#x60;; refresh this list when you receive that code. Reading, deleting, and terminating what already exists keep working unless the whole feature is absent from the environment. Every caller in an environment gets the same answer. 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(CapabilityList, Integer, Hash)>] CapabilityList data, response status code and response headers
+    def list_capabilities_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SystemApi.list_capabilities ...'
+      end
+      # resource path
+      local_var_path = '/capabilities'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'CapabilityList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"SystemApi.list_capabilities",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SystemApi#list_capabilities\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
   end
 end

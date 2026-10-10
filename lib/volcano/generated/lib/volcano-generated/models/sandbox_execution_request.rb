@@ -25,8 +25,12 @@ module Volcano::Generated
     # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
     attr_accessor :region
 
+    # Absolute VM lifetime including startup, bounded by environment capacity policy. Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime. The VM is reclaimed early when the command finishes.
+    attr_accessor :max_duration_seconds
+
     attr_accessor :command
 
+    # Command execution time from process start. Cloud defaults to 60 seconds and accepts 1–28800; local defaults to 0 (unlimited) and accepts nonnegative values. VM expiry always takes precedence. Cloud synchronous requests must return within the public connection idle limit (1000 seconds); use a session with a background process and short polling requests for longer work.
     attr_accessor :timeout_seconds
 
     attr_accessor :environment
@@ -38,6 +42,7 @@ module Volcano::Generated
         :'sandbox_id' => :'sandbox_id',
         :'memory_mb' => :'memory_mb',
         :'region' => :'region',
+        :'max_duration_seconds' => :'max_duration_seconds',
         :'command' => :'command',
         :'timeout_seconds' => :'timeout_seconds',
         :'environment' => :'environment'
@@ -61,6 +66,7 @@ module Volcano::Generated
         :'sandbox_id' => :'String',
         :'memory_mb' => :'Integer',
         :'region' => :'String',
+        :'max_duration_seconds' => :'Integer',
         :'command' => :'String',
         :'timeout_seconds' => :'Integer',
         :'environment' => :'Hash<String, String>'
@@ -107,6 +113,10 @@ module Volcano::Generated
         self.region = nil
       end
 
+      if attributes.key?(:'max_duration_seconds')
+        self.max_duration_seconds = attributes[:'max_duration_seconds']
+      end
+
       if attributes.key?(:'command')
         self.command = attributes[:'command']
       else
@@ -115,8 +125,6 @@ module Volcano::Generated
 
       if attributes.key?(:'timeout_seconds')
         self.timeout_seconds = attributes[:'timeout_seconds']
-      else
-        self.timeout_seconds = 60
       end
 
       if attributes.key?(:'environment')
@@ -140,6 +148,14 @@ module Volcano::Generated
         invalid_properties.push("invalid value for \"region\", must conform to the pattern #{pattern}.")
       end
 
+      if !@max_duration_seconds.nil? && @max_duration_seconds > 2147483647
+        invalid_properties.push('invalid value for "max_duration_seconds", must be smaller than or equal to 2147483647.')
+      end
+
+      if !@max_duration_seconds.nil? && @max_duration_seconds < 0
+        invalid_properties.push('invalid value for "max_duration_seconds", must be greater than or equal to 0.')
+      end
+
       if @command.nil?
         invalid_properties.push('invalid value for "command", command cannot be nil.')
       end
@@ -152,12 +168,12 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "command", the character length must be greater than or equal to 1.')
       end
 
-      if !@timeout_seconds.nil? && @timeout_seconds > 60
-        invalid_properties.push('invalid value for "timeout_seconds", must be smaller than or equal to 60.')
+      if !@timeout_seconds.nil? && @timeout_seconds > 2147483647
+        invalid_properties.push('invalid value for "timeout_seconds", must be smaller than or equal to 2147483647.')
       end
 
-      if !@timeout_seconds.nil? && @timeout_seconds < 1
-        invalid_properties.push('invalid value for "timeout_seconds", must be greater than or equal to 1.')
+      if !@timeout_seconds.nil? && @timeout_seconds < 0
+        invalid_properties.push('invalid value for "timeout_seconds", must be greater than or equal to 0.')
       end
 
       if !@environment.nil? && @environment.length > 64
@@ -175,11 +191,13 @@ module Volcano::Generated
       return false unless memory_mb_validator.valid?(@memory_mb)
       return false if @region.nil?
       return false if @region !~ Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
+      return false if !@max_duration_seconds.nil? && @max_duration_seconds > 2147483647
+      return false if !@max_duration_seconds.nil? && @max_duration_seconds < 0
       return false if @command.nil?
       return false if @command.to_s.length > 65536
       return false if @command.to_s.length < 1
-      return false if !@timeout_seconds.nil? && @timeout_seconds > 60
-      return false if !@timeout_seconds.nil? && @timeout_seconds < 1
+      return false if !@timeout_seconds.nil? && @timeout_seconds > 2147483647
+      return false if !@timeout_seconds.nil? && @timeout_seconds < 0
       return false if !@environment.nil? && @environment.length > 64
       true
     end
@@ -210,6 +228,24 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] max_duration_seconds Value to be assigned
+    def max_duration_seconds=(max_duration_seconds)
+      if max_duration_seconds.nil?
+        fail ArgumentError, 'max_duration_seconds cannot be nil'
+      end
+
+      if max_duration_seconds > 2147483647
+        fail ArgumentError, 'invalid value for "max_duration_seconds", must be smaller than or equal to 2147483647.'
+      end
+
+      if max_duration_seconds < 0
+        fail ArgumentError, 'invalid value for "max_duration_seconds", must be greater than or equal to 0.'
+      end
+
+      @max_duration_seconds = max_duration_seconds
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] command Value to be assigned
     def command=(command)
       if command.nil?
@@ -234,12 +270,12 @@ module Volcano::Generated
         fail ArgumentError, 'timeout_seconds cannot be nil'
       end
 
-      if timeout_seconds > 60
-        fail ArgumentError, 'invalid value for "timeout_seconds", must be smaller than or equal to 60.'
+      if timeout_seconds > 2147483647
+        fail ArgumentError, 'invalid value for "timeout_seconds", must be smaller than or equal to 2147483647.'
       end
 
-      if timeout_seconds < 1
-        fail ArgumentError, 'invalid value for "timeout_seconds", must be greater than or equal to 1.'
+      if timeout_seconds < 0
+        fail ArgumentError, 'invalid value for "timeout_seconds", must be greater than or equal to 0.'
       end
 
       @timeout_seconds = timeout_seconds
@@ -268,6 +304,7 @@ module Volcano::Generated
           sandbox_id == o.sandbox_id &&
           memory_mb == o.memory_mb &&
           region == o.region &&
+          max_duration_seconds == o.max_duration_seconds &&
           command == o.command &&
           timeout_seconds == o.timeout_seconds &&
           environment == o.environment
@@ -282,7 +319,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [preset, sandbox_id, memory_mb, region, command, timeout_seconds, environment].hash
+      [preset, sandbox_id, memory_mb, region, max_duration_seconds, command, timeout_seconds, environment].hash
     end
 
     # Builds the object from hash

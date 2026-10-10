@@ -14,18 +14,12 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class ProjectConfigSandbox < ApiModelBase
-    # Name of an existing sandbox template or matching Git source directory.
-    attr_accessor :name
+  # A product capability and whether it accepts new work in this environment.
+  class Capability < ApiModelBase
+    # Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, or `sandboxes.custom_templates`. New IDs may appear at any time.
+    attr_accessor :id
 
-    # Immutable deployed memory profile; config apply asserts it and Git deploy builds it.
-    attr_accessor :memory_mb
-
-    # Service readiness ports; config apply asserts them and Git deploy builds them.
-    attr_accessor :ports
-
-    # Default absolute lifetime for new sessions when the caller omits it. Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime.
-    attr_accessor :ttl_seconds
+    attr_accessor :status
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -52,10 +46,8 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'name' => :'name',
-        :'memory_mb' => :'memory_mb',
-        :'ports' => :'ports',
-        :'ttl_seconds' => :'ttl_seconds'
+        :'id' => :'id',
+        :'status' => :'status'
       }
     end
 
@@ -72,10 +64,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'name' => :'String',
-        :'memory_mb' => :'Integer',
-        :'ports' => :'Array<Integer>',
-        :'ttl_seconds' => :'Integer'
+        :'id' => :'String',
+        :'status' => :'CapabilityStatus'
       }
     end
 
@@ -89,36 +79,28 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::ProjectConfigSandbox` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::Capability` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::ProjectConfigSandbox`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::Capability`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'name')
-        self.name = attributes[:'name']
+      if attributes.key?(:'id')
+        self.id = attributes[:'id']
       else
-        self.name = nil
+        self.id = nil
       end
 
-      if attributes.key?(:'memory_mb')
-        self.memory_mb = attributes[:'memory_mb']
-      end
-
-      if attributes.key?(:'ports')
-        if (value = attributes[:'ports']).is_a?(Array)
-          self.ports = value
-        end
-      end
-
-      if attributes.key?(:'ttl_seconds')
-        self.ttl_seconds = attributes[:'ttl_seconds']
+      if attributes.key?(:'status')
+        self.status = attributes[:'status']
+      else
+        self.status = nil
       end
     end
 
@@ -127,25 +109,12 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @name.nil?
-        invalid_properties.push('invalid value for "name", name cannot be nil.')
+      if @id.nil?
+        invalid_properties.push('invalid value for "id", id cannot be nil.')
       end
 
-      pattern = Regexp.new(/^[a-z][a-z0-9-]{0,62}$/)
-      if @name !~ pattern
-        invalid_properties.push("invalid value for \"name\", must conform to the pattern #{pattern}.")
-      end
-
-      if !@ports.nil? && @ports.length > 16
-        invalid_properties.push('invalid value for "ports", number of items must be less than or equal to 16.')
-      end
-
-      if !@ttl_seconds.nil? && @ttl_seconds > 2147483647
-        invalid_properties.push('invalid value for "ttl_seconds", must be smaller than or equal to 2147483647.')
-      end
-
-      if !@ttl_seconds.nil? && @ttl_seconds < 0
-        invalid_properties.push('invalid value for "ttl_seconds", must be greater than or equal to 0.')
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
       invalid_properties
@@ -155,71 +124,29 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @name.nil?
-      return false if @name !~ Regexp.new(/^[a-z][a-z0-9-]{0,62}$/)
-      memory_mb_validator = EnumAttributeValidator.new('Integer', [1024, 2048])
-      return false unless memory_mb_validator.valid?(@memory_mb)
-      return false if !@ports.nil? && @ports.length > 16
-      return false if !@ttl_seconds.nil? && @ttl_seconds > 2147483647
-      return false if !@ttl_seconds.nil? && @ttl_seconds < 0
+      return false if @id.nil?
+      return false if @status.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] name Value to be assigned
-    def name=(name)
-      if name.nil?
-        fail ArgumentError, 'name cannot be nil'
+    # @param [Object] id Value to be assigned
+    def id=(id)
+      if id.nil?
+        fail ArgumentError, 'id cannot be nil'
       end
 
-      pattern = Regexp.new(/^[a-z][a-z0-9-]{0,62}$/)
-      if name !~ pattern
-        fail ArgumentError, "invalid value for \"name\", must conform to the pattern #{pattern}."
-      end
-
-      @name = name
-    end
-
-    # Custom attribute writer method checking allowed values (enum).
-    # @param [Object] memory_mb Object to be assigned
-    def memory_mb=(memory_mb)
-      validator = EnumAttributeValidator.new('Integer', [1024, 2048])
-      unless validator.valid?(memory_mb)
-        fail ArgumentError, "invalid value for \"memory_mb\", must be one of #{validator.allowable_values}."
-      end
-      @memory_mb = memory_mb
+      @id = id
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] ports Value to be assigned
-    def ports=(ports)
-      if ports.nil?
-        fail ArgumentError, 'ports cannot be nil'
+    # @param [Object] status Value to be assigned
+    def status=(status)
+      if status.nil?
+        fail ArgumentError, 'status cannot be nil'
       end
 
-      if ports.length > 16
-        fail ArgumentError, 'invalid value for "ports", number of items must be less than or equal to 16.'
-      end
-
-      @ports = ports
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] ttl_seconds Value to be assigned
-    def ttl_seconds=(ttl_seconds)
-      if ttl_seconds.nil?
-        fail ArgumentError, 'ttl_seconds cannot be nil'
-      end
-
-      if ttl_seconds > 2147483647
-        fail ArgumentError, 'invalid value for "ttl_seconds", must be smaller than or equal to 2147483647.'
-      end
-
-      if ttl_seconds < 0
-        fail ArgumentError, 'invalid value for "ttl_seconds", must be greater than or equal to 0.'
-      end
-
-      @ttl_seconds = ttl_seconds
+      @status = status
     end
 
     # Checks equality by comparing each attribute.
@@ -227,10 +154,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          name == o.name &&
-          memory_mb == o.memory_mb &&
-          ports == o.ports &&
-          ttl_seconds == o.ttl_seconds
+          id == o.id &&
+          status == o.status
     end
 
     # @see the `==` method
@@ -242,7 +167,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, memory_mb, ports, ttl_seconds].hash
+      [id, status].hash
     end
 
     # Builds the object from hash

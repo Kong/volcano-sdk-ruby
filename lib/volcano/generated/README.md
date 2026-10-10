@@ -385,6 +385,12 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::SystemApi* | [**head_open_api_spec_json**](docs/SystemApi.md#head_open_api_spec_json) | **HEAD** /openapi.json | Check the JSON OpenAPI specification
 *Volcano::Generated::SystemApi* | [**head_open_api_spec_yaml**](docs/SystemApi.md#head_open_api_spec_yaml) | **HEAD** /openapi.yaml | Check the YAML OpenAPI specification
 *Volcano::Generated::SystemApi* | [**health_check**](docs/SystemApi.md#health_check) | **GET** /health | Health check endpoint
+*Volcano::Generated::SystemApi* | [**list_capabilities**](docs/SystemApi.md#list_capabilities) | **GET** /capabilities | List capabilities
+*Volcano::Generated::VariableEnvironmentsApi* | [**create_variable_environment**](docs/VariableEnvironmentsApi.md#create_variable_environment) | **POST** /projects/{id}/variable-environments | Create a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**delete_variable_environment**](docs/VariableEnvironmentsApi.md#delete_variable_environment) | **DELETE** /projects/{id}/variable-environments/{environmentId} | Delete a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**get_variable_environment**](docs/VariableEnvironmentsApi.md#get_variable_environment) | **GET** /projects/{id}/variable-environments/{environmentId} | Get a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**list_variable_environments**](docs/VariableEnvironmentsApi.md#list_variable_environments) | **GET** /projects/{id}/variable-environments | List variable Environments
+*Volcano::Generated::VariableEnvironmentsApi* | [**rename_variable_environment**](docs/VariableEnvironmentsApi.md#rename_variable_environment) | **PATCH** /projects/{id}/variable-environments/{environmentId} | Rename a variable Environment
 *Volcano::Generated::VariablesApi* | [**create_variable**](docs/VariablesApi.md#create_variable) | **POST** /projects/{id}/variables | Create or update a variable
 *Volcano::Generated::VariablesApi* | [**delete_variable**](docs/VariablesApi.md#delete_variable) | **DELETE** /projects/{id}/variables/{name} | Delete a variable
 *Volcano::Generated::VariablesApi* | [**get_variable**](docs/VariablesApi.md#get_variable) | **GET** /projects/{id}/variables/{name} | Get variable by name
@@ -466,6 +472,9 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CallMCPRequestId](docs/CallMCPRequestId.md)
  - [Volcano::Generated::CallOAuthProviderAPI200Response](docs/CallOAuthProviderAPI200Response.md)
  - [Volcano::Generated::CallOAuthProviderAPIRequest](docs/CallOAuthProviderAPIRequest.md)
+ - [Volcano::Generated::Capability](docs/Capability.md)
+ - [Volcano::Generated::CapabilityList](docs/CapabilityList.md)
+ - [Volcano::Generated::CapabilityStatus](docs/CapabilityStatus.md)
  - [Volcano::Generated::CompleteUploadSessionResponse](docs/CompleteUploadSessionResponse.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequest](docs/ConfigureAuthMethodsRequest.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequestOauthProvidersInner](docs/ConfigureAuthMethodsRequestOauthProvidersInner.md)
@@ -489,6 +498,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateStoragePolicyRequest](docs/CreateStoragePolicyRequest.md)
  - [Volcano::Generated::CreateUploadSessionRequest](docs/CreateUploadSessionRequest.md)
  - [Volcano::Generated::CreateUploadSessionResponse](docs/CreateUploadSessionResponse.md)
+ - [Volcano::Generated::CreateVariableEnvironmentRequest](docs/CreateVariableEnvironmentRequest.md)
  - [Volcano::Generated::CreateVariableRequest](docs/CreateVariableRequest.md)
  - [Volcano::Generated::CreatedProjectAccessToken](docs/CreatedProjectAccessToken.md)
  - [Volcano::Generated::Database](docs/Database.md)
@@ -755,6 +765,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::RenameVariableEnvironmentRequest](docs/RenameVariableEnvironmentRequest.md)
  - [Volcano::Generated::ReplaceFrontendSharedVariablesRequest](docs/ReplaceFrontendSharedVariablesRequest.md)
  - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
  - [Volcano::Generated::RequestDurableApprovalRequest](docs/RequestDurableApprovalRequest.md)
@@ -820,6 +831,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UploadStorageObject201Response](docs/UploadStorageObject201Response.md)
  - [Volcano::Generated::UsageDataPoint](docs/UsageDataPoint.md)
  - [Volcano::Generated::Variable](docs/Variable.md)
+ - [Volcano::Generated::VariableEnvironment](docs/VariableEnvironment.md)
+ - [Volcano::Generated::VariableEnvironmentList](docs/VariableEnvironmentList.md)
  - [Volcano::Generated::VerifiedDomain](docs/VerifiedDomain.md)
  - [Volcano::Generated::VerifiedDomainsResponse](docs/VerifiedDomainsResponse.md)
  - [Volcano::Generated::VerifyDomainRequest](docs/VerifyDomainRequest.md)

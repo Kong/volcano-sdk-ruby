@@ -17,6 +17,7 @@ module Volcano::Generated
   class SandboxCommandRequest < ApiModelBase
     attr_accessor :command
 
+    # Command execution time from process start. Cloud defaults to 60 seconds and accepts 1–28800; local defaults to 0 (unlimited) and accepts nonnegative values. VM expiry always takes precedence. Cloud synchronous requests must return within the public connection idle limit (1000 seconds); use a session with a background process and short polling requests for longer work.
     attr_accessor :timeout_seconds
 
     attr_accessor :environment
@@ -79,8 +80,6 @@ module Volcano::Generated
 
       if attributes.key?(:'timeout_seconds')
         self.timeout_seconds = attributes[:'timeout_seconds']
-      else
-        self.timeout_seconds = 60
       end
 
       if attributes.key?(:'environment')
@@ -107,12 +106,12 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "command", the character length must be greater than or equal to 1.')
       end
 
-      if !@timeout_seconds.nil? && @timeout_seconds > 3600
-        invalid_properties.push('invalid value for "timeout_seconds", must be smaller than or equal to 3600.')
+      if !@timeout_seconds.nil? && @timeout_seconds > 2147483647
+        invalid_properties.push('invalid value for "timeout_seconds", must be smaller than or equal to 2147483647.')
       end
 
-      if !@timeout_seconds.nil? && @timeout_seconds < 1
-        invalid_properties.push('invalid value for "timeout_seconds", must be greater than or equal to 1.')
+      if !@timeout_seconds.nil? && @timeout_seconds < 0
+        invalid_properties.push('invalid value for "timeout_seconds", must be greater than or equal to 0.')
       end
 
       if !@environment.nil? && @environment.length > 64
@@ -129,8 +128,8 @@ module Volcano::Generated
       return false if @command.nil?
       return false if @command.to_s.length > 65536
       return false if @command.to_s.length < 1
-      return false if !@timeout_seconds.nil? && @timeout_seconds > 3600
-      return false if !@timeout_seconds.nil? && @timeout_seconds < 1
+      return false if !@timeout_seconds.nil? && @timeout_seconds > 2147483647
+      return false if !@timeout_seconds.nil? && @timeout_seconds < 0
       return false if !@environment.nil? && @environment.length > 64
       true
     end
@@ -160,12 +159,12 @@ module Volcano::Generated
         fail ArgumentError, 'timeout_seconds cannot be nil'
       end
 
-      if timeout_seconds > 3600
-        fail ArgumentError, 'invalid value for "timeout_seconds", must be smaller than or equal to 3600.'
+      if timeout_seconds > 2147483647
+        fail ArgumentError, 'invalid value for "timeout_seconds", must be smaller than or equal to 2147483647.'
       end
 
-      if timeout_seconds < 1
-        fail ArgumentError, 'invalid value for "timeout_seconds", must be greater than or equal to 1.'
+      if timeout_seconds < 0
+        fail ArgumentError, 'invalid value for "timeout_seconds", must be greater than or equal to 0.'
       end
 
       @timeout_seconds = timeout_seconds

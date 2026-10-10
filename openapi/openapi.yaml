@@ -37,6 +37,8 @@ tags:
     description: Service keys for function invocation and database admin access
   - name: Variables
     description: Environment variable management
+  - name: Variable Environments
+    description: Project-owned variable Environment identity and lifecycle management
   - name: Databases
     description: PostgreSQL database provisioning and management
   - name: Database Branches
@@ -78,7 +80,7 @@ tags:
   - name: Realtime
     description: WebSocket realtime configuration and monitoring
   - name: System
-    description: System health and monitoring endpoints
+    description: System health, capability discovery, and monitoring endpoints
   - name: CLI Authentication
     description: |
       Browser-based CLI login flow for automatic token provisioning.
@@ -7016,6 +7018,262 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /projects/{id}/variable-environments:
+    get:
+      tags:
+        - Variable Environments
+      summary: List variable Environments
+      operationId: listVariableEnvironments
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Variable Environments, with Global first and custom Environments ordered by name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableEnvironmentList'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to list variable Environments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Variable Environments
+      summary: Create a variable Environment
+      operationId: createVariableEnvironment
+      description: Creates a custom variable Environment. Global is reserved and already exists. A Project may have at most 100 custom Environments.
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVariableEnvironmentRequest'
+      responses:
+        '201':
+          description: Variable Environment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableEnvironment'
+        '400':
+          description: |
+            Invalid name, or the reserved Global name. Schema-invalid names
+            return the generic invalid-request error; a reserved name returns
+            `invalid_variable_environment`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project no longer exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A case-insensitive name conflict or the 100-custom-Environment
+            limit has been reached, or the Project is being deleted. Tell them
+            apart with `code`, which is `variable_environment_conflict`,
+            `variable_environment_limit_reached`, or `project_deleting`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to create the variable Environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/{id}/variable-environments/{environmentId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/VariableEnvironmentId'
+    get:
+      tags:
+        - Variable Environments
+      summary: Get a variable Environment
+      operationId: getVariableEnvironment
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      responses:
+        '200':
+          description: Variable Environment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableEnvironment'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Variable Environment not found in this Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to get the variable Environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Variable Environments
+      summary: Rename a variable Environment
+      operationId: renameVariableEnvironment
+      description: Renames a custom Environment without changing its stable ID. Global cannot be renamed.
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameVariableEnvironmentRequest'
+      responses:
+        '200':
+          description: Variable Environment renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableEnvironment'
+        '400':
+          description: |
+            Invalid name, or the reserved Global name. Schema-invalid names
+            return the generic invalid-request error; a reserved name returns
+            `invalid_variable_environment`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Variable Environment not found in this Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A case-insensitive name conflict, an attempt to rename Global, or
+            a Project being deleted. Tell them apart with `code`, which is
+            `variable_environment_conflict`,
+            `variable_environment_immutable`, or `project_deleting`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to rename the variable Environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Variable Environments
+      summary: Delete a variable Environment
+      operationId: deleteVariableEnvironment
+      description: Deletes a custom Environment. Global cannot be deleted.
+      security:
+        - UserToken: []
+        - ProjectAccessToken: []
+      responses:
+        '204':
+          description: Variable Environment deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Project not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Variable Environment not found in this Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            Global is protected, or the Project is being deleted. Tell them
+            apart with `code`, which is `variable_environment_immutable` or
+            `project_deleting`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to delete the variable Environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /projects/{id}/variables:
     get:
       tags:
@@ -11074,7 +11332,8 @@ paths:
         `subject` field is ignored. Sending `subject` alone (no
         bodies) is rejected with 400 to avoid a silently-dropped
         subject or a blank message. Also rejects with 400 if
-        `email_enabled=false` or `smtp_host` is empty.
+        `email_enabled=false`, `smtp_host` is empty, or the saved
+        `smtp_password` can't be read and must be set again.
       operationId: testEmailConfig
       security:
         - UserToken: []
@@ -14632,6 +14891,45 @@ paths:
               schema:
                 type: string
                 example: OK
+  /capabilities:
+    get:
+      tags:
+        - System
+      summary: List capabilities
+      description: |
+        Lists which product capabilities accept new work in this environment. Check it
+        to decide what to offer, instead of calling a route to see whether it fails.
+
+        | ID | Covers |
+        | --- | --- |
+        | `sandboxes` | The Sandbox API: presets, templates, sessions, and executions |
+        | `sandboxes.sessions` | Starting and resuming sessions, and one-shot executions |
+        | `sandboxes.custom_templates` | Deploying a custom template; its validation waits while `sandboxes.sessions` is unavailable |
+
+        A capability missing from the list is unavailable, and a capability under
+        another, such as `sandboxes.sessions`, is unavailable whenever its parent is.
+        While a capability is unavailable, requests that start new work answer `404`
+        or `400` with code `feature_unavailable`; refresh this list when you receive
+        that code. Reading, deleting, and terminating what already exists keep
+        working unless the whole feature is absent from the environment. Every caller
+        in an environment gets the same answer.
+      operationId: listCapabilities
+      security: []
+      responses:
+        '200':
+          description: Capabilities in this environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilityList'
+              example:
+                data:
+                  - id: sandboxes
+                    status: available
+                  - id: sandboxes.sessions
+                    status: available
+                  - id: sandboxes.custom_templates
+                    status: unavailable
   /openapi.json:
     get:
       tags:
@@ -15001,6 +15299,14 @@ components:
         type: string
         format: uuid
       description: Frontend deployment ID
+    VariableEnvironmentId:
+      name: environmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Variable Environment ID
     FrontendId:
       name: frontendId
       in: path
@@ -15421,6 +15727,8 @@ components:
         sandbox_id:
           type: string
           format: uuid
+          nullable: true
+          description: Explicit template used to create the session. Null when created directly from a preset.
         state:
           type: string
           enum:
@@ -15451,6 +15759,8 @@ components:
         expires_at:
           type: string
           format: date-time
+          nullable: true
+          description: Absolute VM expiry. Null means unlimited in local mode.
       required:
         - id
         - project_id
@@ -15482,14 +15792,9 @@ components:
           description: Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
         max_duration_seconds:
           type: integer
-          minimum: 30
-          maximum: 28800
-          description: Inherits the template TTL when omitted (3600 seconds for a new template).
-        idle_timeout_seconds:
-          type: integer
           minimum: 0
-          maximum: 28800
-          description: Inherits the template idle timeout when omitted, capped at the session duration. Set zero to disable idle timeout.
+          maximum: 2147483647
+          description: Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime.
       required:
         - region
       oneOf:
@@ -15513,9 +15818,9 @@ components:
           maxLength: 65536
         timeout_seconds:
           type: integer
-          minimum: 1
-          maximum: 3600
-          default: 60
+          minimum: 0
+          maximum: 2147483647
+          description: Command execution time from process start. Cloud defaults to 60 seconds and accepts 1–28800; local defaults to 0 (unlimited) and accepts nonnegative values. VM expiry always takes precedence. Cloud synchronous requests must return within the public connection idle limit (1000 seconds); use a session with a background process and short polling requests for longer work.
         environment:
           type: object
           additionalProperties:
@@ -15542,15 +15847,20 @@ components:
           type: string
           pattern: ^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$
           description: Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
+        max_duration_seconds:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Absolute VM lifetime including startup, bounded by environment capacity policy. Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime. The VM is reclaimed early when the command finishes.
         command:
           type: string
           minLength: 1
           maxLength: 65536
         timeout_seconds:
           type: integer
-          minimum: 1
-          maximum: 60
-          default: 60
+          minimum: 0
+          maximum: 2147483647
+          description: Command execution time from process start. Cloud defaults to 60 seconds and accepts 1–28800; local defaults to 0 (unlimited) and accepts nonnegative values. VM expiry always takes precedence. Cloud synchronous requests must return within the public connection idle limit (1000 seconds); use a session with a background process and short polling requests for longer work.
         environment:
           type: object
           additionalProperties:
@@ -15805,6 +16115,36 @@ components:
             $ref: '#/components/schemas/SandboxPreset'
       required:
         - data
+    Capability:
+      type: object
+      additionalProperties: false
+      description: A product capability and whether it accepts new work in this environment.
+      properties:
+        id:
+          type: string
+          description: Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, or `sandboxes.custom_templates`. New IDs may appear at any time.
+          example: sandboxes.sessions
+        status:
+          $ref: '#/components/schemas/CapabilityStatus'
+      required:
+        - id
+        - status
+    CapabilityStatus:
+      type: string
+      enum:
+        - available
+        - unavailable
+      description: '`available` means the capability accepts new work; a temporary outage still answers `503`. `unavailable` means requests that start new work answer `404` or `400` with code `feature_unavailable`. Treat any other value as `unavailable`.'
+    CapabilityList:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Capability'
+      required:
+        - data
     SandboxCapacity:
       type: object
       additionalProperties: false
@@ -15906,6 +16246,10 @@ components:
           type: integer
           description: Refresh token lifetime in seconds
           default: 2592000
+        refresh_token_reuse_interval:
+          type: integer
+          description: A refresh within this many seconds of the refresh token being issued returns the same refresh token instead of rotating it, so concurrent refreshes from several tabs all succeed
+          default: 10
         inactivity_timeout:
           type: integer
           description: Force re-login after inactivity (seconds, 0=never)
@@ -15954,6 +16298,10 @@ components:
           type: integer
           description: Refreshes per hour per IP
           default: 1000
+        rate_limit_password_reset:
+          type: integer
+          description: Password reset requests per hour per IP. Unlike the other limits, 0 applies the default of 10 instead of turning the limit off.
+          default: 10
         cors_enabled:
           type: boolean
           default: false
@@ -16090,6 +16438,12 @@ components:
             the built-in managed device page. Lets a CLI surface the project's
             own RFC 8628 approval page. Empty falls back to the managed page.
           example: https://app.acme.com/device
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
       required:
         - password_policy
     AuthInsightsInterval:
@@ -17068,6 +17422,67 @@ components:
       required:
         - name
         - value
+    VariableEnvironment:
+      type: object
+      description: Stable identity for a Project-owned variable Environment.
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,64}$
+          minLength: 1
+          maxLength: 64
+        is_global:
+          type: boolean
+          description: Whether this is the reserved Global Environment.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - name
+        - is_global
+        - created_at
+        - updated_at
+    VariableEnvironmentList:
+      type: object
+      properties:
+        data:
+          type: array
+          maxItems: 101
+          items:
+            $ref: '#/components/schemas/VariableEnvironment'
+      required:
+        - data
+    CreateVariableEnvironmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Leading and trailing ASCII whitespace is trimmed before validating 1–64 ASCII letters, digits, underscores, or hyphens. Global is reserved.
+          pattern: ^[ \t\n\f\r]*[A-Za-z0-9_-]{1,64}[ \t\n\f\r]*$
+      required:
+        - name
+    RenameVariableEnvironmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Leading and trailing ASCII whitespace is trimmed before validating 1–64 ASCII letters, digits, underscores, or hyphens. Global is reserved.
+          pattern: ^[ \t\n\f\r]*[A-Za-z0-9_-]{1,64}[ \t\n\f\r]*$
+      required:
+        - name
     Database:
       type: object
       description: |
@@ -18886,6 +19301,7 @@ components:
           description: Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
         verification_records:
           type: array
+          description: DNS records to publish now. For a managed domain whose hostname the account already owns, the create response names the `_acme-challenge` CNAME that authorizes certificate issuance and renewal. Otherwise it names the `_volcano` TXT record that proves ownership of the hostname's registrable domain, and reads return the CNAME once Volcano sees that record. Usually empty for BYOC.
           items:
             $ref: '#/components/schemas/FrontendDomainVerificationRecord'
         required_routing_record:
@@ -23007,10 +23423,17 @@ components:
           type: integer
         refresh_token_lifetime:
           type: integer
+        refresh_token_reuse_interval:
+          type: integer
         inactivity_timeout:
           type: integer
         max_session_duration:
           type: integer
+        platform_token_ttl:
+          type: integer
+          description: TTL in seconds for platform tokens minted via `/auth/platform/exchange`. From 3600 (1 hour) to 31536000 (365 days).
+          minimum: 3600
+          maximum: 31536000
         min_password_length:
           type: integer
           minimum: 15
@@ -23035,6 +23458,19 @@ components:
           type: integer
         rate_limit_token_refresh:
           type: integer
+        rate_limit_password_reset:
+          type: integer
+          description: Password reset requests per hour per IP. Unlike the other limits, 0 applies the default of 10 instead of turning the limit off.
+        cors_enabled:
+          type: boolean
+        cors_allowed_origins:
+          type: array
+          description: Replaces the allowed origins list.
+          items:
+            type: string
+          example:
+            - https://myapp.com
+            - http://localhost:3000
         cors_allow_credentials:
           type: boolean
         cors_max_age:
@@ -23673,16 +24109,11 @@ components:
             type: integer
             minimum: 1
             maximum: 65532
-        idle_timeout_seconds:
-          type: integer
-          minimum: 0
-          maximum: 28800
-          description: Default idle timeout for new sessions when the caller omits it.
         ttl_seconds:
           type: integer
-          minimum: 30
-          maximum: 28800
-          description: Default absolute lifetime for new sessions when the caller omits it.
+          minimum: 0
+          maximum: 2147483647
+          description: Default absolute lifetime for new sessions when the caller omits it. Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime.
     DatabaseQueryPerformanceDatabase:
       type: object
       properties:

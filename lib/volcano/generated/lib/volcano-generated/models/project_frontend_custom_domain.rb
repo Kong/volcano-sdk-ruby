@@ -27,6 +27,7 @@ module Volcano::Generated
     # Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
     attr_accessor :failure_reason
 
+    # DNS records to publish now. For a managed domain whose hostname the account already owns, the create response names the `_acme-challenge` CNAME that authorizes certificate issuance and renewal. Otherwise it names the `_volcano` TXT record that proves ownership of the hostname's registrable domain, and reads return the CNAME once Volcano sees that record. Usually empty for BYOC.
     attr_accessor :verification_records
 
     # Deprecated and no longer returned. Use routing_target_hostname as the DNS routing target.

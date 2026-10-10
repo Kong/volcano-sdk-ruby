@@ -25,11 +25,8 @@ module Volcano::Generated
     # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
     attr_accessor :region
 
-    # Inherits the template TTL when omitted (3600 seconds for a new template).
+    # Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud accepts 30–28800 seconds; local accepts 0 for unlimited or a positive lifetime.
     attr_accessor :max_duration_seconds
-
-    # Inherits the template idle timeout when omitted, capped at the session duration. Set zero to disable idle timeout.
-    attr_accessor :idle_timeout_seconds
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
@@ -38,8 +35,7 @@ module Volcano::Generated
         :'sandbox_id' => :'sandbox_id',
         :'memory_mb' => :'memory_mb',
         :'region' => :'region',
-        :'max_duration_seconds' => :'max_duration_seconds',
-        :'idle_timeout_seconds' => :'idle_timeout_seconds'
+        :'max_duration_seconds' => :'max_duration_seconds'
       }
     end
 
@@ -60,8 +56,7 @@ module Volcano::Generated
         :'sandbox_id' => :'String',
         :'memory_mb' => :'Integer',
         :'region' => :'String',
-        :'max_duration_seconds' => :'Integer',
-        :'idle_timeout_seconds' => :'Integer'
+        :'max_duration_seconds' => :'Integer'
       }
     end
 
@@ -108,10 +103,6 @@ module Volcano::Generated
       if attributes.key?(:'max_duration_seconds')
         self.max_duration_seconds = attributes[:'max_duration_seconds']
       end
-
-      if attributes.key?(:'idle_timeout_seconds')
-        self.idle_timeout_seconds = attributes[:'idle_timeout_seconds']
-      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -128,20 +119,12 @@ module Volcano::Generated
         invalid_properties.push("invalid value for \"region\", must conform to the pattern #{pattern}.")
       end
 
-      if !@max_duration_seconds.nil? && @max_duration_seconds > 28800
-        invalid_properties.push('invalid value for "max_duration_seconds", must be smaller than or equal to 28800.')
+      if !@max_duration_seconds.nil? && @max_duration_seconds > 2147483647
+        invalid_properties.push('invalid value for "max_duration_seconds", must be smaller than or equal to 2147483647.')
       end
 
-      if !@max_duration_seconds.nil? && @max_duration_seconds < 30
-        invalid_properties.push('invalid value for "max_duration_seconds", must be greater than or equal to 30.')
-      end
-
-      if !@idle_timeout_seconds.nil? && @idle_timeout_seconds > 28800
-        invalid_properties.push('invalid value for "idle_timeout_seconds", must be smaller than or equal to 28800.')
-      end
-
-      if !@idle_timeout_seconds.nil? && @idle_timeout_seconds < 0
-        invalid_properties.push('invalid value for "idle_timeout_seconds", must be greater than or equal to 0.')
+      if !@max_duration_seconds.nil? && @max_duration_seconds < 0
+        invalid_properties.push('invalid value for "max_duration_seconds", must be greater than or equal to 0.')
       end
 
       invalid_properties
@@ -155,10 +138,8 @@ module Volcano::Generated
       return false unless memory_mb_validator.valid?(@memory_mb)
       return false if @region.nil?
       return false if @region !~ Regexp.new(/^(aws-)?[a-z]{2}(-[a-z]+)+-[0-9]+$/)
-      return false if !@max_duration_seconds.nil? && @max_duration_seconds > 28800
-      return false if !@max_duration_seconds.nil? && @max_duration_seconds < 30
-      return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds > 28800
-      return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds < 0
+      return false if !@max_duration_seconds.nil? && @max_duration_seconds > 2147483647
+      return false if !@max_duration_seconds.nil? && @max_duration_seconds < 0
       true
     end
 
@@ -194,33 +175,15 @@ module Volcano::Generated
         fail ArgumentError, 'max_duration_seconds cannot be nil'
       end
 
-      if max_duration_seconds > 28800
-        fail ArgumentError, 'invalid value for "max_duration_seconds", must be smaller than or equal to 28800.'
+      if max_duration_seconds > 2147483647
+        fail ArgumentError, 'invalid value for "max_duration_seconds", must be smaller than or equal to 2147483647.'
       end
 
-      if max_duration_seconds < 30
-        fail ArgumentError, 'invalid value for "max_duration_seconds", must be greater than or equal to 30.'
+      if max_duration_seconds < 0
+        fail ArgumentError, 'invalid value for "max_duration_seconds", must be greater than or equal to 0.'
       end
 
       @max_duration_seconds = max_duration_seconds
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] idle_timeout_seconds Value to be assigned
-    def idle_timeout_seconds=(idle_timeout_seconds)
-      if idle_timeout_seconds.nil?
-        fail ArgumentError, 'idle_timeout_seconds cannot be nil'
-      end
-
-      if idle_timeout_seconds > 28800
-        fail ArgumentError, 'invalid value for "idle_timeout_seconds", must be smaller than or equal to 28800.'
-      end
-
-      if idle_timeout_seconds < 0
-        fail ArgumentError, 'invalid value for "idle_timeout_seconds", must be greater than or equal to 0.'
-      end
-
-      @idle_timeout_seconds = idle_timeout_seconds
     end
 
     # Checks equality by comparing each attribute.
@@ -232,8 +195,7 @@ module Volcano::Generated
           sandbox_id == o.sandbox_id &&
           memory_mb == o.memory_mb &&
           region == o.region &&
-          max_duration_seconds == o.max_duration_seconds &&
-          idle_timeout_seconds == o.idle_timeout_seconds
+          max_duration_seconds == o.max_duration_seconds
     end
 
     # @see the `==` method
@@ -245,7 +207,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [preset, sandbox_id, memory_mb, region, max_duration_seconds, idle_timeout_seconds].hash
+      [preset, sandbox_id, memory_mb, region, max_duration_seconds].hash
     end
 
     # Builds the object from hash

@@ -36,6 +36,7 @@ lib/volcano-generated/api/storage_buckets_api.rb
 lib/volcano-generated/api/storage_objects_api.rb
 lib/volcano-generated/api/storage_policies_api.rb
 lib/volcano-generated/api/system_api.rb
+lib/volcano-generated/api/variable_environments_api.rb
 lib/volcano-generated/api/variables_api.rb
 lib/volcano-generated/api/verified_domains_api.rb
 lib/volcano-generated/api_client.rb
@@ -111,6 +112,9 @@ lib/volcano-generated/models/call_mcp_request.rb
 lib/volcano-generated/models/call_mcp_request_id.rb
 lib/volcano-generated/models/call_o_auth_provider_api200_response.rb
 lib/volcano-generated/models/call_o_auth_provider_api_request.rb
+lib/volcano-generated/models/capability.rb
+lib/volcano-generated/models/capability_list.rb
+lib/volcano-generated/models/capability_status.rb
 lib/volcano-generated/models/complete_upload_session_response.rb
 lib/volcano-generated/models/configure_auth_methods_request.rb
 lib/volcano-generated/models/configure_auth_methods_request_oauth_providers_inner.rb
@@ -134,6 +138,7 @@ lib/volcano-generated/models/create_storage_bucket_request.rb
 lib/volcano-generated/models/create_storage_policy_request.rb
 lib/volcano-generated/models/create_upload_session_request.rb
 lib/volcano-generated/models/create_upload_session_response.rb
+lib/volcano-generated/models/create_variable_environment_request.rb
 lib/volcano-generated/models/create_variable_request.rb
 lib/volcano-generated/models/created_project_access_token.rb
 lib/volcano-generated/models/database.rb
@@ -400,6 +405,7 @@ lib/volcano-generated/models/realtime_config.rb
 lib/volcano-generated/models/realtime_plan_limits.rb
 lib/volcano-generated/models/realtime_stats.rb
 lib/volcano-generated/models/refresh_o_auth_provider_token200_response.rb
+lib/volcano-generated/models/rename_variable_environment_request.rb
 lib/volcano-generated/models/replace_frontend_shared_variables_request.rb
 lib/volcano-generated/models/replace_shared_variables_request.rb
 lib/volcano-generated/models/request_durable_approval_request.rb
@@ -465,6 +471,8 @@ lib/volcano-generated/models/upload_session_status_response.rb
 lib/volcano-generated/models/upload_storage_object201_response.rb
 lib/volcano-generated/models/usage_data_point.rb
 lib/volcano-generated/models/variable.rb
+lib/volcano-generated/models/variable_environment.rb
+lib/volcano-generated/models/variable_environment_list.rb
 lib/volcano-generated/models/verified_domain.rb
 lib/volcano-generated/models/verified_domains_response.rb
 lib/volcano-generated/models/verify_domain_request.rb

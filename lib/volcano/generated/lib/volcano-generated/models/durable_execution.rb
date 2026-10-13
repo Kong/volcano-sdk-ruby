@@ -40,6 +40,9 @@ module Volcano::Generated
     # Present once the execution has reached a terminal status.
     attr_accessor :completed_at
 
+    # Lets a browser read and send the execution's messages. Returned only by the start that created the execution, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
+    attr_accessor :client_token
+
     class EnumAttributeValidator
       attr_reader :datatype
       attr_reader :allowable_values
@@ -74,7 +77,8 @@ module Volcano::Generated
         :'result_expired' => :'result_expired',
         :'error' => :'error',
         :'created_at' => :'created_at',
-        :'completed_at' => :'completed_at'
+        :'completed_at' => :'completed_at',
+        :'client_token' => :'client_token'
       }
     end
 
@@ -100,7 +104,8 @@ module Volcano::Generated
         :'result_expired' => :'Boolean',
         :'error' => :'DurableExecutionError',
         :'created_at' => :'Time',
-        :'completed_at' => :'Time'
+        :'completed_at' => :'Time',
+        :'client_token' => :'String'
       }
     end
 
@@ -177,6 +182,10 @@ module Volcano::Generated
 
       if attributes.key?(:'completed_at')
         self.completed_at = attributes[:'completed_at']
+      end
+
+      if attributes.key?(:'client_token')
+        self.client_token = attributes[:'client_token']
       end
     end
 
@@ -299,7 +308,8 @@ module Volcano::Generated
           result_expired == o.result_expired &&
           error == o.error &&
           created_at == o.created_at &&
-          completed_at == o.completed_at
+          completed_at == o.completed_at &&
+          client_token == o.client_token
     end
 
     # @see the `==` method
@@ -311,7 +321,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, function_id, name, status, region, result, result_expired, error, created_at, completed_at].hash
+      [id, function_id, name, status, region, result, result_expired, error, created_at, completed_at, client_token].hash
     end
 
     # Builds the object from hash

@@ -68,6 +68,9 @@ module Volcano
     end
 
     CHANNEL_TYPES = %i[broadcast presence postgres].freeze
+    # A channel that fetches no rows still takes a batch configuration.
+    UNBATCHED = PostgresBatchConfig.new(auto_fetch: false, batch_window_ms: 1, max_batch_size: 1)
+    private_constant :UNBATCHED
 
     # Owns the public realtime facade and its channel collection.
     module Core
@@ -161,6 +164,20 @@ module Volcano
         Channel.new(self, -> { protocol }, name, type, batch_config:)
       end
 
+      # Opens the channel an execution publishes its messages on, or answers
+      # nil when this client already follows the execution.
+      def durable_channel(execution_id, client_token, resubscribed)
+        channel_lock.acquire do
+          ensure_open!
+          name = "durable:#{execution_id}"
+          next if @channels.key?(name)
+
+          channel = build_channel(name, :durable, UNBATCHED)
+          channel.__send__(:follow_durable, client_token && { 'client_token' => client_token }, resubscribed)
+          @channels[name] = channel
+        end
+      end
+
       def protocol_lock
         require 'async/semaphore'
         @protocol_lock ||= Async::Semaphore.new(1)
@@ -194,7 +211,7 @@ module Volcano
         @protocol_provider = protocol_provider
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
-        @lifecycle_lock = nil
+        @lifecycle_lock = @subscribe_data = @resubscribed = nil
         initialize_recovery_state
         initialize_callback_dispatch
         initialize_presence(type)
@@ -233,10 +250,11 @@ module Volcano
         state = with_lifecycle_lock do
           restoration_needed? ? subscribe_protocol(protocol) : nil
         end
-        if state
-          subscribed_protocol, epoch = state
-          sync_presence(subscribed_protocol, epoch)
-        end
+        return unless state
+
+        subscribed_protocol, epoch = state
+        sync_presence(subscribed_protocol, epoch)
+        @resubscribed&.call
         nil
       end
 
@@ -251,6 +269,14 @@ module Volcano
         nil
       end
       private :remove
+
+      # +data+ goes with every subscribe, including the ones a reconnect
+      # restores, and +resubscribed+ is called after each of those.
+      def follow_durable(data, resubscribed)
+        @subscribe_data = data
+        @resubscribed = resubscribed
+      end
+      private :follow_durable
 
       private
 

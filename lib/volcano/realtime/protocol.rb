@@ -93,12 +93,12 @@ module Volcano
         result.tap { @connected = true }
       end
 
-      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil)
+      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil, data: nil)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = subscribe_request(channel:, recoverable:, join_leave:, recovery:)
+          result = subscribe_request(channel:, recoverable:, join_leave:, recovery:, data:)
           ensure_open!
           @subscriptions.add(channel)
           result

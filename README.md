@@ -522,10 +522,11 @@ owner_client.durable.stop(project_id, "charge-order", handle.id)
 `start` takes a durable function's name or its id and returns a handle, never a
 result: an execution can run for up to 366 days, so its result is read back with `get`.
 It uses the same credential `invoke` does — the active user session, then a
-configured service key, then the anonymous key — and is the only durable
-operation an application credential may perform. An `execution_name` makes the
-start idempotent: starting again under the same name returns the execution that
-already exists rather than beginning a second one.
+configured service key, then the anonymous key — and is, with `messages`, the
+only durable operation an application credential may perform. An
+`execution_name` makes the start idempotent: starting again under the same name
+returns the execution that already exists rather than beginning a second one.
+Only the start that creates the execution returns its `client_token`.
 
 `get`, `list`, and `stop` are owner-scoped and require the project owner's
 platform user token, because an execution is addressed by its id alone.
@@ -600,6 +601,45 @@ expired or cancelled approval, raises `Volcano::Error::ConflictError` (HTTP
 409). An unknown approval, or one in another project, raises
 `Volcano::Error::NotFoundError`. A `comment` is optional, up to 2,000
 characters.
+
+### Message a durable execution
+
+A durable function written in JavaScript or Python can wait for a named
+message, and publish messages of its own. Ruby sends them, lists them, and
+follows what the execution publishes:
+
+```ruby
+handle = client.durable.start("onboarding", { account_id: "account-7" })
+messages = client.durable.messages
+
+messages.send_message("onboarding", handle.id, "documents-uploaded", { count: 3 },
+                      idempotency_key: "upload-42")
+
+page = messages.list("onboarding", handle.id, direction: "out", after: 0)
+puts page.messages.map(&:name), page.has_more
+
+Async do
+  subscription = messages.subscribe("onboarding", handle.id, client_token: handle.client_token) do |message|
+    puts [message.seq, message.name, message.data]
+  end
+  # ...
+  subscription.unsubscribe
+end
+```
+
+A sent message waits until the execution waits for its name. Repeating a send
+with the same `idempotency_key` returns the stored message; sending to an
+execution that has ended raises `Volcano::Error::ConflictError` with `code`
+`execution_not_running`. `subscribe` delivers each published message once, in
+`seq` order: those published before the call first, then live ones, and after a
+reconnect the ones it missed. It needs a signed-in session and an Async reactor.
+
+The service key reaches every execution. A signed-in user reaches the executions
+they started; the anon key, or another user, passes the execution's
+`client_token:`, which only the creating start returns. Pass `project_id:` to
+`send_message` or `list` to use the owner's route with a platform user token or
+a project access token. See the
+[functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md#message-a-durable-execution).
 
 ### Read project logs
 

@@ -81,7 +81,9 @@ module Volcano
         detach_publication_handler(protocol)
       end
 
-      def subscription_options(binding) = { recovery: binding&.last, recoverable: presence?, join_leave: presence? }
+      def subscription_options(binding)
+        { recovery: binding&.last, recoverable: presence?, join_leave: presence?, data: @subscribe_data }
+      end
 
       def recovery_binding
         return unless broadcast?

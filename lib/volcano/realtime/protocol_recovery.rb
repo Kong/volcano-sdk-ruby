@@ -10,23 +10,26 @@ module Volcano
 
       private
 
-      def subscribe_request(channel:, recoverable:, join_leave:, recovery:)
-        on_reply = nil
-        if recovery
-          on_reply = lambda do |reply|
-            publications = parse_recovery_result(channel: channel, recovery: recovery, result: reply)
-            dispatch_recovered_publications(channel, publications)
-          end
-        end
-
-        request('subscribe', on_reply:) do |id|
-          self.class.subscribe(
+      def subscribe_request(channel:, recoverable:, join_leave:, recovery:, data:)
+        request('subscribe', on_reply: recovery_reply(channel, recovery)) do |id|
+          command = self.class.subscribe(
             id: id,
             channel: channel,
             recoverable: recoverable,
             join_leave: join_leave,
             recovery: recovery
           )
+          command['subscribe']['data'] = data if data
+          command
+        end
+      end
+
+      def recovery_reply(channel, recovery)
+        return unless recovery
+
+        lambda do |reply|
+          publications = parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+          dispatch_recovered_publications(channel, publications)
         end
       end
 

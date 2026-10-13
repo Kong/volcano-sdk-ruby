@@ -30,6 +30,7 @@ module Volcano
       @recovery_lineage: SessionOperations?
       @publication_handler: (^(Object?, Object?, Object?, recovered: bool) -> void)?
       @callbacks: Hash[String, Array[^(Object?) -> void]]
+      @subscribe_data: Hash[String, String]?
 
       def mark_closed: () -> void
       def protocol_lost: (Protocol protocol) -> void
@@ -43,7 +44,7 @@ module Volcano
       def complete_protocol_subscription: (Protocol protocol, Integer epoch, recovery_binding? binding) -> [Protocol, Integer]
       def prepare_protocol_subscription: (Protocol protocol, Integer epoch) -> void
       def detach_from_protocol: () -> void
-      def subscription_options: (recovery_binding? binding) -> { recovery: recovery_position?, recoverable: bool, join_leave: bool }
+      def subscription_options: (recovery_binding? binding) -> { recovery: recovery_position?, recoverable: bool, join_leave: bool, data: Hash[String, String]? }
       def recovery_binding: () -> recovery_binding?
       def recovery_position: (SessionOperations lineage) -> recovery_position
       def validate_recovery_binding!: (recovery_binding? binding) -> void
@@ -81,6 +82,7 @@ module Volcano
       @deferred_callback_deliveries: Array[delivery]
       @handler_registered: bool
       @name: String
+      @type: Symbol
 
       def on: (String event, ?callback? callback) ?{ (Object?) -> void } -> self
 
@@ -92,6 +94,7 @@ module Volcano
       def register_publication_handler: (Protocol protocol) -> void
       def publication_callback: (Protocol protocol, Integer generation) -> publication_callback
       def deliver_publication: (Object? event, Object? data) -> Object?
+      def durable?: () -> bool
       def emit: (String event, Object? data, ?before_delivery: before_delivery?) -> nil
       def callback_dispatching?: () -> bool
       def defer_callback_delivery: (delivery delivery) -> nil

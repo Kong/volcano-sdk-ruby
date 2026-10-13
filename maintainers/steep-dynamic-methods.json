@@ -202,6 +202,59 @@
     ]
   },
   {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessage",
+    "methods": [
+      "data",
+      "deconstruct",
+      "deconstruct_keys",
+      "delivered_at",
+      "direction",
+      "execution_id",
+      "id",
+      "members",
+      "name",
+      "self.[]",
+      "self.members",
+      "sender",
+      "sent_at",
+      "seq",
+      "status",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessagePage",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "has_more",
+      "members",
+      "messages",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessageSender",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "type",
+      "user_id",
+      "with"
+    ]
+  },
+  {
     "path": "lib/volcano/errors.rb",
     "scope": "Volcano::Error::VolcanoError",
     "methods": [

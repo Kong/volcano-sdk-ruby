@@ -29,19 +29,20 @@ module Volcano
     attr_reader result_expired: bool?
     attr_reader error: DurableExecutionError?
     attr_reader completed_at: Time?
+    attr_reader client_token: String?
 
-    def self.new: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at) -> DurableExecution
-                | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
-    def self.[]: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at) -> DurableExecution
-               | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
-    def self.members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
+    def self.new: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at, ?String? client_token) -> DurableExecution
+                | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?, ?client_token: String?) -> DurableExecution
+    def self.[]: (String id, String function_id, String name, String status, String region, Time created_at, ?json_value result, ?bool? result_expired, ?DurableExecutionError? error, ?Time? completed_at, ?String? client_token) -> DurableExecution
+               | (id: String, function_id: String, name: String, status: String, region: String, created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?, ?client_token: String?) -> DurableExecution
+    def self.members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at, :client_token]
 
     private def initialize: (**(json_value | Time | DurableExecutionError) attributes) -> void
-    def members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at]
-    def with: (?id: String, ?function_id: String, ?name: String, ?status: String, ?region: String, ?created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?) -> DurableExecution
-    def to_h: () -> { id: String, function_id: String, name: String, status: String, region: String, created_at: Time, result: json_value, result_expired: bool?, error: DurableExecutionError?, completed_at: Time? }
+    def members: () -> [:id, :function_id, :name, :status, :region, :created_at, :result, :result_expired, :error, :completed_at, :client_token]
+    def with: (?id: String, ?function_id: String, ?name: String, ?status: String, ?region: String, ?created_at: Time, ?result: json_value, ?result_expired: bool?, ?error: DurableExecutionError?, ?completed_at: Time?, ?client_token: String?) -> DurableExecution
+    def to_h: () -> { id: String, function_id: String, name: String, status: String, region: String, created_at: Time, result: json_value, result_expired: bool?, error: DurableExecutionError?, completed_at: Time?, client_token: String? }
             | [K, V] () { (Symbol, String | Time | json_value | bool | DurableExecutionError | nil) -> [K, V] } -> Hash[K, V]
-    def deconstruct: () -> [String, String, String, String, String, Time, json_value, bool?, DurableExecutionError?, Time?]
+    def deconstruct: () -> [String, String, String, String, String, Time, json_value, bool?, DurableExecutionError?, Time?, String?]
     def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time | json_value | bool | DurableExecutionError | nil]
     def terminal?: () -> bool
   end

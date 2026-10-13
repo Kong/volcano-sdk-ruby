@@ -12,21 +12,26 @@ module Volcano
     # Lists, reads, and decides the approvals durable workflows request.
     attr_reader :approvals
 
-    def initialize(client, transport)
+    # Sends to, lists, and follows the messages of durable executions.
+    attr_reader :messages
+
+    def initialize(client, transport, realtime)
       @client = client
       @transport = transport
       @approvals = DurableApprovals.new(client, transport)
+      @messages = DurableMessages.new(client, transport, realtime)
     end
 
     # Starts an execution and returns its handle. A durable function is never
     # invoked synchronously: it can outlive any request a caller could hold
     # open, so its result is read back with #get.
     #
-    # Starting is the only durable operation an application credential may
-    # perform, and it takes the token an invoke takes. Passing an
+    # Starting takes the token an invoke takes, and is, with #messages, the
+    # only durable operation an application credential may perform. Passing an
     # +execution_name+ makes the start idempotent: starting again under the
     # same name returns the execution that already exists rather than
-    # beginning a second one.
+    # beginning a second one. Only the start that created the execution
+    # returns its +client_token+.
     def start(function_name, payload = {}, execution_name: nil)
       # A durable function's id is accepted here as well as its name, so the
       # DNS-safe name pattern an invoke checks would reject half the input.

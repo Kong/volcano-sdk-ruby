@@ -1,0 +1,68 @@
+module Volcano
+  class DurableMessageSender < Data
+    attr_reader type: String
+    attr_reader user_id: String?
+
+    def self.new: (String type, ?String? user_id) -> DurableMessageSender
+                | (type: String, ?user_id: String?) -> DurableMessageSender
+    def self.[]: (String type, ?String? user_id) -> DurableMessageSender
+               | (type: String, ?user_id: String?) -> DurableMessageSender
+    def self.members: () -> [:type, :user_id]
+
+    def initialize: (type: String, ?user_id: String?) -> void
+    def members: () -> [:type, :user_id]
+    def with: (?type: String, ?user_id: String?) -> DurableMessageSender
+    def to_h: () -> { type: String, user_id: String? }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+
+  class DurableMessage < Data
+    type field = String | Integer | json_value | DurableMessageSender | Time | nil
+
+    attr_reader id: String
+    attr_reader execution_id: String
+    attr_reader direction: String
+    attr_reader seq: Integer
+    attr_reader name: String
+    attr_reader data: json_value
+    attr_reader sender: DurableMessageSender
+    attr_reader status: String
+    attr_reader sent_at: Time
+    attr_reader delivered_at: Time?
+
+    def self.new: (String id, String execution_id, String direction, Integer seq, String name, json_value data, DurableMessageSender sender, String status, Time sent_at, ?Time? delivered_at) -> DurableMessage
+                | (id: String, execution_id: String, direction: String, seq: Integer, name: String, ?data: json_value, sender: DurableMessageSender, status: String, sent_at: Time, ?delivered_at: Time?) -> DurableMessage
+    def self.[]: (String id, String execution_id, String direction, Integer seq, String name, json_value data, DurableMessageSender sender, String status, Time sent_at, ?Time? delivered_at) -> DurableMessage
+               | (id: String, execution_id: String, direction: String, seq: Integer, name: String, ?data: json_value, sender: DurableMessageSender, status: String, sent_at: Time, ?delivered_at: Time?) -> DurableMessage
+    def self.members: () -> [:id, :execution_id, :direction, :seq, :name, :data, :sender, :status, :sent_at, :delivered_at]
+
+    private def initialize: (**field attributes) -> void
+    def members: () -> [:id, :execution_id, :direction, :seq, :name, :data, :sender, :status, :sent_at, :delivered_at]
+    def with: (?id: String, ?execution_id: String, ?direction: String, ?seq: Integer, ?name: String, ?data: json_value, ?sender: DurableMessageSender, ?status: String, ?sent_at: Time, ?delivered_at: Time?) -> DurableMessage
+    def to_h: () -> { id: String, execution_id: String, direction: String, seq: Integer, name: String, data: json_value, sender: DurableMessageSender, status: String, sent_at: Time, delivered_at: Time? }
+            | [K, V] () { (Symbol, field) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String, String, String, Integer, String, json_value, DurableMessageSender, String, Time, Time?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, field]
+  end
+
+  class DurableMessagePage < Data
+    attr_reader messages: Array[DurableMessage]
+    attr_reader has_more: bool
+
+    def self.new: (Enumerable[DurableMessage] messages, bool has_more) -> DurableMessagePage
+                | (messages: Enumerable[DurableMessage], has_more: bool) -> DurableMessagePage
+    def self.[]: (Enumerable[DurableMessage] messages, bool has_more) -> DurableMessagePage
+               | (messages: Enumerable[DurableMessage], has_more: bool) -> DurableMessagePage
+    def self.members: () -> [:messages, :has_more]
+
+    def initialize: (messages: Enumerable[DurableMessage], has_more: bool) -> void
+    def members: () -> [:messages, :has_more]
+    def with: (?messages: Enumerable[DurableMessage], ?has_more: bool) -> DurableMessagePage
+    def to_h: () -> { messages: Array[DurableMessage], has_more: bool }
+            | [K, V] () { (Symbol, Array[DurableMessage] | bool) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [Array[DurableMessage], bool]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, Array[DurableMessage] | bool]
+  end
+end

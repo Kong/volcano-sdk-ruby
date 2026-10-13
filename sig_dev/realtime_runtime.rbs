@@ -76,6 +76,7 @@ module Volcano
 
 
     CHANNEL_TYPES: Array[Symbol]
+    UNBATCHED: PostgresBatchConfig
 
     class PostgresBatchConfig < Data
       attr_reader auto_fetch: bool
@@ -168,6 +169,8 @@ module Volcano
                     | (:capture_protocol_session method_name) -> [Integer, SessionOperations, Session]
                     | (:capture_session_binding method_name) -> session_binding
                     | (:database_name method_name) -> String?
+                    | (:durable_channel method_name, String execution_id, String? client_token, ^() -> void resubscribed) -> Channel?
+                    | (:remove_durable_channel method_name, Channel channel) -> nil
 
       private
 
@@ -178,6 +181,8 @@ module Volcano
       def cached_channel: (Channel channel, PostgresBatchConfig batch_config) -> Channel
 
       def build_channel: (String name, Symbol type, PostgresBatchConfig batch_config) -> Channel
+
+      def durable_channel: (String execution_id, String? client_token, ^() -> void resubscribed) -> Channel?
 
       def protocol_lock: () -> Async::Semaphore
 
@@ -206,6 +211,10 @@ module Volcano
       @subscribed: bool
 
       @closed: bool
+
+      @subscribe_data: Hash[String, String]?
+
+      @resubscribed: (^() -> void)?
 
       include PostgresChanges
 
@@ -236,6 +245,8 @@ module Volcano
       private
 
       def remove: () -> nil
+
+      def follow_durable: (Hash[String, String]? data, ^() -> void resubscribed) -> (^() -> void)
 
       def subscribe_with_intent: () -> [Protocol, Integer]
 
@@ -338,6 +349,8 @@ module Volcano
       private
 
       def remove_channel_locked: (String name) -> Channel?
+
+      def remove_durable_channel: (Channel channel) -> nil
 
       def remove_channel_entry: (String name, Channel channel) -> StandardError?
     end
@@ -673,7 +686,7 @@ module Volcano
 
       def self.connect: (id: Integer, token: String) -> Hash[String, Object]
 
-      def self.subscribe: (id: Integer, channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Hash[String, Object]
+      def self.subscribe: (id: Integer, channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> { 'id' => Integer, 'subscribe' => Hash[String, Object] }
 
       def self.add_recovery_options: (Hash[String, Object] options, Hash[Symbol, String | Integer] recovery) -> void
 
@@ -687,7 +700,7 @@ module Volcano
 
       def connect: (token: String) -> Hash[String, Object]
 
-      def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Object?
+      def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?, ?data: Hash[String, String]?) -> Object?
 
       def publish: (channel: String, data: Object) -> Object?
 

@@ -5,7 +5,7 @@ require_relative 'immutable_request_value'
 
 module Volcano
   DURABLE_EXECUTION_ATTRIBUTES = %i[
-    id function_id name status region created_at result result_expired error completed_at
+    id function_id name status region created_at result result_expired error completed_at client_token
   ].freeze
   private_constant :DURABLE_EXECUTION_ATTRIBUTES
 
@@ -35,6 +35,10 @@ module Volcano
   # once its retention lapses. That is not the same as a function that returned
   # nothing, so read `result_expired` before concluding anything from a missing
   # result.
+  #
+  # `client_token` lets a browser, or a user who did not start the execution,
+  # reach its messages. Only the start that created the execution returns it;
+  # a repeat under the same name and every read leave it nil.
   DurableExecution = Data.define(*DURABLE_EXECUTION_ATTRIBUTES)
 
   # Reopens the generated record for checked initialization.
@@ -92,13 +96,27 @@ module Volcano
 
     def durable_execution(payload)
       values = execution_payload(payload)
+      result, result_expired, error, completed_at = execution_outcome(values)
       DurableExecution.new(
         id: execution_text(values, 'id'), function_id: execution_text(values, 'function_id'),
         name: execution_text(values, 'name'), status: execution_text(values, 'status'),
         region: execution_text(values, 'region'), created_at: execution_time(values),
-        result: execution_result(values['result']), result_expired: execution_expired(values['result_expired']),
-        error: execution_error(values['error']), completed_at: parse_time(values['completed_at'])
+        result: result, result_expired: result_expired, error: error, completed_at: completed_at,
+        client_token: client_token(values['client_token'])
       )
+    end
+
+    def execution_outcome(values)
+      [
+        execution_result(values['result']), execution_expired(values['result_expired']),
+        execution_error(values['error']), parse_time(values['completed_at'])
+      ]
+    end
+
+    def client_token(value)
+      return value if value.nil? || (value.is_a?(String) && !value.empty?)
+
+      raise TypeError, INCOMPLETE_EXECUTION
     end
 
     def execution_payload(payload)

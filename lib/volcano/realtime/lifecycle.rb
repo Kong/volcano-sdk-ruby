@@ -34,6 +34,18 @@ module Volcano
         @channels.delete(name)
       end
 
+      # Leaves a durable channel unless a later subscription replaced it. Once
+      # the connection is closed there is nothing left to leave.
+      def remove_durable_channel(channel)
+        channel_lock.acquire do
+          if @channels[channel.name].equal?(channel)
+            channel.__send__(:remove) unless @closed
+            @channels.delete(channel.name)
+          end
+        end
+        nil
+      end
+
       def remove_channel_entry(name, channel)
         channel.__send__(:remove)
         @channels.delete(name)

@@ -12,7 +12,7 @@ module Volcano
   ].freeze
   private_constant :DURABLE_APPROVAL_ATTRIBUTES, :DURABLE_APPROVAL_STATS_ATTRIBUTES
 
-  # Checks keywords for the approval records with too many fields for an
+  # Checks keywords for the durable records with too many fields for an
   # explicit keyword list, and owns immutable copies of their values.
   module DurableApprovalAttributes
     def self.capture(attributes, names, optional:)

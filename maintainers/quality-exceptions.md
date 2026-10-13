@@ -68,3 +68,6 @@ The core-record exception covers these exact generated field readers:
 | `DurableApprovalPage` | `lib/volcano/durable_approval_models.rb` | `approvals`, `page`, `limit`, `total`, `has_more` |
 | `DurableApprovalDailyCounts` | `lib/volcano/durable_approval_models.rb` | `date`, `counts` |
 | `DurableApprovalStats` | `lib/volcano/durable_approval_models.rb` | `from`, `to`, `counts`, `approval_rate`, `median_seconds_to_decision`, `p90_seconds_to_decision`, `functions`, `other_functions`, `daily` |
+| `DurableMessageSender` | `lib/volcano/durable_message_models.rb` | `type`, `user_id` |
+| `DurableMessage` | `lib/volcano/durable_message_models.rb` | `id`, `execution_id`, `direction`, `seq`, `name`, `data`, `sender`, `status`, `sent_at`, `delivered_at` |
+| `DurableMessagePage` | `lib/volcano/durable_message_models.rb` | `messages`, `has_more` |

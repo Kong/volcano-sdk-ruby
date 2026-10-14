@@ -24,10 +24,7 @@ module Volcano::Generated
     # Service readiness ports; config apply asserts them and Git deploy builds them.
     attr_accessor :ports
 
-    # Default idle timeout for new sessions when the caller omits it.
-    attr_accessor :idle_timeout_seconds
-
-    # Default absolute lifetime for new sessions when the caller omits it.
+    # Default absolute lifetime for new sessions when the caller omits it. Cloud templates accept 30–28800 seconds; inherited lifetimes are clamped to the session plan limit (3600 for HOBBY, 28800 for SUPERAGENT). Local accepts 0 for unlimited or a positive lifetime.
     attr_accessor :ttl_seconds
 
     class EnumAttributeValidator
@@ -58,7 +55,6 @@ module Volcano::Generated
         :'name' => :'name',
         :'memory_mb' => :'memory_mb',
         :'ports' => :'ports',
-        :'idle_timeout_seconds' => :'idle_timeout_seconds',
         :'ttl_seconds' => :'ttl_seconds'
       }
     end
@@ -79,7 +75,6 @@ module Volcano::Generated
         :'name' => :'String',
         :'memory_mb' => :'Integer',
         :'ports' => :'Array<Integer>',
-        :'idle_timeout_seconds' => :'Integer',
         :'ttl_seconds' => :'Integer'
       }
     end
@@ -122,10 +117,6 @@ module Volcano::Generated
         end
       end
 
-      if attributes.key?(:'idle_timeout_seconds')
-        self.idle_timeout_seconds = attributes[:'idle_timeout_seconds']
-      end
-
       if attributes.key?(:'ttl_seconds')
         self.ttl_seconds = attributes[:'ttl_seconds']
       end
@@ -149,20 +140,12 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "ports", number of items must be less than or equal to 16.')
       end
 
-      if !@idle_timeout_seconds.nil? && @idle_timeout_seconds > 28800
-        invalid_properties.push('invalid value for "idle_timeout_seconds", must be smaller than or equal to 28800.')
+      if !@ttl_seconds.nil? && @ttl_seconds > 2147483647
+        invalid_properties.push('invalid value for "ttl_seconds", must be smaller than or equal to 2147483647.')
       end
 
-      if !@idle_timeout_seconds.nil? && @idle_timeout_seconds < 0
-        invalid_properties.push('invalid value for "idle_timeout_seconds", must be greater than or equal to 0.')
-      end
-
-      if !@ttl_seconds.nil? && @ttl_seconds > 28800
-        invalid_properties.push('invalid value for "ttl_seconds", must be smaller than or equal to 28800.')
-      end
-
-      if !@ttl_seconds.nil? && @ttl_seconds < 30
-        invalid_properties.push('invalid value for "ttl_seconds", must be greater than or equal to 30.')
+      if !@ttl_seconds.nil? && @ttl_seconds < 0
+        invalid_properties.push('invalid value for "ttl_seconds", must be greater than or equal to 0.')
       end
 
       invalid_properties
@@ -177,10 +160,8 @@ module Volcano::Generated
       memory_mb_validator = EnumAttributeValidator.new('Integer', [1024, 2048])
       return false unless memory_mb_validator.valid?(@memory_mb)
       return false if !@ports.nil? && @ports.length > 16
-      return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds > 28800
-      return false if !@idle_timeout_seconds.nil? && @idle_timeout_seconds < 0
-      return false if !@ttl_seconds.nil? && @ttl_seconds > 28800
-      return false if !@ttl_seconds.nil? && @ttl_seconds < 30
+      return false if !@ttl_seconds.nil? && @ttl_seconds > 2147483647
+      return false if !@ttl_seconds.nil? && @ttl_seconds < 0
       true
     end
 
@@ -224,36 +205,18 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] idle_timeout_seconds Value to be assigned
-    def idle_timeout_seconds=(idle_timeout_seconds)
-      if idle_timeout_seconds.nil?
-        fail ArgumentError, 'idle_timeout_seconds cannot be nil'
-      end
-
-      if idle_timeout_seconds > 28800
-        fail ArgumentError, 'invalid value for "idle_timeout_seconds", must be smaller than or equal to 28800.'
-      end
-
-      if idle_timeout_seconds < 0
-        fail ArgumentError, 'invalid value for "idle_timeout_seconds", must be greater than or equal to 0.'
-      end
-
-      @idle_timeout_seconds = idle_timeout_seconds
-    end
-
-    # Custom attribute writer method with validation
     # @param [Object] ttl_seconds Value to be assigned
     def ttl_seconds=(ttl_seconds)
       if ttl_seconds.nil?
         fail ArgumentError, 'ttl_seconds cannot be nil'
       end
 
-      if ttl_seconds > 28800
-        fail ArgumentError, 'invalid value for "ttl_seconds", must be smaller than or equal to 28800.'
+      if ttl_seconds > 2147483647
+        fail ArgumentError, 'invalid value for "ttl_seconds", must be smaller than or equal to 2147483647.'
       end
 
-      if ttl_seconds < 30
-        fail ArgumentError, 'invalid value for "ttl_seconds", must be greater than or equal to 30.'
+      if ttl_seconds < 0
+        fail ArgumentError, 'invalid value for "ttl_seconds", must be greater than or equal to 0.'
       end
 
       @ttl_seconds = ttl_seconds
@@ -267,7 +230,6 @@ module Volcano::Generated
           name == o.name &&
           memory_mb == o.memory_mb &&
           ports == o.ports &&
-          idle_timeout_seconds == o.idle_timeout_seconds &&
           ttl_seconds == o.ttl_seconds
     end
 
@@ -280,7 +242,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, memory_mb, ports, idle_timeout_seconds, ttl_seconds].hash
+      [name, memory_mb, ports, ttl_seconds].hash
     end
 
     # Builds the object from hash

@@ -57,6 +57,9 @@ module Volcano::Generated
     # Paths on this frontend that forward to a public function, ordered from most to least specific. Anyone who can load the frontend can reach the target function at these paths without a credential. 
     attr_accessor :function_routes
 
+    # Recorded completion time of the most recent deploy or redeploy with status active. Omitted when no such deployment has a recorded completion time. Site traffic, pending deployments, degraded deployments, failed deployments, and deletion do not change this value.
+    attr_accessor :last_deployed_at
+
     attr_accessor :last_invoked_at
 
     attr_accessor :created_at
@@ -104,6 +107,7 @@ module Volcano::Generated
         :'custom_domain' => :'custom_domain',
         :'custom_domain_status' => :'custom_domain_status',
         :'function_routes' => :'function_routes',
+        :'last_deployed_at' => :'last_deployed_at',
         :'last_invoked_at' => :'last_invoked_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
@@ -139,6 +143,7 @@ module Volcano::Generated
         :'custom_domain' => :'String',
         :'custom_domain_status' => :'String',
         :'function_routes' => :'Array<FrontendFunctionRoute>',
+        :'last_deployed_at' => :'Time',
         :'last_invoked_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
@@ -249,6 +254,10 @@ module Volcano::Generated
         end
       else
         self.function_routes = nil
+      end
+
+      if attributes.key?(:'last_deployed_at')
+        self.last_deployed_at = attributes[:'last_deployed_at']
       end
 
       if attributes.key?(:'last_invoked_at')
@@ -525,6 +534,7 @@ module Volcano::Generated
           custom_domain == o.custom_domain &&
           custom_domain_status == o.custom_domain_status &&
           function_routes == o.function_routes &&
+          last_deployed_at == o.last_deployed_at &&
           last_invoked_at == o.last_invoked_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
@@ -539,7 +549,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, function_routes, last_invoked_at, created_at, updated_at].hash
+      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, function_routes, last_deployed_at, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

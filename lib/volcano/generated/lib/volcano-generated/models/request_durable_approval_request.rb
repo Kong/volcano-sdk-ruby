@@ -27,7 +27,7 @@ module Volcano::Generated
 
     attr_accessor :description
 
-    # Any JSON value to show the person deciding. The whole request is limited to 64 KiB. 
+    # Any JSON value to show the person deciding. A number's exponent must be between -324 and 324, and a number too large or too precise to store is refused with `400`. Numbers are read back written out in full, so the exponents' absolute values may total at most 65,536. The whole request is limited to 64 KiB. 
     attr_accessor :details
 
     # Attribute mapping from ruby-style variable name to JSON key.

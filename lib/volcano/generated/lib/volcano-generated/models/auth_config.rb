@@ -23,6 +23,9 @@ module Volcano::Generated
     # Refresh token lifetime in seconds
     attr_accessor :refresh_token_lifetime
 
+    # A refresh within this many seconds of the refresh token being issued returns the same refresh token instead of rotating it, so concurrent refreshes from several tabs all succeed
+    attr_accessor :refresh_token_reuse_interval
+
     # Force re-login after inactivity (seconds, 0=never)
     attr_accessor :inactivity_timeout
 
@@ -56,6 +59,9 @@ module Volcano::Generated
 
     # Refreshes per hour per IP
     attr_accessor :rate_limit_token_refresh
+
+    # Password reset requests per hour per IP. Unlike the other limits, 0 applies the default of 10 instead of turning the limit off.
+    attr_accessor :rate_limit_password_reset
 
     attr_accessor :cors_enabled
 
@@ -136,6 +142,10 @@ module Volcano::Generated
     # Optional override for the device-authorization verification page. When set, POST /auth/device/authorize returns this URL (with the user_code) as verification_uri/verification_uri_complete instead of the built-in managed device page. Lets a CLI surface the project's own RFC 8628 approval page. Empty falls back to the managed page. 
     attr_accessor :device_verification_url
 
+    attr_accessor :created_at
+
+    attr_accessor :updated_at
+
     class EnumAttributeValidator
       attr_reader :datatype
       attr_reader :allowable_values
@@ -164,6 +174,7 @@ module Volcano::Generated
         :'project_id' => :'project_id',
         :'access_token_lifetime' => :'access_token_lifetime',
         :'refresh_token_lifetime' => :'refresh_token_lifetime',
+        :'refresh_token_reuse_interval' => :'refresh_token_reuse_interval',
         :'inactivity_timeout' => :'inactivity_timeout',
         :'max_session_duration' => :'max_session_duration',
         :'min_password_length' => :'min_password_length',
@@ -177,6 +188,7 @@ module Volcano::Generated
         :'rate_limit_signup' => :'rate_limit_signup',
         :'rate_limit_signin' => :'rate_limit_signin',
         :'rate_limit_token_refresh' => :'rate_limit_token_refresh',
+        :'rate_limit_password_reset' => :'rate_limit_password_reset',
         :'cors_enabled' => :'cors_enabled',
         :'cors_allowed_origins' => :'cors_allowed_origins',
         :'enable_anonymous_signins' => :'enable_anonymous_signins',
@@ -206,7 +218,9 @@ module Volcano::Generated
         :'post_auth_redirect_url' => :'post_auth_redirect_url',
         :'allowed_redirect_urls' => :'allowed_redirect_urls',
         :'post_logout_redirect_url' => :'post_logout_redirect_url',
-        :'device_verification_url' => :'device_verification_url'
+        :'device_verification_url' => :'device_verification_url',
+        :'created_at' => :'created_at',
+        :'updated_at' => :'updated_at'
       }
     end
 
@@ -226,6 +240,7 @@ module Volcano::Generated
         :'project_id' => :'String',
         :'access_token_lifetime' => :'Integer',
         :'refresh_token_lifetime' => :'Integer',
+        :'refresh_token_reuse_interval' => :'Integer',
         :'inactivity_timeout' => :'Integer',
         :'max_session_duration' => :'Integer',
         :'min_password_length' => :'Integer',
@@ -239,6 +254,7 @@ module Volcano::Generated
         :'rate_limit_signup' => :'Integer',
         :'rate_limit_signin' => :'Integer',
         :'rate_limit_token_refresh' => :'Integer',
+        :'rate_limit_password_reset' => :'Integer',
         :'cors_enabled' => :'Boolean',
         :'cors_allowed_origins' => :'Array<String>',
         :'enable_anonymous_signins' => :'Boolean',
@@ -268,7 +284,9 @@ module Volcano::Generated
         :'post_auth_redirect_url' => :'String',
         :'allowed_redirect_urls' => :'Array<String>',
         :'post_logout_redirect_url' => :'String',
-        :'device_verification_url' => :'String'
+        :'device_verification_url' => :'String',
+        :'created_at' => :'Time',
+        :'updated_at' => :'Time'
       }
     end
 
@@ -308,6 +326,12 @@ module Volcano::Generated
         self.refresh_token_lifetime = attributes[:'refresh_token_lifetime']
       else
         self.refresh_token_lifetime = 2592000
+      end
+
+      if attributes.key?(:'refresh_token_reuse_interval')
+        self.refresh_token_reuse_interval = attributes[:'refresh_token_reuse_interval']
+      else
+        self.refresh_token_reuse_interval = 10
       end
 
       if attributes.key?(:'inactivity_timeout')
@@ -386,6 +410,12 @@ module Volcano::Generated
         self.rate_limit_token_refresh = attributes[:'rate_limit_token_refresh']
       else
         self.rate_limit_token_refresh = 1000
+      end
+
+      if attributes.key?(:'rate_limit_password_reset')
+        self.rate_limit_password_reset = attributes[:'rate_limit_password_reset']
+      else
+        self.rate_limit_password_reset = 10
       end
 
       if attributes.key?(:'cors_enabled')
@@ -547,6 +577,14 @@ module Volcano::Generated
       if attributes.key?(:'device_verification_url')
         self.device_verification_url = attributes[:'device_verification_url']
       end
+
+      if attributes.key?(:'created_at')
+        self.created_at = attributes[:'created_at']
+      end
+
+      if attributes.key?(:'updated_at')
+        self.updated_at = attributes[:'updated_at']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -627,6 +665,7 @@ module Volcano::Generated
           project_id == o.project_id &&
           access_token_lifetime == o.access_token_lifetime &&
           refresh_token_lifetime == o.refresh_token_lifetime &&
+          refresh_token_reuse_interval == o.refresh_token_reuse_interval &&
           inactivity_timeout == o.inactivity_timeout &&
           max_session_duration == o.max_session_duration &&
           min_password_length == o.min_password_length &&
@@ -640,6 +679,7 @@ module Volcano::Generated
           rate_limit_signup == o.rate_limit_signup &&
           rate_limit_signin == o.rate_limit_signin &&
           rate_limit_token_refresh == o.rate_limit_token_refresh &&
+          rate_limit_password_reset == o.rate_limit_password_reset &&
           cors_enabled == o.cors_enabled &&
           cors_allowed_origins == o.cors_allowed_origins &&
           enable_anonymous_signins == o.enable_anonymous_signins &&
@@ -669,7 +709,9 @@ module Volcano::Generated
           post_auth_redirect_url == o.post_auth_redirect_url &&
           allowed_redirect_urls == o.allowed_redirect_urls &&
           post_logout_redirect_url == o.post_logout_redirect_url &&
-          device_verification_url == o.device_verification_url
+          device_verification_url == o.device_verification_url &&
+          created_at == o.created_at &&
+          updated_at == o.updated_at
     end
 
     # @see the `==` method
@@ -681,7 +723,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [project_id, access_token_lifetime, refresh_token_lifetime, inactivity_timeout, max_session_duration, min_password_length, password_policy, require_uppercase, require_lowercase, require_numbers, require_special_chars, enable_signup, enable_email_password, rate_limit_signup, rate_limit_signin, rate_limit_token_refresh, cors_enabled, cors_allowed_origins, enable_anonymous_signins, allowed_email_domains, allowed_email_domains_mode, platform_token_ttl, allow_password_reset, password_reset_timeout, max_password_history, cors_allow_credentials, cors_max_age, require_email_confirmation, email_confirmation_timeout, auto_link_verified_oauth, email_enabled, email_from_address, email_from_name, smtp_host, smtp_port, smtp_username, smtp_password_configured, smtp_use_tls, email_confirmation_subject, email_password_reset_subject, email_password_changed_subject, managed_auth_enabled, post_auth_redirect_url, allowed_redirect_urls, post_logout_redirect_url, device_verification_url].hash
+      [project_id, access_token_lifetime, refresh_token_lifetime, refresh_token_reuse_interval, inactivity_timeout, max_session_duration, min_password_length, password_policy, require_uppercase, require_lowercase, require_numbers, require_special_chars, enable_signup, enable_email_password, rate_limit_signup, rate_limit_signin, rate_limit_token_refresh, rate_limit_password_reset, cors_enabled, cors_allowed_origins, enable_anonymous_signins, allowed_email_domains, allowed_email_domains_mode, platform_token_ttl, allow_password_reset, password_reset_timeout, max_password_history, cors_allow_credentials, cors_max_age, require_email_confirmation, email_confirmation_timeout, auto_link_verified_oauth, email_enabled, email_from_address, email_from_name, smtp_host, smtp_port, smtp_username, smtp_password_configured, smtp_use_tls, email_confirmation_subject, email_password_reset_subject, email_password_changed_subject, managed_auth_enabled, post_auth_redirect_url, allowed_redirect_urls, post_logout_redirect_url, device_verification_url, created_at, updated_at].hash
     end
 
     # Builds the object from hash

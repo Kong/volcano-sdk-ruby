@@ -24,9 +24,13 @@ module Volcano::Generated
     # `verified`: the domain is served by a validated certificate. `pending`: it is not served yet, is being re-validated after its certificate material was withdrawn, or Volcano is retrying after a failure. `failed`: a failure left the domain unserved, alongside `domain_status: failed`; managed domains report the cause in `failure_reason`.
     attr_accessor :verification_status
 
-    # Failure category, present only when managed TLS setup has failed. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
+    # Certificate the domain serves, present only while it is active. `uploaded`: the BYOC certificate, including after the domain switched to managed TLS and until Volcano issues the managed one; `failure_reason` then reports an issuance failure. `managed`: a certificate Volcano issued.
+    attr_accessor :serving_certificate
+
+    # Failure category, present when managed TLS setup has failed, or when issuance is failing for a domain that switched to managed TLS and still serves its uploaded certificate. Current values are provider, certificate, ownership, and internal; ownership means another account has already claimed the hostname through ownership verification. Treat unrecognized values as internal.
     attr_accessor :failure_reason
 
+    # DNS records to publish now. For a managed domain whose hostname the account already owns, the create response names the `_acme-challenge` CNAME that authorizes certificate issuance and renewal. Otherwise it names the `_volcano` TXT record that proves ownership of the hostname's registrable domain, and reads return the CNAME once Volcano sees that record. Usually empty for BYOC.
     attr_accessor :verification_records
 
     # Deprecated and no longer returned. Use routing_target_hostname as the DNS routing target.
@@ -72,6 +76,7 @@ module Volcano::Generated
         :'tls_mode' => :'tls_mode',
         :'domain_status' => :'domain_status',
         :'verification_status' => :'verification_status',
+        :'serving_certificate' => :'serving_certificate',
         :'failure_reason' => :'failure_reason',
         :'verification_records' => :'verification_records',
         :'required_routing_record' => :'required_routing_record',
@@ -100,6 +105,7 @@ module Volcano::Generated
         :'tls_mode' => :'String',
         :'domain_status' => :'String',
         :'verification_status' => :'String',
+        :'serving_certificate' => :'String',
         :'failure_reason' => :'String',
         :'verification_records' => :'Array<FrontendDomainVerificationRecord>',
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
@@ -162,6 +168,10 @@ module Volcano::Generated
         self.verification_status = attributes[:'verification_status']
       else
         self.verification_status = nil
+      end
+
+      if attributes.key?(:'serving_certificate')
+        self.serving_certificate = attributes[:'serving_certificate']
       end
 
       if attributes.key?(:'failure_reason')
@@ -263,6 +273,8 @@ module Volcano::Generated
       return false if @verification_status.nil?
       verification_status_validator = EnumAttributeValidator.new('String', ["pending", "verified", "failed"])
       return false unless verification_status_validator.valid?(@verification_status)
+      serving_certificate_validator = EnumAttributeValidator.new('String', ["uploaded", "managed"])
+      return false unless serving_certificate_validator.valid?(@serving_certificate)
       return false if @effective_urls.nil?
       return false if @created_at.nil?
       return false if @updated_at.nil?
@@ -308,6 +320,16 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for \"verification_status\", must be one of #{validator.allowable_values}."
       end
       @verification_status = verification_status
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] serving_certificate Object to be assigned
+    def serving_certificate=(serving_certificate)
+      validator = EnumAttributeValidator.new('String', ["uploaded", "managed"])
+      unless validator.valid?(serving_certificate)
+        fail ArgumentError, "invalid value for \"serving_certificate\", must be one of #{validator.allowable_values}."
+      end
+      @serving_certificate = serving_certificate
     end
 
     # Custom attribute writer method with validation
@@ -359,6 +381,7 @@ module Volcano::Generated
           tls_mode == o.tls_mode &&
           domain_status == o.domain_status &&
           verification_status == o.verification_status &&
+          serving_certificate == o.serving_certificate &&
           failure_reason == o.failure_reason &&
           verification_records == o.verification_records &&
           required_routing_record == o.required_routing_record &&
@@ -378,7 +401,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, failure_reason, verification_records, required_routing_record, routing_target_hostname, effective_urls, created_at, updated_at, frontend].hash
+      [domain, tls_mode, domain_status, verification_status, serving_certificate, failure_reason, verification_records, required_routing_record, routing_target_hostname, effective_urls, created_at, updated_at, frontend].hash
     end
 
     # Builds the object from hash

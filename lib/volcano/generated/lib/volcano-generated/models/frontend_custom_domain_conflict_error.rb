@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Domain ownership conflict. With `code: ownership_verification_required`, the account has not proven it owns the domain: publish `required_record` in DNS and send the same request again. The retry succeeds once Volcano can see the record. Other conflicts omit both fields.
+  # Domain ownership conflict. With `code: ownership_verification_required`, the account has not proven it owns the domain: publish `required_record` in DNS and send the same request again. The retry succeeds once Volcano can see the record. With `code: custom_domain_releasing`, a removed domain still holds the hostname or the frontend while Volcano releases it: send the same request again after the response's `Retry-After` seconds. A release that will not finish within a few minutes is a plain conflict. Other conflicts omit both fields.
   class FrontendCustomDomainConflictError < ApiModelBase
     attr_accessor :error
 

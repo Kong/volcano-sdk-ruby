@@ -155,6 +155,9 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::AuthenticationApi* | [**auth_signup_anonymous**](docs/AuthenticationApi.md#auth_signup_anonymous) | **POST** /auth/signup-anonymous | Create anonymous user
 *Volcano::Generated::AuthenticationApi* | [**auth_unlink_identity**](docs/AuthenticationApi.md#auth_unlink_identity) | **DELETE** /auth/user/identities/{identityId} | Unlink an identity from the current user
 *Volcano::Generated::AuthenticationApi* | [**auth_update_user**](docs/AuthenticationApi.md#auth_update_user) | **PUT** /auth/user | Update user profile
+*Volcano::Generated::AutofixApi* | [**delete_autofix_api_key**](docs/AutofixApi.md#delete_autofix_api_key) | **DELETE** /projects/{id}/autofix/api-key | Delete the API key
+*Volcano::Generated::AutofixApi* | [**get_autofix_settings**](docs/AutofixApi.md#get_autofix_settings) | **GET** /projects/{id}/autofix | Get autofix settings
+*Volcano::Generated::AutofixApi* | [**update_autofix_settings**](docs/AutofixApi.md#update_autofix_settings) | **PUT** /projects/{id}/autofix | Replace autofix settings
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_backup**](docs/DatabaseBackupsApi.md#create_database_backup) | **POST** /projects/{id}/databases/{databaseName}/backups | Back up a database
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_restore**](docs/DatabaseBackupsApi.md#create_database_restore) | **POST** /projects/{id}/databases/{databaseName}/restores | Restore a database
 *Volcano::Generated::DatabaseBackupsApi* | [**delete_database_backup**](docs/DatabaseBackupsApi.md#delete_database_backup) | **DELETE** /projects/{id}/databases/{databaseName}/backups/{backupName} | Delete a backup
@@ -260,6 +263,9 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::GitConnectionsApi* | [**set_project_git_production_branch**](docs/GitConnectionsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
 *Volcano::Generated::GitConnectionsApi* | [**start_git_connect**](docs/GitConnectionsApi.md#start_git_connect) | **POST** /user/git/connect | Start a git provider connection
 *Volcano::Generated::GitConnectionsApi* | [**update_project_git_deploy_settings**](docs/GitConnectionsApi.md#update_project_git_deploy_settings) | **PUT** /projects/{id}/git-deploy-settings | Update a project's Git auto-deploy settings
+*Volcano::Generated::IssuesApi* | [**get_issue**](docs/IssuesApi.md#get_issue) | **GET** /projects/{id}/issues/{issueId} | Get an issue
+*Volcano::Generated::IssuesApi* | [**list_issues**](docs/IssuesApi.md#list_issues) | **GET** /projects/{id}/issues | List issues
+*Volcano::Generated::IssuesApi* | [**update_issue**](docs/IssuesApi.md#update_issue) | **PATCH** /projects/{id}/issues/{issueId} | Update an issue
 *Volcano::Generated::LocksApi* | [**acquire_project_lock**](docs/LocksApi.md#acquire_project_lock) | **POST** /locks/{key}/lease | Acquire a project lock
 *Volcano::Generated::LocksApi* | [**force_release_project_lock**](docs/LocksApi.md#force_release_project_lock) | **DELETE** /locks/{key} | Force release a project lock
 *Volcano::Generated::LocksApi* | [**get_project_lock**](docs/LocksApi.md#get_project_lock) | **GET** /locks/{key} | Read a project lock
@@ -385,6 +391,12 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::SystemApi* | [**head_open_api_spec_json**](docs/SystemApi.md#head_open_api_spec_json) | **HEAD** /openapi.json | Check the JSON OpenAPI specification
 *Volcano::Generated::SystemApi* | [**head_open_api_spec_yaml**](docs/SystemApi.md#head_open_api_spec_yaml) | **HEAD** /openapi.yaml | Check the YAML OpenAPI specification
 *Volcano::Generated::SystemApi* | [**health_check**](docs/SystemApi.md#health_check) | **GET** /health | Health check endpoint
+*Volcano::Generated::SystemApi* | [**list_capabilities**](docs/SystemApi.md#list_capabilities) | **GET** /capabilities | List capabilities
+*Volcano::Generated::VariableEnvironmentsApi* | [**create_variable_environment**](docs/VariableEnvironmentsApi.md#create_variable_environment) | **POST** /projects/{id}/variable-environments | Create a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**delete_variable_environment**](docs/VariableEnvironmentsApi.md#delete_variable_environment) | **DELETE** /projects/{id}/variable-environments/{environmentId} | Delete a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**get_variable_environment**](docs/VariableEnvironmentsApi.md#get_variable_environment) | **GET** /projects/{id}/variable-environments/{environmentId} | Get a variable Environment
+*Volcano::Generated::VariableEnvironmentsApi* | [**list_variable_environments**](docs/VariableEnvironmentsApi.md#list_variable_environments) | **GET** /projects/{id}/variable-environments | List variable Environments
+*Volcano::Generated::VariableEnvironmentsApi* | [**rename_variable_environment**](docs/VariableEnvironmentsApi.md#rename_variable_environment) | **PATCH** /projects/{id}/variable-environments/{environmentId} | Rename a variable Environment
 *Volcano::Generated::VariablesApi* | [**create_variable**](docs/VariablesApi.md#create_variable) | **POST** /projects/{id}/variables | Create or update a variable
 *Volcano::Generated::VariablesApi* | [**delete_variable**](docs/VariablesApi.md#delete_variable) | **DELETE** /projects/{id}/variables/{name} | Delete a variable
 *Volcano::Generated::VariablesApi* | [**get_variable**](docs/VariablesApi.md#get_variable) | **GET** /projects/{id}/variables/{name} | Get variable by name
@@ -453,6 +465,10 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::AuthTokenResponse](docs/AuthTokenResponse.md)
  - [Volcano::Generated::AuthUpdateUserRequest](docs/AuthUpdateUserRequest.md)
  - [Volcano::Generated::AuthUser](docs/AuthUser.md)
+ - [Volcano::Generated::AutofixModel](docs/AutofixModel.md)
+ - [Volcano::Generated::AutofixProvider](docs/AutofixProvider.md)
+ - [Volcano::Generated::AutofixSettings](docs/AutofixSettings.md)
+ - [Volcano::Generated::AutofixStage](docs/AutofixStage.md)
  - [Volcano::Generated::BYOCProjectConfigFrontendCustomDomainTLSConfig](docs/BYOCProjectConfigFrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::BYOCProjectConfigFrontendCustomDomainTLSConfigNot](docs/BYOCProjectConfigFrontendCustomDomainTLSConfigNot.md)
  - [Volcano::Generated::BanAuthUserRequest](docs/BanAuthUserRequest.md)
@@ -466,6 +482,9 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CallMCPRequestId](docs/CallMCPRequestId.md)
  - [Volcano::Generated::CallOAuthProviderAPI200Response](docs/CallOAuthProviderAPI200Response.md)
  - [Volcano::Generated::CallOAuthProviderAPIRequest](docs/CallOAuthProviderAPIRequest.md)
+ - [Volcano::Generated::Capability](docs/Capability.md)
+ - [Volcano::Generated::CapabilityList](docs/CapabilityList.md)
+ - [Volcano::Generated::CapabilityStatus](docs/CapabilityStatus.md)
  - [Volcano::Generated::CompleteUploadSessionResponse](docs/CompleteUploadSessionResponse.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequest](docs/ConfigureAuthMethodsRequest.md)
  - [Volcano::Generated::ConfigureAuthMethodsRequestOauthProvidersInner](docs/ConfigureAuthMethodsRequestOauthProvidersInner.md)
@@ -489,6 +508,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateStoragePolicyRequest](docs/CreateStoragePolicyRequest.md)
  - [Volcano::Generated::CreateUploadSessionRequest](docs/CreateUploadSessionRequest.md)
  - [Volcano::Generated::CreateUploadSessionResponse](docs/CreateUploadSessionResponse.md)
+ - [Volcano::Generated::CreateVariableEnvironmentRequest](docs/CreateVariableEnvironmentRequest.md)
  - [Volcano::Generated::CreateVariableRequest](docs/CreateVariableRequest.md)
  - [Volcano::Generated::CreatedProjectAccessToken](docs/CreatedProjectAccessToken.md)
  - [Volcano::Generated::Database](docs/Database.md)
@@ -596,6 +616,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ImportProvider](docs/ImportProvider.md)
  - [Volcano::Generated::ImportSource](docs/ImportSource.md)
  - [Volcano::Generated::ImportSourcesResponse](docs/ImportSourcesResponse.md)
+ - [Volcano::Generated::Issue](docs/Issue.md)
+ - [Volcano::Generated::IssueStatus](docs/IssueStatus.md)
  - [Volcano::Generated::ListAnonKeys200Response](docs/ListAnonKeys200Response.md)
  - [Volcano::Generated::ListAvailableOAuthProviders200Response](docs/ListAvailableOAuthProviders200Response.md)
  - [Volcano::Generated::ListAvailableOAuthProviders200ResponseProvidersInner](docs/ListAvailableOAuthProviders200ResponseProvidersInner.md)
@@ -636,6 +658,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::PaginatedFrontends](docs/PaginatedFrontends.md)
  - [Volcano::Generated::PaginatedFunctionDeployments](docs/PaginatedFunctionDeployments.md)
  - [Volcano::Generated::PaginatedFunctions](docs/PaginatedFunctions.md)
+ - [Volcano::Generated::PaginatedIssues](docs/PaginatedIssues.md)
  - [Volcano::Generated::PaginatedProjectAccessTokens](docs/PaginatedProjectAccessTokens.md)
  - [Volcano::Generated::PaginatedProjectCustomDomains](docs/PaginatedProjectCustomDomains.md)
  - [Volcano::Generated::PaginatedProjectDeployments](docs/PaginatedProjectDeployments.md)
@@ -673,6 +696,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectConfigAuthSessions](docs/ProjectConfigAuthSessions.md)
  - [Volcano::Generated::ProjectConfigAuthSignup](docs/ProjectConfigAuthSignup.md)
  - [Volcano::Generated::ProjectConfigAuthTokens](docs/ProjectConfigAuthTokens.md)
+ - [Volcano::Generated::ProjectConfigAutofix](docs/ProjectConfigAutofix.md)
  - [Volcano::Generated::ProjectConfigBucket](docs/ProjectConfigBucket.md)
  - [Volcano::Generated::ProjectConfigBucketPolicy](docs/ProjectConfigBucketPolicy.md)
  - [Volcano::Generated::ProjectConfigCustomDomain](docs/ProjectConfigCustomDomain.md)
@@ -755,6 +779,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::RenameVariableEnvironmentRequest](docs/RenameVariableEnvironmentRequest.md)
  - [Volcano::Generated::ReplaceFrontendSharedVariablesRequest](docs/ReplaceFrontendSharedVariablesRequest.md)
  - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
  - [Volcano::Generated::RequestDurableApprovalRequest](docs/RequestDurableApprovalRequest.md)
@@ -803,11 +828,13 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UpdateAuthHostedPageRequest](docs/UpdateAuthHostedPageRequest.md)
  - [Volcano::Generated::UpdateAuthPageLayoutRequest](docs/UpdateAuthPageLayoutRequest.md)
  - [Volcano::Generated::UpdateAuthPageThemeRequest](docs/UpdateAuthPageThemeRequest.md)
+ - [Volcano::Generated::UpdateAutofixSettingsRequest](docs/UpdateAutofixSettingsRequest.md)
  - [Volcano::Generated::UpdateDatabaseBranchRequest](docs/UpdateDatabaseBranchRequest.md)
  - [Volcano::Generated::UpdateDatabaseTypeRequest](docs/UpdateDatabaseTypeRequest.md)
  - [Volcano::Generated::UpdateEmailTemplateRequest](docs/UpdateEmailTemplateRequest.md)
  - [Volcano::Generated::UpdateFunctionRequest](docs/UpdateFunctionRequest.md)
  - [Volcano::Generated::UpdateFunctionSchedulerRequest](docs/UpdateFunctionSchedulerRequest.md)
+ - [Volcano::Generated::UpdateIssueRequest](docs/UpdateIssueRequest.md)
  - [Volcano::Generated::UpdateOAuthConfigRequest](docs/UpdateOAuthConfigRequest.md)
  - [Volcano::Generated::UpdateProjectGitDeploySettingsRequest](docs/UpdateProjectGitDeploySettingsRequest.md)
  - [Volcano::Generated::UpdateProjectRequest](docs/UpdateProjectRequest.md)
@@ -820,6 +847,8 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UploadStorageObject201Response](docs/UploadStorageObject201Response.md)
  - [Volcano::Generated::UsageDataPoint](docs/UsageDataPoint.md)
  - [Volcano::Generated::Variable](docs/Variable.md)
+ - [Volcano::Generated::VariableEnvironment](docs/VariableEnvironment.md)
+ - [Volcano::Generated::VariableEnvironmentList](docs/VariableEnvironmentList.md)
  - [Volcano::Generated::VerifiedDomain](docs/VerifiedDomain.md)
  - [Volcano::Generated::VerifiedDomainsResponse](docs/VerifiedDomainsResponse.md)
  - [Volcano::Generated::VerifyDomainRequest](docs/VerifyDomainRequest.md)

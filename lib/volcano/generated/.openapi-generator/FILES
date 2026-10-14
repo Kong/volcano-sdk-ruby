@@ -13,6 +13,7 @@ lib/volcano-generated/api/anon_keys_api.rb
 lib/volcano-generated/api/auth_admin_api.rb
 lib/volcano-generated/api/auth_configuration_api.rb
 lib/volcano-generated/api/authentication_api.rb
+lib/volcano-generated/api/autofix_api.rb
 lib/volcano-generated/api/database_backups_api.rb
 lib/volcano-generated/api/database_branches_api.rb
 lib/volcano-generated/api/database_queries_api.rb
@@ -21,6 +22,7 @@ lib/volcano-generated/api/durable_functions_api.rb
 lib/volcano-generated/api/frontends_api.rb
 lib/volcano-generated/api/functions_api.rb
 lib/volcano-generated/api/git_connections_api.rb
+lib/volcano-generated/api/issues_api.rb
 lib/volcano-generated/api/locks_api.rb
 lib/volcano-generated/api/logs_api.rb
 lib/volcano-generated/api/o_auth_authentication_api.rb
@@ -99,6 +101,10 @@ lib/volcano-generated/models/auth_signup_response.rb
 lib/volcano-generated/models/auth_token_response.rb
 lib/volcano-generated/models/auth_update_user_request.rb
 lib/volcano-generated/models/auth_user.rb
+lib/volcano-generated/models/autofix_model.rb
+lib/volcano-generated/models/autofix_provider.rb
+lib/volcano-generated/models/autofix_settings.rb
+lib/volcano-generated/models/autofix_stage.rb
 lib/volcano-generated/models/ban_auth_user_request.rb
 lib/volcano-generated/models/ban_user_response.rb
 lib/volcano-generated/models/batch_function_deploy_failure.rb
@@ -256,6 +262,8 @@ lib/volcano-generated/models/import_connections_response.rb
 lib/volcano-generated/models/import_provider.rb
 lib/volcano-generated/models/import_source.rb
 lib/volcano-generated/models/import_sources_response.rb
+lib/volcano-generated/models/issue.rb
+lib/volcano-generated/models/issue_status.rb
 lib/volcano-generated/models/list_anon_keys200_response.rb
 lib/volcano-generated/models/list_available_o_auth_providers200_response.rb
 lib/volcano-generated/models/list_available_o_auth_providers200_response_providers_inner.rb
@@ -297,6 +305,7 @@ lib/volcano-generated/models/paginated_frontend_deployments.rb
 lib/volcano-generated/models/paginated_frontends.rb
 lib/volcano-generated/models/paginated_function_deployments.rb
 lib/volcano-generated/models/paginated_functions.rb
+lib/volcano-generated/models/paginated_issues.rb
 lib/volcano-generated/models/paginated_project_access_tokens.rb
 lib/volcano-generated/models/paginated_project_custom_domains.rb
 lib/volcano-generated/models/paginated_project_deployments.rb
@@ -334,6 +343,7 @@ lib/volcano-generated/models/project_config_auth_redirects.rb
 lib/volcano-generated/models/project_config_auth_sessions.rb
 lib/volcano-generated/models/project_config_auth_signup.rb
 lib/volcano-generated/models/project_config_auth_tokens.rb
+lib/volcano-generated/models/project_config_autofix.rb
 lib/volcano-generated/models/project_config_bucket.rb
 lib/volcano-generated/models/project_config_bucket_policy.rb
 lib/volcano-generated/models/project_config_custom_domain.rb
@@ -468,11 +478,13 @@ lib/volcano-generated/models/update_auth_config_request.rb
 lib/volcano-generated/models/update_auth_hosted_page_request.rb
 lib/volcano-generated/models/update_auth_page_layout_request.rb
 lib/volcano-generated/models/update_auth_page_theme_request.rb
+lib/volcano-generated/models/update_autofix_settings_request.rb
 lib/volcano-generated/models/update_database_branch_request.rb
 lib/volcano-generated/models/update_database_type_request.rb
 lib/volcano-generated/models/update_email_template_request.rb
 lib/volcano-generated/models/update_function_request.rb
 lib/volcano-generated/models/update_function_scheduler_request.rb
+lib/volcano-generated/models/update_issue_request.rb
 lib/volcano-generated/models/update_o_auth_config_request.rb
 lib/volcano-generated/models/update_project_git_deploy_settings_request.rb
 lib/volcano-generated/models/update_project_request.rb

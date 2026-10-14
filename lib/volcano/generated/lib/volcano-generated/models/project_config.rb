@@ -36,6 +36,8 @@ module Volcano::Generated
 
     attr_accessor :realtime
 
+    attr_accessor :autofix
+
     attr_accessor :auth
 
     attr_accessor :functions
@@ -78,6 +80,7 @@ module Volcano::Generated
         :'variables' => :'variables',
         :'buckets' => :'buckets',
         :'realtime' => :'realtime',
+        :'autofix' => :'autofix',
         :'auth' => :'auth',
         :'functions' => :'functions',
         :'frontends' => :'frontends',
@@ -106,6 +109,7 @@ module Volcano::Generated
         :'variables' => :'Array<ProjectConfigVariable>',
         :'buckets' => :'Array<ProjectConfigBucket>',
         :'realtime' => :'ProjectConfigRealtime',
+        :'autofix' => :'ProjectConfigAutofix',
         :'auth' => :'ProjectConfigAuth',
         :'functions' => :'Array<ProjectConfigFunction>',
         :'frontends' => :'Array<ProjectConfigFrontend>',
@@ -177,6 +181,10 @@ module Volcano::Generated
 
       if attributes.key?(:'realtime')
         self.realtime = attributes[:'realtime']
+      end
+
+      if attributes.key?(:'autofix')
+        self.autofix = attributes[:'autofix']
       end
 
       if attributes.key?(:'auth')
@@ -267,6 +275,7 @@ module Volcano::Generated
           variables == o.variables &&
           buckets == o.buckets &&
           realtime == o.realtime &&
+          autofix == o.autofix &&
           auth == o.auth &&
           functions == o.functions &&
           frontends == o.frontends &&
@@ -282,7 +291,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [version, project, databases, shared_variables, frontend_shared_variables, variables, buckets, realtime, auth, functions, frontends, sandboxes].hash
+      [version, project, databases, shared_variables, frontend_shared_variables, variables, buckets, realtime, autofix, auth, functions, frontends, sandboxes].hash
     end
 
     # Builds the object from hash

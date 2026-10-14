@@ -125,3 +125,17 @@ sessions and requires the `sandboxes.terminate` permission. History page limits
 range from 1 to 100. All template management uses backend service credentials.
 
 Custom deployments accept at most 16 unique ports, from 1 through 65532.
+
+## Runtime billing
+
+Confirmed cloud running time is measured using baseline memory times observed
+running duration and consumes the account's Sandbox allowance. Paid overage is
+purchased in 5 GBh blocks at 25 credits per block; unused purchased capacity
+carries forward. Usage is not rounded up to a whole hour per session.
+Suspended and uncertain time are uncharged, snapshot costs are included, and
+burst resources are not billed separately. Local sessions consume no cloud
+allowance or credits.
+
+Plan and allowance refusals use `sandbox_plan_limit_exceeded` and
+`sandbox_allowance_exhausted`. Retrying these errors with a fresh request ID
+does not bypass the plan or account limit.

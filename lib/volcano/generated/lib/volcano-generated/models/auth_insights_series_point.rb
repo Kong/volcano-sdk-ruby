@@ -23,10 +23,19 @@ module Volcano::Generated
     # Successful session creations during the bucket.
     attr_accessor :signins
 
+    # Users registered in this bucket who are currently banned. Excludes deleted users, lifted bans, expired temporary bans, and internal test identities.
+    attr_accessor :banned_users
+
+    # Users registered in this bucket who are now deleted, counted once across soft and hard deletion. Grouped by signup date, not deletion date.
+    attr_accessor :deleted_users
+
+    # Currently available users registered in this bucket (signups minus banned_users minus deleted_users). Unban or expiry restores availability in the original signup bucket. This measures account availability, not return activity.
+    attr_accessor :available_users
+
     # Accounts deleted during this bucket, counted once across soft and hard deletion.
     attr_accessor :deletions
 
-    # Registrations minus deletions during this bucket. May be negative.
+    # Registrations minus deletions during this bucket. May be negative. Bans do not affect this value.
     attr_accessor :net_growth
 
     # Whether the requested window or observation time clips this bucket.
@@ -38,6 +47,9 @@ module Volcano::Generated
         :'bucket_start' => :'bucket_start',
         :'signups' => :'signups',
         :'signins' => :'signins',
+        :'banned_users' => :'banned_users',
+        :'deleted_users' => :'deleted_users',
+        :'available_users' => :'available_users',
         :'deletions' => :'deletions',
         :'net_growth' => :'net_growth',
         :'is_partial' => :'is_partial'
@@ -60,6 +72,9 @@ module Volcano::Generated
         :'bucket_start' => :'Date',
         :'signups' => :'Integer',
         :'signins' => :'Integer',
+        :'banned_users' => :'Integer',
+        :'deleted_users' => :'Integer',
+        :'available_users' => :'Integer',
         :'deletions' => :'Integer',
         :'net_growth' => :'Integer',
         :'is_partial' => :'Boolean'
@@ -106,6 +121,24 @@ module Volcano::Generated
         self.signins = nil
       end
 
+      if attributes.key?(:'banned_users')
+        self.banned_users = attributes[:'banned_users']
+      else
+        self.banned_users = nil
+      end
+
+      if attributes.key?(:'deleted_users')
+        self.deleted_users = attributes[:'deleted_users']
+      else
+        self.deleted_users = nil
+      end
+
+      if attributes.key?(:'available_users')
+        self.available_users = attributes[:'available_users']
+      else
+        self.available_users = nil
+      end
+
       if attributes.key?(:'deletions')
         self.deletions = attributes[:'deletions']
       else
@@ -150,6 +183,30 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "signins", must be greater than or equal to 0.')
       end
 
+      if @banned_users.nil?
+        invalid_properties.push('invalid value for "banned_users", banned_users cannot be nil.')
+      end
+
+      if @banned_users < 0
+        invalid_properties.push('invalid value for "banned_users", must be greater than or equal to 0.')
+      end
+
+      if @deleted_users.nil?
+        invalid_properties.push('invalid value for "deleted_users", deleted_users cannot be nil.')
+      end
+
+      if @deleted_users < 0
+        invalid_properties.push('invalid value for "deleted_users", must be greater than or equal to 0.')
+      end
+
+      if @available_users.nil?
+        invalid_properties.push('invalid value for "available_users", available_users cannot be nil.')
+      end
+
+      if @available_users < 0
+        invalid_properties.push('invalid value for "available_users", must be greater than or equal to 0.')
+      end
+
       if @deletions.nil?
         invalid_properties.push('invalid value for "deletions", deletions cannot be nil.')
       end
@@ -178,6 +235,12 @@ module Volcano::Generated
       return false if @signups < 0
       return false if @signins.nil?
       return false if @signins < 0
+      return false if @banned_users.nil?
+      return false if @banned_users < 0
+      return false if @deleted_users.nil?
+      return false if @deleted_users < 0
+      return false if @available_users.nil?
+      return false if @available_users < 0
       return false if @deletions.nil?
       return false if @deletions < 0
       return false if @net_growth.nil?
@@ -224,6 +287,48 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] banned_users Value to be assigned
+    def banned_users=(banned_users)
+      if banned_users.nil?
+        fail ArgumentError, 'banned_users cannot be nil'
+      end
+
+      if banned_users < 0
+        fail ArgumentError, 'invalid value for "banned_users", must be greater than or equal to 0.'
+      end
+
+      @banned_users = banned_users
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] deleted_users Value to be assigned
+    def deleted_users=(deleted_users)
+      if deleted_users.nil?
+        fail ArgumentError, 'deleted_users cannot be nil'
+      end
+
+      if deleted_users < 0
+        fail ArgumentError, 'invalid value for "deleted_users", must be greater than or equal to 0.'
+      end
+
+      @deleted_users = deleted_users
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] available_users Value to be assigned
+    def available_users=(available_users)
+      if available_users.nil?
+        fail ArgumentError, 'available_users cannot be nil'
+      end
+
+      if available_users < 0
+        fail ArgumentError, 'invalid value for "available_users", must be greater than or equal to 0.'
+      end
+
+      @available_users = available_users
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] deletions Value to be assigned
     def deletions=(deletions)
       if deletions.nil?
@@ -265,6 +370,9 @@ module Volcano::Generated
           bucket_start == o.bucket_start &&
           signups == o.signups &&
           signins == o.signins &&
+          banned_users == o.banned_users &&
+          deleted_users == o.deleted_users &&
+          available_users == o.available_users &&
           deletions == o.deletions &&
           net_growth == o.net_growth &&
           is_partial == o.is_partial
@@ -279,7 +387,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [bucket_start, signups, signins, deletions, net_growth, is_partial].hash
+      [bucket_start, signups, signins, banned_users, deleted_users, available_users, deletions, net_growth, is_partial].hash
     end
 
     # Builds the object from hash

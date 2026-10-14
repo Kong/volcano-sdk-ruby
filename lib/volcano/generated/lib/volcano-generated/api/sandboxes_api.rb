@@ -79,7 +79,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.create_sandbox",
@@ -154,7 +154,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSession'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.create_sandbox_session",
@@ -293,7 +293,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.delete_sandbox",
@@ -478,7 +478,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxExecutionResult'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.execute_sandbox",
@@ -557,7 +557,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxCommandResult'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.execute_sandbox_session",
@@ -624,7 +624,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.get_sandbox",
@@ -934,7 +934,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSession'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.get_sandbox_session",
@@ -1093,7 +1093,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxDeploymentPage'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.list_sandbox_deployments",
@@ -1223,7 +1223,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSessionPage'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.list_sandbox_sessions",
@@ -1298,7 +1298,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxTemplatePage'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.list_sandboxes",
@@ -1370,7 +1370,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxFileResult'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.read_sandbox_session_file",
@@ -1431,7 +1431,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSession'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.resume_sandbox_session",
@@ -1559,7 +1559,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSession'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.suspend_sandbox_session",
@@ -1620,7 +1620,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxSession'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.terminate_sandbox_session",
@@ -1698,7 +1698,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'SandboxTemplate'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.update_sandbox",
@@ -1770,7 +1770,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken']
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"SandboxesApi.write_sandbox_session_file",

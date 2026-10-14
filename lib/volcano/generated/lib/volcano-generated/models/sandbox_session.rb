@@ -19,6 +19,7 @@ module Volcano::Generated
 
     attr_accessor :project_id
 
+    # Explicit template used to create the session. Null when created directly from a preset.
     attr_accessor :sandbox_id
 
     attr_accessor :state
@@ -33,6 +34,7 @@ module Volcano::Generated
 
     attr_accessor :started_at
 
+    # Absolute VM expiry. Null means unlimited in local mode.
     attr_accessor :expires_at
 
     class EnumAttributeValidator
@@ -102,6 +104,8 @@ module Volcano::Generated
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'sandbox_id',
+        :'expires_at'
       ])
     end
 
@@ -193,10 +197,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "project_id", project_id cannot be nil.')
       end
 
-      if @sandbox_id.nil?
-        invalid_properties.push('invalid value for "sandbox_id", sandbox_id cannot be nil.')
-      end
-
       if @state.nil?
         invalid_properties.push('invalid value for "state", state cannot be nil.')
       end
@@ -217,10 +217,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
 
-      if @expires_at.nil?
-        invalid_properties.push('invalid value for "expires_at", expires_at cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -230,7 +226,6 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @id.nil?
       return false if @project_id.nil?
-      return false if @sandbox_id.nil?
       return false if @state.nil?
       state_validator = EnumAttributeValidator.new('String', ["starting", "running", "suspending", "suspended", "resuming", "terminating", "terminated", "unknown"])
       return false unless state_validator.valid?(@state)
@@ -240,7 +235,6 @@ module Volcano::Generated
       return false if @region.nil?
       return false if @memory_mb.nil?
       return false if @created_at.nil?
-      return false if @expires_at.nil?
       true
     end
 
@@ -262,16 +256,6 @@ module Volcano::Generated
       end
 
       @project_id = project_id
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] sandbox_id Value to be assigned
-    def sandbox_id=(sandbox_id)
-      if sandbox_id.nil?
-        fail ArgumentError, 'sandbox_id cannot be nil'
-      end
-
-      @sandbox_id = sandbox_id
     end
 
     # Custom attribute writer method checking allowed values (enum).
@@ -322,16 +306,6 @@ module Volcano::Generated
       end
 
       @created_at = created_at
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] expires_at Value to be assigned
-    def expires_at=(expires_at)
-      if expires_at.nil?
-        fail ArgumentError, 'expires_at cannot be nil'
-      end
-
-      @expires_at = expires_at
     end
 
     # Checks equality by comparing each attribute.

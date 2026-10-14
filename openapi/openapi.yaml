@@ -303,6 +303,7 @@ paths:
       security:
         - UserToken: []
         - ServiceRoleKey: []
+        - ProjectAccessToken: []
       parameters:
         - name: id
           in: path
@@ -407,6 +408,7 @@ paths:
       security:
         - UserToken: []
         - ServiceRoleKey: []
+        - ProjectAccessToken: []
       parameters:
         - name: id
           in: path
@@ -448,6 +450,7 @@ paths:
       security:
         - UserToken: []
         - ServiceRoleKey: []
+        - ProjectAccessToken: []
       parameters:
         - name: id
           in: path
@@ -507,6 +510,7 @@ paths:
       security:
         - UserToken: []
         - ServiceRoleKey: []
+        - ProjectAccessToken: []
       parameters:
         - name: id
           in: path

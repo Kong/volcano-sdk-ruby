@@ -32,6 +32,13 @@ module Volcano
       [message_choice(values['direction'], DIRECTIONS), message_choice(values['status'], STATUSES)]
     end
 
+    # The seq a broadcast says the execution published before it, or 0, naming
+    # no gap, when it has none.
+    def broadcast_prev_seq(payload)
+      prev_seq = message_object(payload, INCOMPLETE_MESSAGE)['prev_seq']
+      prev_seq.is_a?(Integer) ? prev_seq : 0
+    end
+
     def durable_message_page(payload)
       values = message_object(payload, INCOMPLETE_PAGE)
       data = values['data']

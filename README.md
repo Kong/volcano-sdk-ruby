@@ -632,7 +632,9 @@ with the same `idempotency_key` returns the stored message; sending to an
 execution that has ended raises `Volcano::Error::ConflictError` with `code`
 `execution_not_running`. `subscribe` delivers each published message once, in
 `seq` order: those published before the call first, then live ones, and after a
-reconnect the ones it missed. It needs a signed-in session and an Async reactor.
+reconnect or a lost live message the ones it missed. It needs a signed-in
+session and an Async reactor; a client with only a client token or the service
+key raises `Volcano::Error::AuthenticationError`.
 
 The service key reaches every execution. A signed-in user reaches the executions
 they started; the anon key, or another user, passes the execution's

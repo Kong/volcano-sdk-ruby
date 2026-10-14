@@ -121,6 +121,61 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'stops at a page that delivers nothing new', :aggregate_failures do
+    Async do
+      [page(1, has_more: true), page(1, has_more: true), page(2)].each do |next_page|
+        transport.pages.enqueue(next_page)
+      end
+      follow
+
+      expect(received).to eq([1])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads back what a broadcast shows was missed before delivering it', :aggregate_failures do
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      wait_until(task) { transport.lists.size == 2 }
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2, 3))
+      wait_until(task) { received.size == 3 }
+      publish(sockets[0], published(2).merge('prev_seq' => 1))
+      publish(sockets[0], published(4).merge('prev_seq' => 3))
+      publish(sockets[0], published(5).merge('prev_seq' => '9'))
+      publish(sockets[0], published(6).merge('prev_seq' => true))
+      publish(sockets[0], published(7))
+      wait_until(task) { received.size == 7 }
+      expect(received).to eq([1, 2, 3, 4, 5, 6, 7])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'delivers a broadcast that started a catch-up even when the catch-up fails', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      transport.pages.enqueue(unavailable)
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+
+      wait_until(task) { errors.include?('unavailable') }
+      expect(errors).to eq(['unavailable'])
+      expect(received).to eq([1, 3])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'ignores publications that are not messages the execution published' do
     Async do |task|
       transport.pages.enqueue(page)

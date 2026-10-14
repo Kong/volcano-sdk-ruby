@@ -176,6 +176,7 @@ module Volcano
     private def durable_message: (Object? payload) -> DurableMessage
     private def message_labels: (Hash[String, Object?] values) -> [String, String, String]
     private def message_states: (Hash[String, Object?] values) -> [String, String]
+    private def broadcast_prev_seq: (Object? payload) -> Integer
     private def durable_message_page: (Object? payload) -> DurableMessagePage
     private def page_flag: (Object? value) -> bool
     private def message_object: (Object? payload, String message) -> Hash[String, Object?]
@@ -207,6 +208,8 @@ module Volcano
     def catch_up: () -> void
     def close: () -> bool
 
+    private def catch_up_to: (DurableMessage message) -> nil
+    private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
     private def read_missed: () -> void
     private def read_pages: () -> void

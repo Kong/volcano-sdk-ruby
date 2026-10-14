@@ -11,6 +11,8 @@ module Volcano
   #
   # The channel itself drops publications while it is not subscribed, and
   # reports each resubscription, which starts a catch-up of what it dropped.
+  # A broadcast naming a publish not yet delivered starts one too, since the
+  # broadcast before it was lost or has yet to arrive.
   class DurableMessageStream
     include DurableMessageResponses
 
@@ -30,19 +32,13 @@ module Volcano
       message = published(data)
       return unless message
       return hold(message) if !@started || @catch_ups.positive?
+      return catch_up_to(message) if broadcast_prev_seq(data) > @last_seq
 
       deliver(message)
     end
 
-    # A failed catch-up leaves the gap until the next one; live delivery goes on.
     def resubscribed
-      begin_catch_up
-      Async::Task.current.async do
-        read_missed
-      rescue StandardError => e
-        @on_failure.call(e)
-      end
-      nil
+      catch_up_in_background
     end
 
     # Reads what was missed, then releases the held messages. Raises the
@@ -58,6 +54,23 @@ module Volcano
     end
 
     private
+
+    def catch_up_to(message)
+      hold(message)
+      catch_up_in_background
+    end
+
+    # A failed catch-up leaves the gap until the next one; the held messages
+    # are still released and live delivery goes on.
+    def catch_up_in_background
+      begin_catch_up
+      Async::Task.current.async do
+        read_missed
+      rescue StandardError => e
+        @on_failure.call(e)
+      end
+      nil
+    end
 
     # Counted before the read waits its turn, so nothing is delivered live
     # meanwhile.
@@ -80,9 +93,11 @@ module Volcano
 
     def read_pages
       until @closed
-        page = @list_after.call(@last_seq)
+        after = @last_seq
+        page = @list_after.call(after)
         page.messages.each { |message| deliver(message) }
-        return if !page.has_more || page.messages.empty?
+        # A page that delivered nothing would be asked for again unchanged.
+        return if !page.has_more || @last_seq == after
       end
     end
 

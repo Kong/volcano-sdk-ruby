@@ -167,13 +167,14 @@ RSpec.describe Volcano::Client do
         .to raise_error(ArgumentError, 'name must be 1 to 237 printable ASCII characters')
     end
     expect { messages.list('approvals', 'execution-1', name: '') }.to raise_error(ArgumentError, /name must be/)
-    expect { messages.send_message('approvals', 'execution-1', 'decision', idempotency_key: 'k' * 256) }
-      .to raise_error(ArgumentError, 'idempotency_key must be a String of 1 to 255 characters')
-    expect { messages.send_message('approvals', 'execution-1', 'decision', idempotency_key: '') }
-      .to raise_error(ArgumentError, /idempotency_key/)
-    expect { messages.list('approvals', 'execution-1', client_token: 't' * 129) }
-      .to raise_error(ArgumentError, 'client_token must be a String of 1 to 128 characters')
-    expect { messages.list('approvals', 'execution-1', client_token: 7) }.to raise_error(ArgumentError, /client_token/)
+    ['', 'k' * 256, 'confirm-café', "line\nbreak"].each do |key|
+      expect { messages.send_message('approvals', 'execution-1', 'decision', idempotency_key: key) }
+        .to raise_error(ArgumentError, 'idempotency_key must be 1 to 255 printable ASCII characters')
+    end
+    ['t' * 129, 'tök', 7].each do |token|
+      expect { messages.list('approvals', 'execution-1', client_token: token) }
+        .to raise_error(ArgumentError, 'client_token must be 1 to 128 printable ASCII characters')
+    end
     expect(calls).to be_empty
   end
 

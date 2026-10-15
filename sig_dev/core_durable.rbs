@@ -156,6 +156,7 @@ module Volcano
 
   module DurableMessageArguments : Object
     MESSAGE_NAME: Regexp
+    HEADER_VALUE: Regexp
     MAX_IDEMPOTENCY_KEY_LENGTH: Integer
     MAX_CLIENT_TOKEN_LENGTH: Integer
     MAX_LIST_LIMIT: Integer

@@ -29,6 +29,8 @@ module Volcano
           dispatch_presence(push, 'join')
         elsif push.key?('leave')
           dispatch_presence(push, 'leave')
+        elsif push.key?('disconnect')
+          close_with(ClosedError.from_disconnect(push.fetch('disconnect')), notify_error: true)
         end
       end
 

@@ -63,10 +63,10 @@ module Volcano
     # Sends a message to a running execution, queued until a wait for its
     # +name+ takes it. +data+ is any JSON value. The returned message's
     # +status+ is +delivered+ when a wait took it at once, and +queued+
-    # otherwise. Sending again with an +idempotency_key:+ the execution has
-    # seen returns the message the first send stored, in its current status,
-    # and sends nothing. Sending to an execution that has ended raises
-    # Error::ConflictError, whose +code+ is +execution_not_running+.
+    # otherwise. Sending again with an +idempotency_key:+ the same sender has
+    # used on the execution returns the message the first send stored, in its
+    # current status, and sends nothing. Sending to an execution that has ended
+    # raises Error::ConflictError, whose +code+ is +execution_not_running+.
     def send_message(function_name, execution_id, name, data = nil, **options)
       target = message_target(function_name, execution_id, known_options(options, SEND_OPTIONS))
       name = message_name(name)

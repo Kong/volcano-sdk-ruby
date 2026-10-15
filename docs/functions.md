@@ -129,7 +129,7 @@ Async do
 end
 ```
 
-`send_message` queues the message until a wait for its name takes it, and returns the stored `DurableMessage`: its `status` is `delivered` when a wait took it at once, and `queued` otherwise. A name is 1 to 237 printable ASCII characters; `data` is any JSON value up to 64 KiB. Sending again with an `idempotency_key` the execution has seen returns the stored message in its current status and sends nothing. Sending to an execution that has ended raises `Volcano::Error::ConflictError` with `code` `execution_not_running`.
+`send_message` queues the message until a wait for its name takes it, and returns the stored `DurableMessage`: its `status` is `delivered` when a wait took it at once, and `queued` otherwise. A name is 1 to 237 printable ASCII characters; `data` is any JSON value up to 64 KiB. Sending again with an `idempotency_key` the same sender has used on the execution returns the stored message in its current status and sends nothing; another sender's keys never collide with it. Sending to an execution that has ended raises `Volcano::Error::ConflictError` with `code` `execution_not_running`.
 
 `list` returns both directions, oldest first, filtered by `direction` (`in` or `out`), `name`, `after` (a `seq`), and `limit` (1 to 500, default 100). `seq` orders an execution's messages but can skip numbers, so read the next page with `after` set to the last message's `seq` while `has_more` is true.
 

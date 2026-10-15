@@ -117,6 +117,12 @@ module Volcano
       def report_channel_error: (StandardError error) -> void
     end
 
+    interface _DurableFollower
+      def resubscribed: () -> nil
+      def dropped: () -> nil
+      def close: () -> nil
+    end
+
     interface _CoreDependencies
       def initialize_postgres_database: () -> void
       def connect_protocol: () -> Protocol
@@ -169,7 +175,7 @@ module Volcano
                     | (:capture_protocol_session method_name) -> [Integer, SessionOperations, Session]
                     | (:capture_session_binding method_name) -> session_binding
                     | (:database_name method_name) -> String?
-                    | (:durable_channel method_name, String execution_id, String? client_token, ^() -> void resubscribed) -> Channel?
+                    | (:durable_channel method_name, String execution_id, String? client_token, _DurableFollower follower) -> Channel?
                     | (:remove_durable_channel method_name, Channel channel) -> nil
 
       private
@@ -182,7 +188,7 @@ module Volcano
 
       def build_channel: (String name, Symbol type, PostgresBatchConfig batch_config) -> Channel
 
-      def durable_channel: (String execution_id, String? client_token, ^() -> void resubscribed) -> Channel?
+      def durable_channel: (String execution_id, String? client_token, _DurableFollower follower) -> Channel?
 
       def protocol_lock: () -> Async::Semaphore
 
@@ -214,7 +220,7 @@ module Volcano
 
       @subscribe_data: Hash[String, String]?
 
-      @resubscribed: (^() -> void)?
+      @follower: _DurableFollower?
 
       include PostgresChanges
 
@@ -246,7 +252,9 @@ module Volcano
 
       def remove: () -> nil
 
-      def follow_durable: (Hash[String, String]? data, ^() -> void resubscribed) -> (^() -> void)
+      def follow_durable: (Hash[String, String]? data, _DurableFollower follower) -> _DurableFollower
+
+      def publication_rejection: (Protocol protocol, Integer generation) -> (^(Object?) -> void)?
 
       def subscribe_with_intent: () -> [Protocol, Integer]
 

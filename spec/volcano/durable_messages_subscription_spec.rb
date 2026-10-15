@@ -158,7 +158,8 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
-  it 'delivers a broadcast that started a catch-up even when the catch-up fails', :aggregate_failures do
+  it 'holds a broadcast after a gap until a retry reads what it missed', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
     errors = []
     client.realtime.on_error { |context| errors << context.message }
 
@@ -167,13 +168,183 @@ RSpec.describe Volcano::DurableMessages do
       follow
       transport.pages.enqueue(unavailable)
       publish(sockets[0], published(3).merge('prev_seq' => 2))
-
+      publish(sockets[0], published(4).merge('prev_seq' => 3))
       wait_until(task) { errors.include?('unavailable') }
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2, 3))
+      wait_until(task) { received.size == 4 }
+      expect(received).to eq([1, 2, 3, 4])
       expect(errors).to eq(['unavailable'])
-      expect(received).to eq([1, 3])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1, 1])
     ensure
       client.realtime.disconnect
     end.wait
+  end
+
+  it 'holds a broadcast without prev_seq while another waits behind a gap', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.05)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      transport.pages.enqueue(unavailable)
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      wait_until(task) { errors.include?('unavailable') }
+      publish(sockets[0], published(4))
+      task.sleep(0.01)
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2, 3, 4))
+      wait_until(task) { received.size == 4 }
+      expect(received).to eq([1, 2, 3, 4])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'releases what follows on from a failed read and holds the rest', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 60)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      lose_connection(task, from: sockets[0], to: sockets[1])
+      publish(sockets[1], published(2).merge('prev_seq' => 1))
+      publish(sockets[1], published(4).merge('prev_seq' => 3))
+      task.sleep(0.01)
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(unavailable)
+      wait_until(task) { errors.include?('unavailable') }
+      expect(received).to eq([1, 2])
+      expect(errors).to eq(['socket failed', 'unavailable'])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads again when a read stops short of what a held broadcast follows', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
+
+    Async do |task|
+      subscribing = task.async { follow }
+      wait_until(task) { transport.lists.any? }
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      task.sleep(0.01)
+      transport.pages.enqueue(page(1))
+      subscribing.wait
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2, 3))
+      wait_until(task) { received.size == 3 }
+      expect(received).to eq([1, 2, 3])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'drops a waiting retry once a reconnect catches up', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.2)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      transport.pages.enqueue(unavailable)
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      wait_until(task) { errors.include?('unavailable') }
+      lose_connection(task, from: sockets[0], to: sockets[1])
+      transport.pages.enqueue(page(2, 3))
+      wait_until(task) { received.size == 3 }
+      task.sleep(0.4)
+
+      expect(received).to eq([1, 2, 3])
+      expect(transport.lists.size).to eq(3)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'resumes after the message a handler raised on in a later read', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow do |message|
+        received << message.seq
+        raise 'handler failed' if message.seq == 2
+      end
+      transport.pages.enqueue(page(2, 3, 4))
+      publish(sockets[0], published(5).merge('prev_seq' => 4))
+      wait_until(task) { errors.include?('handler failed') }
+      transport.pages.enqueue(page(3, 4, 5))
+      wait_until(task) { received.size == 5 }
+
+      expect(received).to eq([1, 2, 3, 4, 5])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1, 2])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads back a message the connection had no room for', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    entered = Async::Queue.new
+    resume = Async::Queue.new
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow do |message|
+        received << message.seq
+        next unless message.seq == 2
+
+        entered.enqueue(true)
+        resume.dequeue
+      end
+      publish(sockets[0], published(2).merge('prev_seq' => 1))
+      task.with_timeout(0.5) { entered.dequeue }
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      publish(sockets[0], published(4).merge('prev_seq' => 3))
+      wait_until(task) { transport.lists.size == 2 }
+      resume.enqueue(true)
+      task.sleep(0.01)
+
+      expect(received).to eq([1, 2])
+      transport.pages.enqueue(page(3, 4))
+      wait_until(task) { received.size == 4 }
+      expect(received).to eq([1, 2, 3, 4])
+      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 2)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  %i[remove_all_channels disconnect].each do |ending|
+    it "delivers nothing a pending read returns once #{ending} ends the subscription", :aggregate_failures do
+      Async do |task|
+        transport.pages.enqueue(page(1))
+        follow
+        publish(sockets[0], published(3).merge('prev_seq' => 2))
+        wait_until(task) { transport.lists.size == 2 }
+        client.realtime.public_send(ending)
+        transport.pages.enqueue(page(2, 3))
+        task.sleep(0.01)
+
+        expect(received).to eq([1])
+        expect(transport.lists.size).to eq(2)
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
   end
 
   it 'ignores publications that are not messages the execution published' do

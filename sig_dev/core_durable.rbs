@@ -194,30 +194,68 @@ module Volcano
 
     @handler: ^(DurableMessage) -> void
     @list_after: ^(Integer) -> DurableMessagePage
-    @on_failure: ^(StandardError) -> void
+    class Held < Data
+      attr_reader message: DurableMessage
+      attr_reader prev_seq: Integer
+
+      def self.new: (message: DurableMessage, prev_seq: Integer) -> Held
+    end
+
     @last_seq: Integer
     @catch_ups: Integer
     @started: bool
     @closed: bool
-    @held: Array[DurableMessage]
+    @held: Array[Held]
     @reads: Async::Semaphore?
+    @background: DurableMessageCatchUps
 
     def initialize: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> void
     def live: (Object? data) -> nil
     def resubscribed: () -> nil
+    def dropped: () -> nil
     def catch_up: () -> void
-    def close: () -> bool
+    def close: () -> nil
 
-    private def catch_up_to: (DurableMessage message) -> nil
+    private def behind?: () -> bool
+    private def catch_up_to: (Held held) -> nil
     private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
     private def read_missed: () -> void
     private def read_pages: () -> void
-    private def release: () -> void
-    private def hold: (DurableMessage message) -> nil
+    private def release: (bool read) -> void
+    private def following_on: () -> Held?
+    private def hold: (Held held) -> nil
     private def deliver: (DurableMessage message) -> nil
-    private def published: (Object? data) -> DurableMessage?
+    private def published: (Object? data) -> Held?
     private def reads: () -> Async::Semaphore
+  end
+
+  class DurableMessageCatchUps
+    FIRST_RETRY_SECONDS: Float
+    MAX_RETRY_SECONDS: Float
+
+    @read: ^() -> void
+    @due: ^() -> void
+    @on_failure: ^(StandardError) -> void
+    @requested: Integer
+    @backoff: Float
+    @retry_delay: Float?
+    @task: Async::Task?
+    @wake: Async::Notification?
+    @closed: bool
+
+    def initialize: (^() -> void read, ^() -> void due, ^(StandardError) -> void on_failure) -> void
+    def start: () -> nil
+    def request: () -> nil
+    def retry_later: () -> nil
+    def cancel_retry: () -> nil
+    def caught_up: () -> Float
+    def close: () -> nil
+
+    private def work: () -> void
+    private def read: () -> void
+    private def await_request: () -> void
+    private def wake: () -> Async::Notification
   end
 
   class DurableMessageSubscription

@@ -6,86 +6,93 @@ module Volcano
   #
   # A live message can only be delivered once everything before it has been
   # listed, or the missed ones would fall below the last delivered `seq` and be
-  # skipped. So live messages are held until the first catch-up starts, and
-  # while any catch-up is reading, then released in order.
+  # skipped. So live messages are held until the first catch-up starts, while
+  # any catch-up is reading, and while any held message still follows a gap.
+  # A held message is released only once the message its broadcast names as
+  # the one before it has been delivered.
   #
   # The channel itself drops publications while it is not subscribed, and
   # reports each resubscription, which starts a catch-up of what it dropped.
   # A broadcast naming a publish not yet delivered starts one too, since the
-  # broadcast before it was lost or has yet to arrive.
+  # broadcast before it was lost or has yet to arrive, and so does a
+  # publication the connection had no room for.
   class DurableMessageStream
     include DurableMessageResponses
+
+    Held = Data.define(:message, :prev_seq)
+    private_constant :Held
 
     # +list_after+ reads the page of published messages after a `seq`, and
     # +on_failure+ hears about a catch-up that failed in the background.
     def initialize(handler, list_after, on_failure)
       @handler = handler
       @list_after = list_after
-      @on_failure = on_failure
       @last_seq = @catch_ups = 0
       @started = @closed = false
       @held = []
       @reads = nil
+      @background = DurableMessageCatchUps.new(-> { read_missed }, -> { catch_up_in_background }, on_failure)
     end
 
     def live(data)
-      message = published(data)
-      return unless message
-      return hold(message) if !@started || @catch_ups.positive?
-      return catch_up_to(message) if broadcast_prev_seq(data) > @last_seq
+      held = published(data)
+      return unless held
+      return hold(held) if behind?
+      return catch_up_to(held) if held.prev_seq > @last_seq
 
-      deliver(message)
+      deliver(held.message)
     end
 
-    def resubscribed
-      catch_up_in_background
-    end
+    def resubscribed = catch_up_in_background
+
+    def dropped = catch_up_in_background
 
     # Reads what was missed, then releases the held messages. Raises the
-    # list's or the handler's error.
+    # list's or the handler's error. Call it from the task that subscribes,
+    # which the catch-ups the stream starts itself run under.
     def catch_up
       begin_catch_up
+      @background.start
       read_missed
     end
 
     # Not stopped: the handler a catch-up is running may be what closed it.
     def close
       @closed = true
+      @background.close
     end
 
     private
 
-    def catch_up_to(message)
-      hold(message)
+    def behind? = !@started || @catch_ups.positive? || !@held.empty?
+
+    def catch_up_to(held)
+      hold(held)
       catch_up_in_background
     end
 
-    # A failed catch-up leaves the gap until the next one; the held messages
-    # are still released and live delivery goes on.
     def catch_up_in_background
       begin_catch_up
-      Async::Task.current.async do
-        read_missed
-      rescue StandardError => e
-        @on_failure.call(e)
-      end
-      nil
+      @background.request
     end
 
     # Counted before the read waits its turn, so nothing is delivered live
-    # meanwhile.
+    # meanwhile. A catch-up replaces the retry that was waiting.
     def begin_catch_up
       @started = true
+      @background.cancel_retry
       @catch_ups += 1
     end
 
     def read_missed
+      read = false
       reads.acquire do
         read_pages
+        read = true
       ensure
         # Released by the last catch-up only, and while still counted, so a
         # live message that arrives meanwhile is held behind the released ones.
-        release if @catch_ups == 1
+        release(read) if @catch_ups == 1
       end
     ensure
       @catch_ups -= 1
@@ -101,16 +108,24 @@ module Volcano
       end
     end
 
-    def release
-      until @held.empty?
-        held = @held.sort_by(&:seq)
-        @held = []
-        held.each { |message| deliver(message) }
+    # Delivers the held messages that follow on from the last one delivered,
+    # and retries the read while any is left behind a gap or the read failed.
+    def release(read)
+      while (held = following_on)
+        @held.delete(held)
+        deliver(held.message)
       end
+    ensure
+      read && @held.empty? ? @background.caught_up : @background.retry_later
     end
 
-    def hold(message)
-      @held << message
+    def following_on
+      held = @held.min_by { |candidate| candidate.message.seq }
+      held if held && held.prev_seq <= @last_seq
+    end
+
+    def hold(held)
+      @held << held
       nil
     end
 
@@ -124,7 +139,7 @@ module Volcano
 
     def published(data)
       message = durable_message(data)
-      message if message.direction == 'out'
+      Held.new(message:, prev_seq: broadcast_prev_seq(data)) if message.direction == 'out'
     rescue TypeError
       nil
     end

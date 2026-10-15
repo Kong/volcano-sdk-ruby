@@ -166,14 +166,14 @@ module Volcano
 
       # Opens the channel an execution publishes its messages on, or answers
       # nil when this client already follows the execution.
-      def durable_channel(execution_id, client_token, resubscribed)
+      def durable_channel(execution_id, client_token, follower)
         channel_lock.acquire do
           ensure_open!
           name = "durable:#{execution_id}"
           next if @channels.key?(name)
 
           channel = build_channel(name, :durable, UNBATCHED)
-          channel.__send__(:follow_durable, client_token && { 'client_token' => client_token }, resubscribed)
+          channel.__send__(:follow_durable, client_token && { 'client_token' => client_token }, follower)
           @channels[name] = channel
         end
       end
@@ -211,7 +211,7 @@ module Volcano
         @protocol_provider = protocol_provider
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
-        @lifecycle_lock = @subscribe_data = @resubscribed = nil
+        @lifecycle_lock = @subscribe_data = @follower = nil
         initialize_recovery_state
         initialize_callback_dispatch
         initialize_presence(type)
@@ -254,7 +254,7 @@ module Volcano
 
         subscribed_protocol, epoch = state
         sync_presence(subscribed_protocol, epoch)
-        @resubscribed&.call
+        @follower&.resubscribed
         nil
       end
 
@@ -265,18 +265,27 @@ module Volcano
           clear_broadcast_recovery_state
           clear_channel_recovery_state
           mark_removed
+          @follower&.close
         end
         nil
       end
       private :remove
 
       # +data+ goes with every subscribe, including the ones a reconnect
-      # restores, and +resubscribed+ is called after each of those.
-      def follow_durable(data, resubscribed)
+      # restores. +follower+ hears each of those restores and each publication
+      # the connection dropped, and is closed with the channel.
+      def follow_durable(data, follower)
         @subscribe_data = data
-        @resubscribed = resubscribed
+        @follower = follower
       end
       private :follow_durable
+
+      # A durable channel's follower reads back what the connection dropped.
+      def publication_rejection(protocol, generation)
+        follower = @follower
+        follower ? ->(_publication) { follower.dropped } : super
+      end
+      private :publication_rejection
 
       private
 

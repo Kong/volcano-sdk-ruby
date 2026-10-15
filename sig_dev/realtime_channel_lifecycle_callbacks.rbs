@@ -31,6 +31,7 @@ module Volcano
       @publication_handler: (^(Object?, Object?, Object?, recovered: bool) -> void)?
       @callbacks: Hash[String, Array[^(Object?) -> void]]
       @subscribe_data: Hash[String, String]?
+      @follower: _DurableFollower?
 
       def mark_closed: () -> void
       def protocol_lost: (Protocol protocol) -> void

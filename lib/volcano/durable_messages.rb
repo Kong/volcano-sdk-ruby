@@ -45,10 +45,12 @@ module Volcano
     end
 
     # Sends a message to a running execution, queued until a wait for its
-    # +name+ takes it. +data+ is any JSON value. Sending again with an
-    # +idempotency_key:+ the execution has seen returns the message the first
-    # send stored and sends nothing. Sending to an execution that has ended
-    # raises Error::ConflictError, whose +code+ is +execution_not_running+.
+    # +name+ takes it. +data+ is any JSON value. The returned message's
+    # +status+ is +delivered+ when a wait took it at once, and +queued+
+    # otherwise. Sending again with an +idempotency_key:+ the execution has
+    # seen returns the message the first send stored, in its current status,
+    # and sends nothing. Sending to an execution that has ended raises
+    # Error::ConflictError, whose +code+ is +execution_not_running+.
     def send_message(function_name, execution_id, name, data = nil, **options)
       target = message_target(function_name, execution_id, known_options(options, SEND_OPTIONS))
       name = message_name(name)
@@ -82,9 +84,11 @@ module Volcano
     #
     # Follows the execution on the client's realtime connection, so call it
     # inside that connection's Async reactor, with a signed-in session. A
-    # catch-up that fails after a reconnect is reported to Realtime#on_error.
-    # Raises Realtime::DuplicateSubscriptionError when this client already
-    # follows the execution.
+    # catch-up that fails in the background is reported to Realtime#on_error
+    # and retried, backing off to every 30 seconds. Realtime#remove_all_channels
+    # and Realtime#disconnect end the subscription. Raises
+    # Realtime::DuplicateSubscriptionError when this client already follows the
+    # execution.
     def subscribe(function_name, execution_id, client_token: nil, project_id: nil, &handler)
       raise ArgumentError, 'subscribe requires a block' unless handler
 
@@ -96,7 +100,7 @@ module Volcano
     private
 
     def durable_channel(target, stream)
-      @realtime.__send__(:durable_channel, target.execution_id, target.client_token, -> { stream.resubscribed }) ||
+      @realtime.__send__(:durable_channel, target.execution_id, target.client_token, stream) ||
         raise(Realtime::DuplicateSubscriptionError, 'already subscribed to this execution; unsubscribe first')
     end
 

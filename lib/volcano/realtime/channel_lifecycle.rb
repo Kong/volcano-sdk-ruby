@@ -10,6 +10,7 @@ module Volcano
       def mark_closed
         @closed = true
         @subscription_desired = @subscribed = false
+        @follower&.close
         end_postgres_delivery
         reset_presence
       end

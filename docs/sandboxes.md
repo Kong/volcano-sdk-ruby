@@ -34,6 +34,8 @@ when supplied by the server.
 
 ## Keep a session
 
+`session.expires_at` is the time the session ends, or `nil` when it has no lifetime limit (a local-mode session), so check for `nil` before using it as a time.
+
 ```ruby
 client.sandboxes.create(
   project_id, region: 'us-east-1', preset: 'python3.12', max_duration_seconds: 300

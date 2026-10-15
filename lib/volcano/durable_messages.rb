@@ -5,9 +5,10 @@ module Volcano
   # until #unsubscribe.
   class DurableMessageSubscription
     # Subscribes +channel+ and delivers what was published so far. Leaves the
-    # channel if that fails, or the task running it is stopped.
-    def self.open(stream, channel, realtime)
-      subscription = new(stream, channel, realtime)
+    # channel if that fails, or the task running it is stopped. +session+ can
+    # end the subscription from the first read on.
+    def self.open(session, stream, channel, realtime)
+      subscription = session.end_with(new(stream, channel, realtime))
       finished = false
       begin
         channel.subscribe
@@ -117,13 +118,13 @@ module Volcano
       target = message_target(function_name, execution_id, { client_token: client_token, project_id: project_id })
       session = DurableMessageSession.new(@realtime)
       stream = session.stream(handler, reader(target), failure_reporter)
-      session.end_with(DurableMessageSubscription.open(stream, durable_channel(target, stream), @realtime))
+      DurableMessageSubscription.open(session, stream, durable_channel(target, session), @realtime)
     end
 
     private
 
-    def durable_channel(target, stream)
-      @realtime.__send__(:durable_channel, target.execution_id, target.client_token, stream) ||
+    def durable_channel(target, session)
+      @realtime.__send__(:durable_channel, target.execution_id, target.client_token, session) ||
         raise(Realtime::DuplicateSubscriptionError, 'already subscribed to this execution; unsubscribe first')
     end
 

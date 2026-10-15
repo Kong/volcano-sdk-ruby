@@ -9,8 +9,9 @@ module Volcano
       private
 
       # +data+ goes with every subscribe, including the ones a reconnect
-      # restores. +follower+ hears each of those restores and each publication
-      # the connection dropped, and is closed with the channel.
+      # restores. +follower+ is asked before each of those restores, hears each
+      # one and each publication the connection dropped, and is closed with the
+      # channel.
       def follow_durable(data, follower)
         @subscribe_data = data
         @follower = follower

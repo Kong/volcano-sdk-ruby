@@ -120,6 +120,7 @@ module Volcano
     end
 
     interface _DurableFollower
+      def restoring: () -> void
       def resubscribed: () -> nil
       def dropped: () -> nil
       def close: () -> nil
@@ -260,6 +261,7 @@ module Volcano
       def remove: () -> nil
 
       def subscribe_with_intent: () -> [Protocol, Integer]
+      def ask_follower_to_restore: () -> void
 
       def initialize_recovery_state: () -> void
 

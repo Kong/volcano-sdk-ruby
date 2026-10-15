@@ -58,6 +58,20 @@ RSpec.describe Volcano::DurableMessages do
     wait_until(task) { commands(to, 'subscribe').any? && transport.lists.size > count }
   end
 
+  # Holds the connection's callback task in a room's callback until +resume+
+  # is given a value, so the publications after the next one find no room.
+  def block_callbacks(task, resume)
+    entered = Async::Queue.new
+    room = client.realtime.channel('room')
+    room.on('message') do
+      entered.enqueue(true)
+      resume.dequeue
+    end
+    room.subscribe
+    sockets[0].publication(channel: room.name, data: { 'event' => 'message' })
+    task.with_timeout(0.5) { entered.dequeue }
+  end
+
   it 'delivers what was published before it subscribed, then live messages, once each', :aggregate_failures do
     Async do |task|
       transport.pages.enqueue(page(1, 2))
@@ -326,38 +340,28 @@ RSpec.describe Volcano::DurableMessages do
 
   it 'reads back a message the connection had no room for', :aggregate_failures do
     stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
-    entered = Async::Queue.new
     resume = Async::Queue.new
 
     Async do |task|
       transport.pages.enqueue(page(1))
-      follow do |message|
-        received << message.seq
-        next unless message.seq == 2
-
-        entered.enqueue(true)
-        resume.dequeue
-      end
-      publish(sockets[0], published(2).merge('prev_seq' => 1))
-      task.with_timeout(0.5) { entered.dequeue }
-      publish(sockets[0], published(3).merge('prev_seq' => 2))
-      publish(sockets[0], published(4).merge('prev_seq' => 3))
+      follow
+      block_callbacks(task, resume)
+      (2..4).each { |seq| publish(sockets[0], published(seq).merge('prev_seq' => seq - 1)) }
       wait_until(task) { transport.lists.size == 2 }
-      resume.enqueue(true)
-      task.sleep(0.01)
 
-      expect(received).to eq([1, 2])
-      transport.pages.enqueue(page(3, 4))
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2, 3, 4))
       wait_until(task) { received.size == 4 }
       expect(received).to eq([1, 2, 3, 4])
-      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 2)
+      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 1)
     ensure
+      resume.enqueue(true)
       client.realtime.disconnect
     end.wait
   end
 
-  it 'calls the block for a read only once its call on a live message returns', :aggregate_failures do
-    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+  it 'lets the block finish a live message when the connection drops, then reads back after it',
+     :aggregate_failures do
     calls = []
     entered = Async::Queue.new
     resume = Async::Queue.new
@@ -374,23 +378,23 @@ RSpec.describe Volcano::DurableMessages do
       end
       publish(sockets[0], published(2).merge('prev_seq' => 1))
       task.with_timeout(0.5) { entered.dequeue }
-      publish(sockets[0], published(3).merge('prev_seq' => 2))
-      publish(sockets[0], published(4).merge('prev_seq' => 3))
-      transport.pages.enqueue(page(3, 4))
-      wait_until(task) { transport.lists.size == 2 }
+      sockets[0].fail_read(IOError.new('socket failed'))
+      wait_until(task) { commands(sockets[1], 'subscribe').any? }
+      transport.pages.enqueue(page(2, 3))
       task.sleep(0.01)
 
       expect(calls).to eq([[:start, 1], [:end, 1], [:start, 2]])
+      expect(transport.lists.size).to eq(1)
       resume.enqueue(true)
-      wait_until(task) { calls.size == 8 }
-      expect(calls.drop(2)).to eq([[:start, 2], [:end, 2], [:start, 3], [:end, 3], [:start, 4], [:end, 4]])
+      wait_until(task) { calls.size == 6 }
+      expect(calls.drop(2)).to eq([[:start, 2], [:end, 2], [:start, 3], [:end, 3]])
+      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 2)
     ensure
       client.realtime.disconnect
     end.wait
   end
 
-  it 'reads once for a burst of publications the connection had no room for' do
-    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+  it 'reads back a gap a live message left while the block ran, once the block returns', :aggregate_failures do
     entered = Async::Queue.new
     resume = Async::Queue.new
 
@@ -405,16 +409,40 @@ RSpec.describe Volcano::DurableMessages do
       end
       publish(sockets[0], published(2).merge('prev_seq' => 1))
       task.with_timeout(0.5) { entered.dequeue }
-      (3..8).each { |seq| publish(sockets[0], published(seq).merge('prev_seq' => seq - 1)) }
-      wait_until(task) { transport.lists.size == 2 }
-      transport.pages.enqueue(page(3, 4, 5, 6, 7, 8))
-      transport.pages.enqueue(page)
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      publish(sockets[0], published(5).merge('prev_seq' => 4))
+      task.sleep(0.01)
+
+      expect(transport.lists.size).to eq(1)
+      transport.pages.enqueue(page(4, 5))
       resume.enqueue(true)
+      wait_until(task) { received.size == 5 }
+      expect(received).to eq([1, 2, 3, 4, 5])
+      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 3)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads once for a burst of publications the connection had no room for' do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    resume = Async::Queue.new
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      block_callbacks(task, resume)
+      (2..8).each { |seq| publish(sockets[0], published(seq).merge('prev_seq' => seq - 1)) }
+      wait_until(task) { transport.lists.size == 2 }
+      task.sleep(0.01)
+      transport.pages.enqueue(page(2, 3, 4, 5, 6, 7, 8))
+      transport.pages.enqueue(page)
       wait_until(task) { received.size == 8 }
       task.sleep(0.05)
 
       expect(transport.lists.size).to be <= 3
     ensure
+      resume.enqueue(true)
       client.realtime.disconnect
     end.wait
   end
@@ -564,16 +592,70 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
-  it 'fails subscribing when the session changes during the first read', :aggregate_failures do
+  { 'a message' => [1], 'nothing' => [] }.each do |read, seqs|
+    it "fails subscribing when the session changes during a first read of #{read}", :aggregate_failures do
+      Async do |task|
+        subscribing = task.async { follow }
+        wait_until(task) { transport.lists.any? }
+        client.store_session(other_session)
+        transport.pages.enqueue(page(*seqs))
+
+        expect { subscribing.wait }.to raise_error(Volcano::Error::SessionChangedError, /session that subscribed/)
+        expect(received).to be_empty
+        expect(commands(sockets[0], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
+  end
+
+  it 'fails subscribing when the session changes before a catch-up asked for during the first read',
+     :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
     Async do |task|
-      subscribing = task.async { follow }
+      subscribing = task.async do
+        follow do |message|
+          received << message.seq
+          client.store_session(other_session)
+        end
+      end
       wait_until(task) { transport.lists.any? }
-      client.store_session(other_session)
+      sockets[0].fail_read(IOError.new('socket failed'))
+      wait_until(task) { commands(sockets[1], 'subscribe').any? }
       transport.pages.enqueue(page(1))
 
-      expect { subscribing.wait }.to raise_error(Volcano::Error::SessionChangedError, /session that subscribed/)
-      expect(received).to be_empty
-      expect(commands(sockets[0], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+      expect { subscribing.wait }
+        .to raise_error(Volcano::Realtime::ClosedError, 'the durable message subscription has ended')
+      expect(received).to eq([1])
+      expect(errors).to contain_exactly('socket failed', /session that subscribed/)
+      expect(commands(sockets[1], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+      expect(transport.lists.size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'ends the subscription rather than restore it on a connection under another session', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page)
+      follow
+      client.store_session(other_session)
+      sockets[0].fail_read(IOError.new('socket failed'))
+      wait_until(task) { errors.size == 2 }
+      task.sleep(0.01)
+
+      expect(errors).to contain_exactly('socket failed', /session that subscribed/)
+      expect(commands(sockets[1], 'subscribe')).to be_empty
+      expect(transport.lists.size).to eq(1)
+      transport.pages.enqueue(page(2))
+      follow
+      expect(received).to eq([2])
+      expect(commands(sockets[1], 'subscribe').size).to eq(1)
     ensure
       client.realtime.disconnect
     end.wait

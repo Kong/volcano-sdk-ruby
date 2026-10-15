@@ -251,6 +251,7 @@ module Volcano
       def restoration_needed? = subscription_desired? && !@subscribed
 
       def restore_subscription(protocol)
+        ask_follower_to_restore
         state = with_lifecycle_lock do
           restoration_needed? ? subscribe_protocol(protocol) : nil
         end
@@ -294,6 +295,11 @@ module Volcano
       rescue StandardError
         @subscription_desired = false unless protocol && !protocol.connected?
         raise
+      end
+
+      # Outside the lifecycle lock: a follower that refuses may leave the channel.
+      def ask_follower_to_restore
+        @follower&.restoring if restoration_needed?
       end
 
       def with_lifecycle_lock(&)

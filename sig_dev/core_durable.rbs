@@ -209,7 +209,6 @@ module Volcano
     @closed: bool
     @held: DurableMessageBacklog
     @reads: Async::Semaphore
-    @handling: Async::Semaphore
     @background: DurableMessageCatchUps
 
     def initialize: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> void
@@ -220,13 +219,13 @@ module Volcano
     def close: () -> nil
 
     private def behind?: () -> bool
-    private def catch_up_to: (Held held) -> nil
+    private def release_live: () -> void
     private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
     private def read_missed: (?first: bool) -> void
     private def read_pages: (report: bool) -> void
     private def release: (bool read, report: bool) -> void
-    private def deliver: (DurableMessage message, report: bool) -> nil
+    private def deliver: (DurableMessage message, report: bool) -> void
     private def call_handler: (DurableMessage message, bool report) -> void
     private def published: (Object? data) -> Held?
   end
@@ -237,13 +236,18 @@ module Volcano
     @realtime: Realtime
     @lineage: SessionOperations
     @stream: DurableMessageStream
-    @subscription: DurableMessageSubscription?
+    @subscription: DurableMessageSubscription
 
     def initialize: (Realtime realtime) -> void
     def stream: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> DurableMessageStream
     def end_with: (DurableMessageSubscription subscription) -> DurableMessageSubscription
+    def restoring: () -> void
+    def resubscribed: () -> nil
+    def dropped: () -> nil
+    def close: () -> nil
 
     private def bind: [A, R] (^(A) -> R callable) -> ^(A) -> R
+    private def bind_read: (^(Integer) -> DurableMessagePage list_after) -> ^(Integer) -> DurableMessagePage
     private def require_session: () -> void
   end
 
@@ -266,18 +270,21 @@ module Volcano
     MAX_RETRY_SECONDS: Float
 
     @read: ^() -> void
+    @release: ^() -> void
     @due: ^() -> void
     @on_failure: ^(StandardError) -> void
     @pending: bool
+    @releasing: bool
     @backoff: Float
     @retry_delay: Float?
     @task: Async::Task?
     @wake: Async::Notification?
     @closed: bool
 
-    def initialize: (^() -> void read, ^() -> void due, ^(StandardError) -> void on_failure) -> void
+    def initialize: (^() -> void read, ^() -> void release, ^() -> void due, ^(StandardError) -> void on_failure) -> void
     def start: () -> nil
     def request: () -> nil
+    def release: () -> nil
     def pending?: () -> bool
     def retry_later: () -> nil
     def cancel_retry: () -> nil
@@ -285,7 +292,8 @@ module Volcano
     def close: () -> nil
 
     private def work: () -> void
-    private def read: () -> void
+    private def next_job: () -> (^() -> void)?
+    private def run: (^() -> void job) -> void
     private def await_request: () -> void
     private def wake: () -> Async::Notification
   end
@@ -295,7 +303,7 @@ module Volcano
     @channel: Realtime::Channel
     @realtime: Realtime
 
-    def self.open: (DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> DurableMessageSubscription
+    def self.open: (DurableMessageSession session, DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> DurableMessageSubscription
     def initialize: (DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> void
   end
 
@@ -322,7 +330,7 @@ module Volcano
 
     def initialize: (_DurableClient client, _DurableMessagesTransport transport, Realtime realtime) -> void
 
-    private def durable_channel: (Target target, DurableMessageStream stream) -> Realtime::Channel
+    private def durable_channel: (Target target, DurableMessageSession session) -> Realtime::Channel
     private def reader: (Target target) -> ^(Integer) -> DurableMessagePage
     private def list_messages: (Target target, Hash[Symbol, String | Integer] query, ?String authorization) -> Transport::Response
     private def failure_reporter: () -> ^(StandardError) -> void

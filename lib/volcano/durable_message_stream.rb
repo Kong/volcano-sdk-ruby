@@ -11,6 +11,11 @@ module Volcano
   # A held message is released only once the message its broadcast names as
   # the one before it has been delivered.
   #
+  # After the first catch-up, every message is delivered from the stream's own
+  # task, one at a time. A live one is held and released there too, since a
+  # reconnect stops the connection's tasks midway and would leave the block's
+  # work on it unfinished.
+  #
   # The channel itself drops publications while it is not subscribed, and
   # reports each resubscription, which starts a catch-up of what it dropped.
   # A broadcast naming a publish not yet delivered starts one too, since the
@@ -35,21 +40,21 @@ module Volcano
       @started = @closed = false
       @held = DurableMessageBacklog.new
       @reads = Async::Semaphore.new(1)
-      # Live messages and catch-ups are delivered from different tasks, so a
-      # catch-up waits for a handler still running on a live message.
-      @handling = Async::Semaphore.new(1)
-      @background = DurableMessageCatchUps.new(-> { read_missed }, -> { catch_up_in_background }, on_failure)
+      @background = DurableMessageCatchUps.new(
+        -> { read_missed }, -> { release_live }, -> { catch_up_in_background }, on_failure
+      )
     end
 
     def live(data)
-      return if @closed
-
-      held = published(data)
+      held = published(data) unless @closed
       return unless held
-      return @held.hold(held) if behind?
-      return catch_up_to(held) if held.prev_seq > @last_seq
 
-      deliver(held.message, report: true)
+      waiting = behind?
+      @held.hold(held)
+      return if waiting
+      return catch_up_in_background if held.prev_seq > @last_seq
+
+      @background.release
     end
 
     def resubscribed = catch_up_in_background
@@ -66,9 +71,8 @@ module Volcano
     def catch_up
       begin_catch_up
       read_missed(first: true)
+      @background.start unless @closed
       raise Realtime::ClosedError, ENDED if @closed
-
-      @background.start
     end
 
     # Not stopped: the handler a catch-up is running may be what closed it.
@@ -82,9 +86,14 @@ module Volcano
 
     def behind? = !@started || @catch_ups.positive? || !@held.empty?
 
-    def catch_up_to(held)
-      @held.hold(held)
-      catch_up_in_background
+    # Delivers the held live messages that follow on from the last one
+    # delivered, until a catch-up is asked for. One left behind a gap is read
+    # back.
+    def release_live
+      while @catch_ups.zero? && (held = @held.take_following(@last_seq))
+        deliver(held.message, report: true)
+      end
+      catch_up_in_background unless @held.empty?
     end
 
     # One catch-up waiting its turn reads whatever more are asked for
@@ -140,13 +149,12 @@ module Volcano
     end
 
     def deliver(message, report:)
-      @handling.acquire { call_handler(message, report) unless @closed || message.seq <= @last_seq }
-      nil
+      call_handler(message, report) unless @closed || message.seq <= @last_seq
     end
 
     # Only the first catch-up raises what the handler raised, to the caller
-    # that subscribes. Later the protocol's callback task or the catch-up
-    # task would lose it, so it is reported and delivery goes on.
+    # that subscribes. Later the stream's own task would lose it, so it is
+    # reported and delivery goes on.
     def call_handler(message, report)
       @last_seq = message.seq
       @handler.call(message)

@@ -624,7 +624,9 @@ Async do
   end
   # ...
   subscription.unsubscribe
-end
+ensure
+  client.realtime.disconnect
+end.wait
 ```
 
 A sent message waits until the execution waits for its name. Repeating a send

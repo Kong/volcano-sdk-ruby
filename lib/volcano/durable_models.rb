@@ -62,6 +62,17 @@ module Volcano
       DURABLE_TERMINAL_STATUSES.include?(status)
     end
 
+    # The client token is a bearer credential, so inspection masks it.
+    def inspect
+      fields = to_h.map do |name, value|
+        "#{name}=#{name == :client_token && value ? Redaction::MARKER : value.inspect}"
+      end
+      "#<data #{self.class.name} #{fields.join(', ')}>"
+    end
+    alias to_s inspect
+
+    def pretty_print(printer) = printer.text(inspect)
+
     private
 
     # `result` is the function's own JSON, so it is frozen all the way down.

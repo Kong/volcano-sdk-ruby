@@ -2,7 +2,7 @@
 
 module Volcano
   RSpec.describe DurableMessageCatchUps do
-    subject(:catch_ups) { described_class.new(-> {}, -> {}, ->(_error) {}) }
+    subject(:catch_ups) { described_class.new(-> {}, -> {}, -> {}, ->(_error) {}) }
 
     def retry_delays(count)
       Array.new(count) do

@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module Volcano
-  # Runs the catch-ups a durable message stream starts itself, one at a time,
-  # and waits out the retry of one that failed: half a second, doubling to 30
+  # Runs a durable message stream's own work one job at a time: the catch-ups
+  # it starts itself, the release of the live messages it holds, and the wait
+  # before retrying a catch-up that failed, half a second doubling to 30
   # seconds. It runs in a task of its own rather than the realtime
   # connection's, which a reconnect stops midway.
   class DurableMessageCatchUps
@@ -10,15 +11,17 @@ module Volcano
     MAX_RETRY_SECONDS = 30.0
     private_constant :FIRST_RETRY_SECONDS, :MAX_RETRY_SECONDS
 
-    # +read+ runs a catch-up that was asked for, +due+ asks for one once a
-    # retry's wait is over, and +on_failure+ hears about a catch-up that failed.
-    def initialize(read, due, on_failure)
+    # +read+ runs a catch-up that was asked for, +release+ delivers the held
+    # live messages, +due+ asks for a catch-up once a retry's wait is over, and
+    # +on_failure+ hears about a job that failed.
+    def initialize(read, release, due, on_failure)
       @read = read
+      @release = release
       @due = due
       @on_failure = on_failure
       @backoff = FIRST_RETRY_SECONDS
       @retry_delay = @task = @wake = nil
-      @pending = @closed = false
+      @pending = @releasing = @closed = false
     end
 
     # The task is a transient child of the caller's, so call it from the task
@@ -30,6 +33,12 @@ module Volcano
 
     def request
       @pending = true
+      wake.signal
+      nil
+    end
+
+    def release
+      @releasing = true
       wake.signal
       nil
     end
@@ -61,17 +70,24 @@ module Volcano
 
     def work
       until @closed
-        if @pending
-          @pending = false
-          read
-        else
-          await_request
-        end
+        job = next_job
+        job ? run(job) : await_request
       end
     end
 
-    def read
-      @read.call
+    # A catch-up goes first: it releases the held messages itself.
+    def next_job
+      if @pending
+        @pending = false
+        @read
+      elsif @releasing
+        @releasing = false
+        @release
+      end
+    end
+
+    def run(job)
+      job.call
     rescue StandardError => e
       @on_failure.call(e)
     end

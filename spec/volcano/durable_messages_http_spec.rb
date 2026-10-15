@@ -108,6 +108,22 @@ RSpec.describe Volcano::DurableMessages do
     expect(client.durable.start('approvals', {}, execution_name: 'job').client_token).to be_nil
   end
 
+  it 'masks the client token wherever an execution is inspected', :aggregate_failures do
+    respond({
+              'id' => execution, 'function_id' => 'function', 'name' => 'job', 'status' => 'pending',
+              'region' => 'aws-us-east-1', 'created_at' => '2026-10-12T09:00:00Z', 'client_token' => 'client-token'
+            }, code: 202)
+    handle = client.durable.start('approvals')
+    shown = "#<data Volcano::DurableExecution id=#{execution.inspect}, function_id=\"function\", name=\"job\", " \
+            'status="pending", region="aws-us-east-1", created_at=2026-10-12 09:00:00 UTC, result=nil, ' \
+            'result_expired=nil, error=nil, completed_at=nil, client_token=[REDACTED]>'
+
+    expect(handle.inspect).to eq(shown)
+    expect(handle.to_s).to eq(shown)
+    expect(PP.pp(handle, +'')).to eq("#{shown}\n")
+    expect(handle.with(client_token: nil).inspect).to end_with('client_token=nil>')
+  end
+
   { 404 => Volcano::Error::NotFoundError, 409 => Volcano::Error::ConflictError }.each do |code, error|
     it "raises #{error} for an HTTP #{code} send" do
       respond({ 'error' => 'refused', 'code' => 'execution_not_running' }, code: code)

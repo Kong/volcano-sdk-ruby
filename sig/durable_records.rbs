@@ -45,6 +45,13 @@ module Volcano
     def deconstruct: () -> [String, String, String, String, String, Time, json_value, bool?, DurableExecutionError?, Time?, String?]
     def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String | Time | json_value | bool | DurableExecutionError | nil]
     def terminal?: () -> bool
+    def inspect: () -> String
+    def to_s: () -> String
+    def pretty_print: (_PrettyPrinter printer) -> void
+
+    interface _PrettyPrinter
+      def text: (String text) -> void
+    end
   end
 
   class DurableExecutionPage < Data

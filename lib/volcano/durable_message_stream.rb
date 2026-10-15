@@ -20,11 +20,12 @@ module Volcano
     include DurableMessageResponses
 
     Held = Data.define(:message, :prev_seq)
-    private_constant :Held
+    ENDED = 'the durable message subscription has ended'
+    private_constant :Held, :ENDED
 
     # +list_after+ reads the page of published messages after a `seq`, and
     # +on_failure+ hears about a catch-up that failed in the background or a
-    # handler that raised on a live message.
+    # handler that raised after the first catch-up.
     def initialize(handler, list_after, on_failure)
       require 'async/semaphore'
       @handler = handler
@@ -41,15 +42,14 @@ module Volcano
     end
 
     def live(data)
+      return if @closed
+
       held = published(data)
       return unless held
       return @held.hold(held) if behind?
       return catch_up_to(held) if held.prev_seq > @last_seq
 
-      deliver(held.message)
-    rescue StandardError => e
-      # The protocol's callback task would ignore what the handler raised.
-      @on_failure.call(e)
+      deliver(held.message, report: true)
     end
 
     def resubscribed = catch_up_in_background
@@ -58,17 +58,20 @@ module Volcano
 
     # Reads what was missed, then releases the held messages. Raises the
     # list's or the handler's error, closing the stream before anything held
-    # is delivered. Call it from the task that subscribes, which the catch-ups
+    # is delivered, and raises Realtime::ClosedError if the stream was closed
+    # meanwhile. Call it from the task that subscribes, which the catch-ups
     # the stream starts itself run under.
     def catch_up
       begin_catch_up
       @background.start
       read_missed(first: true)
+      raise Realtime::ClosedError, ENDED if @closed
     end
 
     # Not stopped: the handler a catch-up is running may be what closed it.
     def close
       @closed = true
+      @held.clear
       @background.close
     end
 
@@ -101,23 +104,23 @@ module Volcano
     def read_missed(first: false)
       read = false
       @reads.acquire do
-        read_pages
+        read_pages(report: !first)
         read = true
       ensure
         close if first && !read
         # Released by the last catch-up only, and while still counted, so a
         # live message that arrives meanwhile is held behind the released ones.
-        release(read) if @catch_ups == 1
+        release(read, report: !first) if @catch_ups == 1
       end
     ensure
       @catch_ups -= 1
     end
 
-    def read_pages
+    def read_pages(report:)
       until @closed
         after = @last_seq
         page = @list_after.call(after)
-        page.messages.each { |message| deliver(message) }
+        page.messages.each { |message| deliver(message, report:) }
         # A page that delivered nothing would be asked for again unchanged.
         return if !page.has_more || @last_seq == after
       end
@@ -125,22 +128,29 @@ module Volcano
 
     # Delivers the held messages that follow on from the last one delivered,
     # and retries the read while any is left behind a gap or the read failed.
-    def release(read)
+    def release(read, report:)
       while (held = @held.take_following(@last_seq))
-        deliver(held.message)
+        deliver(held.message, report:)
       end
     ensure
       read && @held.empty? ? @background.caught_up : @background.retry_later
     end
 
-    def deliver(message)
-      @handling.acquire { call_handler(message) unless @closed || message.seq <= @last_seq }
+    def deliver(message, report:)
+      @handling.acquire { call_handler(message, report) unless @closed || message.seq <= @last_seq }
       nil
     end
 
-    def call_handler(message)
+    # Only the first catch-up raises what the handler raised, to the caller
+    # that subscribes. Later the protocol's callback task or the catch-up
+    # task would lose it, so it is reported and delivery goes on.
+    def call_handler(message, report)
       @last_seq = message.seq
       @handler.call(message)
+    rescue StandardError => e
+      raise unless report
+
+      @on_failure.call(e)
     end
 
     def published(data)

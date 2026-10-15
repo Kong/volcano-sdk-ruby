@@ -243,6 +243,8 @@ module Volcano
 
       include ChannelLifecycle
 
+      include DurableChannel
+
       def initialize: (Core realtime, ^() -> Protocol protocol_provider, String name, Symbol type, batch_config: PostgresBatchConfig) -> void
 
       def subscription_desired?: () -> bool
@@ -254,10 +256,6 @@ module Volcano
       private
 
       def remove: () -> nil
-
-      def follow_durable: (Hash[String, String]? data, _DurableFollower follower) -> _DurableFollower
-
-      def publication_rejection: (Protocol protocol, Integer generation) -> (^(Object?) -> void)?
 
       def subscribe_with_intent: () -> [Protocol, Integer]
 

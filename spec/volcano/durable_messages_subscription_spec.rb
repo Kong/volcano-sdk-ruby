@@ -273,7 +273,7 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
-  it 'resumes after the message a handler raised on in a later read', :aggregate_failures do
+  it 'reports a block that raises during a later read and goes on reading', :aggregate_failures do
     stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
     errors = []
     client.realtime.on_error { |context| errors << context.message }
@@ -286,12 +286,39 @@ RSpec.describe Volcano::DurableMessages do
       end
       transport.pages.enqueue(page(2, 3, 4))
       publish(sockets[0], published(5).merge('prev_seq' => 4))
-      wait_until(task) { errors.include?('handler failed') }
-      transport.pages.enqueue(page(3, 4, 5))
       wait_until(task) { received.size == 5 }
+      task.sleep(0.05)
 
       expect(received).to eq([1, 2, 3, 4, 5])
-      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1, 2])
+      expect(errors).to eq(['handler failed'])
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reports a block that raises on a message a later read releases and releases the rest', :aggregate_failures do
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow do |message|
+        received << message.seq
+        raise 'handler failed' if message.seq == 3
+      end
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      wait_until(task) { transport.lists.size == 2 }
+      publish(sockets[0], published(4).merge('prev_seq' => 3))
+      task.sleep(0.01)
+      transport.pages.enqueue(page(2))
+      wait_until(task) { received.size == 4 }
+      task.sleep(0.05)
+
+      expect(received).to eq([1, 2, 3, 4])
+      expect(errors).to eq(['handler failed'])
+      expect(transport.lists.size).to eq(2)
     ensure
       client.realtime.disconnect
     end.wait
@@ -525,6 +552,42 @@ RSpec.describe Volcano::DurableMessages do
       expect { subscribing.wait }.to raise_error(Volcano::Error::SessionChangedError, /session that subscribed/)
       expect(received).to be_empty
       expect(commands(sockets[0], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'refuses to follow on a connection another session opened', :aggregate_failures do
+    Async do
+      transport.pages.enqueue(page)
+      follow.unsubscribe
+      client.store_session(other_session)
+      transport.pages.enqueue(page(1))
+
+      expect { follow }.to raise_error(Volcano::Error::SessionChangedError)
+      expect(commands(sockets[0], 'subscribe').size).to eq(1)
+      expect(sockets[0]).to be_closed
+      follow
+      expect(received).to eq([1])
+      expect(commands(sockets[1], 'subscribe').size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'fails subscribing when the subscription ends during the first read', :aggregate_failures do
+    Async do |task|
+      subscribing = task.async { follow }
+      wait_until(task) { transport.lists.any? }
+      client.realtime.remove_all_channels
+      transport.pages.enqueue(page(1))
+
+      expect { subscribing.wait }
+        .to raise_error(Volcano::Realtime::ClosedError, 'the durable message subscription has ended')
+      expect(received).to be_empty
+      transport.pages.enqueue(page(1))
+      follow
+      expect(received).to eq([1])
     ensure
       client.realtime.disconnect
     end.wait

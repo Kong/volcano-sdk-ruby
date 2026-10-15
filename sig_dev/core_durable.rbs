@@ -202,6 +202,8 @@ module Volcano
       def self.new: (message: DurableMessage, prev_seq: Integer) -> Held
     end
 
+    ENDED: String
+
     @last_seq: Integer
     @catch_ups: Integer
     @started: bool
@@ -223,10 +225,10 @@ module Volcano
     private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
     private def read_missed: (?first: bool) -> void
-    private def read_pages: () -> void
-    private def release: (bool read) -> void
-    private def deliver: (DurableMessage message) -> nil
-    private def call_handler: (DurableMessage message) -> void
+    private def read_pages: (report: bool) -> void
+    private def release: (bool read, report: bool) -> void
+    private def deliver: (DurableMessage message, report: bool) -> nil
+    private def call_handler: (DurableMessage message, bool report) -> void
     private def published: (Object? data) -> Held?
   end
 
@@ -251,6 +253,7 @@ module Volcano
 
     def initialize: () -> void
     def empty?: () -> bool
+    def clear: () -> Array[DurableMessageStream::Held]
     def hold: (DurableMessageStream::Held held) -> nil
     def take_following: (Integer last_seq) -> DurableMessageStream::Held?
 

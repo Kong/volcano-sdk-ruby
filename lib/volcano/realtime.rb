@@ -16,6 +16,7 @@ require_relative 'realtime/postgres_batch'
 require_relative 'realtime/postgres_delivery'
 require_relative 'realtime/broadcast_delivery'
 require_relative 'realtime/channel_callbacks'
+require_relative 'realtime/durable_channel'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
@@ -205,6 +206,7 @@ module Volcano
       include PostgresDelivery
       include BroadcastDelivery
       include ChannelCallbacks
+      include DurableChannel
 
       attr_reader :name
 
@@ -272,22 +274,6 @@ module Volcano
         nil
       end
       private :remove
-
-      # +data+ goes with every subscribe, including the ones a reconnect
-      # restores. +follower+ hears each of those restores and each publication
-      # the connection dropped, and is closed with the channel.
-      def follow_durable(data, follower)
-        @subscribe_data = data
-        @follower = follower
-      end
-      private :follow_durable
-
-      # A durable channel's follower reads back what the connection dropped.
-      def publication_rejection(protocol, generation)
-        follower = @follower
-        follower ? ->(_publication) { follower.dropped } : super
-      end
-      private :publication_rejection
 
       private
 

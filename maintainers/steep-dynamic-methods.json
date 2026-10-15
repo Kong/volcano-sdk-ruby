@@ -402,6 +402,13 @@
     ]
   },
   {
+    "path": "lib/volcano/realtime/durable_channel.rb",
+    "scope": "Volcano::Realtime::DurableChannel",
+    "methods": [
+      "durable?"
+    ]
+  },
+  {
     "path": "lib/volcano/realtime/lifecycle.rb",
     "scope": "Volcano::Realtime::Lifecycle",
     "methods": [

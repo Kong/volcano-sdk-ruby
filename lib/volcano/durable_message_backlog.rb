@@ -15,6 +15,8 @@ module Volcano
 
     def empty? = @held.empty?
 
+    def clear = @held.clear
+
     def hold(held)
       @held << held
       @held.delete(oldest) if @held.size > LIMIT

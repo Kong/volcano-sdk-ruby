@@ -97,16 +97,18 @@ module Volcano
     # read back before live delivery resumes. Returns a
     # DurableMessageSubscription once the messages published so far are
     # delivered; a block that raises meanwhile ends the subscription and
-    # raises here.
+    # raises here, and a subscription ended meanwhile raises
+    # Realtime::ClosedError.
     #
     # Follows the execution on the client's realtime connection, so call it
     # inside that connection's Async reactor, with a signed-in session. A
-    # catch-up that fails in the background is reported to Realtime#on_error
-    # and retried, backing off to every 30 seconds; a block that raises later
-    # is reported there too, and delivery goes on. Realtime#remove_all_channels
-    # and Realtime#disconnect end the subscription, and so does signing out,
-    # signing in again, or setting another session, though not a token
-    # refresh. Raises
+    # connection an earlier session opened is closed, raising
+    # Error::SessionChangedError. A catch-up that fails in the background is
+    # reported to Realtime#on_error and retried, backing off to every 30
+    # seconds; a block that raises later is reported there too, and delivery
+    # goes on. Realtime#remove_all_channels and Realtime#disconnect end the
+    # subscription, and so does signing out, signing in again, or setting
+    # another session, though not a token refresh. Raises
     # Realtime::DuplicateSubscriptionError when this client already follows the
     # execution.
     def subscribe(function_name, execution_id, client_token: nil, project_id: nil, &handler)

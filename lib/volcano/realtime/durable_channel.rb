@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+module Volcano
+  class Realtime
+    # Follows a durable execution's messages on a channel.
+    module DurableChannel
+      # @dynamic durable?
+
+      private
+
+      # +data+ goes with every subscribe, including the ones a reconnect
+      # restores. +follower+ hears each of those restores and each publication
+      # the connection dropped, and is closed with the channel.
+      def follow_durable(data, follower)
+        @subscribe_data = data
+        @follower = follower
+      end
+
+      # A durable channel's follower reads back what the connection dropped.
+      def publication_rejection(protocol, generation)
+        follower = @follower
+        follower ? ->(_publication) { follower.dropped } : super
+      end
+
+      # The server authorizes a durable subscribe by the socket's session, so
+      # the socket must belong to the client's current one.
+      def prepare_protocol_subscription(protocol, epoch)
+        @realtime.__send__(:capture_protocol_session) if durable?
+        super
+      end
+    end
+    private_constant :DurableChannel
+  end
+end

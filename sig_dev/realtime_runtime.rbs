@@ -89,6 +89,8 @@ module Volcano
     interface _LifecycleContext
       def channel_lock: () -> Async::Semaphore
       def normalize_channel_type: (String | Symbol type) -> Symbol
+      def report_channel_error: (StandardError error) -> void
+      def protocol: () -> Protocol
     end
 
     interface _ConnectionContext
@@ -360,6 +362,8 @@ module Volcano
       def remove_channel_locked: (String name) -> Channel?
 
       def remove_durable_channel: (Channel channel) -> nil
+
+      def leave_durable_channel: (Channel channel) -> void
 
       def remove_channel_entry: (String name, Channel channel) -> StandardError?
     end

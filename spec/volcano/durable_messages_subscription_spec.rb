@@ -525,6 +525,28 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'leaves the channel once the session changes, so the next session can follow again', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page)
+      follow
+      client.store_session(other_session)
+      publish(sockets[0], published(1))
+      wait_until(task) { errors.any? }
+
+      expect(commands(sockets[0], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+      expect(errors).to contain_exactly(/session that subscribed/)
+      transport.pages.enqueue(page(2))
+      expect { follow }.to raise_error(Volcano::Error::SessionChangedError)
+      follow
+      expect(received).to eq([2])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'keeps delivering after a token refresh' do
     Async do |task|
       transport.pages.enqueue(page)
@@ -718,6 +740,127 @@ RSpec.describe Volcano::DurableMessages do
       follow
       expect(received).to eq([1])
     ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'drops the connection when the server refuses to let the channel go', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do
+      transport.pages.enqueue(page)
+      subscription = follow
+      sockets[0].on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        sockets[0].reject(command.fetch('id'), 'unsubscribe failed')
+        :defer
+      end
+
+      expect(subscription.unsubscribe).to be_nil
+      expect(sockets[0]).to be_closed
+      expect(errors).to include('unsubscribe failed')
+      transport.pages.enqueue(page(1))
+      follow
+      expect(received).to eq([1])
+      expect(commands(sockets[1], 'subscribe').size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'leaves the channel when the connection drops while leaving it', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page)
+      subscription = follow
+      sockets[0].on_write = ->(command) { :defer if command.key?('unsubscribe') }
+      leaving = task.async { subscription.unsubscribe }
+      wait_until(task) { commands(sockets[0], 'unsubscribe').any? }
+      sockets[0].fail_read(IOError.new('socket failed'))
+
+      expect(leaving.wait).to be_nil
+      expect(errors).to include('socket failed')
+      transport.pages.enqueue(page(1))
+      follow
+      expect(received).to eq([1])
+      expect(commands(sockets[1], 'subscribe').size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'delivers nothing published while a failed subscription leaves its channel', :aggregate_failures do
+    Async do |task|
+      unsubscribe_id = nil
+      sockets[0].on_write = lambda do |command|
+        next unless command.key?('unsubscribe')
+
+        unsubscribe_id = command.fetch('id')
+        :defer
+      end
+      transport.pages.enqueue(unavailable)
+      subscribing = task.async { follow }
+      wait_until(task) { unsubscribe_id }
+      publish(sockets[0], published(1))
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      task.sleep(0.01)
+      sockets[0].respond(unsubscribe_id)
+
+      expect { subscribing.wait }.to raise_error(Volcano::Error::VolcanoError, 'unavailable')
+      expect(received).to be_empty
+      expect(transport.lists.size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'calls the block for the read subscribe waits on before one a drop asked for while subscribing',
+     :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    entered = Async::Queue.new
+    resume = Async::Queue.new
+
+    Async do |task|
+      room = client.realtime.channel('room')
+      room.on('message') do
+        entered.enqueue(true)
+        resume.dequeue
+      end
+      room.subscribe
+      subscribe_id = nil
+      sockets[0].on_write = lambda do |command|
+        next unless command.dig('subscribe', 'channel') == 'durable:execution-1'
+
+        subscribe_id = command.fetch('id')
+        :defer
+      end
+      subscribing = task.async do
+        follow do |message|
+          received << message.seq
+          raise 'handler failed'
+        end
+      end
+      wait_until(task) { subscribe_id }
+      sockets[0].publication(channel: room.name, data: { 'event' => 'message' })
+      task.with_timeout(0.5) { entered.dequeue }
+      (1..3).each { |seq| publish(sockets[0], published(seq)) }
+      task.sleep(0.01)
+      transport.pages.enqueue(page(1, 2, 3))
+      transport.pages.enqueue(page(2, 3))
+      sockets[0].respond(subscribe_id)
+
+      expect { subscribing.wait }.to raise_error(RuntimeError, 'handler failed')
+      expect(received).to eq([1])
+      expect(errors).to be_empty
+    ensure
+      resume.enqueue(true)
       client.realtime.disconnect
     end.wait
   end

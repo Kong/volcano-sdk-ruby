@@ -35,7 +35,8 @@ RSpec.describe Volcano::DurableMessages do
 
   [
     { 'id' => nil }, { 'execution_id' => '' }, { 'name' => 7 }, { 'direction' => 'both' }, { 'direction' => :out },
-    { 'seq' => 0 }, { 'seq' => '1' }, { 'seq' => 1.0 }, { 'status' => 'lost' }, { 'data' => Object.new },
+    { 'seq' => 0 }, { 'seq' => '1' }, { 'seq' => 1.0 }, { 'status' => '' }, { 'status' => :queued },
+    { 'status' => nil }, { 'data' => Object.new },
     { 'data' => { key: 'symbol' } }, { 'sender' => nil }, { 'sender' => { 'type' => '' } },
     { 'sender' => { 'type' => 'user', 'user_id' => 7 } }, { 'sent_at' => nil }, { 'sent_at' => 'today' },
     { 'delivered_at' => 12 }
@@ -53,6 +54,11 @@ RSpec.describe Volcano::DurableMessages do
 
     expect(received).to have_attributes(data: nil, delivered_at: Time.utc(2026, 10, 12, 9, 0, 1))
     expect(received.sender).to have_attributes(type: 'user', user_id: 'user-1')
+  end
+
+  it 'reads a status this version does not know as written' do
+    expect(listed('data' => [message.merge('status' => 'archived')], 'has_more' => false).messages.first.status)
+      .to eq('archived')
   end
 
   [nil, [], 'invalid', {}, { 'data' => {}, 'has_more' => false }, { 'data' => [], 'has_more' => nil },

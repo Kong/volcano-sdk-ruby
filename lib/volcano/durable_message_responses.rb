@@ -8,8 +8,7 @@ module Volcano
     INCOMPLETE_MESSAGE = 'Expected a complete durable message'
     INCOMPLETE_PAGE = 'Expected a complete durable message page'
     DIRECTIONS = %w[in out].freeze
-    STATUSES = %w[queued delivering delivered dropped published].freeze
-    private_constant :INCOMPLETE_MESSAGE, :INCOMPLETE_PAGE, :DIRECTIONS, :STATUSES
+    private_constant :INCOMPLETE_MESSAGE, :INCOMPLETE_PAGE, :DIRECTIONS
 
     private
 
@@ -28,8 +27,10 @@ module Volcano
       [message_text(values['id']), message_text(values['execution_id']), message_text(values['name'])]
     end
 
+    # The stream filters on direction, so it has to be one it knows. A status
+    # added later reads as written, as an execution's does.
     def message_states(values)
-      [message_choice(values['direction'], DIRECTIONS), message_choice(values['status'], STATUSES)]
+      [message_choice(values['direction'], DIRECTIONS), message_text(values['status'])]
     end
 
     # The seq a broadcast says the execution published before it, or 0, naming

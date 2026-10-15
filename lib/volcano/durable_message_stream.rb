@@ -60,12 +60,15 @@ module Volcano
     # list's or the handler's error, closing the stream before anything held
     # is delivered, and raises Realtime::ClosedError if the stream was closed
     # meanwhile. Call it from the task that subscribes, which the catch-ups
-    # the stream starts itself run under.
+    # the stream starts itself run under. Those start once it has read, so
+    # one asked for while subscribing cannot call the handler before the
+    # read whose errors the subscriber hears.
     def catch_up
       begin_catch_up
-      @background.start
       read_missed(first: true)
       raise Realtime::ClosedError, ENDED if @closed
+
+      @background.start
     end
 
     # Not stopped: the handler a catch-up is running may be what closed it.

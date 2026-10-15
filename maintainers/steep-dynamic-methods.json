@@ -413,7 +413,9 @@
     "scope": "Volcano::Realtime::Lifecycle",
     "methods": [
       "channel_lock",
-      "normalize_channel_type"
+      "normalize_channel_type",
+      "report_channel_error",
+      "protocol"
     ]
   },
   {

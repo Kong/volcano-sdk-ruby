@@ -171,7 +171,6 @@ module Volcano
     INCOMPLETE_MESSAGE: String
     INCOMPLETE_PAGE: String
     DIRECTIONS: Array[String]
-    STATUSES: Array[String]
 
     private def durable_message: (Object? payload) -> DurableMessage
     private def message_labels: (Hash[String, Object?] values) -> [String, String, String]
@@ -238,9 +237,11 @@ module Volcano
     @realtime: Realtime
     @lineage: SessionOperations
     @stream: DurableMessageStream
+    @subscription: DurableMessageSubscription?
 
     def initialize: (Realtime realtime) -> void
     def stream: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> DurableMessageStream
+    def end_with: (DurableMessageSubscription subscription) -> DurableMessageSubscription
 
     private def bind: [A, R] (^(A) -> R callable) -> ^(A) -> R
     private def require_session: () -> void

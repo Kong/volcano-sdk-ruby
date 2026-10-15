@@ -115,8 +115,9 @@ module Volcano
       raise ArgumentError, 'subscribe requires a block' unless handler
 
       target = message_target(function_name, execution_id, { client_token: client_token, project_id: project_id })
-      stream = DurableMessageSession.new(@realtime).stream(handler, reader(target), failure_reporter)
-      DurableMessageSubscription.open(stream, durable_channel(target, stream), @realtime)
+      session = DurableMessageSession.new(@realtime)
+      stream = session.stream(handler, reader(target), failure_reporter)
+      session.end_with(DurableMessageSubscription.open(stream, durable_channel(target, stream), @realtime))
     end
 
     private

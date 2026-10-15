@@ -4,7 +4,7 @@ module Volcano
   class Realtime
     # Channel collection and connection-state lifecycle operations.
     module Lifecycle
-      # @dynamic channel_lock, normalize_channel_type
+      # @dynamic channel_lock, normalize_channel_type, report_channel_error, protocol
       def connected? = !@closed && (@protocol&.connected? || false)
 
       def remove_channel(name, type: :broadcast)
@@ -39,11 +39,22 @@ module Volcano
       def remove_durable_channel(channel)
         channel_lock.acquire do
           if @channels[channel.name].equal?(channel)
-            channel.__send__(:remove) unless @closed
             @channels.delete(channel.name)
+            leave_durable_channel(channel) unless @closed
           end
         end
         nil
+      end
+
+      # A leave the server did not confirm may have left the subscription in
+      # place, so the connection is dropped, which ends it. The reconnect
+      # restores only the channels still in use.
+      def leave_durable_channel(channel)
+        channel.__send__(:remove)
+      rescue StandardError => e
+        channel.mark_closed
+        protocol.close if connected?
+        report_channel_error(e)
       end
 
       def remove_channel_entry(name, channel)

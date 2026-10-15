@@ -670,6 +670,63 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'calls the block for nothing it held once the block raises during the first read', :aggregate_failures do
+    Async do |task|
+      subscribing = task.async do
+        follow do |message|
+          received << message.seq
+          raise 'handler failed'
+        end
+      end
+      wait_until(task) { transport.lists.any? }
+      publish(sockets[0], published(2).merge('prev_seq' => 1))
+      task.sleep(0.01)
+      transport.pages.enqueue(page(1))
+
+      expect { subscribing.wait }.to raise_error(RuntimeError, 'handler failed')
+      expect(received).to eq([1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'calls the block for nothing it held once the first read fails', :aggregate_failures do
+    Async do |task|
+      subscribing = task.async { follow }
+      wait_until(task) { transport.lists.any? }
+      publish(sockets[0], published(1).merge('prev_seq' => 0))
+      task.sleep(0.01)
+      transport.pages.enqueue(unavailable)
+
+      expect { subscribing.wait }.to raise_error(Volcano::Error::VolcanoError, 'unavailable')
+      expect(received).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'drops the oldest of more than 128 held messages for a read to list', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1000)
+    stub_const('Volcano::DurableMessageCatchUps::FIRST_RETRY_SECONDS', 0.01)
+
+    Async do |task|
+      subscribing = task.async { follow }
+      wait_until(task) { transport.lists.any? }
+      [130, *2..129].each { |seq| publish(sockets[0], published(seq).merge('prev_seq' => seq - 1)) }
+      task.sleep(0.05)
+      transport.pages.enqueue(page(1))
+      subscribing.wait
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2))
+      wait_until(task) { received.size == 130 }
+      expect(received).to eq((1..130).to_a)
+      expect(transport.lists.map { |list| list.fetch(:query).fetch(:after) }).to eq([0, 1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'unsubscribes quietly once the connection is closed' do
     Async do
       transport.pages.enqueue(page)

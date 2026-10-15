@@ -206,7 +206,7 @@ module Volcano
     @catch_ups: Integer
     @started: bool
     @closed: bool
-    @held: Array[Held]
+    @held: DurableMessageBacklog
     @reads: Async::Semaphore
     @handling: Async::Semaphore
     @background: DurableMessageCatchUps
@@ -222,11 +222,9 @@ module Volcano
     private def catch_up_to: (Held held) -> nil
     private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
-    private def read_missed: () -> void
+    private def read_missed: (?first: bool) -> void
     private def read_pages: () -> void
     private def release: (bool read) -> void
-    private def following_on: () -> Held?
-    private def hold: (Held held) -> nil
     private def deliver: (DurableMessage message) -> nil
     private def call_handler: (DurableMessage message) -> void
     private def published: (Object? data) -> Held?
@@ -244,6 +242,19 @@ module Volcano
 
     private def bind: [A, R] (^(A) -> R callable) -> ^(A) -> R
     private def require_session: () -> void
+  end
+
+  class DurableMessageBacklog
+    LIMIT: Integer
+
+    @held: Array[DurableMessageStream::Held]
+
+    def initialize: () -> void
+    def empty?: () -> bool
+    def hold: (DurableMessageStream::Held held) -> nil
+    def take_following: (Integer last_seq) -> DurableMessageStream::Held?
+
+    private def oldest: () -> DurableMessageStream::Held?
   end
 
   class DurableMessageCatchUps

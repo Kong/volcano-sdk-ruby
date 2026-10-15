@@ -188,6 +188,7 @@ target :durable_messages do
   check 'lib/volcano/durable_message_models.rb'
   check 'lib/volcano/durable_message_responses.rb'
   check 'lib/volcano/durable_message_catch_ups.rb'
+  check 'lib/volcano/durable_message_backlog.rb'
   check 'lib/volcano/durable_message_stream.rb'
   check 'lib/volcano/durable_message_session.rb'
   library 'json'

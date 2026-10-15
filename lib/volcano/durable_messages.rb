@@ -104,14 +104,16 @@ module Volcano
     # catch-up that fails in the background is reported to Realtime#on_error
     # and retried, backing off to every 30 seconds; a block that raises later
     # is reported there too, and delivery goes on. Realtime#remove_all_channels
-    # and Realtime#disconnect end the subscription. Raises
+    # and Realtime#disconnect end the subscription, and so does signing out,
+    # signing in again, or setting another session, though not a token
+    # refresh. Raises
     # Realtime::DuplicateSubscriptionError when this client already follows the
     # execution.
     def subscribe(function_name, execution_id, client_token: nil, project_id: nil, &handler)
       raise ArgumentError, 'subscribe requires a block' unless handler
 
       target = message_target(function_name, execution_id, { client_token: client_token, project_id: project_id })
-      stream = DurableMessageStream.new(handler, reader(target), failure_reporter)
+      stream = DurableMessageSession.new(@realtime).stream(handler, reader(target), failure_reporter)
       DurableMessageSubscription.open(stream, durable_channel(target, stream), @realtime)
     end
 

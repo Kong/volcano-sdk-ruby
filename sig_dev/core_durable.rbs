@@ -232,6 +232,20 @@ module Volcano
     private def published: (Object? data) -> Held?
   end
 
+  class DurableMessageSession
+    CHANGED: String
+
+    @realtime: Realtime
+    @lineage: SessionOperations
+    @stream: DurableMessageStream
+
+    def initialize: (Realtime realtime) -> void
+    def stream: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> DurableMessageStream
+
+    private def bind: [A, R] (^(A) -> R callable) -> ^(A) -> R
+    private def require_session: () -> void
+  end
+
   class DurableMessageCatchUps
     FIRST_RETRY_SECONDS: Float
     MAX_RETRY_SECONDS: Float

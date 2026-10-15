@@ -635,6 +635,8 @@ execution that has ended raises `Volcano::Error::ConflictError` with `code`
 then live ones, and after a reconnect or a lost live message the ones it
 missed. It needs a signed-in session and an Async reactor; a client with only a
 client token or the service key raises `Volcano::Error::AuthenticationError`.
+Signing out, signing in again, or setting another session ends the
+subscription; a token refresh does not.
 
 The service key reaches every execution. A signed-in user reaches the executions
 they started; the anon key, or another user, passes the execution's

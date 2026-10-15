@@ -189,6 +189,7 @@ target :durable_messages do
   check 'lib/volcano/durable_message_responses.rb'
   check 'lib/volcano/durable_message_catch_ups.rb'
   check 'lib/volcano/durable_message_stream.rb'
+  check 'lib/volcano/durable_message_session.rb'
   library 'json'
   library 'time'
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error

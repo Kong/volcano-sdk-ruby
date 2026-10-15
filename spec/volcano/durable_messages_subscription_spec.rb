@@ -433,6 +433,103 @@ RSpec.describe Volcano::DurableMessages do
     end
   end
 
+  def other_session
+    Volcano::Session.new(access_token: 'other-access-token', refresh_token: 'other-refresh-token', user_id: 'user-456')
+  end
+
+  { 'another session replaces it' => true, 'it signs out' => false }.each do |change, replaced|
+    it "delivers nothing a pending read returns once #{change}", :aggregate_failures do
+      errors = []
+      client.realtime.on_error { |context| errors << context.message }
+
+      Async do |task|
+        transport.pages.enqueue(page(1))
+        follow
+        publish(sockets[0], published(3).merge('prev_seq' => 2))
+        wait_until(task) { transport.lists.size == 2 }
+        client.store_session(replaced ? other_session : nil)
+        transport.pages.enqueue(page(2, 3))
+        wait_until(task) { errors.any? }
+
+        expect(received).to eq([1])
+        expect(errors).to contain_exactly(/session that subscribed/)
+        expect(transport.lists.size).to eq(2)
+      ensure
+        client.realtime.disconnect
+      end.wait
+    end
+  end
+
+  it 'reads nothing more once the session changes', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      client.store_session(other_session)
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      wait_until(task) { errors.any? }
+
+      expect(errors).to contain_exactly(/session that subscribed/)
+      expect(transport.lists.size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'delivers no live message once the session changes', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page)
+      follow
+      client.store_session(other_session)
+      publish(sockets[0], published(1))
+      publish(sockets[0], published(2))
+      wait_until(task) { errors.any? }
+      task.sleep(0.01)
+
+      expect(received).to be_empty
+      expect(errors).to contain_exactly(/session that subscribed/)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'keeps delivering after a token refresh' do
+    Async do |task|
+      transport.pages.enqueue(page)
+      follow
+      client.store_session(
+        Volcano::Session.new(access_token: 'access-refreshed', refresh_token: 'refresh-token', user_id: 'user-123'),
+        event: :token_refreshed
+      )
+      publish(sockets[0], published(1))
+      wait_until(task) { received.any? }
+
+      expect(received).to eq([1])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'fails subscribing when the session changes during the first read', :aggregate_failures do
+    Async do |task|
+      subscribing = task.async { follow }
+      wait_until(task) { transport.lists.any? }
+      client.store_session(other_session)
+      transport.pages.enqueue(page(1))
+
+      expect { subscribing.wait }.to raise_error(Volcano::Error::SessionChangedError, /session that subscribed/)
+      expect(received).to be_empty
+      expect(commands(sockets[0], 'unsubscribe')).to eq([{ 'channel' => 'durable:execution-1' }])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'ignores publications that are not messages the execution published' do
     Async do |task|
       transport.pages.enqueue(page)

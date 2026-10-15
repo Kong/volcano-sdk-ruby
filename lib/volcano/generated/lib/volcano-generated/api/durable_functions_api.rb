@@ -1763,7 +1763,7 @@ module Volcano::Generated
     # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
     # @param publish_durable_message_request [PublishDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @return [DurableMessage]
     def publish_durable_message(x_volcano_durable_session, publish_durable_message_request, opts = {})
       data, _status_code, _headers = publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts)
@@ -1775,7 +1775,7 @@ module Volcano::Generated
     # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
     # @param publish_durable_message_request [PublishDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts = {})
       if @api_client.config.debugging
@@ -1995,7 +1995,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @return [DurableMessage]
     def send_durable_message(id, function_id, execution_id, send_durable_message_request, opts = {})
       data, _status_code, _headers = send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts)
@@ -2009,7 +2009,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts = {})
       if @api_client.config.debugging
@@ -2086,12 +2086,12 @@ module Volcano::Generated
     end
 
     # Send a message to a durable execution from an application
-    # Sends a named message to a running execution. The workflow receives it from `ctx.waitForMessage` with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in `ctx.waitForApproval` is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose `X-Volcano-Client-Token` the request carries, of a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** an execution whose `X-Volcano-Client-Token` the request carries, of a function with `visibility: public`.  Any other execution answers `404`, as a missing one does.  Send `Idempotency-Key` to make a retry safe: a repeat with a key the execution has seen returns the first message with `200` and sends nothing. 
+    # Sends a named message to a running execution. The workflow receives it from `ctx.waitForMessage` with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in `ctx.waitForApproval` is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose `X-Volcano-Client-Token` the request carries, of a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** an execution whose `X-Volcano-Client-Token` the request carries, of a function with `visibility: public`.  Any other execution answers `404`, as a missing one does.  Send `Idempotency-Key` to make a retry safe: a repeat with a key the same sender has used on the execution returns the first message with `200` and sends nothing. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
     # @return [DurableMessage]
     def send_durable_message_from_application(function_id, execution_id, send_durable_message_request, opts = {})
@@ -2100,12 +2100,12 @@ module Volcano::Generated
     end
 
     # Send a message to a durable execution from an application
-    # Sends a named message to a running execution. The workflow receives it from &#x60;ctx.waitForMessage&#x60; with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in &#x60;ctx.waitForApproval&#x60; is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** an execution whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a function with &#x60;visibility: public&#x60;.  Any other execution answers &#x60;404&#x60;, as a missing one does.  Send &#x60;Idempotency-Key&#x60; to make a retry safe: a repeat with a key the execution has seen returns the first message with &#x60;200&#x60; and sends nothing. 
+    # Sends a named message to a running execution. The workflow receives it from &#x60;ctx.waitForMessage&#x60; with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in &#x60;ctx.waitForApproval&#x60; is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** an execution whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a function with &#x60;visibility: public&#x60;.  Any other execution answers &#x60;404&#x60;, as a missing one does.  Send &#x60;Idempotency-Key&#x60; to make a retry safe: a repeat with a key the same sender has used on the execution returns the first message with &#x60;200&#x60; and sends nothing. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the execution has already seen returns the first message and sends nothing. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
     # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts = {})

@@ -24,8 +24,10 @@ module Volcano
       @pending = @releasing = @closed = false
     end
 
-    # The task is a transient child of the caller's, so call it from the task
-    # that subscribes.
+    # A transient child of the caller's task, so call it from the task that
+    # subscribes. Stopping that task, as a disconnect stops a realtime
+    # callback's, does not stop a transient child, and one that ends hands it
+    # to its parent.
     def start
       @task ||= Async::Task.current.async(transient: true) { work }
       nil

@@ -6415,12 +6415,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests from this address with session tokens that are not valid
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /durable-approvals:
     post:
       tags:

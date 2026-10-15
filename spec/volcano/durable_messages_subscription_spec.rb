@@ -794,6 +794,42 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  # A realtime callback's task is one: a disconnect stops it.
+  it 'keeps delivering once the task that subscribed is stopped', :aggregate_failures do
+    Async do |task|
+      client.realtime.channel('room').subscribe
+      transport.pages.enqueue(page(1))
+      subscribed = Async::Queue.new
+      subscriber = task.async do
+        subscribed.enqueue(follow)
+        Async::Queue.new.dequeue
+      end
+      subscription = task.with_timeout(0.5) { subscribed.dequeue }
+      subscriber.stop
+      publish(sockets[0], published(2))
+      wait_until(task) { received.size == 2 }
+
+      expect(received).to eq([1, 2])
+      subscription.unsubscribe
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'shows no credential when a subscription is inspected', :aggregate_failures do
+    Async do
+      transport.pages.enqueue(page)
+      subscription = follow(client_token: 'client-token')
+      shown = '#<Volcano::DurableMessageSubscription>'
+
+      expect(subscription.inspect).to eq(shown)
+      expect(subscription.to_s).to eq(shown)
+      expect(PP.pp(subscription, +'')).to eq("#{shown}\n")
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'refuses a second subscription to an execution until the first one ends', :aggregate_failures do
     Async do |task|
       transport.pages.enqueue(page(1))

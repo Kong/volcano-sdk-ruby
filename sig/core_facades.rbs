@@ -82,6 +82,9 @@ module Volcano
 
   class DurableMessageSubscription
     def unsubscribe: () -> nil
+    def inspect: () -> String
+    def to_s: () -> String
+    def pretty_print: (DurableExecution::_PrettyPrinter printer) -> void
   end
 
   class DurableMessages

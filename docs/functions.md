@@ -114,6 +114,8 @@ Reads accept the project owner's platform user token or a project access token. 
 A durable function written in JavaScript or Python can wait for a named message and publish messages of its own. Ruby sends, lists, and follows them:
 
 ```ruby
+require "async"
+
 handle = client.durable.start("onboarding", { account_id: "account-7" })
 messages = client.durable.messages
 
@@ -131,7 +133,7 @@ ensure
 end.wait
 ```
 
-`send_message` queues the message until a wait for its name takes it, and returns the stored `DurableMessage`: its `status` is `delivered` when a wait took it at once, and `queued` otherwise. A name is 1 to 237 printable ASCII characters; `data` is any JSON value up to 64 KiB. Sending again with an `idempotency_key` the same sender has used on the execution returns the stored message in its current status and sends nothing; another sender's keys never collide with it. Sending to an execution that has ended raises `Volcano::Error::ConflictError` with `code` `execution_not_running`.
+`send_message` queues the message until a wait for its name takes it, and returns the stored `DurableMessage`: its `status` is `delivered` when a wait took it at once, `delivering` while the handover to that wait is still being confirmed, and `queued` otherwise. A name is 1 to 237 printable ASCII characters; `data` is any JSON value up to 64 KiB. Sending again with an `idempotency_key` the same sender has used on the execution returns the stored message in its current status and sends nothing; another sender's keys never collide with it. Sending to an execution that has ended raises `Volcano::Error::ConflictError` with `code` `execution_not_running`, and sending to one already holding 100 messages no wait has taken raises it with `too_many_queued_messages`.
 
 `list` returns both directions, oldest first, filtered by `direction` (`in` or `out`), `name`, `after` (a `seq`), and `limit` (1 to 500, default 100). `seq` orders an execution's messages but can skip numbers, so read the next page with `after` set to the last message's `seq` while `has_more` is true.
 

@@ -33,6 +33,13 @@ module Volcano
       @stream.close
       @realtime.__send__(:remove_durable_channel, @channel)
     end
+
+    # The channel holds the client token and the realtime client the session,
+    # so inspection shows neither.
+    def inspect = '#<Volcano::DurableMessageSubscription>'
+    alias to_s inspect
+
+    def pretty_print(printer) = printer.text(inspect)
   end
 
   # Sends to, lists, and follows the messages of durable executions.
@@ -63,11 +70,13 @@ module Volcano
 
     # Sends a message to a running execution, queued until a wait for its
     # +name+ takes it. +data+ is any JSON value. The returned message's
-    # +status+ is +delivered+ when a wait took it at once, and +queued+
-    # otherwise. Sending again with an +idempotency_key:+ the same sender has
-    # used on the execution returns the message the first send stored, in its
-    # current status, and sends nothing. Sending to an execution that has ended
-    # raises Error::ConflictError, whose +code+ is +execution_not_running+.
+    # +status+ is +delivered+ when a wait took it at once, +delivering+ while
+    # that handover is still being confirmed, and +queued+ otherwise. Sending
+    # again with an +idempotency_key:+ the same sender has used on the
+    # execution returns the message the first send stored, in its current
+    # status, and sends nothing. Sending to an execution that has ended raises
+    # Error::ConflictError, whose +code+ is +execution_not_running+, and to one
+    # holding 100 messages no wait has taken, +too_many_queued_messages+.
     def send_message(function_name, execution_id, name, data = nil, **options)
       target = message_target(function_name, execution_id, known_options(options, SEND_OPTIONS))
       name = message_name(name)

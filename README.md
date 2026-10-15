@@ -609,6 +609,8 @@ message, and publish messages of its own. Ruby sends them, lists them, and
 follows what the execution publishes:
 
 ```ruby
+require "async"
+
 handle = client.durable.start("onboarding", { account_id: "account-7" })
 messages = client.durable.messages
 

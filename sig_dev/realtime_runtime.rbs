@@ -564,9 +564,6 @@ end
 
 module Volcano
   class Realtime
-    class ClosedError < StandardError
-    end
-
     class DuplicateSubscriptionError < StandardError
     end
 
@@ -959,6 +956,14 @@ module Volcano
       def reconnect_needed?: () -> bool
 
       def default_reconnect_delay: (Integer attempt) -> Float
+    end
+  end
+end
+
+module Volcano
+  class Realtime
+    class ClosedError
+      def self.from_disconnect: (Object? payload) -> ClosedError
     end
   end
 end

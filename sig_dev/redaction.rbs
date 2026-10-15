@@ -1,12 +1,4 @@
 module Volcano
-  class Realtime
-    class ServerError < StandardError
-      attr_reader code: Object?
-
-      def initialize: (String message, ?code: Object?) -> void
-    end
-  end
-
   module Redaction
     MARKER: String
 

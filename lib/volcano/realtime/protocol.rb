@@ -22,7 +22,27 @@ module Volcano
       end
     end
 
-    class ClosedError < StandardError; end
+    # A closed realtime transport, retaining its numeric close code when available.
+    class ClosedError < ServerError
+      def initialize(message, code: nil)
+        @close_code = code
+        super
+      end
+
+      def code = @close_code
+
+      def self.from_disconnect(payload)
+        raise TypeError, 'realtime disconnect must be an object' unless payload.is_a?(Hash)
+
+        reason = payload['reason']
+        code = payload['code']
+        new(
+          reason.is_a?(String) && !reason.empty? ? reason : 'realtime connection closed',
+          code: code.is_a?(Integer) ? code : nil
+        )
+      end
+    end
+
     class DuplicateSubscriptionError < StandardError; end
     class PendingLimitError < StandardError; end
     class RequestTimeoutError < StandardError; end

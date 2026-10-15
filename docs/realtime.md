@@ -38,6 +38,23 @@ Run realtime operations inside the same Async reactor for that client.
 The SDK uses HTTP/1.1 WebSocket upgrades; network proxies must allow those upgrades.
 The following channel examples belong inside an `Async` block with an authenticated `client`.
 
+## Connection failures
+
+The public key needs `realtime.connect` and `realtime.subscribe` permissions.
+Terminal startup failures received as WebSocket closes or disconnect push frames
+reject the pending subscription promptly with `Volcano::Realtime::ClosedError`.
+The exception preserves the reason and exposes the optional numeric close code
+through its read-only `code` method. Credentials are redacted from error messages,
+and failed sockets close before another subscription attempt.
+
+```ruby
+begin
+  channel.subscribe
+rescue Volcano::Realtime::ClosedError => error
+  warn "#{error.message} (code: #{error.code})"
+end
+```
+
 ## Pause or remove channels
 
 ```ruby

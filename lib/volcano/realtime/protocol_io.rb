@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'protocol/websocket/error'
+
 module Volcano
   class Realtime
     # Centrifuge protocol implementation extended with socket IO helpers.
@@ -85,7 +87,8 @@ module Volcano
         end
 
         def closed_error(error)
-          ClosedError.new(Redaction.message(error.message, secrets: @secrets)).tap do |closed|
+          code = error.is_a?(::Protocol::WebSocket::ClosedError) ? error.code : nil
+          ClosedError.new(Redaction.message(error.message, secrets: @secrets), code: code).tap do |closed|
             trace = error.backtrace
             closed.set_backtrace(trace) if trace
           end

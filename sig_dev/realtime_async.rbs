@@ -4,6 +4,14 @@ module Volcano
   end
 end
 
+module Protocol
+  module WebSocket
+    class ClosedError < StandardError
+      attr_reader code: Integer
+    end
+  end
+end
+
 interface _RealtimeFrame
   def to_str: () -> String
 end

@@ -87,7 +87,7 @@ module Volcano
   class DurableMessages
     def send_message: (String function_name, String execution_id, String name, ?sdk_json data, **String? options) -> DurableMessage
     def list: (String function_name, String execution_id, ?durable_message_filters filters) -> DurableMessagePage
-    def subscribe: (String function_name, String execution_id, ?client_token: String?, ?project_id: String?) ?{ (DurableMessage) -> void } -> DurableMessageSubscription
+    def subscribe: (String function_name, String execution_id, ?client_token: String?, ?project_id: String?) { (DurableMessage) -> void } -> DurableMessageSubscription
   end
 
   class Durable

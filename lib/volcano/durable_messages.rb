@@ -113,7 +113,7 @@ module Volcano
     # Realtime::DuplicateSubscriptionError when this client already follows the
     # execution.
     def subscribe(function_name, execution_id, client_token: nil, project_id: nil, &handler)
-      raise ArgumentError, 'subscribe requires a block' unless handler
+      raise ArgumentError, 'subscribe requires a block' unless block_given?
 
       target = message_target(function_name, execution_id, { client_token: client_token, project_id: project_id })
       session = DurableMessageSession.new(@realtime)

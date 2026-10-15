@@ -23,14 +23,20 @@ module Volcano
     private_constant :Held
 
     # +list_after+ reads the page of published messages after a `seq`, and
-    # +on_failure+ hears about a catch-up that failed in the background.
+    # +on_failure+ hears about a catch-up that failed in the background or a
+    # handler that raised on a live message.
     def initialize(handler, list_after, on_failure)
+      require 'async/semaphore'
       @handler = handler
       @list_after = list_after
+      @on_failure = on_failure
       @last_seq = @catch_ups = 0
       @started = @closed = false
       @held = []
-      @reads = nil
+      @reads = Async::Semaphore.new(1)
+      # Live messages and catch-ups are delivered from different tasks, so a
+      # catch-up waits for a handler still running on a live message.
+      @handling = Async::Semaphore.new(1)
       @background = DurableMessageCatchUps.new(-> { read_missed }, -> { catch_up_in_background }, on_failure)
     end
 
@@ -41,6 +47,9 @@ module Volcano
       return catch_up_to(held) if held.prev_seq > @last_seq
 
       deliver(held.message)
+    rescue StandardError => e
+      # The protocol's callback task would ignore what the handler raised.
+      @on_failure.call(e)
     end
 
     def resubscribed = catch_up_in_background
@@ -71,7 +80,11 @@ module Volcano
       catch_up_in_background
     end
 
+    # One catch-up waiting its turn reads whatever more are asked for
+    # meanwhile, so a burst of dropped publications reads once.
     def catch_up_in_background
+      return if @background.pending?
+
       begin_catch_up
       @background.request
     end
@@ -86,7 +99,7 @@ module Volcano
 
     def read_missed
       read = false
-      reads.acquire do
+      @reads.acquire do
         read_pages
         read = true
       ensure
@@ -130,11 +143,13 @@ module Volcano
     end
 
     def deliver(message)
-      return if @closed || message.seq <= @last_seq
+      @handling.acquire { call_handler(message) unless @closed || message.seq <= @last_seq }
+      nil
+    end
 
+    def call_handler(message)
       @last_seq = message.seq
       @handler.call(message)
-      nil
     end
 
     def published(data)
@@ -142,11 +157,6 @@ module Volcano
       Held.new(message:, prev_seq: broadcast_prev_seq(data)) if message.direction == 'out'
     rescue TypeError
       nil
-    end
-
-    def reads
-      require 'async/semaphore'
-      @reads ||= Async::Semaphore.new(1)
     end
   end
   private_constant :DurableMessageStream

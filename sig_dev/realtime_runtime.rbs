@@ -177,6 +177,7 @@ module Volcano
                     | (:database_name method_name) -> String?
                     | (:durable_channel method_name, String execution_id, String? client_token, _DurableFollower follower) -> Channel?
                     | (:remove_durable_channel method_name, Channel channel) -> nil
+                    | [T] (:blocking method_name) { () -> T } -> T
 
       private
 
@@ -189,6 +190,8 @@ module Volcano
       def build_channel: (String name, Symbol type, PostgresBatchConfig batch_config) -> Channel
 
       def durable_channel: (String execution_id, String? client_token, _DurableFollower follower) -> Channel?
+
+      def blocking: [T] () { () -> T } -> T
 
       def protocol_lock: () -> Async::Semaphore
 

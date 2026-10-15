@@ -74,6 +74,7 @@ RSpec.describe Volcano::DurableMessages do
         authorization: 'access-token', query: { direction: 'out', after: 0 }
       )
       expect(transport.lists.first.fetch(:target).client_token).to eq('client-token')
+      expect(transport.list_threads).not_to include(Thread.current)
     ensure
       client.realtime.disconnect
     end.wait
@@ -323,6 +324,91 @@ RSpec.describe Volcano::DurableMessages do
       wait_until(task) { received.size == 4 }
       expect(received).to eq([1, 2, 3, 4])
       expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 2)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'calls the block for a read only once its call on a live message returns', :aggregate_failures do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    calls = []
+    entered = Async::Queue.new
+    resume = Async::Queue.new
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow do |message|
+        calls << [:start, message.seq]
+        if message.seq == 2
+          entered.enqueue(true)
+          resume.dequeue
+        end
+        calls << [:end, message.seq]
+      end
+      publish(sockets[0], published(2).merge('prev_seq' => 1))
+      task.with_timeout(0.5) { entered.dequeue }
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      publish(sockets[0], published(4).merge('prev_seq' => 3))
+      transport.pages.enqueue(page(3, 4))
+      wait_until(task) { transport.lists.size == 2 }
+      task.sleep(0.01)
+
+      expect(calls).to eq([[:start, 1], [:end, 1], [:start, 2]])
+      resume.enqueue(true)
+      wait_until(task) { calls.size == 8 }
+      expect(calls.drop(2)).to eq([[:start, 2], [:end, 2], [:start, 3], [:end, 3], [:start, 4], [:end, 4]])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads once for a burst of publications the connection had no room for' do
+    stub_const('Volcano::Realtime::Protocol::DEFAULT_MAX_CALLBACK_QUEUE', 1)
+    entered = Async::Queue.new
+    resume = Async::Queue.new
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow do |message|
+        received << message.seq
+        next unless message.seq == 2
+
+        entered.enqueue(true)
+        resume.dequeue
+      end
+      publish(sockets[0], published(2).merge('prev_seq' => 1))
+      task.with_timeout(0.5) { entered.dequeue }
+      (3..8).each { |seq| publish(sockets[0], published(seq).merge('prev_seq' => seq - 1)) }
+      wait_until(task) { transport.lists.size == 2 }
+      transport.pages.enqueue(page(3, 4, 5, 6, 7, 8))
+      transport.pages.enqueue(page)
+      resume.enqueue(true)
+      wait_until(task) { received.size == 8 }
+      task.sleep(0.05)
+
+      expect(transport.lists.size).to be <= 3
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reports a block that raises on a live message and goes on delivering', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page)
+      follow do |message|
+        received << message.seq
+        raise 'handler failed' if message.seq == 1
+      end
+      publish(sockets[0], published(1))
+      publish(sockets[0], published(2))
+      wait_until(task) { received.size == 2 }
+
+      expect(received).to eq([1, 2])
+      expect(errors).to eq(['handler failed'])
+      expect(transport.lists.size).to eq(1)
     ensure
       client.realtime.disconnect
     end.wait

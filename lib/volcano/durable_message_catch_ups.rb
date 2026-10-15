@@ -16,10 +16,9 @@ module Volcano
       @read = read
       @due = due
       @on_failure = on_failure
-      @requested = 0
       @backoff = FIRST_RETRY_SECONDS
       @retry_delay = @task = @wake = nil
-      @closed = false
+      @pending = @closed = false
     end
 
     # The task is a transient child of the caller's, so call it from the task
@@ -30,10 +29,13 @@ module Volcano
     end
 
     def request
-      @requested += 1
+      @pending = true
       wake.signal
       nil
     end
+
+    # Whether a catch-up asked for has yet to start reading.
+    def pending? = @pending
 
     def retry_later
       return if @closed
@@ -59,8 +61,8 @@ module Volcano
 
     def work
       until @closed
-        if @requested.positive?
-          @requested -= 1
+        if @pending
+          @pending = false
           read
         else
           await_request

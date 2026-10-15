@@ -194,6 +194,7 @@ module Volcano
 
     @handler: ^(DurableMessage) -> void
     @list_after: ^(Integer) -> DurableMessagePage
+    @on_failure: ^(StandardError) -> void
     class Held < Data
       attr_reader message: DurableMessage
       attr_reader prev_seq: Integer
@@ -206,11 +207,12 @@ module Volcano
     @started: bool
     @closed: bool
     @held: Array[Held]
-    @reads: Async::Semaphore?
+    @reads: Async::Semaphore
+    @handling: Async::Semaphore
     @background: DurableMessageCatchUps
 
     def initialize: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> void
-    def live: (Object? data) -> nil
+    def live: (Object? data) -> void
     def resubscribed: () -> nil
     def dropped: () -> nil
     def catch_up: () -> void
@@ -226,8 +228,8 @@ module Volcano
     private def following_on: () -> Held?
     private def hold: (Held held) -> nil
     private def deliver: (DurableMessage message) -> nil
+    private def call_handler: (DurableMessage message) -> void
     private def published: (Object? data) -> Held?
-    private def reads: () -> Async::Semaphore
   end
 
   class DurableMessageCatchUps
@@ -237,7 +239,7 @@ module Volcano
     @read: ^() -> void
     @due: ^() -> void
     @on_failure: ^(StandardError) -> void
-    @requested: Integer
+    @pending: bool
     @backoff: Float
     @retry_delay: Float?
     @task: Async::Task?
@@ -247,6 +249,7 @@ module Volcano
     def initialize: (^() -> void read, ^() -> void due, ^(StandardError) -> void on_failure) -> void
     def start: () -> nil
     def request: () -> nil
+    def pending?: () -> bool
     def retry_later: () -> nil
     def cancel_retry: () -> nil
     def caught_up: () -> Float
@@ -263,6 +266,7 @@ module Volcano
     @channel: Realtime::Channel
     @realtime: Realtime
 
+    def self.open: (DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> DurableMessageSubscription
     def initialize: (DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> void
   end
 
@@ -290,10 +294,8 @@ module Volcano
     def initialize: (_DurableClient client, _DurableMessagesTransport transport, Realtime realtime) -> void
 
     private def durable_channel: (Target target, DurableMessageStream stream) -> Realtime::Channel
-    private def follow: (DurableMessageStream stream, Realtime::Channel channel) -> DurableMessageSubscription
-    private def unsubscribe_unless_finished: (DurableMessageSubscription subscription) { () -> void } -> void
     private def reader: (Target target) -> ^(Integer) -> DurableMessagePage
-    private def list_messages: (Target target, Hash[Symbol, String | Integer] query) -> Transport::Response
+    private def list_messages: (Target target, Hash[Symbol, String | Integer] query, ?String authorization) -> Transport::Response
     private def failure_reporter: () -> ^(StandardError) -> void
     private def authorization: (Target target) -> String
     private def message_target: (Object? function_name, Object? execution_id, Hash[Symbol, Object?] options) -> Target

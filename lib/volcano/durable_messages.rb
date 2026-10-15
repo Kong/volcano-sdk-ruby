@@ -4,10 +4,26 @@ module Volcano
   # Messages an execution publishes, delivered to the block #subscribe took
   # until #unsubscribe.
   class DurableMessageSubscription
+    # Subscribes +channel+ and delivers what was published so far. Leaves the
+    # channel if that fails, or the task running it is stopped.
+    def self.open(stream, channel, realtime)
+      subscription = new(stream, channel, realtime)
+      finished = false
+      begin
+        channel.subscribe
+        stream.catch_up
+        finished = true
+      ensure
+        subscription.unsubscribe unless finished
+      end
+      subscription
+    end
+
     def initialize(stream, channel, realtime)
       @stream = stream
       @channel = channel
       @realtime = realtime
+      channel.on('message') { |data| stream.live(data) }
     end
 
     # Stops delivering messages and leaves the execution's channel. Safe to
@@ -75,17 +91,19 @@ module Volcano
       durable_message_page(Transport.body(list_messages(target, list_query(filters)), 200))
     end
 
-    # Delivers every message the execution publishes to the block, in order
-    # and once each. Messages it published before the call come first, and
-    # after a reconnect the ones published meanwhile are read back before live
-    # delivery resumes. Returns a DurableMessageSubscription once the messages
-    # published so far are delivered; a block that raises meanwhile ends the
-    # subscription and raises here.
+    # Delivers every message the execution publishes to the block, in order,
+    # once each, and one call at a time. Messages it published before the
+    # call come first, and after a reconnect the ones published meanwhile are
+    # read back before live delivery resumes. Returns a
+    # DurableMessageSubscription once the messages published so far are
+    # delivered; a block that raises meanwhile ends the subscription and
+    # raises here.
     #
     # Follows the execution on the client's realtime connection, so call it
     # inside that connection's Async reactor, with a signed-in session. A
     # catch-up that fails in the background is reported to Realtime#on_error
-    # and retried, backing off to every 30 seconds. Realtime#remove_all_channels
+    # and retried, backing off to every 30 seconds; a block that raises later
+    # is reported there too, and delivery goes on. Realtime#remove_all_channels
     # and Realtime#disconnect end the subscription. Raises
     # Realtime::DuplicateSubscriptionError when this client already follows the
     # execution.
@@ -94,7 +112,7 @@ module Volcano
 
       target = message_target(function_name, execution_id, { client_token: client_token, project_id: project_id })
       stream = DurableMessageStream.new(handler, reader(target), failure_reporter)
-      follow(stream, durable_channel(target, stream))
+      DurableMessageSubscription.open(stream, durable_channel(target, stream), @realtime)
     end
 
     private
@@ -104,36 +122,21 @@ module Volcano
         raise(Realtime::DuplicateSubscriptionError, 'already subscribed to this execution; unsubscribe first')
     end
 
-    def follow(stream, channel)
-      subscription = DurableMessageSubscription.new(stream, channel, @realtime)
-      channel.on('message') { |data| stream.live(data) }
-      unsubscribe_unless_finished(subscription) do
-        channel.subscribe
-        stream.catch_up
-      end
-      subscription
-    end
-
-    # Also leaves the channel when the task running the block is stopped.
-    def unsubscribe_unless_finished(subscription)
-      finished = false
-      begin
-        yield
-        finished = true
-      ensure
-        subscription.unsubscribe unless finished
-      end
-    end
-
+    # Reads off the reactor, which the transport would block along with the
+    # connection's reads and heartbeats.
     def reader(target)
       lambda do |after|
-        durable_message_page(Transport.body(list_messages(target, { direction: 'out', after: after }), 200))
+        authorization = authorization(target)
+        response = @realtime.__send__(:blocking) do
+          list_messages(target, { direction: 'out', after: after }, authorization)
+        end
+        durable_message_page(Transport.body(response, 200))
       end
     end
 
-    def list_messages(target, query)
+    def list_messages(target, query, authorization = authorization(target))
       Transport.invoke do
-        @transport.list_durable_messages(authorization: authorization(target), target: target, query: query)
+        @transport.list_durable_messages(authorization: authorization, target: target, query: query)
       end
     end
 

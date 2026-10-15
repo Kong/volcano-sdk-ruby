@@ -155,6 +155,8 @@ module Volcano
 
       def report_channel_error(error) = protocol_error(public_error(error))
 
+      def blocking(&) = BlockingCall.call(&)
+
       def cached_channel(channel, batch_config)
         channel.__send__(:ensure_fetch_config!, batch_config)
         channel

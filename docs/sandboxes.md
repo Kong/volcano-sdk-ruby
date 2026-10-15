@@ -85,7 +85,7 @@ template's configured memory.
 Only trusted backend code should call
 `client.sandboxes.grant(session_id, auth_user_id, expires_at: expiry)` or
 `client.sandboxes.revoke(session_id, auth_user_id)`. Supply a `Time` or ISO8601
-string for `expiry`; returned session and access expiries are `Time` values. Project users can access only
+string for `expiry`; a returned access expiry is a `Time`, and a session expiry is a `Time` or `nil` when the session has no lifetime limit. Project users can access only
 sessions explicitly granted to them; they cannot create or manage sessions.
 Service keys stay on the backend. The preset catalog is public; anonymous keys cannot create or manage sessions.
 

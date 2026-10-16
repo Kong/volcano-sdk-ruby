@@ -9,6 +9,13 @@ module Volcano
         # @dynamic dispatch_publication_batches, read_loop
         def connected? = @connected && !@closed
 
+        # Ends the connection from the reader, as a loss would, so the reconnect
+        # runs in the protocol's tasks rather than the caller's.
+        def drop
+          close_socket
+          nil
+        end
+
         def on_publication(channel, on_rejection: nil, &handler)
           ensure_open!
           @publication_handlers[channel] << ProtocolPublicationDispatch::Registration.new(

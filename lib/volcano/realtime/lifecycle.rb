@@ -52,9 +52,17 @@ module Volcano
       def leave_durable_channel(channel)
         channel.__send__(:remove)
       rescue StandardError => e
-        channel.mark_closed
-        protocol.close if connected?
+        abandon_durable_leave(channel) { protocol.close }
         report_channel_error(e)
+      rescue Async::Cancel
+        # Closing here would start the reconnect in the task being stopped.
+        abandon_durable_leave(channel) { protocol.drop }
+        raise
+      end
+
+      def abandon_durable_leave(channel)
+        channel.mark_closed
+        yield if connected?
       end
 
       def remove_channel_entry(name, channel)

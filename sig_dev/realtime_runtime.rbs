@@ -369,6 +369,8 @@ module Volcano
 
       def leave_durable_channel: (Channel channel) -> void
 
+      def abandon_durable_leave: (Channel channel) { () -> void } -> void
+
       def remove_channel_entry: (String name, Channel channel) -> StandardError?
     end
   end
@@ -862,6 +864,8 @@ module Volcano
         @max_callback_queue: Integer
 
         def connected?: () -> bool
+
+        def drop: () -> nil
 
         def on_publication: (String channel, ?on_rejection: (^(Object?) -> void)?) { (Object?, Object?, Object?, recovered: bool) -> void } -> ^(Object?, Object?, Object?, recovered: bool) -> void
 

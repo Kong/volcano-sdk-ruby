@@ -17,7 +17,8 @@ See [runtime coverage](maintainers/coverage.md) for coverage reports and focused
 
 After updating `openapi/openapi.yaml` from Hosting's public bundle, regenerate
 the internal client with `bin/generate-openapi` and check it with
-`bin/check-openapi`. Keep generated code inside `lib/volcano/generated` and the realtime protocol
+`bin/check-openapi`. The generator also refreshes `openapi/openapi.yaml.sha256`,
+the digest the bundled-contract spec pins; commit it with the contract. Keep generated code inside `lib/volcano/generated` and the realtime protocol
 adapter behind the public facade.
 
 ## Coordinate SDK changes

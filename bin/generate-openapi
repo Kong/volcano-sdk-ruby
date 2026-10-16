@@ -55,3 +55,12 @@ npx --no-install openapi-generator-cli generate \
   -t openapi/templates \
   -o "$output" \
   --global-property apiTests=false,modelTests=false,apiDocs=false,modelDocs=false
+
+# Record the digest of the vendored contract next to it. The bundled-contract
+# spec compares against this file, so a contract sync updates it here instead
+# of by hand. Only the committed output refreshes it; freshness checks write to
+# a temporary directory and leave it alone.
+if [[ "$output" == "$committed_output" ]]; then
+  ruby -rdigest -e 'puts Digest::SHA256.file(ARGV.fetch(0)).hexdigest' \
+    openapi/openapi.yaml > openapi/openapi.yaml.sha256
+fi

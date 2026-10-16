@@ -73,6 +73,20 @@ RSpec.describe Volcano::Client do
     expect(sent_target).to eq(target(client_token: 'client-token'))
   end
 
+  it 'masks the client token wherever a message target is inspected', :aggregate_failures do
+    responses[:send_durable_message] = transport_response(201, message)
+
+    messages.send_message('approvals', 'execution-1', 'decision', nil, client_token: 'client-token')
+
+    sent = calls.first.last.fetch(:target)
+    shown = '#<data Volcano::DurableMessages::Target project_id=nil, function_id="approvals", ' \
+            'execution_id="execution-1", client_token=[REDACTED]>'
+    expect(sent.inspect).to eq(shown)
+    expect(sent.to_s).to eq(shown)
+    expect(PP.pp(sent, +'')).to eq("#{shown}\n")
+    expect(sent.with(client_token: nil).inspect).to end_with('client_token=nil>')
+  end
+
   it 'sends on the project route with the session token when given a project' do
     responses[:send_durable_message] = transport_response(201, message(sender: { 'type' => 'project' }))
 

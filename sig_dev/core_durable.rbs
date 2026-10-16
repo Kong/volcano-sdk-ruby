@@ -319,6 +319,9 @@ module Volcano
       attr_reader client_token: String?
 
       def self.new: (project_id: String?, function_id: String, execution_id: String, client_token: String?) -> Target
+      def inspect: () -> String
+      def to_s: () -> String
+      def pretty_print: (DurableExecution::_PrettyPrinter printer) -> void
     end
 
     SEND_OPTIONS: Array[Symbol]

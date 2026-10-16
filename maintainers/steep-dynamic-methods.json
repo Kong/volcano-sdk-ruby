@@ -255,6 +255,16 @@
     ]
   },
   {
+    "path": "lib/volcano/durable_messages.rb",
+    "scope": "Volcano::DurableMessages::Target",
+    "methods": [
+      "client_token",
+      "execution_id",
+      "function_id",
+      "project_id"
+    ]
+  },
+  {
     "path": "lib/volcano/errors.rb",
     "scope": "Volcano::Error::VolcanoError",
     "methods": [

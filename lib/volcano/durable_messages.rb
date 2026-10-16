@@ -56,6 +56,24 @@ module Volcano
     include DurableMessageResponses
 
     Target = Data.define(:project_id, :function_id, :execution_id, :client_token)
+
+    # Reopens the generated record to mask its credential.
+    class Target
+      # @dynamic project_id, function_id, execution_id, client_token
+
+      # The client token is a bearer credential, so inspection masks it, as
+      # DurableExecution#inspect does.
+      def inspect
+        fields = to_h.map do |name, value|
+          "#{name}=#{name == :client_token && value ? Redaction::MARKER : value.inspect}"
+        end
+        "#<data #{self.class.name} #{fields.join(', ')}>"
+      end
+
+      def to_s = inspect
+
+      def pretty_print(printer) = printer.text(inspect)
+    end
     private_constant :Target
 
     SEND_OPTIONS = %i[idempotency_key client_token project_id].freeze

@@ -402,6 +402,8 @@ module Volcano::Generated
     # Generates recovery token and stores it (email sending pending). Returns generic message to prevent email enumeration. Project is identified via the anon key. 
     # @param auth_forgot_password_request [AuthForgotPasswordRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [AuthForgotPassword200Response]
     def auth_forgot_password(auth_forgot_password_request, opts = {})
       data, _status_code, _headers = auth_forgot_password_with_http_info(auth_forgot_password_request, opts)
@@ -412,6 +414,8 @@ module Volcano::Generated
     # Generates recovery token and stores it (email sending pending). Returns generic message to prevent email enumeration. Project is identified via the anon key. 
     # @param auth_forgot_password_request [AuthForgotPasswordRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [Array<(AuthForgotPassword200Response, Integer, Hash)>] AuthForgotPassword200Response data, response status code and response headers
     def auth_forgot_password_with_http_info(auth_forgot_password_request, opts = {})
       if @api_client.config.debugging
@@ -436,6 +440,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -575,6 +581,8 @@ module Volcano::Generated
     # Get the effective password policy
     # Returns the backend-enforced password bounds and compromised-password screening status for the project identified by the anon key. A valid anon key is required, but no route-specific auth permission is needed. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [AuthPasswordPolicy]
     def auth_get_password_policy(opts = {})
       data, _status_code, _headers = auth_get_password_policy_with_http_info(opts)
@@ -584,6 +592,8 @@ module Volcano::Generated
     # Get the effective password policy
     # Returns the backend-enforced password bounds and compromised-password screening status for the project identified by the anon key. A valid anon key is required, but no route-specific auth permission is needed. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [Array<(AuthPasswordPolicy, Integer, Hash)>] AuthPasswordPolicy data, response status code and response headers
     def auth_get_password_policy_with_http_info(opts = {})
       if @api_client.config.debugging
@@ -599,6 +609,8 @@ module Volcano::Generated
       header_params = opts[:header_params] || {}
       # HTTP header 'Accept' (if needed)
       header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -803,6 +815,8 @@ module Volcano::Generated
     # Logout (revoke refresh token)
     # Invalidate a refresh token. Requires an anon key.  Send `refresh_token` for the default flow. An eligible cookie-mode browser request may instead send `session_mode: cookie` with an empty token; logout remains idempotent when the cookie is missing or expired. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthRefreshRequest] :auth_refresh_request 
     # @return [nil]
     def auth_logout(opts = {})
@@ -813,6 +827,8 @@ module Volcano::Generated
     # Logout (revoke refresh token)
     # Invalidate a refresh token. Requires an anon key.  Send &#x60;refresh_token&#x60; for the default flow. An eligible cookie-mode browser request may instead send &#x60;session_mode: cookie&#x60; with an empty token; logout remains idempotent when the cookie is missing or expired. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthRefreshRequest] :auth_refresh_request 
     # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
     def auth_logout_with_http_info(opts = {})
@@ -827,11 +843,15 @@ module Volcano::Generated
 
       # header parameters
       header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
       # HTTP header 'Content-Type'
       content_type = @api_client.select_header_content_type(['application/json'])
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -928,6 +948,8 @@ module Volcano::Generated
     # Refresh access token
     # Get a new access token using a refresh token. Requires an anon key.  Send `refresh_token` in the body for the default flow. An eligible cookie-mode browser request may instead send `session_mode: cookie` with an empty token or omit the request body; the API reads and resets the project's HttpOnly cookie and omits `refresh_token` from the response. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthRefreshRequest] :auth_refresh_request 
     # @return [AuthTokenResponse]
     def auth_refresh(opts = {})
@@ -938,6 +960,8 @@ module Volcano::Generated
     # Refresh access token
     # Get a new access token using a refresh token. Requires an anon key.  Send &#x60;refresh_token&#x60; in the body for the default flow. An eligible cookie-mode browser request may instead send &#x60;session_mode: cookie&#x60; with an empty token or omit the request body; the API reads and resets the project&#39;s HttpOnly cookie and omits &#x60;refresh_token&#x60; from the response. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthRefreshRequest] :auth_refresh_request 
     # @return [Array<(AuthTokenResponse, Integer, Hash)>] AuthTokenResponse data, response status code and response headers
     def auth_refresh_with_http_info(opts = {})
@@ -959,6 +983,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -1129,6 +1155,8 @@ module Volcano::Generated
     # Reset password using recovery token from forgot-password. Revokes all existing sessions for security. 
     # @param auth_reset_password_request [AuthResetPasswordRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [AuthResetPassword200Response]
     def auth_reset_password(auth_reset_password_request, opts = {})
       data, _status_code, _headers = auth_reset_password_with_http_info(auth_reset_password_request, opts)
@@ -1139,6 +1167,8 @@ module Volcano::Generated
     # Reset password using recovery token from forgot-password. Revokes all existing sessions for security. 
     # @param auth_reset_password_request [AuthResetPasswordRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [Array<(AuthResetPassword200Response, Integer, Hash)>] AuthResetPassword200Response data, response status code and response headers
     def auth_reset_password_with_http_info(auth_reset_password_request, opts = {})
       if @api_client.config.debugging
@@ -1163,6 +1193,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -1197,6 +1229,8 @@ module Volcano::Generated
     # Authenticate with email and password. Requires an anon key.  Set `session_mode` to `cookie` to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. A frontend on its default Volcano URL is cross-site with this API and so always gets the body token. 
     # @param auth_signin_request [AuthSigninRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [AuthTokenResponse]
     def auth_signin(auth_signin_request, opts = {})
       data, _status_code, _headers = auth_signin_with_http_info(auth_signin_request, opts)
@@ -1207,6 +1241,8 @@ module Volcano::Generated
     # Authenticate with email and password. Requires an anon key.  Set &#x60;session_mode&#x60; to &#x60;cookie&#x60; to request HttpOnly refresh-token storage. Cookie mode is honored only for an exact, credentialed CORS origin on the same schemeful site as this API. Otherwise the response retains the refresh token in its body. A frontend on its default Volcano URL is cross-site with this API and so always gets the body token. 
     # @param auth_signin_request [AuthSigninRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [Array<(AuthTokenResponse, Integer, Hash)>] AuthTokenResponse data, response status code and response headers
     def auth_signin_with_http_info(auth_signin_request, opts = {})
       if @api_client.config.debugging
@@ -1231,6 +1267,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -1265,6 +1303,8 @@ module Volcano::Generated
     # Create a new end-user account. The project is determined from the anon key. Requires project-specific anon key in Authorization header.  **Session-less**: signup never issues a session. On success it returns a uniform acknowledgement (`AuthSignupResponse`) with no tokens; the client obtains a session with a subsequent `POST /auth/signin`. If email confirmation is enabled for the project, a confirmation email is sent and `confirmation_required` is `true`.  **Anti-enumeration**: a signup for an already-registered email returns the exact same `201` response as a fresh signup — it never returns `409` — so the response cannot be used to discover which emails are registered. 
     # @param auth_signup_request [AuthSignupRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [AuthSignupResponse]
     def auth_signup(auth_signup_request, opts = {})
       data, _status_code, _headers = auth_signup_with_http_info(auth_signup_request, opts)
@@ -1275,6 +1315,8 @@ module Volcano::Generated
     # Create a new end-user account. The project is determined from the anon key. Requires project-specific anon key in Authorization header.  **Session-less**: signup never issues a session. On success it returns a uniform acknowledgement (&#x60;AuthSignupResponse&#x60;) with no tokens; the client obtains a session with a subsequent &#x60;POST /auth/signin&#x60;. If email confirmation is enabled for the project, a confirmation email is sent and &#x60;confirmation_required&#x60; is &#x60;true&#x60;.  **Anti-enumeration**: a signup for an already-registered email returns the exact same &#x60;201&#x60; response as a fresh signup — it never returns &#x60;409&#x60; — so the response cannot be used to discover which emails are registered. 
     # @param auth_signup_request [AuthSignupRequest] 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @return [Array<(AuthSignupResponse, Integer, Hash)>] AuthSignupResponse data, response status code and response headers
     def auth_signup_with_http_info(auth_signup_request, opts = {})
       if @api_client.config.debugging
@@ -1299,6 +1341,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}
@@ -1332,6 +1376,8 @@ module Volcano::Generated
     # Create anonymous user
     # Create guest user without email/password.  User metadata (like display_name) can be included and will appear in realtime presence events. Requires enable_anonymous_signins to be true. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthSignupAnonymousRequest] :auth_signup_anonymous_request Optional user metadata
     # @return [AuthTokenResponse]
     def auth_signup_anonymous(opts = {})
@@ -1342,6 +1388,8 @@ module Volcano::Generated
     # Create anonymous user
     # Create guest user without email/password.  User metadata (like display_name) can be included and will appear in realtime presence events. Requires enable_anonymous_signins to be true. 
     # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_proxy_authorization Trusted server-side auth proxy credential in &#x60;Bearer SERVICE_KEY&#x60; form. When supplied, &#x60;X-Volcano-Client-IP&#x60; is also required. The service key must belong to the anon key&#39;s project and hold this operation&#39;s scope: &#x60;auth.signup&#x60; for signup and anonymous signup, &#x60;auth.signin&#x60; for signin and OAuth code exchange, &#x60;auth.refresh&#x60; for refresh, &#x60;auth.logout&#x60; for logout, and &#x60;auth.password_reset&#x60; for forgot-password and reset-password. The password policy accepts any service key for the project. Never expose a service key to browser code. 
+    # @option opts [String] :x_volcano_client_ip Original browser IPv4 or IPv6 address supplied by a trusted server-side auth proxy. The proxy must derive this value from its platform-verified request metadata, never from a browser-supplied header. Requires a valid &#x60;X-Volcano-Proxy-Authorization&#x60; header. 
     # @option opts [AuthSignupAnonymousRequest] :auth_signup_anonymous_request Optional user metadata
     # @return [Array<(AuthTokenResponse, Integer, Hash)>] AuthTokenResponse data, response status code and response headers
     def auth_signup_anonymous_with_http_info(opts = {})
@@ -1363,6 +1411,8 @@ module Volcano::Generated
       if !content_type.nil?
           header_params['Content-Type'] = content_type
       end
+      header_params[:'X-Volcano-Proxy-Authorization'] = opts[:'x_volcano_proxy_authorization'] if !opts[:'x_volcano_proxy_authorization'].nil?
+      header_params[:'X-Volcano-Client-IP'] = opts[:'x_volcano_client_ip'] if !opts[:'x_volcano_client_ip'].nil?
 
       # form parameters
       form_params = opts[:form_params] || {}

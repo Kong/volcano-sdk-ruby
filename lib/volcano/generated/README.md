@@ -156,7 +156,10 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::AuthenticationApi* | [**auth_unlink_identity**](docs/AuthenticationApi.md#auth_unlink_identity) | **DELETE** /auth/user/identities/{identityId} | Unlink an identity from the current user
 *Volcano::Generated::AuthenticationApi* | [**auth_update_user**](docs/AuthenticationApi.md#auth_update_user) | **PUT** /auth/user | Update user profile
 *Volcano::Generated::AutofixApi* | [**delete_autofix_api_key**](docs/AutofixApi.md#delete_autofix_api_key) | **DELETE** /projects/{id}/autofix/api-key | Delete the API key
+*Volcano::Generated::AutofixApi* | [**get_autofix_run**](docs/AutofixApi.md#get_autofix_run) | **GET** /projects/{id}/autofix-runs/{runId} | Get an autofix run
 *Volcano::Generated::AutofixApi* | [**get_autofix_settings**](docs/AutofixApi.md#get_autofix_settings) | **GET** /projects/{id}/autofix | Get autofix settings
+*Volcano::Generated::AutofixApi* | [**list_autofix_runs**](docs/AutofixApi.md#list_autofix_runs) | **GET** /projects/{id}/autofix-runs | List autofix runs
+*Volcano::Generated::AutofixApi* | [**start_autofix_run**](docs/AutofixApi.md#start_autofix_run) | **POST** /projects/{id}/issues/{issueId}/autofix-runs | Diagnose an issue
 *Volcano::Generated::AutofixApi* | [**update_autofix_settings**](docs/AutofixApi.md#update_autofix_settings) | **PUT** /projects/{id}/autofix | Replace autofix settings
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_backup**](docs/DatabaseBackupsApi.md#create_database_backup) | **POST** /projects/{id}/databases/{databaseName}/backups | Back up a database
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_restore**](docs/DatabaseBackupsApi.md#create_database_restore) | **POST** /projects/{id}/databases/{databaseName}/restores | Restore a database
@@ -211,7 +214,15 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_deployments**](docs/DurableFunctionsApi.md#list_durable_function_deployments) | **GET** /projects/{id}/durable-functions/{functionId}/deployments | List durable function deployments
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_function_schedulers**](docs/DurableFunctionsApi.md#list_durable_function_schedulers) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers | List schedulers for a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_functions**](docs/DurableFunctionsApi.md#list_durable_functions) | **GET** /projects/{id}/durable-functions | List all durable functions in a project
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_message_waits**](docs/DurableFunctionsApi.md#list_durable_message_waits) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/message-waits | List a durable execution's open message waits
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_messages**](docs/DurableFunctionsApi.md#list_durable_messages) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/messages | List a durable execution's messages
+*Volcano::Generated::DurableFunctionsApi* | [**list_durable_messages_from_application**](docs/DurableFunctionsApi.md#list_durable_messages_from_application) | **GET** /durable-functions/{functionId}/executions/{executionId}/messages | List a durable execution's messages from an application
+*Volcano::Generated::DurableFunctionsApi* | [**open_durable_message_session**](docs/DurableFunctionsApi.md#open_durable_message_session) | **POST** /durable-messages/sessions | Open a messages session from inside a workflow
+*Volcano::Generated::DurableFunctionsApi* | [**publish_durable_message**](docs/DurableFunctionsApi.md#publish_durable_message) | **POST** /durable-messages/publish | Publish a message from inside a workflow
+*Volcano::Generated::DurableFunctionsApi* | [**register_durable_message_wait**](docs/DurableFunctionsApi.md#register_durable_message_wait) | **POST** /durable-messages/waits | Wait for a message from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**request_durable_approval**](docs/DurableFunctionsApi.md#request_durable_approval) | **POST** /durable-approvals | Request an approval from inside a workflow
+*Volcano::Generated::DurableFunctionsApi* | [**send_durable_message**](docs/DurableFunctionsApi.md#send_durable_message) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/messages | Send a message to a durable execution
+*Volcano::Generated::DurableFunctionsApi* | [**send_durable_message_from_application**](docs/DurableFunctionsApi.md#send_durable_message_from_application) | **POST** /durable-functions/{functionId}/executions/{executionId}/messages | Send a message to a durable execution from an application
 *Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution**](docs/DurableFunctionsApi.md#start_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions | Start a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution_from_application**](docs/DurableFunctionsApi.md#start_durable_execution_from_application) | **POST** /durable-functions/{functionId}/executions | Start a durable execution from an application
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
@@ -465,8 +476,19 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::AuthTokenResponse](docs/AuthTokenResponse.md)
  - [Volcano::Generated::AuthUpdateUserRequest](docs/AuthUpdateUserRequest.md)
  - [Volcano::Generated::AuthUser](docs/AuthUser.md)
+ - [Volcano::Generated::AutofixDiagnosis](docs/AutofixDiagnosis.md)
+ - [Volcano::Generated::AutofixEdit](docs/AutofixEdit.md)
+ - [Volcano::Generated::AutofixEvidence](docs/AutofixEvidence.md)
  - [Volcano::Generated::AutofixModel](docs/AutofixModel.md)
+ - [Volcano::Generated::AutofixPatch](docs/AutofixPatch.md)
  - [Volcano::Generated::AutofixProvider](docs/AutofixProvider.md)
+ - [Volcano::Generated::AutofixPullRequest](docs/AutofixPullRequest.md)
+ - [Volcano::Generated::AutofixPullRequestSkipped](docs/AutofixPullRequestSkipped.md)
+ - [Volcano::Generated::AutofixPullRequestState](docs/AutofixPullRequestState.md)
+ - [Volcano::Generated::AutofixRun](docs/AutofixRun.md)
+ - [Volcano::Generated::AutofixRunStatus](docs/AutofixRunStatus.md)
+ - [Volcano::Generated::AutofixRunTrigger](docs/AutofixRunTrigger.md)
+ - [Volcano::Generated::AutofixRunUsage](docs/AutofixRunUsage.md)
  - [Volcano::Generated::AutofixSettings](docs/AutofixSettings.md)
  - [Volcano::Generated::AutofixStage](docs/AutofixStage.md)
  - [Volcano::Generated::BYOCProjectConfigFrontendCustomDomainTLSConfig](docs/BYOCProjectConfigFrontendCustomDomainTLSConfig.md)
@@ -563,6 +585,16 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DurableExecutionStatus](docs/DurableExecutionStatus.md)
  - [Volcano::Generated::DurableFunction](docs/DurableFunction.md)
  - [Volcano::Generated::DurableFunctionConfig](docs/DurableFunctionConfig.md)
+ - [Volcano::Generated::DurableMessage](docs/DurableMessage.md)
+ - [Volcano::Generated::DurableMessageDirection](docs/DurableMessageDirection.md)
+ - [Volcano::Generated::DurableMessageList](docs/DurableMessageList.md)
+ - [Volcano::Generated::DurableMessageSender](docs/DurableMessageSender.md)
+ - [Volcano::Generated::DurableMessageSessionRegistration](docs/DurableMessageSessionRegistration.md)
+ - [Volcano::Generated::DurableMessageStatus](docs/DurableMessageStatus.md)
+ - [Volcano::Generated::DurableMessageWait](docs/DurableMessageWait.md)
+ - [Volcano::Generated::DurableMessageWaitList](docs/DurableMessageWaitList.md)
+ - [Volcano::Generated::DurableMessageWaitRegistration](docs/DurableMessageWaitRegistration.md)
+ - [Volcano::Generated::DurableMessageWaitStatus](docs/DurableMessageWaitStatus.md)
  - [Volcano::Generated::EmailTemplate](docs/EmailTemplate.md)
  - [Volcano::Generated::Error](docs/Error.md)
  - [Volcano::Generated::ExportProjectSourceRequest](docs/ExportProjectSourceRequest.md)
@@ -649,7 +681,9 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::MetricUsageData](docs/MetricUsageData.md)
  - [Volcano::Generated::OAuthConfig](docs/OAuthConfig.md)
  - [Volcano::Generated::OAuthErrorResponse](docs/OAuthErrorResponse.md)
+ - [Volcano::Generated::OpenDurableMessageSessionRequest](docs/OpenDurableMessageSessionRequest.md)
  - [Volcano::Generated::PaginatedAuthUsers](docs/PaginatedAuthUsers.md)
+ - [Volcano::Generated::PaginatedAutofixRuns](docs/PaginatedAutofixRuns.md)
  - [Volcano::Generated::PaginatedDatabases](docs/PaginatedDatabases.md)
  - [Volcano::Generated::PaginatedDurableApprovals](docs/PaginatedDurableApprovals.md)
  - [Volcano::Generated::PaginatedDurableExecutions](docs/PaginatedDurableExecutions.md)
@@ -774,11 +808,13 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectSourceExportState](docs/ProjectSourceExportState.md)
  - [Volcano::Generated::ProjectTemplateInstallation](docs/ProjectTemplateInstallation.md)
  - [Volcano::Generated::ProjectUsageResponse](docs/ProjectUsageResponse.md)
+ - [Volcano::Generated::PublishDurableMessageRequest](docs/PublishDurableMessageRequest.md)
  - [Volcano::Generated::PublishSandboxPresetRequest](docs/PublishSandboxPresetRequest.md)
  - [Volcano::Generated::RealtimeConfig](docs/RealtimeConfig.md)
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::RegisterDurableMessageWaitRequest](docs/RegisterDurableMessageWaitRequest.md)
  - [Volcano::Generated::RenameVariableEnvironmentRequest](docs/RenameVariableEnvironmentRequest.md)
  - [Volcano::Generated::ReplaceFrontendSharedVariablesRequest](docs/ReplaceFrontendSharedVariablesRequest.md)
  - [Volcano::Generated::ReplaceSharedVariablesRequest](docs/ReplaceSharedVariablesRequest.md)
@@ -810,6 +846,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::SandboxTemplate](docs/SandboxTemplate.md)
  - [Volcano::Generated::SandboxTemplatePage](docs/SandboxTemplatePage.md)
  - [Volcano::Generated::ScheduleRequest](docs/ScheduleRequest.md)
+ - [Volcano::Generated::SendDurableMessageRequest](docs/SendDurableMessageRequest.md)
  - [Volcano::Generated::ServiceKey](docs/ServiceKey.md)
  - [Volcano::Generated::SetProjectGitProductionBranchRequest](docs/SetProjectGitProductionBranchRequest.md)
  - [Volcano::Generated::StorageBucket](docs/StorageBucket.md)

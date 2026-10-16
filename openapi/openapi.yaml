@@ -22414,6 +22414,8 @@ components:
           type: string
         data:
           x-go-type: json.RawMessage
+          x-go-type-skip-optional-pointer: true
+          nullable: true
           description: The JSON value sent or published, or null.
         sender:
           $ref: '#/components/schemas/DurableMessageSender'
@@ -22497,6 +22499,7 @@ components:
         data:
           x-go-type: json.RawMessage
           x-go-type-skip-optional-pointer: true
+          nullable: true
           description: Any JSON value, up to 64 KiB. Omitted means null.
       required:
         - name
@@ -22574,6 +22577,7 @@ components:
         data:
           x-go-type: json.RawMessage
           x-go-type-skip-optional-pointer: true
+          nullable: true
           description: Any JSON value, up to 64 KiB. Omitted means null.
       required:
         - name

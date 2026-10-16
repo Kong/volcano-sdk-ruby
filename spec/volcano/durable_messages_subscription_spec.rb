@@ -993,6 +993,34 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'drops the connection when the task leaving is stopped while another leave holds the lock',
+     :aggregate_failures do
+    Async do |task|
+      room = client.realtime.channel('room')
+      room.subscribe
+      transport.pages.enqueue(page)
+      first = follow
+      transport.pages.enqueue(page)
+      second = messages.subscribe('approvals', 'execution-2') { |message| received << message.seq }
+      sockets[0].on_write = ->(command) { :defer if command.key?('unsubscribe') }
+      first_leaving = task.async { first.unsubscribe }
+      wait_until(task) { commands(sockets[0], 'unsubscribe').any? }
+      second_leaving = task.async { second.unsubscribe }
+      second_leaving.stop
+      wait_until(task) { commands(sockets[1], 'subscribe').any? }
+
+      expect(first_leaving.wait).to be_nil
+      expect(sockets[0]).to be_closed
+      expect(commands(sockets[0], 'unsubscribe').size).to eq(1)
+      expect(commands(sockets[1], 'subscribe').map { |command| command['channel'] }).to eq([room.name])
+      transport.pages.enqueue(page)
+      messages.subscribe('approvals', 'execution-2') { |message| received << message.seq }
+      expect(commands(sockets[1], 'subscribe').last).to eq({ 'channel' => 'durable:execution-2' })
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'leaves the channel when the connection drops while leaving it', :aggregate_failures do
     errors = []
     client.realtime.on_error { |context| errors << context.message }

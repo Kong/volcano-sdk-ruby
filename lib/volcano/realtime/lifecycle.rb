@@ -38,12 +38,17 @@ module Volcano
       # the connection is closed there is nothing left to leave.
       def remove_durable_channel(channel)
         channel_lock.acquire do
-          if @channels[channel.name].equal?(channel)
-            @channels.delete(channel.name)
-            leave_durable_channel(channel) unless @closed
-          end
+          leave_durable_channel(channel) if forget_durable_channel(channel) && !@closed
         end
         nil
+      rescue Async::Cancel
+        # Stopped waiting for the lock, so the channel is still subscribed.
+        abandon_durable_leave(channel) { protocol.drop } if forget_durable_channel(channel)
+        raise
+      end
+
+      def forget_durable_channel(channel)
+        @channels.delete(channel.name) if @channels[channel.name].equal?(channel)
       end
 
       # A leave the server did not confirm may have left the subscription in

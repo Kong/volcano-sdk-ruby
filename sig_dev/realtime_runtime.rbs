@@ -367,6 +367,8 @@ module Volcano
 
       def remove_durable_channel: (Channel channel) -> nil
 
+      def forget_durable_channel: (Channel channel) -> Channel?
+
       def leave_durable_channel: (Channel channel) -> void
 
       def abandon_durable_leave: (Channel channel) { () -> void } -> void

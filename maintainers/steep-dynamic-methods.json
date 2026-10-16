@@ -546,6 +546,7 @@
     "scope": "Volcano::Realtime::ProtocolRecovery",
     "methods": [
       "class",
+      "close_socket",
       "delete_recovery_state",
       "dispatch_recovered_publications",
       "mark_publication_gap",

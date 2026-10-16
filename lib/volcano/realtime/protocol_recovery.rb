@@ -6,7 +6,7 @@ module Volcano
     module ProtocolRecovery
       # @dynamic class, request, dispatch_recovered_publications, recovery_position
       # @dynamic delete_recovery_state, set_recovery_position, mark_unknown_gap
-      # @dynamic mark_publication_gap, same_epoch?
+      # @dynamic mark_publication_gap, same_epoch?, close_socket
 
       private
 
@@ -22,6 +22,12 @@ module Volcano
           command['subscribe']['data'] = data if data
           command
         end
+      rescue Async::Cancel
+        # The server may have subscribed, and nothing would leave the channel.
+        # Closing the socket has the reader end the connection, as on a loss, so
+        # the reconnect is not cancelled along with this task.
+        close_socket
+        raise
       end
 
       def recovery_reply(channel, recovery)

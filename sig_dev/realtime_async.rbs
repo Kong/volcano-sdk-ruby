@@ -19,6 +19,9 @@ module Async
   class TimeoutError < StandardError
   end
 
+  class Cancel < Exception
+  end
+
   class Task
     def self.current: () -> Task
     def self.current?: () -> Task?

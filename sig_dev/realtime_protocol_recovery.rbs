@@ -24,6 +24,7 @@ module Volcano
       def mark_unknown_gap: (String channel) -> void
       def mark_publication_gap: (String channel, Object publication) -> void
       def same_epoch?: ({ epoch: String, offset: Integer } first, { epoch: String, offset: Integer } second) -> bool
+      def close_socket: () -> void
     end
 
     module ProtocolRecovery

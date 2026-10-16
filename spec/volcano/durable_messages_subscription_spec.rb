@@ -946,6 +946,29 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  # The server may hold the subscription, which nothing on the client would leave.
+  it 'drops the connection when the task subscribing is stopped before the server answers', :aggregate_failures do
+    Async do |task|
+      room = client.realtime.channel('room')
+      room.subscribe
+      sockets[0].on_write = ->(command) { :defer if command.dig('subscribe', 'channel')&.start_with?('durable:') }
+      subscribing = task.async { follow }
+      wait_until(task) { commands(sockets[0], 'subscribe').size == 2 }
+      subscribing.stop
+      wait_until(task) { commands(sockets[1], 'subscribe').any? }
+
+      expect(sockets[0]).to be_closed
+      expect(commands(sockets[1], 'subscribe').map { |command| command['channel'] }).to eq([room.name])
+      transport.pages.enqueue(page(1))
+      follow
+      expect(received).to eq([1])
+      expect(commands(sockets[1], 'subscribe').last).to eq({ 'channel' => 'durable:execution-1' })
+      expect(sockets[2].commands).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'leaves the channel when the connection drops while leaving it', :aggregate_failures do
     errors = []
     client.realtime.on_error { |context| errors << context.message }

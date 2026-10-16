@@ -47,7 +47,7 @@ The cross-mixin exception names only these methods. Each entry has a matching ty
 | `lib/volcano/realtime/protocol_io.rb` | `ensure_open!`, `close_with`, `process` |
 | `lib/volcano/realtime/protocol_lifecycle.rb` | `ensure_open!`, `initialize_recovery_positions`, `initialize_publication_producer`, `dispatch_callbacks`, `dispatch_publication_batches`, `read_loop` |
 | `lib/volcano/realtime/protocol_publication_dispatch.rb` | `enqueue_live_publication`, `matching_channel`, `drop_publication`, `mark_unknown_gap`, `dispatch_callback_delivery` |
-| `lib/volcano/realtime/protocol_recovery.rb` | `class`, `request`, `dispatch_recovered_publications`, `recovery_position`, `delete_recovery_state`, `set_recovery_position`, `mark_unknown_gap`, `mark_publication_gap`, `same_epoch?` |
+| `lib/volcano/realtime/protocol_recovery.rb` | `class`, `request`, `dispatch_recovered_publications`, `recovery_position`, `delete_recovery_state`, `set_recovery_position`, `mark_unknown_gap`, `mark_publication_gap`, `same_epoch?`, `close_socket` |
 | `lib/volcano/realtime/protocol_recovery_dispatch.rb` | `publication_delivery`, `reject_publication_delivery`, `admit_live_publication`, `close_with`, `closed_error` |
 
 The core-record exception covers these exact generated field readers:

@@ -646,8 +646,8 @@ to restore it on, as when the execution is no longer visible to the session.
 The service key reaches every execution. A signed-in user reaches the executions
 they started; the anon key, or another user, passes the execution's
 `client_token:`, which only the creating start returns. Pass `project_id:` to
-`send_message` or `list` to use the owner's route with a platform user token or
-a project access token. See the
+`send_message`, `list`, or `subscribe` to use the owner's route with a platform
+user token or a project access token; `subscribe` reads back over it. See the
 [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md#message-a-durable-execution).
 
 ### Read project logs

@@ -104,7 +104,8 @@ module Volcano
     # Delivers every message the execution publishes to the block, in order,
     # once each, and one call at a time. Messages it published before the
     # call come first, and after a reconnect the ones published meanwhile are
-    # read back before live delivery resumes. Returns a
+    # read back before live delivery resumes, over the owner's route when
+    # +project_id+ is given. Returns a
     # DurableMessageSubscription once the messages published so far are
     # delivered; a block that raises meanwhile ends the subscription and
     # raises here, and a subscription ended meanwhile raises

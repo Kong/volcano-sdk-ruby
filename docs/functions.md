@@ -141,4 +141,4 @@ end.wait
 
 These calls use the application route with the same credential `start` uses. The service key reaches every execution. A signed-in user reaches executions they started, and the anon key, or another user, reaches one by passing its `client_token:`. The function must be visible to the credential: public for the anon key, public or authenticated for a user. The anon key on an authenticated function raises `Volcano::Error::PermissionDeniedError`; any other execution the credential cannot reach raises `Volcano::Error::NotFoundError`. Only the start that creates an execution returns the token, so a lost start response loses it.
 
-Pass `project_id:` to `send_message` or `list` to use the owner's route with the project owner's platform user token or a project access token instead; a read-only token can list but not send.
+Pass `project_id:` to `send_message`, `list`, or `subscribe` to use the owner's route with the project owner's platform user token or a project access token instead; `subscribe` reads back over it, and a read-only token can list but not send.

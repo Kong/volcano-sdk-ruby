@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.35.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.34.0...v0.35.0) (2026-10-16)
+
+
+### Features
+
+* **durable:** send, list, and subscribe to durable messages ([#343](https://github.com/Kong/volcano-sdk-ruby/issues/343)) ([4a9e309](https://github.com/Kong/volcano-sdk-ruby/commit/4a9e309938ce956b4e6abfbab66a9942c04b647f))
+
+
+### Bug Fixes
+
+* **sandboxes:** sync runtime billing API contract ([#344](https://github.com/Kong/volcano-sdk-ruby/issues/344)) ([7db5f05](https://github.com/Kong/volcano-sdk-ruby/commit/7db5f0579873ad720880b60fafe9aaa644bc67ed))
+
 ## [0.34.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.33.0...v0.34.0) (2026-10-08)
 
 

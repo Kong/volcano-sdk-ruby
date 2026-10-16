@@ -121,6 +121,7 @@ module Volcano
 
       def follow_durable: (Hash[String, String]? data, _DurableFollower follower) -> _DurableFollower
       def publication_rejection: (Protocol protocol, Integer generation) -> (^(Object?) -> void)?
+      def restore_refused: (ServerError error) -> ServerError
       def prepare_protocol_subscription: (Protocol protocol, Integer epoch) -> void
     end
   end

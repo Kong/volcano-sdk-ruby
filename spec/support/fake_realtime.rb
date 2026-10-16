@@ -179,9 +179,10 @@ module SpecSupport
       @incoming.enqueue(frame)
     end
 
-    def reject(id, message, code: nil)
+    def reject(id, message, code: nil, temporary: nil)
       error = { 'message' => message }
       error['code'] = code if code
+      error['temporary'] = temporary unless temporary.nil?
       @incoming.enqueue(JSON.generate('id' => id, 'error' => error))
     end
 

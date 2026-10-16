@@ -55,5 +55,16 @@ module Volcano
         expect(error.message).to eq("failed #{secret}")
       end
     end
+
+    { true => 'temporary', false => 'not temporary' }.each do |temporary, reading|
+      it "keeps a realtime server error's code and that it is #{reading}" do
+        error = Realtime::ServerError.new('refused secret-value', code: 103, temporary: temporary)
+
+        redacted = described_class.exception(error, secrets: ['secret-value'])
+
+        expect(redacted).to be_a(Realtime::ServerError)
+        expect([redacted.message, redacted.code, redacted.temporary?]).to eq(['refused [REDACTED]', 103, temporary])
+      end
+    end
   end
 end

@@ -16,10 +16,14 @@ module Volcano
 
       # @dynamic code
 
-      def initialize(message, code: nil)
+      def initialize(message, code: nil, temporary: false)
         super(message)
         @code = code.is_a?(String) ? code.dup.freeze : code
+        @temporary = temporary == true
       end
+
+      # Whether the server expects the same command to succeed later.
+      def temporary? = @temporary
     end
 
     class ClosedError < StandardError; end

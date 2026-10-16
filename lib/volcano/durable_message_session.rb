@@ -34,6 +34,9 @@ module Volcano
     # Asked before a reconnect restores the channel.
     def restoring = require_session
 
+    # Told when the server refuses to restore the channel for good.
+    def refused = @subscription.unsubscribe
+
     def resubscribed = @stream.resubscribed
     def dropped = @stream.dropped
     def close = @stream.close

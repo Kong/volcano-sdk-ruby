@@ -118,7 +118,9 @@ module Volcano
     # seconds; a block that raises later is reported there too, and delivery
     # goes on. Realtime#remove_all_channels and Realtime#disconnect end the
     # subscription, and so does signing out, signing in again, or setting
-    # another session, though not a token refresh. Raises
+    # another session, though not a token refresh, and a reconnect the server
+    # refuses to restore the subscription on for good, which is reported to
+    # Realtime#on_error once. Raises
     # Realtime::DuplicateSubscriptionError when this client already follows the
     # execution.
     def subscribe(function_name, execution_id, client_token: nil, project_id: nil, &handler)

@@ -23,6 +23,18 @@ module Volcano
         follower ? ->(_publication) { follower.dropped } : super
       end
 
+      # The server refuses a durable subscribe for good once the execution is
+      # gone or hidden from the session, so the follower ends the subscription
+      # instead of the reconnect retrying it, and the refusal says so.
+      def restore_refused(error)
+        follower = @follower
+        return error unless follower
+        return error if error.temporary?
+
+        follower.refused
+        ServerError.new("#{error.message}; the durable message subscription has ended", code: error.code)
+      end
+
       # The server authorizes a durable subscribe by the socket's session, so
       # the socket must belong to the client's current one.
       def prepare_protocol_subscription(protocol, epoch)

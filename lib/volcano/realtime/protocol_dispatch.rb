@@ -59,7 +59,7 @@ module Volcano
         raise TypeError, 'realtime error must be an object' unless error.is_a?(Hash)
 
         message = error['message'] || 'realtime command failed'
-        Protocol::Failure.new(error: ServerError.new(message, code: error['code']))
+        Protocol::Failure.new(error: ServerError.new(message, code: error['code'], temporary: error['temporary']))
       end
 
       def successful_reply(frame, reply_key)

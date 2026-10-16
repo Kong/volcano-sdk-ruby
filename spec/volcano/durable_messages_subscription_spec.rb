@@ -774,6 +774,64 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'ends the subscription when the server refuses to restore it, reporting that once', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      sockets[1].on_write = lambda do |command|
+        next unless command.key?('subscribe')
+
+        sockets[1].reject(command.fetch('id'), 'permission denied', code: 103)
+        :defer
+      end
+      sockets[0].fail_read(IOError.new('socket failed'))
+      wait_until(task) { errors.size == 2 }
+      task.sleep(0.01)
+
+      expect(errors).to eq(['socket failed', 'permission denied; the durable message subscription has ended'])
+      expect(commands(sockets[1], 'subscribe').size).to eq(1)
+      expect(transport.lists.size).to eq(1)
+      sockets[1].on_write = nil
+      transport.pages.enqueue(page(2))
+      follow
+      expect(received).to eq([1, 2])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'restores a subscription the server refuses only for now', :aggregate_failures do
+    errors = []
+    client.realtime.on_error { |context| errors << context.message }
+
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      refused = false
+      sockets[1].on_write = lambda do |command|
+        next if refused || !command.key?('subscribe')
+
+        refused = true
+        sockets[1].reject(command.fetch('id'), 'internal server error', code: 100, temporary: true)
+        :defer
+      end
+      transport.pages.enqueue(page(2))
+      sockets[0].fail_read(IOError.new('socket failed'))
+      wait_until(task) { received.size == 2 }
+      publish(sockets[1], published(3))
+      wait_until(task) { received.size == 3 }
+
+      expect(errors).to eq(['socket failed', 'internal server error'])
+      expect(commands(sockets[1], 'subscribe').size).to eq(2)
+      expect(received).to eq([1, 2, 3])
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'stops delivering when the handler unsubscribes', :aggregate_failures do
     Async do |task|
       transport.pages.enqueue(page(1))

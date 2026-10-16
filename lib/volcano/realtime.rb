@@ -252,9 +252,7 @@ module Volcano
 
       def restore_subscription(protocol)
         ask_follower_to_restore
-        state = with_lifecycle_lock do
-          restoration_needed? ? subscribe_protocol(protocol) : nil
-        end
+        state = resubscribe(protocol)
         return unless state
 
         subscribed_protocol, epoch = state
@@ -300,6 +298,13 @@ module Volcano
       # Outside the lifecycle lock: a follower that refuses may leave the channel.
       def ask_follower_to_restore
         @follower&.restoring if restoration_needed?
+      end
+
+      # The refusal is handled outside the lifecycle lock too, for the same reason.
+      def resubscribe(protocol)
+        with_lifecycle_lock { restoration_needed? ? subscribe_protocol(protocol) : nil }
+      rescue ServerError => e
+        raise restore_refused(e)
       end
 
       def with_lifecycle_lock(&)

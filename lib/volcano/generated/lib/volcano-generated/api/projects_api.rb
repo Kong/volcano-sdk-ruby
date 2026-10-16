@@ -816,7 +816,7 @@ module Volcano::Generated
     end
 
     # Get project health
-    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is `unhealthy`; transport and authorization failures use HTTP errors. 
+    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is `degraded` or `critical`; transport and authorization failures use HTTP errors. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [ProjectHealthResponse]
@@ -826,7 +826,7 @@ module Volcano::Generated
     end
 
     # Get project health
-    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is &#x60;unhealthy&#x60;; transport and authorization failures use HTTP errors. 
+    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is &#x60;degraded&#x60; or &#x60;critical&#x60;; transport and authorization failures use HTTP errors. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [Array<(ProjectHealthResponse, Integer, Hash)>] ProjectHealthResponse data, response status code and response headers

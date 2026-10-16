@@ -10,11 +10,13 @@ module Volcano
 
         private
 
-        def request(reply_key, on_reply: nil)
+        # on_write runs once the frame holds the write lock, when the server may
+        # start to receive it.
+        def request(reply_key, on_reply: nil, on_write: nil)
           # @type var registered_id: Integer?
           ensure_open!
           registered_id, reply_queue = register_request(reply_key, on_reply)
-          write_frame(yield(registered_id || raise(TypeError, 'invalid realtime request id')))
+          write_frame(yield(registered_id || raise(TypeError, 'invalid realtime request id')), on_write)
           reply = await_reply(reply_queue)
           raise reply.error if reply.is_a?(Failure)
 
@@ -36,10 +38,11 @@ module Volcano
           [@next_id, queue]
         end
 
-        def write_frame(frame) = write_serialized_frame("#{JSON.generate(frame)}\n")
+        def write_frame(frame, on_write = nil) = write_serialized_frame("#{JSON.generate(frame)}\n", on_write)
 
-        def write_serialized_frame(frame)
+        def write_serialized_frame(frame, on_write = nil)
           @write_lock.acquire do
+            on_write&.call
             @socket.write(frame)
             @socket.flush
           end

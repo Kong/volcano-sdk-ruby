@@ -1040,6 +1040,31 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
+  it 'keeps the connection when the task subscribing is stopped before its frame is written', :aggregate_failures do
+    Async do |task|
+      room = client.realtime.channel('room')
+      room.subscribe
+      release = Async::Queue.new
+      sockets[0].on_write = lambda do |command|
+        release.dequeue if command.key?('publish')
+        nil
+      end
+      sending = task.async { room.send(event: 'message', value: 'hello') }
+      wait_until(task) { commands(sockets[0], 'publish').any? }
+      subscribing = task.async { follow }
+      5.times { task.yield }
+      subscribing.stop
+      release.enqueue(true)
+      sending.wait
+
+      expect(sockets[0]).not_to be_closed
+      expect(commands(sockets[0], 'subscribe').map { |command| command['channel'] }).to eq([room.name])
+      expect(sockets[1].commands).to be_empty
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
   it 'leaves the channel when the connection drops while leaving it', :aggregate_failures do
     errors = []
     client.realtime.on_error { |context| errors << context.message }

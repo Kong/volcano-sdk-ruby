@@ -16,7 +16,7 @@ module Volcano
 
     interface _RecoveryContext
       def class: () -> singleton(Protocol)
-      def request: (String reply_key, ?on_reply: (^(Object) -> void)?) { (Integer) -> Hash[String, Object] } -> Object
+      def request: (String reply_key, ?on_reply: (^(Object) -> void)?, ?on_write: (^() -> void)?) { (Integer) -> Hash[String, Object] } -> Object
       def dispatch_recovered_publications: (String channel, Array[Hash[String, Object]] publications) -> void
       def recovery_position: (Object epoch, Object offset) -> { epoch: String, offset: Integer }?
       def delete_recovery_state: (String channel) -> void

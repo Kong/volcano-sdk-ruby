@@ -11,7 +11,8 @@ module Volcano
       private
 
       def subscribe_request(channel:, recoverable:, join_leave:, recovery:, data:)
-        request('subscribe', on_reply: recovery_reply(channel, recovery)) do |id|
+        writing = false
+        request('subscribe', on_reply: recovery_reply(channel, recovery), on_write: -> { writing = true }) do |id|
           command = self.class.subscribe(
             id: id,
             channel: channel,
@@ -23,10 +24,11 @@ module Volcano
           command
         end
       rescue Async::Cancel
-        # The server may have subscribed, and nothing would leave the channel.
-        # Closing the socket has the reader end the connection, as on a loss, so
-        # the reconnect is not cancelled along with this task.
-        close_socket
+        # Once the frame is being written the server may subscribe, and nothing
+        # would leave the channel. Closing the socket has the reader end the
+        # connection, as on a loss, so the reconnect is not cancelled along with
+        # this task. Stopped before that, there is nothing to leave.
+        close_socket if writing
         raise
       end
 

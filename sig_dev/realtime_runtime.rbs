@@ -812,13 +812,13 @@ module Volcano
 
         private
 
-        def request: (String reply_key, ?on_reply: (^(Object?) -> void)?) { (Integer) -> Hash[String, Object] } -> Object?
+        def request: (String reply_key, ?on_reply: (^(Object?) -> void)?, ?on_write: (^() -> void)?) { (Integer) -> Hash[String, Object] } -> Object?
 
         def register_request: (String reply_key, (^(Object?) -> void)? on_reply) -> [Integer, Async::Queue[Object?]]
 
-        def write_frame: (Hash[String, Object] frame) -> void
+        def write_frame: (Hash[String, Object] frame, ?(^() -> void)? on_write) -> void
 
-        def write_serialized_frame: (String frame) -> void
+        def write_serialized_frame: (String frame, ?(^() -> void)? on_write) -> void
 
         def await_reply: (Async::Queue[Object?] reply_queue) -> Object?
 

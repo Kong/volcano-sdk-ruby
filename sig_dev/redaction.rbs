@@ -2,8 +2,11 @@ module Volcano
   class Realtime
     class ServerError < StandardError
       attr_reader code: Object?
+      @temporary: bool
 
-      def initialize: (String message, ?code: Object?) -> void
+      def initialize: (String message, ?code: Object?, ?temporary: Object?) -> void
+
+      def temporary?: () -> bool
     end
   end
 

@@ -16,7 +16,7 @@ module Volcano
 
     interface _RecoveryContext
       def class: () -> singleton(Protocol)
-      def request: (String reply_key, ?on_reply: (^(Object) -> void)?) { (Integer) -> Hash[String, Object] } -> Object
+      def request: (String reply_key, ?on_reply: (^(Object) -> void)?, ?on_write: (^() -> void)?) { (Integer) -> Hash[String, Object] } -> Object
       def dispatch_recovered_publications: (String channel, Array[Hash[String, Object]] publications) -> void
       def recovery_position: (Object epoch, Object offset) -> { epoch: String, offset: Integer }?
       def delete_recovery_state: (String channel) -> void
@@ -24,6 +24,7 @@ module Volcano
       def mark_unknown_gap: (String channel) -> void
       def mark_publication_gap: (String channel, Object publication) -> void
       def same_epoch?: ({ epoch: String, offset: Integer } first, { epoch: String, offset: Integer } second) -> bool
+      def close_socket: () -> void
     end
 
     module ProtocolRecovery
@@ -35,7 +36,8 @@ module Volcano
 
       private
 
-      def subscribe_request: (channel: String, recoverable: bool, join_leave: bool, recovery: Hash[Symbol, String | Integer]?) -> Object
+      def subscribe_request: (channel: String, recoverable: bool, join_leave: bool, recovery: Hash[Symbol, String | Integer]?, data: Hash[String, String]?) -> Object
+      def recovery_reply: (String channel, Hash[Symbol, String | Integer]? recovery) -> (^(Object) -> void)?
       def parse_recovery_result: (channel: String, recovery: Hash[Symbol, String | Integer]?, result: Object) -> Array[publication]
       def block_malformed_recovery_result: (String channel, Hash[Symbol, String | Integer]? recovery) -> Array[publication]
       def block_recovery_result: (String channel, position? requested_position) -> Array[publication]

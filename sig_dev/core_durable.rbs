@@ -29,6 +29,8 @@ module Volcano
     private def page_payload: (Object? payload) -> [Hash[String, Object?], Array[Object?], bool]
     private def count: (Object? value) -> Integer
     private def parse_time: (Object? value) -> Time?
+    private def client_token: (Object? value) -> String?
+    private def execution_outcome: (Hash[String, Object?] values) -> [json_value, bool?, DurableExecutionError?, Time?]
   end
 
   DURABLE_APPROVAL_ATTRIBUTES: Array[Symbol]
@@ -129,10 +131,11 @@ module Volcano
     @client: _DurableClient
     @transport: _DurableTransport
     @approvals: DurableApprovals
+    @messages: DurableMessages
 
     EXECUTION_NAME: Regexp
 
-    def initialize: (_DurableClient client, _DurableTransport & _DurableApprovalsTransport transport) -> void
+    def initialize: (_DurableClient client, _DurableTransport & _DurableApprovalsTransport & _DurableMessagesTransport transport, Realtime realtime) -> void
 
     private def execution_path: (String project_id, String function_name, String execution_id) -> [String, String, String]
     private def execution_name_argument: (Object? value) -> String
@@ -140,5 +143,204 @@ module Volcano
 
   class DurableExecution
     private def immutable_value: (Object? value) -> Object?
+  end
+end
+
+module Volcano
+  DURABLE_MESSAGE_ATTRIBUTES: Array[Symbol]
+
+  interface _DurableMessagesTransport
+    def send_durable_message: (authorization: String, target: DurableMessages::Target, name: String, data: sdk_json, idempotency_key: String?) -> Transport::Response
+    def list_durable_messages: (authorization: String, target: DurableMessages::Target, query: Hash[Symbol, String | Integer]) -> Transport::Response
+  end
+
+  module DurableMessageArguments : Object
+    MESSAGE_NAME: Regexp
+    HEADER_VALUE: Regexp
+    MAX_IDEMPOTENCY_KEY_LENGTH: Integer
+    MAX_CLIENT_TOKEN_LENGTH: Integer
+    MAX_LIST_LIMIT: Integer
+
+    private def known_options: (Hash[Symbol, Object?] options, Array[Symbol] known) -> Hash[Symbol, Object?]
+    private def message_name: (Object? value) -> String
+    private def bounded_text: (Object? value, String field, Integer limit) -> String?
+    private def after_argument: (Object? value) -> Integer?
+    private def limit_argument: (Object? value) -> Integer?
+  end
+
+  module DurableMessageResponses : Object
+    INCOMPLETE_MESSAGE: String
+    INCOMPLETE_PAGE: String
+    DIRECTIONS: Array[String]
+
+    private def durable_message: (Object? payload) -> DurableMessage
+    private def message_labels: (Hash[String, Object?] values) -> [String, String, String]
+    private def message_states: (Hash[String, Object?] values) -> [String, String]
+    private def broadcast_prev_seq: (Object? payload) -> Integer
+    private def durable_message_page: (Object? payload) -> DurableMessagePage
+    private def page_flag: (Object? value) -> bool
+    private def message_object: (Object? payload, String message) -> Hash[String, Object?]
+    private def message_text: (Object? value) -> String
+    private def message_choice: (Object? value, Array[String] choices) -> String
+    private def message_seq: (Object? value) -> Integer
+    private def message_data: (Object? value) -> json_value
+    private def message_sender: (Object? payload) -> DurableMessageSender
+    private def message_time: (Object? value) -> Time
+    private def optional_message_time: (Object? value) -> Time?
+  end
+
+  class DurableMessageStream
+    include DurableMessageResponses
+
+    @handler: ^(DurableMessage) -> void
+    @list_after: ^(Integer) -> DurableMessagePage
+    @on_failure: ^(StandardError) -> void
+    class Held < Data
+      attr_reader message: DurableMessage
+      attr_reader prev_seq: Integer
+
+      def self.new: (message: DurableMessage, prev_seq: Integer) -> Held
+    end
+
+    ENDED: String
+
+    @last_seq: Integer
+    @catch_ups: Integer
+    @started: bool
+    @closed: bool
+    @held: DurableMessageBacklog
+    @reads: Async::Semaphore
+    @background: DurableMessageCatchUps
+
+    def initialize: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> void
+    def live: (Object? data) -> void
+    def catch_up: () -> void
+    def catch_up_in_background: () -> nil
+    def close: () -> nil
+
+    private def behind?: () -> bool
+    private def release_live: () -> void
+    private def begin_catch_up: () -> Integer
+    private def read_missed: (?first: bool) -> void
+    private def read_pages: (report: bool) -> void
+    private def release: (bool read, report: bool) -> void
+    private def deliver: (DurableMessage message, report: bool) -> void
+    private def call_handler: (DurableMessage message, bool report) -> void
+    private def published: (Object? data) -> Held?
+  end
+
+  class DurableMessageSession
+    CHANGED: String
+
+    @realtime: Realtime
+    @lineage: SessionOperations
+    @stream: DurableMessageStream
+    @subscription: DurableMessageSubscription
+
+    def initialize: (Realtime realtime) -> void
+    def stream: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> DurableMessageStream
+    def end_with: (DurableMessageSubscription subscription) -> DurableMessageSubscription
+    def restoring: () -> void
+    def refused: () -> void
+    def resubscribed: () -> nil
+    def dropped: () -> nil
+    def close: () -> nil
+
+    private def bind: [A, R] (^(A) -> R callable) -> ^(A) -> R
+    private def bind_read: (^(Integer) -> DurableMessagePage list_after) -> ^(Integer) -> DurableMessagePage
+    private def require_session: () -> void
+  end
+
+  class DurableMessageBacklog
+    LIMIT: Integer
+
+    @held: Array[DurableMessageStream::Held]
+
+    def initialize: () -> void
+    def empty?: () -> bool
+    def clear: () -> Array[DurableMessageStream::Held]
+    def hold: (DurableMessageStream::Held held) -> nil
+    def take_following: (Integer last_seq) -> DurableMessageStream::Held?
+
+    private def oldest: () -> DurableMessageStream::Held?
+  end
+
+  class DurableMessageCatchUps
+    FIRST_RETRY_SECONDS: Float
+    MAX_RETRY_SECONDS: Float
+
+    @read: ^() -> void
+    @release: ^() -> void
+    @due: ^() -> void
+    @on_failure: ^(StandardError) -> void
+    @pending: bool
+    @releasing: bool
+    @backoff: Float
+    @retry_delay: Float?
+    @task: Async::Task?
+    @wake: Async::Notification?
+    @closed: bool
+
+    def initialize: (^() -> void read, ^() -> void release, ^() -> void due, ^(StandardError) -> void on_failure) -> void
+    def start: () -> nil
+    def request: () -> nil
+    def release: () -> nil
+    def pending?: () -> bool
+    def retry_later: () -> nil
+    def cancel_retry: () -> nil
+    def caught_up: () -> Float
+    def close: () -> nil
+
+    private def work: () -> void
+    private def next_job: () -> (^() -> void)?
+    private def run: (^() -> void job) -> void
+    private def await_request: () -> void
+    private def wake: () -> Async::Notification
+  end
+
+  class DurableMessageSubscription
+    @stream: DurableMessageStream
+    @channel: Realtime::Channel
+    @realtime: Realtime
+
+    def self.open: (DurableMessageSession session, DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> DurableMessageSubscription
+    def initialize: (DurableMessageStream stream, Realtime::Channel channel, Realtime realtime) -> void
+  end
+
+  class DurableMessages
+    include DurableArguments
+    include DurableMessageArguments
+    include DurableMessageResponses
+
+    class Target < Data
+      attr_reader project_id: String?
+      attr_reader function_id: String
+      attr_reader execution_id: String
+      attr_reader client_token: String?
+
+      def self.new: (project_id: String?, function_id: String, execution_id: String, client_token: String?) -> Target
+      def inspect: () -> String
+      def to_s: () -> String
+      def pretty_print: (DurableExecution::_PrettyPrinter printer) -> void
+    end
+
+    SEND_OPTIONS: Array[Symbol]
+    LIST_OPTIONS: Array[Symbol]
+
+    @client: _DurableClient
+    @transport: _DurableMessagesTransport
+    @realtime: Realtime
+
+    def initialize: (_DurableClient client, _DurableMessagesTransport transport, Realtime realtime) -> void
+
+    private def durable_channel: (Target target, DurableMessageSession session) -> Realtime::Channel
+    private def reader: (Target target) -> ^(Integer) -> DurableMessagePage
+    private def list_messages: (Target target, Hash[Symbol, String | Integer] query, ?String authorization) -> Transport::Response
+    private def failure_reporter: () -> ^(StandardError) -> void
+    private def authorization: (Target target) -> String
+    private def message_target: (Object? function_name, Object? execution_id, Hash[Symbol, Object?] options) -> Target
+    private def list_filters: (Object? filters) -> Hash[Symbol, Object?]
+    private def list_query: (Hash[Symbol, Object?] filters) -> Hash[Symbol, String | Integer]
+    private def direction_filter: (Object? value) -> String?
   end
 end

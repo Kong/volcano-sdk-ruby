@@ -1390,6 +1390,536 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # List a durable execution's open message waits
+    # Lists the waits an execution has open in `ctx.waitForMessage`, oldest first, so you can see which message names it is waiting for.  Project access tokens can list waits, including read-only ones. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [DurableMessageWaitList]
+    def list_durable_message_waits(id, function_id, execution_id, opts = {})
+      data, _status_code, _headers = list_durable_message_waits_with_http_info(id, function_id, execution_id, opts)
+      data
+    end
+
+    # List a durable execution&#39;s open message waits
+    # Lists the waits an execution has open in &#x60;ctx.waitForMessage&#x60;, oldest first, so you can see which message names it is waiting for.  Project access tokens can list waits, including read-only ones. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableMessageWaitList, Integer, Hash)>] DurableMessageWaitList data, response status code and response headers
+    def list_durable_message_waits_with_http_info(id, function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_message_waits ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.list_durable_message_waits"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.list_durable_message_waits"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.list_durable_message_waits"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/durable-functions/{functionId}/executions/{executionId}/message-waits'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessageWaitList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_message_waits",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_message_waits\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a durable execution's messages
+    # Lists the messages sent to and published by an execution, oldest first. Pass the last `seq` you read as `after` to read only what came next.  Project access tokens can list messages, including read-only ones. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
+    # @option opts [String] :name Return only messages with this name.
+    # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
+    # @option opts [Integer] :limit Most messages to return. (default to 100)
+    # @return [DurableMessageList]
+    def list_durable_messages(id, function_id, execution_id, opts = {})
+      data, _status_code, _headers = list_durable_messages_with_http_info(id, function_id, execution_id, opts)
+      data
+    end
+
+    # List a durable execution&#39;s messages
+    # Lists the messages sent to and published by an execution, oldest first. Pass the last &#x60;seq&#x60; you read as &#x60;after&#x60; to read only what came next.  Project access tokens can list messages, including read-only ones. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
+    # @option opts [String] :name Return only messages with this name.
+    # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
+    # @option opts [Integer] :limit Most messages to return. (default to 100)
+    # @return [Array<(DurableMessageList, Integer, Hash)>] DurableMessageList data, response status code and response headers
+    def list_durable_messages_with_http_info(id, function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_messages ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.list_durable_messages"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.list_durable_messages"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.list_durable_messages"
+      end
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'].to_s.length > 237
+        fail ArgumentError, 'invalid value for "opts[:"name"]" when calling DurableFunctionsApi.list_durable_messages, the character length must be smaller than or equal to 237.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"name"]" when calling DurableFunctionsApi.list_durable_messages, the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[ -~]+$/)
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"name\"]' when calling DurableFunctionsApi.list_durable_messages, must conform to the pattern #{pattern}."
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'after'].nil? && opts[:'after'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"after"]" when calling DurableFunctionsApi.list_durable_messages, must be greater than or equal to 0.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 500
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_messages, must be smaller than or equal to 500.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_messages, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/durable-functions/{functionId}/executions/{executionId}/messages'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'direction'] = opts[:'direction'] if !opts[:'direction'].nil?
+      query_params[:'name'] = opts[:'name'] if !opts[:'name'].nil?
+      query_params[:'after'] = opts[:'after'] if !opts[:'after'].nil?
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessageList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_messages",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_messages\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a durable execution's messages from an application
+    # Lists the messages sent to and published by an execution, oldest first. Pass the last `seq` you read as `after` to read only what came next; that is how a client catches up after a live subscription reconnects.  Access follows the same rules as sending. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
+    # @option opts [String] :name Return only messages with this name.
+    # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
+    # @option opts [Integer] :limit Most messages to return. (default to 100)
+    # @return [DurableMessageList]
+    def list_durable_messages_from_application(function_id, execution_id, opts = {})
+      data, _status_code, _headers = list_durable_messages_from_application_with_http_info(function_id, execution_id, opts)
+      data
+    end
+
+    # List a durable execution&#39;s messages from an application
+    # Lists the messages sent to and published by an execution, oldest first. Pass the last &#x60;seq&#x60; you read as &#x60;after&#x60; to read only what came next; that is how a client catches up after a live subscription reconnects.  Access follows the same rules as sending. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
+    # @option opts [String] :name Return only messages with this name.
+    # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
+    # @option opts [Integer] :limit Most messages to return. (default to 100)
+    # @return [Array<(DurableMessageList, Integer, Hash)>] DurableMessageList data, response status code and response headers
+    def list_durable_messages_from_application_with_http_info(function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.list_durable_messages_from_application ...'
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.list_durable_messages_from_application"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.list_durable_messages_from_application"
+      end
+      if @api_client.config.client_side_validation && !opts[:'x_volcano_client_token'].nil? && opts[:'x_volcano_client_token'].to_s.length > 128
+        fail ArgumentError, 'invalid value for "opts[:"x_volcano_client_token"]" when calling DurableFunctionsApi.list_durable_messages_from_application, the character length must be smaller than or equal to 128.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'].to_s.length > 237
+        fail ArgumentError, 'invalid value for "opts[:"name"]" when calling DurableFunctionsApi.list_durable_messages_from_application, the character length must be smaller than or equal to 237.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"name"]" when calling DurableFunctionsApi.list_durable_messages_from_application, the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[ -~]+$/)
+      if @api_client.config.client_side_validation && !opts[:'name'].nil? && opts[:'name'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"name\"]' when calling DurableFunctionsApi.list_durable_messages_from_application, must conform to the pattern #{pattern}."
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'after'].nil? && opts[:'after'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"after"]" when calling DurableFunctionsApi.list_durable_messages_from_application, must be greater than or equal to 0.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 500
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_messages_from_application, must be smaller than or equal to 500.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling DurableFunctionsApi.list_durable_messages_from_application, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/durable-functions/{functionId}/executions/{executionId}/messages'.sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'direction'] = opts[:'direction'] if !opts[:'direction'].nil?
+      query_params[:'name'] = opts[:'name'] if !opts[:'name'].nil?
+      query_params[:'after'] = opts[:'after'] if !opts[:'after'].nil?
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'X-Volcano-Client-Token'] = opts[:'x_volcano_client_token'] if !opts[:'x_volcano_client_token'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessageList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'AnonKey']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.list_durable_messages_from_application",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#list_durable_messages_from_application\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Open a messages session from inside a workflow
+    # Opens the session a workflow publishes messages with. The Volcano SDK calls this once per workflow context, on its first `ctx.publish`; applications do not call it directly.  As for a wait, `execution_ref` and `callback_id` are the credential. The session's token is delivered to the workflow itself and never appears in a response.  Retrying is safe: a request for a session that is already registered returns it with `200`. 
+    # @param open_durable_message_session_request [OpenDurableMessageSessionRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [DurableMessageSessionRegistration]
+    def open_durable_message_session(open_durable_message_session_request, opts = {})
+      data, _status_code, _headers = open_durable_message_session_with_http_info(open_durable_message_session_request, opts)
+      data
+    end
+
+    # Open a messages session from inside a workflow
+    # Opens the session a workflow publishes messages with. The Volcano SDK calls this once per workflow context, on its first &#x60;ctx.publish&#x60;; applications do not call it directly.  As for a wait, &#x60;execution_ref&#x60; and &#x60;callback_id&#x60; are the credential. The session&#39;s token is delivered to the workflow itself and never appears in a response.  Retrying is safe: a request for a session that is already registered returns it with &#x60;200&#x60;. 
+    # @param open_durable_message_session_request [OpenDurableMessageSessionRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableMessageSessionRegistration, Integer, Hash)>] DurableMessageSessionRegistration data, response status code and response headers
+    def open_durable_message_session_with_http_info(open_durable_message_session_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.open_durable_message_session ...'
+      end
+      # verify the required parameter 'open_durable_message_session_request' is set
+      if @api_client.config.client_side_validation && open_durable_message_session_request.nil?
+        fail ArgumentError, "Missing the required parameter 'open_durable_message_session_request' when calling DurableFunctionsApi.open_durable_message_session"
+      end
+      # resource path
+      local_var_path = '/durable-messages/sessions'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(open_durable_message_session_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessageSessionRegistration'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.open_durable_message_session",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#open_durable_message_session\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Publish a message from inside a workflow
+    # Publishes a named message from a running workflow. The Volcano SDK calls this from `ctx.publish`; applications do not call it directly.  The message is stored, listed with the execution's messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project's Realtime messages.  The SDK sends an `Idempotency-Key` that a rerun of the publishing step repeats, so a step that runs again returns the first message with `200` and publishes nothing. 
+    # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
+    # @param publish_durable_message_request [PublishDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @return [DurableMessage]
+    def publish_durable_message(x_volcano_durable_session, publish_durable_message_request, opts = {})
+      data, _status_code, _headers = publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts)
+      data
+    end
+
+    # Publish a message from inside a workflow
+    # Publishes a named message from a running workflow. The Volcano SDK calls this from &#x60;ctx.publish&#x60;; applications do not call it directly.  The message is stored, listed with the execution&#39;s messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project&#39;s Realtime messages.  The SDK sends an &#x60;Idempotency-Key&#x60; that a rerun of the publishing step repeats, so a step that runs again returns the first message with &#x60;200&#x60; and publishes nothing. 
+    # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
+    # @param publish_durable_message_request [PublishDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
+    def publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.publish_durable_message ...'
+      end
+      # verify the required parameter 'x_volcano_durable_session' is set
+      if @api_client.config.client_side_validation && x_volcano_durable_session.nil?
+        fail ArgumentError, "Missing the required parameter 'x_volcano_durable_session' when calling DurableFunctionsApi.publish_durable_message"
+      end
+      if @api_client.config.client_side_validation && x_volcano_durable_session.to_s.length > 128
+        fail ArgumentError, 'invalid value for "x_volcano_durable_session" when calling DurableFunctionsApi.publish_durable_message, the character length must be smaller than or equal to 128.'
+      end
+
+      if @api_client.config.client_side_validation && x_volcano_durable_session.to_s.length < 1
+        fail ArgumentError, 'invalid value for "x_volcano_durable_session" when calling DurableFunctionsApi.publish_durable_message, the character length must be greater than or equal to 1.'
+      end
+
+      # verify the required parameter 'publish_durable_message_request' is set
+      if @api_client.config.client_side_validation && publish_durable_message_request.nil?
+        fail ArgumentError, "Missing the required parameter 'publish_durable_message_request' when calling DurableFunctionsApi.publish_durable_message"
+      end
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.publish_durable_message, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.publish_durable_message, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/durable-messages/publish'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+      header_params[:'X-Volcano-Durable-Session'] = x_volcano_durable_session
+      header_params[:'Idempotency-Key'] = opts[:'idempotency_key'] if !opts[:'idempotency_key'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(publish_durable_message_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessage'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.publish_durable_message",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#publish_durable_message\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Wait for a message from inside a workflow
+    # Registers a wait for a named message. The Volcano SDK calls this from `ctx.waitForMessage`; applications do not call it directly.  `execution_ref` and `callback_id` are opaque values the SDK reads from the running workflow. Together they are the request's credential, so the operation takes no other authentication. When a message for the name is already queued, the wait takes the oldest one at once.  Retrying is safe: a request for a wait that is already registered returns it with `200`. 
+    # @param register_durable_message_wait_request [RegisterDurableMessageWaitRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [DurableMessageWaitRegistration]
+    def register_durable_message_wait(register_durable_message_wait_request, opts = {})
+      data, _status_code, _headers = register_durable_message_wait_with_http_info(register_durable_message_wait_request, opts)
+      data
+    end
+
+    # Wait for a message from inside a workflow
+    # Registers a wait for a named message. The Volcano SDK calls this from &#x60;ctx.waitForMessage&#x60;; applications do not call it directly.  &#x60;execution_ref&#x60; and &#x60;callback_id&#x60; are opaque values the SDK reads from the running workflow. Together they are the request&#39;s credential, so the operation takes no other authentication. When a message for the name is already queued, the wait takes the oldest one at once.  Retrying is safe: a request for a wait that is already registered returns it with &#x60;200&#x60;. 
+    # @param register_durable_message_wait_request [RegisterDurableMessageWaitRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(DurableMessageWaitRegistration, Integer, Hash)>] DurableMessageWaitRegistration data, response status code and response headers
+    def register_durable_message_wait_with_http_info(register_durable_message_wait_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.register_durable_message_wait ...'
+      end
+      # verify the required parameter 'register_durable_message_wait_request' is set
+      if @api_client.config.client_side_validation && register_durable_message_wait_request.nil?
+        fail ArgumentError, "Missing the required parameter 'register_durable_message_wait_request' when calling DurableFunctionsApi.register_durable_message_wait"
+      end
+      # resource path
+      local_var_path = '/durable-messages/waits'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(register_durable_message_wait_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessageWaitRegistration'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || []
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.register_durable_message_wait",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#register_durable_message_wait\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Request an approval from inside a workflow
     # Registers an approval request for a running durable execution. The Volcano SDK calls this from `ctx.waitForApproval`; applications do not call it directly.  `execution_ref` and `callback_id` are opaque values the SDK reads from the running workflow. Together they are the request's credential, so the operation takes no other authentication. The approval belongs to the project that owns the execution, and expires when the workflow's own approval timeout does.  Retrying is safe: a request for an approval that is already registered returns it with `200`. 
     # @param request_durable_approval_request [RequestDurableApprovalRequest] 
@@ -1454,6 +1984,201 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#request_durable_approval\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Send a message to a durable execution
+    # Sends a named message to a running execution, as `POST /durable-functions/{functionId}/executions/{executionId}/messages` does for an application. The workflow receives it from `ctx.waitForMessage` with the same name; until then it is kept, and waits take messages oldest first.  Project access tokens can send messages, but read-only ones cannot. A message never decides an approval. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param send_durable_message_request [SendDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @return [DurableMessage]
+    def send_durable_message(id, function_id, execution_id, send_durable_message_request, opts = {})
+      data, _status_code, _headers = send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts)
+      data
+    end
+
+    # Send a message to a durable execution
+    # Sends a named message to a running execution, as &#x60;POST /durable-functions/{functionId}/executions/{executionId}/messages&#x60; does for an application. The workflow receives it from &#x60;ctx.waitForMessage&#x60; with the same name; until then it is kept, and waits take messages oldest first.  Project access tokens can send messages, but read-only ones cannot. A message never decides an approval. 
+    # @param id [String] Project ID
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param send_durable_message_request [SendDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
+    def send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.send_durable_message ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling DurableFunctionsApi.send_durable_message"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.send_durable_message"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.send_durable_message"
+      end
+      # verify the required parameter 'send_durable_message_request' is set
+      if @api_client.config.client_side_validation && send_durable_message_request.nil?
+        fail ArgumentError, "Missing the required parameter 'send_durable_message_request' when calling DurableFunctionsApi.send_durable_message"
+      end
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/durable-functions/{functionId}/executions/{executionId}/messages'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+      header_params[:'Idempotency-Key'] = opts[:'idempotency_key'] if !opts[:'idempotency_key'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(send_durable_message_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessage'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.send_durable_message",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#send_durable_message\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Send a message to a durable execution from an application
+    # Sends a named message to a running execution. The workflow receives it from `ctx.waitForMessage` with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in `ctx.waitForApproval` is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose `X-Volcano-Client-Token` the request carries, of a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** an execution whose `X-Volcano-Client-Token` the request carries, of a function with `visibility: public`.  Any other execution answers `404`, as a missing one does.  Send `Idempotency-Key` to make a retry safe: a repeat with a key the same sender has used on the execution returns the first message with `200` and sends nothing. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param send_durable_message_request [SendDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @return [DurableMessage]
+    def send_durable_message_from_application(function_id, execution_id, send_durable_message_request, opts = {})
+      data, _status_code, _headers = send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts)
+      data
+    end
+
+    # Send a message to a durable execution from an application
+    # Sends a named message to a running execution. The workflow receives it from &#x60;ctx.waitForMessage&#x60; with the same name. A message sent before anything waits for its name is kept, and each wait takes the oldest one, so messages arrive in the order they were sent.  Messages never decide an approval: a workflow waiting in &#x60;ctx.waitForApproval&#x60; is not resumed by one.  **With a service key:** any execution in the project.  **With an auth user token:** an execution the user started, or one whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** an execution whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a function with &#x60;visibility: public&#x60;.  Any other execution answers &#x60;404&#x60;, as a missing one does.  Send &#x60;Idempotency-Key&#x60; to make a retry safe: a repeat with a key the same sender has used on the execution returns the first message with &#x60;200&#x60; and sends nothing. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param send_durable_message_request [SendDurableMessageRequest] 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
+    def send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.send_durable_message_from_application ...'
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.send_durable_message_from_application"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.send_durable_message_from_application"
+      end
+      # verify the required parameter 'send_durable_message_request' is set
+      if @api_client.config.client_side_validation && send_durable_message_request.nil?
+        fail ArgumentError, "Missing the required parameter 'send_durable_message_request' when calling DurableFunctionsApi.send_durable_message_from_application"
+      end
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message_from_application, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message_from_application, the character length must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'x_volcano_client_token'].nil? && opts[:'x_volcano_client_token'].to_s.length > 128
+        fail ArgumentError, 'invalid value for "opts[:"x_volcano_client_token"]" when calling DurableFunctionsApi.send_durable_message_from_application, the character length must be smaller than or equal to 128.'
+      end
+
+      # resource path
+      local_var_path = '/durable-functions/{functionId}/executions/{executionId}/messages'.sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+      header_params[:'Idempotency-Key'] = opts[:'idempotency_key'] if !opts[:'idempotency_key'].nil?
+      header_params[:'X-Volcano-Client-Token'] = opts[:'x_volcano_client_token'] if !opts[:'x_volcano_client_token'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(send_durable_message_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableMessage'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'AnonKey']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.send_durable_message_from_application",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#send_durable_message_from_application\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

@@ -25,7 +25,7 @@ module Volcano
         return copy_volcano_error(error, redacted_message)
       end
       if defined?(Realtime::ServerError) && error.is_a?(Realtime::ServerError)
-        return error.class.new(redacted_message, code: error.code)
+        return error.class.new(redacted_message, code: error.code, temporary: error.temporary?)
       end
 
       error.exception(redacted_message)

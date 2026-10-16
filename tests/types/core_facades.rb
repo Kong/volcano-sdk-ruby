@@ -34,6 +34,15 @@ def typed_approval_calls(client)
   approvals.approve('project', 'approval', comment: 'Looks right')
 end
 
+# @type method typed_message_calls: (Volcano::Client) -> Volcano::DurableMessageSubscription
+def typed_message_calls(client)
+  messages = client.durable.messages
+  messages.send_message('approvals', 'execution', 'decision', { 'approved' => true }, idempotency_key: 'decision-1')
+  messages.list('approvals', 'execution', direction: :out, after: 3, limit: 50).messages.last&.seq
+  messages.list('approvals', 'execution', name: 'progress', project_id: 'project')
+  messages.subscribe('approvals', 'execution', client_token: 'token', &:data)
+end
+
 # @type method typed_lock_result: (Volcano::Client) -> String
 def typed_lock_result(client)
   client.locks.with_lock('job', ttl: 30) { |guard| guard.lease.key }

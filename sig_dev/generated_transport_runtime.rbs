@@ -134,6 +134,21 @@ module Volcano
 end
 
 module Volcano
+  # Durable message operations for the internal generated transport.
+  class GeneratedTransport
+    def send_durable_message: (authorization: String, target: DurableMessages::Target, name: String, data: sdk_json, idempotency_key: String?) -> Transport::Response
+
+    def list_durable_messages: (authorization: String, target: DurableMessages::Target, query: Hash[Symbol, String | Integer]) -> Transport::Response
+
+    private def send_on_route: (Generated::DurableFunctionsApi durable, DurableMessages::Target target, Generated::SendDurableMessageRequest body, String? idempotency_key) -> Generated::api_result
+
+    private def list_on_route: (Generated::DurableFunctionsApi durable, DurableMessages::Target target, Hash[Symbol, String | Integer] query) -> Generated::api_result
+
+    private def durable_message_options: (**Object? options) -> Generated::api_options
+  end
+end
+
+module Volcano
   # Email-change operations for the internal generated transport.
   class GeneratedTransport
     INVALID_EMAIL_CHANGE_RESPONSE: "Expected a valid email-change acknowledgement"

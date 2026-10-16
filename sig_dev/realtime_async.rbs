@@ -19,11 +19,14 @@ module Async
   class TimeoutError < StandardError
   end
 
+  class Cancel < Exception
+  end
+
   class Task
     def self.current: () -> Task
     def self.current?: () -> Task?
 
-    def async: [T] () { () -> T } -> Task
+    def async: [T] (?transient: bool) { () -> T } -> Task
     def with_timeout: [T] (Numeric duration, ?singleton(Exception) exception, ?String message) { () -> T } -> T
     def wait: () -> Object?
     def stop: (?bool later) -> void
@@ -47,6 +50,12 @@ module Async
   class Semaphore
     def initialize: (?Integer limit) -> void
     def acquire: [T] () { () -> T } -> T
+  end
+
+  class Notification
+    def initialize: () -> void
+    def wait: () -> Object?
+    def signal: (?Object? value) -> bool
   end
 
   module HTTP

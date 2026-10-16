@@ -202,6 +202,69 @@
     ]
   },
   {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessage",
+    "methods": [
+      "data",
+      "deconstruct",
+      "deconstruct_keys",
+      "delivered_at",
+      "direction",
+      "execution_id",
+      "id",
+      "members",
+      "name",
+      "self.[]",
+      "self.members",
+      "sender",
+      "sent_at",
+      "seq",
+      "status",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessagePage",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "has_more",
+      "members",
+      "messages",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_message_models.rb",
+    "scope": "Volcano::DurableMessageSender",
+    "methods": [
+      "deconstruct",
+      "deconstruct_keys",
+      "members",
+      "self.[]",
+      "self.members",
+      "to_h",
+      "type",
+      "user_id",
+      "with"
+    ]
+  },
+  {
+    "path": "lib/volcano/durable_messages.rb",
+    "scope": "Volcano::DurableMessages::Target",
+    "methods": [
+      "client_token",
+      "execution_id",
+      "function_id",
+      "project_id"
+    ]
+  },
+  {
     "path": "lib/volcano/errors.rb",
     "scope": "Volcano::Error::VolcanoError",
     "methods": [
@@ -349,11 +412,20 @@
     ]
   },
   {
+    "path": "lib/volcano/realtime/durable_channel.rb",
+    "scope": "Volcano::Realtime::DurableChannel",
+    "methods": [
+      "durable?"
+    ]
+  },
+  {
     "path": "lib/volcano/realtime/lifecycle.rb",
     "scope": "Volcano::Realtime::Lifecycle",
     "methods": [
       "channel_lock",
-      "normalize_channel_type"
+      "normalize_channel_type",
+      "report_channel_error",
+      "protocol"
     ]
   },
   {
@@ -484,6 +556,7 @@
     "scope": "Volcano::Realtime::ProtocolRecovery",
     "methods": [
       "class",
+      "close_socket",
       "delete_recovery_state",
       "dispatch_recovered_publications",
       "mark_publication_gap",

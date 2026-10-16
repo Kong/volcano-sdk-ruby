@@ -199,6 +199,16 @@ lib/volcano-generated/models/durable_execution_operation_list.rb
 lib/volcano-generated/models/durable_execution_status.rb
 lib/volcano-generated/models/durable_function.rb
 lib/volcano-generated/models/durable_function_config.rb
+lib/volcano-generated/models/durable_message.rb
+lib/volcano-generated/models/durable_message_direction.rb
+lib/volcano-generated/models/durable_message_list.rb
+lib/volcano-generated/models/durable_message_sender.rb
+lib/volcano-generated/models/durable_message_session_registration.rb
+lib/volcano-generated/models/durable_message_status.rb
+lib/volcano-generated/models/durable_message_wait.rb
+lib/volcano-generated/models/durable_message_wait_list.rb
+lib/volcano-generated/models/durable_message_wait_registration.rb
+lib/volcano-generated/models/durable_message_wait_status.rb
 lib/volcano-generated/models/email_template.rb
 lib/volcano-generated/models/error.rb
 lib/volcano-generated/models/export_project_source_request.rb
@@ -285,6 +295,7 @@ lib/volcano-generated/models/managed_project_config_frontend_custom_domain_tls_c
 lib/volcano-generated/models/metric_usage_data.rb
 lib/volcano-generated/models/o_auth_config.rb
 lib/volcano-generated/models/o_auth_error_response.rb
+lib/volcano-generated/models/open_durable_message_session_request.rb
 lib/volcano-generated/models/paginated_auth_users.rb
 lib/volcano-generated/models/paginated_databases.rb
 lib/volcano-generated/models/paginated_durable_approvals.rb
@@ -410,11 +421,13 @@ lib/volcano-generated/models/project_source_export_skip.rb
 lib/volcano-generated/models/project_source_export_state.rb
 lib/volcano-generated/models/project_template_installation.rb
 lib/volcano-generated/models/project_usage_response.rb
+lib/volcano-generated/models/publish_durable_message_request.rb
 lib/volcano-generated/models/publish_sandbox_preset_request.rb
 lib/volcano-generated/models/realtime_config.rb
 lib/volcano-generated/models/realtime_plan_limits.rb
 lib/volcano-generated/models/realtime_stats.rb
 lib/volcano-generated/models/refresh_o_auth_provider_token200_response.rb
+lib/volcano-generated/models/register_durable_message_wait_request.rb
 lib/volcano-generated/models/rename_variable_environment_request.rb
 lib/volcano-generated/models/replace_frontend_shared_variables_request.rb
 lib/volcano-generated/models/replace_shared_variables_request.rb
@@ -446,6 +459,7 @@ lib/volcano-generated/models/sandbox_subject_grant_request.rb
 lib/volcano-generated/models/sandbox_template.rb
 lib/volcano-generated/models/sandbox_template_page.rb
 lib/volcano-generated/models/schedule_request.rb
+lib/volcano-generated/models/send_durable_message_request.rb
 lib/volcano-generated/models/service_key.rb
 lib/volcano-generated/models/set_project_git_production_branch_request.rb
 lib/volcano-generated/models/storage_bucket.rb

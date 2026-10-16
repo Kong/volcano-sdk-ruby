@@ -287,9 +287,28 @@ RSpec.describe Volcano::Realtime do
       expect { protocol.connect(token: 'bad') }.to raise_error(
         Volcano::Realtime::ServerError,
         'bad request'
-      ) { |error| expect(error.code).to eq(107) }
+      ) { |error| expect([error.code, error.temporary?]).to eq([107, false]) }
       protocol.close
     end.wait
+  end
+
+  [[true, true, 'temporary'], [false, false, 'not temporary'], ['true', false, 'not temporary']]
+    .each do |raw, temporary, reading|
+    it "reads a server error marked temporary #{raw.inspect} as #{reading}" do
+      Async do |task|
+        socket = SpecSupport::ProtocolSocket.new
+        socket.on_write = lambda do |command|
+          error = { 'code' => 100, 'message' => 'internal server error', 'temporary' => raw }
+          socket.receive(JSON.generate('id' => command.fetch('id'), 'error' => error))
+        end
+        protocol = protocol_class.new(socket: socket, task: task)
+
+        expect { protocol.connect(token: 'token') }.to raise_error(Volcano::Realtime::ServerError) do |error|
+          expect(error.temporary?).to be(temporary)
+        end
+        protocol.close
+      end.wait
+    end
   end
 
   it 'rejects pending and future operations when the socket closes' do

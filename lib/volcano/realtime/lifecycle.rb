@@ -4,7 +4,7 @@ module Volcano
   class Realtime
     # Channel collection and connection-state lifecycle operations.
     module Lifecycle
-      # @dynamic channel_lock, normalize_channel_type
+      # @dynamic channel_lock, normalize_channel_type, report_channel_error, protocol
       def connected? = !@closed && (@protocol&.connected? || false)
 
       def remove_channel(name, type: :broadcast)
@@ -32,6 +32,42 @@ module Volcano
 
         channel.__send__(:remove)
         @channels.delete(name)
+      end
+
+      # Leaves a durable channel unless a later subscription replaced it. Once
+      # the connection is closed there is nothing left to leave.
+      def remove_durable_channel(channel)
+        channel_lock.acquire do
+          leave_durable_channel(channel) if forget_durable_channel(channel) && !@closed
+        end
+        nil
+      rescue Async::Cancel
+        # Stopped waiting for the lock, so the channel is still subscribed.
+        abandon_durable_leave(channel) { protocol.drop } if forget_durable_channel(channel)
+        raise
+      end
+
+      def forget_durable_channel(channel)
+        @channels.delete(channel.name) if @channels[channel.name].equal?(channel)
+      end
+
+      # A leave the server did not confirm may have left the subscription in
+      # place, so the connection is dropped, which ends it. The reconnect
+      # restores only the channels still in use.
+      def leave_durable_channel(channel)
+        channel.__send__(:remove)
+      rescue StandardError => e
+        abandon_durable_leave(channel) { protocol.close }
+        report_channel_error(e)
+      rescue Async::Cancel
+        # Closing here would start the reconnect in the task being stopped.
+        abandon_durable_leave(channel) { protocol.drop }
+        raise
+      end
+
+      def abandon_durable_leave(channel)
+        channel.mark_closed
+        yield if connected?
       end
 
       def remove_channel_entry(name, channel)

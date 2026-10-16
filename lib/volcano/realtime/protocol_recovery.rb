@@ -6,27 +6,38 @@ module Volcano
     module ProtocolRecovery
       # @dynamic class, request, dispatch_recovered_publications, recovery_position
       # @dynamic delete_recovery_state, set_recovery_position, mark_unknown_gap
-      # @dynamic mark_publication_gap, same_epoch?
+      # @dynamic mark_publication_gap, same_epoch?, close_socket
 
       private
 
-      def subscribe_request(channel:, recoverable:, join_leave:, recovery:)
-        on_reply = nil
-        if recovery
-          on_reply = lambda do |reply|
-            publications = parse_recovery_result(channel: channel, recovery: recovery, result: reply)
-            dispatch_recovered_publications(channel, publications)
-          end
-        end
-
-        request('subscribe', on_reply:) do |id|
-          self.class.subscribe(
+      def subscribe_request(channel:, recoverable:, join_leave:, recovery:, data:)
+        writing = false
+        request('subscribe', on_reply: recovery_reply(channel, recovery), on_write: -> { writing = true }) do |id|
+          command = self.class.subscribe(
             id: id,
             channel: channel,
             recoverable: recoverable,
             join_leave: join_leave,
             recovery: recovery
           )
+          command['subscribe']['data'] = data if data
+          command
+        end
+      rescue Async::Cancel
+        # Once the frame is being written the server may subscribe, and nothing
+        # would leave the channel. Closing the socket has the reader end the
+        # connection, as on a loss, so the reconnect is not cancelled along with
+        # this task. Stopped before that, there is nothing to leave.
+        close_socket if writing
+        raise
+      end
+
+      def recovery_reply(channel, recovery)
+        return unless recovery
+
+        lambda do |reply|
+          publications = parse_recovery_result(channel: channel, recovery: recovery, result: reply)
+          dispatch_recovered_publications(channel, publications)
         end
       end
 

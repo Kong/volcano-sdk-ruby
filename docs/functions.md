@@ -83,7 +83,7 @@ page = owner_client.durable.list(project_id, "charge-order", status: "running")
 owner_client.durable.stop(project_id, "charge-order", handle.id)
 ```
 
-`start` accepts the same active session, service key, or anonymous key as `functions.invoke`. It is the only durable operation available to application credentials. An execution name makes a start idempotent.
+`start` accepts the same active session, service key, or anonymous key as `functions.invoke`. With `messages`, it is the only durable operation available to application credentials. An execution name makes a start idempotent. The start that creates an execution returns its `client_token`; a repeated start returns nil there. Inspecting the execution masks the token.
 
 `get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token. Auth-user sessions, anonymous keys, service keys, and project access tokens are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
 
@@ -108,3 +108,37 @@ stats = approvals.stats(project_id, from: Time.now - (7 * 86_400))
 An approval's `decision` is nil unless it was approved or denied. `decision.decided_by` is nil once the deciding account is deleted, so read it with `decided_by&.email`.
 
 Reads accept the project owner's platform user token or a project access token. Decisions require a person, so a project access token raises `Volcano::Error::PermissionDeniedError`, a subclass of `Volcano::Error::AuthenticationError`. A conflicting decision, or deciding an expired or cancelled approval, raises `Volcano::Error::ConflictError` with `code` set to `approval_decided`, `approval_expired`, or `approval_cancelled`; repeating the same decision returns the approval unchanged. An unknown approval raises `Volcano::Error::NotFoundError`. Malformed responses raise `TypeError`.
+
+## Message a durable execution
+
+A durable function written in JavaScript or Python can wait for a named message and publish messages of its own. Ruby sends, lists, and follows them:
+
+```ruby
+require "async"
+
+handle = client.durable.start("onboarding", { account_id: "account-7" })
+messages = client.durable.messages
+
+messages.send_message("onboarding", handle.id, "documents-uploaded", { count: 3 }, idempotency_key: "upload-42")
+page = messages.list("onboarding", handle.id, direction: "out", after: 0, limit: 100)
+
+Async do
+  subscription = messages.subscribe("onboarding", handle.id, client_token: handle.client_token) do |message|
+    puts [message.seq, message.name, message.data]
+  end
+  # ...
+  subscription.unsubscribe
+ensure
+  client.realtime.disconnect
+end.wait
+```
+
+`send_message` queues the message until a wait for its name takes it, and returns the stored `DurableMessage`: its `status` is `delivered` when a wait took it at once, `delivering` while the handover to that wait is still being confirmed, and `queued` otherwise. A name is 1 to 237 printable ASCII characters; `data` is any JSON value up to 64 KiB. Sending again with an `idempotency_key` the same sender has used on the execution returns the stored message in its current status and sends nothing; another sender's keys never collide with it. Sending to an execution that has ended raises `Volcano::Error::ConflictError` with `code` `execution_not_running`, and sending to one already holding 100 messages no wait has taken raises it with `too_many_queued_messages`.
+
+`list` returns both directions, oldest first, filtered by `direction` (`in` or `out`), `name`, `after` (a `seq`), and `limit` (1 to 500, default 100). `seq` orders an execution's messages but can skip numbers, so read the next page with `after` set to the last message's `seq` while `has_more` is true.
+
+`subscribe` delivers what the execution publishes, once each, in `seq` order, and one block call at a time: first the messages it published before the call, then live ones. After a reconnect, or a live message that shows an earlier one was lost, it reads back the missing ones before live delivery resumes. A read-back that fails is reported to `realtime.on_error` and retried, backing off to every 30 seconds, while the live messages after the gap wait. `realtime.remove_all_channels` and `realtime.disconnect` end the subscription, and a read-back still in flight delivers nothing; during the first read-back, `subscribe` then raises `Volcano::Realtime::ClosedError`. The subscription belongs to the session that opened it: once the client signs out, signs in again, or sets another session, it reads and delivers nothing more, the next read-back, delivery, or reconnect leaves the execution's channel, and raises `Volcano::Error::SessionChangedError`, reported to `realtime.on_error`, or from `subscribe` during its first read-back. Subscribing on a realtime connection an earlier session opened raises it too, and closes that connection so the next call reconnects as the current session. A token refresh keeps it. A reconnect the server refuses to restore the subscription on, as when the execution is no longer visible to the session, ends it too: the refusal is reported to `realtime.on_error` once, as a `Volcano::Realtime::ServerError` with the server's `code`, and the execution can be subscribed to again. A refusal the server marks `temporary?` is retried instead. It runs on the client's realtime connection, so call it inside an Async reactor with a signed-in session. A block that raises during the first read-back ends the subscription before it is called again, and raises from `subscribe`; one that raises later, on a live message or during a read-back, is reported to `realtime.on_error`, and delivery goes on with the next message. A second subscription to the same execution raises `Volcano::Realtime::DuplicateSubscriptionError` until the first unsubscribes.
+
+These calls use the application route with the same credential `start` uses. The service key reaches every execution. A signed-in user reaches executions they started, and the anon key, or another user, reaches one by passing its `client_token:`. The function must be visible to the credential: public for the anon key, public or authenticated for a user. The anon key on an authenticated function raises `Volcano::Error::PermissionDeniedError`; any other execution the credential cannot reach raises `Volcano::Error::NotFoundError`. Only the start that creates an execution returns the token, so a lost start response loses it.
+
+Pass `project_id:` to `send_message`, `list`, or `subscribe` to use the owner's route with the project owner's platform user token or a project access token instead; `subscribe` reads back over it, and a read-only token can list but not send.

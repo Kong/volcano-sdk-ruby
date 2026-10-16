@@ -197,10 +197,18 @@ module Volcano
       def get_durable_approval_stats_with_http_info: (String id, ?api_options opts) -> api_result
       def approve_durable_approval_with_http_info: (String id, String approval_id, ?api_options opts) -> api_result
       def deny_durable_approval_with_http_info: (String id, String approval_id, ?api_options opts) -> api_result
+      def send_durable_message_with_http_info: (String id, String function_id, String execution_id, SendDurableMessageRequest send_durable_message_request, ?api_options opts) -> api_result
+      def send_durable_message_from_application_with_http_info: (String function_id, String execution_id, SendDurableMessageRequest send_durable_message_request, ?api_options opts) -> api_result
+      def list_durable_messages_with_http_info: (String id, String function_id, String execution_id, ?api_options opts) -> api_result
+      def list_durable_messages_from_application_with_http_info: (String function_id, String execution_id, ?api_options opts) -> api_result
     end
 
     class DurableApprovalDecisionRequest < ApiModelBase
       def initialize: (?Hash[Symbol, String] attributes) -> void
+    end
+
+    class SendDurableMessageRequest < ApiModelBase
+      def initialize: ({ name: String, data: sdk_json } attributes) -> void
     end
 
     class LogsApi

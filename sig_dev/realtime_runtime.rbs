@@ -76,6 +76,7 @@ module Volcano
 
 
     CHANNEL_TYPES: Array[Symbol]
+    UNBATCHED: PostgresBatchConfig
 
     class PostgresBatchConfig < Data
       attr_reader auto_fetch: bool
@@ -88,6 +89,8 @@ module Volcano
     interface _LifecycleContext
       def channel_lock: () -> Async::Semaphore
       def normalize_channel_type: (String | Symbol type) -> Symbol
+      def report_channel_error: (StandardError error) -> void
+      def protocol: () -> Protocol
     end
 
     interface _ConnectionContext
@@ -114,6 +117,14 @@ module Volcano
 
     interface _ChannelErrorContext
       def report_channel_error: (StandardError error) -> void
+    end
+
+    interface _DurableFollower
+      def restoring: () -> void
+      def refused: () -> void
+      def resubscribed: () -> nil
+      def dropped: () -> nil
+      def close: () -> nil
     end
 
     interface _CoreDependencies
@@ -168,6 +179,9 @@ module Volcano
                     | (:capture_protocol_session method_name) -> [Integer, SessionOperations, Session]
                     | (:capture_session_binding method_name) -> session_binding
                     | (:database_name method_name) -> String?
+                    | (:durable_channel method_name, String execution_id, String? client_token, _DurableFollower follower) -> Channel?
+                    | (:remove_durable_channel method_name, Channel channel) -> nil
+                    | [T] (:blocking method_name) { () -> T } -> T
 
       private
 
@@ -178,6 +192,10 @@ module Volcano
       def cached_channel: (Channel channel, PostgresBatchConfig batch_config) -> Channel
 
       def build_channel: (String name, Symbol type, PostgresBatchConfig batch_config) -> Channel
+
+      def durable_channel: (String execution_id, String? client_token, _DurableFollower follower) -> Channel?
+
+      def blocking: [T] () { () -> T } -> T
 
       def protocol_lock: () -> Async::Semaphore
 
@@ -207,6 +225,10 @@ module Volcano
 
       @closed: bool
 
+      @subscribe_data: Hash[String, String]?
+
+      @follower: _DurableFollower?
+
       include PostgresChanges
 
       include BroadcastDelivery
@@ -225,6 +247,8 @@ module Volcano
 
       include ChannelLifecycle
 
+      include DurableChannel
+
       def initialize: (Core realtime, ^() -> Protocol protocol_provider, String name, Symbol type, batch_config: PostgresBatchConfig) -> void
 
       def subscription_desired?: () -> bool
@@ -238,6 +262,8 @@ module Volcano
       def remove: () -> nil
 
       def subscribe_with_intent: () -> [Protocol, Integer]
+      def ask_follower_to_restore: () -> void
+      def resubscribe: (Protocol protocol) -> [Protocol, Integer]?
 
       def initialize_recovery_state: () -> void
 
@@ -338,6 +364,14 @@ module Volcano
       private
 
       def remove_channel_locked: (String name) -> Channel?
+
+      def remove_durable_channel: (Channel channel) -> nil
+
+      def forget_durable_channel: (Channel channel) -> Channel?
+
+      def leave_durable_channel: (Channel channel) -> void
+
+      def abandon_durable_leave: (Channel channel) { () -> void } -> void
 
       def remove_channel_entry: (String name, Channel channel) -> StandardError?
     end
@@ -673,7 +707,7 @@ module Volcano
 
       def self.connect: (id: Integer, token: String) -> Hash[String, Object]
 
-      def self.subscribe: (id: Integer, channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Hash[String, Object]
+      def self.subscribe: (id: Integer, channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> { 'id' => Integer, 'subscribe' => Hash[String, Object] }
 
       def self.add_recovery_options: (Hash[String, Object] options, Hash[Symbol, String | Integer] recovery) -> void
 
@@ -687,7 +721,7 @@ module Volcano
 
       def connect: (token: String) -> Hash[String, Object]
 
-      def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?) -> Object?
+      def subscribe: (channel: String, ?recoverable: bool, ?join_leave: bool, ?recovery: Hash[Symbol, String | Integer]?, ?data: Hash[String, String]?) -> Object?
 
       def publish: (channel: String, data: Object) -> Object?
 
@@ -778,13 +812,13 @@ module Volcano
 
         private
 
-        def request: (String reply_key, ?on_reply: (^(Object?) -> void)?) { (Integer) -> Hash[String, Object] } -> Object?
+        def request: (String reply_key, ?on_reply: (^(Object?) -> void)?, ?on_write: (^() -> void)?) { (Integer) -> Hash[String, Object] } -> Object?
 
         def register_request: (String reply_key, (^(Object?) -> void)? on_reply) -> [Integer, Async::Queue[Object?]]
 
-        def write_frame: (Hash[String, Object] frame) -> void
+        def write_frame: (Hash[String, Object] frame, ?(^() -> void)? on_write) -> void
 
-        def write_serialized_frame: (String frame) -> void
+        def write_serialized_frame: (String frame, ?(^() -> void)? on_write) -> void
 
         def await_reply: (Async::Queue[Object?] reply_queue) -> Object?
 
@@ -832,6 +866,8 @@ module Volcano
         @max_callback_queue: Integer
 
         def connected?: () -> bool
+
+        def drop: () -> nil
 
         def on_publication: (String channel, ?on_rejection: (^(Object?) -> void)?) { (Object?, Object?, Object?, recovered: bool) -> void } -> ^(Object?, Object?, Object?, recovered: bool) -> void
 

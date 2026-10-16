@@ -61,13 +61,17 @@ module Volcano
         end
       end
 
+      # A durable message has no event field; everything the server publishes
+      # on its channel is one.
       def deliver_publication(event, data)
         if postgres?
           dispatch_postgres_change(data)
-        elsif event == 'message'
+        elsif event == 'message' || durable?
           emit('message', data)
         end
       end
+
+      def durable? = @type == :durable
 
       def emit(event, data, before_delivery: nil)
         callbacks = @callbacks[event].dup

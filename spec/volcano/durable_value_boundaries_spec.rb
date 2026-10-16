@@ -3,7 +3,7 @@
 RSpec.describe Volcano::Durable do
   let(:client) { instance_double(Volcano::Client) }
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
-  let(:durable) { described_class.new(client, transport) }
+  let(:durable) { described_class.new(client, transport, instance_double(Volcano::Realtime)) }
 
   def response
     body = {

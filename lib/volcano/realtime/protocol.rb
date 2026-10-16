@@ -16,10 +16,14 @@ module Volcano
 
       # @dynamic code
 
-      def initialize(message, code: nil)
+      def initialize(message, code: nil, temporary: false)
         super(message)
         @code = code.is_a?(String) ? code.dup.freeze : code
+        @temporary = temporary == true
       end
+
+      # Whether the server expects the same command to succeed later.
+      def temporary? = @temporary
     end
 
     class ClosedError < StandardError; end
@@ -93,12 +97,12 @@ module Volcano
         result.tap { @connected = true }
       end
 
-      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil)
+      def subscribe(channel:, recoverable: false, join_leave: false, recovery: nil, data: nil)
         @subscription_lock.acquire do
           ensure_open!
           raise DuplicateSubscriptionError, "already subscribed to #{channel}" if @subscriptions.include?(channel)
 
-          result = subscribe_request(channel:, recoverable:, join_leave:, recovery:)
+          result = subscribe_request(channel:, recoverable:, join_leave:, recovery:, data:)
           ensure_open!
           @subscriptions.add(channel)
           result

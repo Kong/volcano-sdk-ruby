@@ -16,6 +16,7 @@ require_relative 'realtime/postgres_batch'
 require_relative 'realtime/postgres_delivery'
 require_relative 'realtime/broadcast_delivery'
 require_relative 'realtime/channel_callbacks'
+require_relative 'realtime/durable_channel'
 
 module Volcano
   # Manages a project's realtime connection and broadcast channels.
@@ -68,6 +69,9 @@ module Volcano
     end
 
     CHANNEL_TYPES = %i[broadcast presence postgres].freeze
+    # A channel that fetches no rows still takes a batch configuration.
+    UNBATCHED = PostgresBatchConfig.new(auto_fetch: false, batch_window_ms: 1, max_batch_size: 1)
+    private_constant :UNBATCHED
 
     # Owns the public realtime facade and its channel collection.
     module Core
@@ -152,6 +156,8 @@ module Volcano
 
       def report_channel_error(error) = protocol_error(public_error(error))
 
+      def blocking(&) = BlockingCall.call(&)
+
       def cached_channel(channel, batch_config)
         channel.__send__(:ensure_fetch_config!, batch_config)
         channel
@@ -159,6 +165,20 @@ module Volcano
 
       def build_channel(name, type, batch_config)
         Channel.new(self, -> { protocol }, name, type, batch_config:)
+      end
+
+      # Opens the channel an execution publishes its messages on, or answers
+      # nil when this client already follows the execution.
+      def durable_channel(execution_id, client_token, follower)
+        channel_lock.acquire do
+          ensure_open!
+          name = "durable:#{execution_id}"
+          next if @channels.key?(name)
+
+          channel = build_channel(name, :durable, UNBATCHED)
+          channel.__send__(:follow_durable, client_token && { 'client_token' => client_token }, follower)
+          @channels[name] = channel
+        end
       end
 
       def protocol_lock
@@ -186,6 +206,7 @@ module Volcano
       include PostgresDelivery
       include BroadcastDelivery
       include ChannelCallbacks
+      include DurableChannel
 
       attr_reader :name
 
@@ -194,7 +215,7 @@ module Volcano
         @protocol_provider = protocol_provider
         @name = name.freeze
         @handler_registered = @subscribed = @subscription_desired = @closed = false
-        @lifecycle_lock = nil
+        @lifecycle_lock = @subscribe_data = @follower = nil
         initialize_recovery_state
         initialize_callback_dispatch
         initialize_presence(type)
@@ -230,13 +251,13 @@ module Volcano
       def restoration_needed? = subscription_desired? && !@subscribed
 
       def restore_subscription(protocol)
-        state = with_lifecycle_lock do
-          restoration_needed? ? subscribe_protocol(protocol) : nil
-        end
-        if state
-          subscribed_protocol, epoch = state
-          sync_presence(subscribed_protocol, epoch)
-        end
+        ask_follower_to_restore
+        state = resubscribe(protocol)
+        return unless state
+
+        subscribed_protocol, epoch = state
+        sync_presence(subscribed_protocol, epoch)
+        @follower&.resubscribed
         nil
       end
 
@@ -247,6 +268,7 @@ module Volcano
           clear_broadcast_recovery_state
           clear_channel_recovery_state
           mark_removed
+          @follower&.close
         end
         nil
       end
@@ -271,6 +293,18 @@ module Volcano
       rescue StandardError
         @subscription_desired = false unless protocol && !protocol.connected?
         raise
+      end
+
+      # Outside the lifecycle lock: a follower that refuses may leave the channel.
+      def ask_follower_to_restore
+        @follower&.restoring if restoration_needed?
+      end
+
+      # The refusal is handled outside the lifecycle lock too, for the same reason.
+      def resubscribe(protocol)
+        with_lifecycle_lock { restoration_needed? ? subscribe_protocol(protocol) : nil }
+      rescue ServerError => e
+        raise restore_refused(e)
       end
 
       def with_lifecycle_lock(&)

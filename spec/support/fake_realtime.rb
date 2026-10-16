@@ -80,6 +80,29 @@ module SpecSupport
     end
   end
 
+  # Answers each durable message list with the next page the test enqueues,
+  # so a test decides when a catch-up's read returns.
+  class DurableMessagesTransport < RealtimeAuthTransport
+    attr_reader :lists, :list_threads, :pages
+
+    def initialize
+      super
+      @lists = []
+      @list_threads = []
+      # Listed from a worker thread, which an Async::Queue cannot wake.
+      @pages = ThreadSignalQueue.new
+    end
+
+    def list_durable_messages(**arguments)
+      @lists << arguments
+      @list_threads << Thread.current
+      page = @pages.dequeue
+      return page if page.is_a?(Volcano::Transport::Response)
+
+      Volcano::Transport::Response.new(status: 200, body: page, headers: {}, data: nil)
+    end
+  end
+
   class ThreadSignalQueue < Queue
     alias dequeue pop
     alias enqueue push
@@ -156,9 +179,10 @@ module SpecSupport
       @incoming.enqueue(frame)
     end
 
-    def reject(id, message, code: nil)
+    def reject(id, message, code: nil, temporary: nil)
       error = { 'message' => message }
       error['code'] = code if code
+      error['temporary'] = temporary unless temporary.nil?
       @incoming.enqueue(JSON.generate('id' => id, 'error' => error))
     end
 

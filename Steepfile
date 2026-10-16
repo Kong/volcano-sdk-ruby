@@ -181,6 +181,21 @@ target :durable_approvals do
   configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
 end
 
+target :durable_messages do
+  signature 'sig', 'sig_dev'
+  check 'lib/volcano/durable_messages.rb'
+  check 'lib/volcano/durable_message_arguments.rb'
+  check 'lib/volcano/durable_message_models.rb'
+  check 'lib/volcano/durable_message_responses.rb'
+  check 'lib/volcano/durable_message_catch_ups.rb'
+  check 'lib/volcano/durable_message_backlog.rb'
+  check 'lib/volcano/durable_message_stream.rb'
+  check 'lib/volcano/durable_message_session.rb'
+  library 'json'
+  library 'time'
+  configure_code_diagnostics Steep::Diagnostic::Ruby.all_error
+end
+
 target :sandboxes do
   signature 'sig', 'sig_dev'
   check 'lib/volcano/sandbox_models.rb'

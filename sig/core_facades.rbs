@@ -1,6 +1,7 @@
 module Volcano
   type sdk_json = nil | bool | Integer | Float | String | Time | Array[sdk_json] | Hash[String | Symbol, sdk_json]
   type sdk_payload = Hash[String | Symbol, sdk_json]
+  type durable_message_filters = { ?direction: (String | Symbol)?, ?name: String?, ?after: Integer?, ?limit: Integer?, ?client_token: String?, ?project_id: String? }
   type durable_approval_filters = { ?status: String?, ?function: String?, ?execution_id: String?, ?from: (Time | String)?, ?to: (Time | String)?, ?page: Integer?, ?limit: Integer? }
   type database_rows = Array[Hash[String, json_value]]
 
@@ -79,8 +80,22 @@ module Volcano
     def deny: (String project_id, String approval_id, ?comment: String?) -> DurableApproval
   end
 
+  class DurableMessageSubscription
+    def unsubscribe: () -> nil
+    def inspect: () -> String
+    def to_s: () -> String
+    def pretty_print: (DurableExecution::_PrettyPrinter printer) -> void
+  end
+
+  class DurableMessages
+    def send_message: (String function_name, String execution_id, String name, ?sdk_json data, **String? options) -> DurableMessage
+    def list: (String function_name, String execution_id, ?durable_message_filters filters) -> DurableMessagePage
+    def subscribe: (String function_name, String execution_id, ?client_token: String?, ?project_id: String?) { (DurableMessage) -> void } -> DurableMessageSubscription
+  end
+
   class Durable
     attr_reader approvals: DurableApprovals
+    attr_reader messages: DurableMessages
 
     def start: (String function_name, ?sdk_payload payload, ?execution_name: String?) -> DurableExecution
     def get: (String project_id, String function_name, String execution_id) -> DurableExecution

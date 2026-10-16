@@ -21,7 +21,7 @@ execution = Volcano::DurableExecution.new(
 )
 raise 'Wrong execution' unless execution.status == 'running' && !execution.terminal?
 raise 'Wrong execution members' unless Volcano::DurableExecution.members == %i[
-  id function_id name status region created_at result result_expired error completed_at
+  id function_id name status region created_at result result_expired error completed_at client_token
 ]
 
 positional = Volcano::DurableExecution.new('execution', 'function', 'job', 'running', 'aws-us-east-1', created)

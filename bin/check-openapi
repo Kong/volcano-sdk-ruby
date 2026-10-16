@@ -14,4 +14,10 @@ if ! diff -qr "$expected" "$temporary/generated"; then
   exit 1
 fi
 
+actual_digest=$(ruby -rdigest -e 'puts Digest::SHA256.file(ARGV.fetch(0)).hexdigest' "$repo_root/openapi/openapi.yaml")
+if [[ "$(tr -d '[:space:]' < "$repo_root/openapi/openapi.yaml.sha256")" != "$actual_digest" ]]; then
+  echo "openapi/openapi.yaml.sha256 is out of date; run bin/generate-openapi" >&2
+  exit 1
+fi
+
 echo "generated OpenAPI boundary is up to date"

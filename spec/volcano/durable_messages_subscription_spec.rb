@@ -697,16 +697,35 @@ RSpec.describe Volcano::DurableMessages do
     end.wait
   end
 
-  it 'ignores publications that are not messages the execution published' do
+  it 'ignores a message sent to the execution', :aggregate_failures do
     Async do |task|
       transport.pages.enqueue(page)
       follow
       publish(sockets[0], published(1, direction: 'in'))
-      publish(sockets[0], { 'seq' => 2 })
-      publish(sockets[0], published(3))
+      publish(sockets[0], published(2))
 
       wait_until(task) { received.any? }
-      expect(received).to eq([3])
+      expect(received).to eq([2])
+      expect(transport.lists.size).to eq(1)
+    ensure
+      client.realtime.disconnect
+    end.wait
+  end
+
+  it 'reads back a publication that does not read as a message', :aggregate_failures do
+    Async do |task|
+      transport.pages.enqueue(page(1))
+      follow
+      publish(sockets[0], { 'seq' => 2 })
+      wait_until(task) { transport.lists.size == 2 }
+      publish(sockets[0], published(3).merge('prev_seq' => 2))
+      task.sleep(0.01)
+
+      expect(received).to eq([1])
+      transport.pages.enqueue(page(2))
+      wait_until(task) { received.size == 3 }
+      expect(received).to eq([1, 2, 3])
+      expect(transport.lists.last.fetch(:query)).to eq(direction: 'out', after: 1)
     ensure
       client.realtime.disconnect
     end.wait

@@ -37,8 +37,8 @@ module Volcano
     # Told when the server refuses to restore the channel for good.
     def refused = @subscription.unsubscribe
 
-    def resubscribed = @stream.resubscribed
-    def dropped = @stream.dropped
+    def resubscribed = @stream.catch_up_in_background
+    def dropped = @stream.catch_up_in_background
     def close = @stream.close
 
     private

@@ -20,7 +20,8 @@ module Volcano
   # reports each resubscription, which starts a catch-up of what it dropped.
   # A broadcast naming a publish not yet delivered starts one too, since the
   # broadcast before it was lost or has yet to arrive, and so does a
-  # publication the connection had no room for.
+  # publication the connection had no room for or that does not read as a
+  # message.
   class DurableMessageStream
     include DurableMessageResponses
 
@@ -57,10 +58,6 @@ module Volcano
       @background.release
     end
 
-    def resubscribed = catch_up_in_background
-
-    def dropped = catch_up_in_background
-
     # Reads what was missed, then releases the held messages. Raises the
     # list's or the handler's error, closing the stream before anything held
     # is delivered, and raises Realtime::ClosedError if the stream was closed
@@ -73,6 +70,16 @@ module Volcano
       read_missed(first: true)
       @background.start unless @closed
       raise Realtime::ClosedError, ENDED if @closed
+    end
+
+    # Reads back what the channel lost, as when it resubscribes or had no room
+    # for a publication. One catch-up waiting its turn reads whatever more are
+    # asked for meanwhile, so a burst of dropped publications reads once.
+    def catch_up_in_background
+      return if @background.pending?
+
+      begin_catch_up
+      @background.request
     end
 
     # Not stopped: the handler a catch-up is running may be what closed it.
@@ -94,15 +101,6 @@ module Volcano
         deliver(held.message, report: true)
       end
       catch_up_in_background unless @held.empty?
-    end
-
-    # One catch-up waiting its turn reads whatever more are asked for
-    # meanwhile, so a burst of dropped publications reads once.
-    def catch_up_in_background
-      return if @background.pending?
-
-      begin_catch_up
-      @background.request
     end
 
     # Counted before the read waits its turn, so nothing is delivered live
@@ -164,10 +162,13 @@ module Volcano
       @on_failure.call(e)
     end
 
+    # A publication that does not read as a message is still one the
+    # execution published, so the list is read for it as for a dropped one.
     def published(data)
       message = durable_message(data)
       Held.new(message:, prev_seq: broadcast_prev_seq(data)) if message.direction == 'out'
     rescue TypeError
+      catch_up_in_background
       nil
     end
   end

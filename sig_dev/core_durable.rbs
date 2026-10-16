@@ -214,14 +214,12 @@ module Volcano
 
     def initialize: (^(DurableMessage) -> void handler, ^(Integer) -> DurableMessagePage list_after, ^(StandardError) -> void on_failure) -> void
     def live: (Object? data) -> void
-    def resubscribed: () -> nil
-    def dropped: () -> nil
     def catch_up: () -> void
+    def catch_up_in_background: () -> nil
     def close: () -> nil
 
     private def behind?: () -> bool
     private def release_live: () -> void
-    private def catch_up_in_background: () -> nil
     private def begin_catch_up: () -> Integer
     private def read_missed: (?first: bool) -> void
     private def read_pages: (report: bool) -> void

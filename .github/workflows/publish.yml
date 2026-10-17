@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
+      - uses: ruby/setup-ruby@e81a8fa391b11a595c1b7ed84177cc0fe02faf83 # v1
         with:
           bundler-cache: true
       - run: gem build volcano-sdk.gemspec
@@ -95,7 +95,7 @@ jobs:
             cat SHA256SUMS
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-package
           path: |
@@ -147,14 +147,14 @@ jobs:
           echo "artifact-id=$artifact_id" >> "$GITHUB_OUTPUT"
           echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
           echo "Source: $tag ($commit), release build $RELEASE_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           artifact-ids: ${{ steps.release.outputs.artifact-id }}
           run-id: ${{ inputs.run-id }}
           github-token: ${{ github.token }}
           merge-multiple: true
           path: package
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
+      - uses: ruby/setup-ruby@e81a8fa391b11a595c1b7ed84177cc0fe02faf83 # v1
         with:
           bundler-cache: false
       - name: Verify and record the package
@@ -184,7 +184,7 @@ jobs:
             echo '```'
             echo 'The publish-package artifact includes the original gem, checksum, and file inventory.'
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: publish-package
           path: |
@@ -211,10 +211,10 @@ jobs:
     env:
       RELEASE_VERSION: ${{ needs.build.outputs.version || needs.prepare.outputs.version }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ github.event_name == 'release' && 'release-package' || 'publish-package' }}
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
+      - uses: ruby/setup-ruby@e81a8fa391b11a595c1b7ed84177cc0fe02faf83 # v1
         with:
           ruby-version: '3.4.10'
           bundler-cache: false

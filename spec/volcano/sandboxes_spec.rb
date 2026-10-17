@@ -49,6 +49,57 @@ RSpec.describe Volcano::Sandboxes do
     expect(handle.expires_at).to eq(Time.utc(2026, 10, 6, 10))
   end
 
+  it 'sends the session lifetime and no idle timeout' do
+    reply(state, status: 201)
+    facade.create(project, region: 'aws-us-east-1', preset: 'python3.12', max_duration_seconds: 300)
+    body = JSON.parse(requests.last.options[:body])
+    expect(body).to eq('preset' => 'python3.12', 'region' => 'aws-us-east-1', 'max_duration_seconds' => 300)
+  end
+
+  it 'rejects the idle timeout the API removed instead of sending it' do
+    reply(state, status: 201)
+    expect { facade.create(project, region: 'aws-us-east-1', preset: 'python3.12', idle_timeout_seconds: 60) }
+      .to raise_error(ArgumentError, /unknown keyword: :idle_timeout_seconds/)
+    expect(requests).to be_empty
+  end
+
+  it 'creates and reads a session with no expiry when it has no lifetime limit' do
+    # A local-mode session has no lifetime limit, so the API returns expires_at: null.
+    unlimited = state.merge(expires_at: nil)
+    reply(unlimited, status: 201)
+    expect(facade.create(project, region: 'aws-us-east-1', preset: 'python3.12').expires_at).to be_nil
+    reply(unlimited)
+    expect(facade.get(session_id).expires_at).to be_nil
+  end
+
+  it 'refreshes between a time and no expiry in both directions' do
+    reply(state)
+    handle = facade.get(session_id)
+    expect(handle.expires_at).to eq(Time.utc(2026, 10, 6, 10))
+    reply(state.merge(expires_at: nil))
+    expect(handle.refresh).to be(handle)
+    expect(handle.expires_at).to be_nil
+    reply(state)
+    handle.refresh
+    expect(handle.expires_at).to eq(Time.utc(2026, 10, 6, 10))
+  end
+
+  it 'still rejects a session expiry that is neither a time nor null' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply(state('terminated').merge(expires_at: 3600))
+    expect { handle.refresh }.to raise_error(TypeError, 'Invalid Sandbox text field')
+    expect(handle.state).to eq('running')
+    expect(handle.expires_at).to eq(Time.utc(2026, 10, 6, 10))
+  end
+
+  it 'keeps the expiry of an access credential required' do
+    reply(state)
+    handle = facade.get(session_id)
+    reply({ url: 'https://access.test', token: 'secret', expires_at: nil })
+    expect { handle.access(8080) }.to raise_error(TypeError, 'Invalid Sandbox text field')
+  end
+
   it 'returns nonzero command exits as one-shot data' do
     reply(command.merge(session_id: session_id, region: 'aws-us-east-1', duration_ms: 42))
     result = facade.exec(project, 'exit 7', region: 'aws-us-east-1', preset: 'python3.12')

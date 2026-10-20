@@ -85,7 +85,7 @@ owner_client.durable.stop(project_id, "charge-order", handle.id)
 
 `start` accepts the same active session, service key, or anonymous key as `functions.invoke`. With `messages`, it is the only durable operation available to application credentials. An execution name makes a start idempotent. The start that creates an execution returns its `client_token`; a repeated start returns nil there. Inspecting the execution masks the token.
 
-`get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token. Auth-user sessions, anonymous keys, service keys, and project access tokens are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
+`get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token or a project access token; a `read_only` token can read and list but not stop. Auth-user sessions, anonymous keys, and service keys are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
 
 `list` returns executions and pagination metadata. A successful response must include `data`, `page`, `limit`, `total`, and `has_more` with the API's declared types. Missing or malformed fields raise `TypeError`; a complete response with `data: []` returns an empty execution list.
 
@@ -111,11 +111,15 @@ Reads accept the project owner's platform user token or a project access token. 
 
 ## Message a durable execution
 
-A durable function written in JavaScript or Python can wait for a named message and publish messages of its own. Ruby sends, lists, and follows them:
+A durable function written in JavaScript or Python can wait for a named message and publish messages of its own. Ruby sends, lists, and follows them. Here a signed-in user starts the execution, so it reaches it without the client token:
 
 ```ruby
 require "async"
 
+client.auth.sign_in(
+  email: ENV.fetch("VOLCANO_USER_EMAIL"),
+  password: ENV.fetch("VOLCANO_USER_PASSWORD")
+)
 handle = client.durable.start("onboarding", { account_id: "account-7" })
 messages = client.durable.messages
 
@@ -123,7 +127,7 @@ messages.send_message("onboarding", handle.id, "documents-uploaded", { count: 3 
 page = messages.list("onboarding", handle.id, direction: "out", after: 0, limit: 100)
 
 Async do
-  subscription = messages.subscribe("onboarding", handle.id, client_token: handle.client_token) do |message|
+  subscription = messages.subscribe("onboarding", handle.id) do |message|
     puts [message.seq, message.name, message.data]
   end
   # ...

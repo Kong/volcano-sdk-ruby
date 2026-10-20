@@ -529,9 +529,10 @@ returns the execution that already exists rather than beginning a second one.
 Only the start that creates the execution returns its `client_token`.
 
 `get`, `list`, and `stop` are owner-scoped and require the project owner's
-platform user token, because an execution is addressed by its id alone.
-Auth-user sessions, anonymous keys, service keys, and project access tokens are
-not accepted. `get` carries the deeply
+platform user token or a project access token, because an execution is
+addressed by its id alone. A `read_only` project access token can read and list
+but not stop. Auth-user sessions, anonymous keys, and service keys are not
+accepted. `get` carries the deeply
 frozen `result` once the execution has succeeded, and `error` when it failed;
 `result_expired` separates a result the platform has discarded from a function
 that returned nothing. `terminal?` reports whether the execution has stopped
@@ -606,11 +607,16 @@ characters.
 
 A durable function written in JavaScript or Python can wait for a named
 message, and publish messages of its own. Ruby sends them, lists them, and
-follows what the execution publishes:
+follows what the execution publishes. Here a signed-in user starts the
+execution, so it reaches it without the client token:
 
 ```ruby
 require "async"
 
+client.auth.sign_in(
+  email: ENV.fetch("VOLCANO_USER_EMAIL"),
+  password: ENV.fetch("VOLCANO_USER_PASSWORD")
+)
 handle = client.durable.start("onboarding", { account_id: "account-7" })
 messages = client.durable.messages
 
@@ -621,7 +627,7 @@ page = messages.list("onboarding", handle.id, direction: "out", after: 0)
 puts page.messages.map(&:name), page.has_more
 
 Async do
-  subscription = messages.subscribe("onboarding", handle.id, client_token: handle.client_token) do |message|
+  subscription = messages.subscribe("onboarding", handle.id) do |message|
     puts [message.seq, message.name, message.data]
   end
   # ...

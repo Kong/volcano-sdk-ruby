@@ -55,6 +55,7 @@ module Volcano
   module SandboxResponse
     STATES: Array[String]
     def self.timestamp: (Object? value) -> Time
+    def self.nullable_timestamp: (Object? value) -> Time?
     def self.text: (Object? value) -> String
     def self.integer: (Object? value) -> Integer
     def self.flag: (Object? value) -> bool

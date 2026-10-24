@@ -1,6 +1,6 @@
 module Volcano
   type sandbox_selector = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer }
-  type sandbox_create_options = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer, ?max_duration_seconds: Integer, ?idle_timeout_seconds: Integer, ?request_id: String }
+  type sandbox_create_options = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer, ?max_duration_seconds: Integer, ?request_id: String }
   type sandbox_exec_options = { region: String, ?preset: String, ?sandbox_id: String, ?memory_mb: Integer, ?timeout_seconds: Integer, ?environment: Hash[String, String], ?request_id: String }
   type sandbox_command_options = { ?timeout_seconds: Integer, ?environment: Hash[String, String], ?request_id: String }
 
@@ -93,7 +93,7 @@ module Volcano
     include SandboxDeployments
     def inspect: () -> String
     def presets: () -> Array[SandboxPreset]
-    def create: (String project_id, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?max_duration_seconds: Integer?, ?idle_timeout_seconds: Integer?, ?request_id: String?) -> SandboxSession
+    def create: (String project_id, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?max_duration_seconds: Integer?, ?request_id: String?) -> SandboxSession
     def get: (String session_id) -> SandboxSession
     def exec: (String project_id, String command, region: String, ?preset: String?, ?sandbox_id: String?, ?memory_mb: Integer?, ?timeout_seconds: Integer, ?environment: Hash[String, String]?, ?request_id: String?) -> SandboxExecutionResult
     def grant: (String session_id, String auth_user_id, expires_at: (Time | String)) -> nil
@@ -106,7 +106,7 @@ module Volcano
     attr_reader project_id: String
     attr_reader region: String
     attr_reader state: String
-    attr_reader expires_at: Time
+    attr_reader expires_at: Time?
     attr_reader files: SandboxFiles
     def refresh: () -> SandboxSession
     def suspend: () -> SandboxSession

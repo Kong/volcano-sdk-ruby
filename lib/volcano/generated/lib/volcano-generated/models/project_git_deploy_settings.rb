@@ -28,6 +28,7 @@ module Volcano::Generated
     # App root (subdirectory) the frontend builds from. Omitted for the repo root.
     attr_accessor :frontend_app_root
 
+    # When the settings were last saved, or last changed by connecting a repository. Other changes to the project leave it alone. Settings a connection turned on before Volcano began tracking this report the project's last change before then; settings never saved or changed report when the project was created.
     attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.

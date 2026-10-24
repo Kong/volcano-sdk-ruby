@@ -106,8 +106,10 @@ module Volcano::Generated
     # Enable transactional email sending (confirmation, reset, change notifications). Must be true when require_email_confirmation is true.
     attr_accessor :email_enabled
 
+    # Sender email address. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is trimmed in responses and exports, and ignored when sending.
     attr_accessor :email_from_address
 
+    # Sender display name; supports punctuation and Unicode. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is trimmed in responses and exports, and ignored when sending.
     attr_accessor :email_from_name
 
     attr_accessor :smtp_host

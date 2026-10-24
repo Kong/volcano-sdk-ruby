@@ -40,7 +40,7 @@ module Volcano::Generated
     # Present once the execution has reached a terminal status.
     attr_accessor :completed_at
 
-    # Lets a browser read and send the execution's messages. Returned only by the start that created the execution, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
+    # Lets a browser read and send the execution's messages. Returned only by the start whose input the execution runs, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
     attr_accessor :client_token
 
     class EnumAttributeValidator

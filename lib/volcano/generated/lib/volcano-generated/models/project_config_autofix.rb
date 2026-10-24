@@ -14,17 +14,13 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # AI diagnosis and fix settings. Omitted fields keep their current value. Your API key is never part of the manifest, and an apply never sets or deletes it: set it with `PUT /projects/{id}/autofix` before turning on a provider that runs on your own key.
+  # AI diagnosis and fix settings. Omitted fields keep their current value; a project that never saved settings starts from `max_stage: pull_request` and `auto_trigger: true`.
   class ProjectConfigAutofix < ApiModelBase
     attr_accessor :enabled
 
     attr_accessor :max_stage
 
     attr_accessor :auto_trigger
-
-    attr_accessor :provider
-
-    attr_accessor :model
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -53,9 +49,7 @@ module Volcano::Generated
       {
         :'enabled' => :'enabled',
         :'max_stage' => :'max_stage',
-        :'auto_trigger' => :'auto_trigger',
-        :'provider' => :'provider',
-        :'model' => :'model'
+        :'auto_trigger' => :'auto_trigger'
       }
     end
 
@@ -74,9 +68,7 @@ module Volcano::Generated
       {
         :'enabled' => :'Boolean',
         :'max_stage' => :'AutofixStage',
-        :'auto_trigger' => :'Boolean',
-        :'provider' => :'AutofixProvider',
-        :'model' => :'AutofixModel'
+        :'auto_trigger' => :'Boolean'
       }
     end
 
@@ -113,14 +105,6 @@ module Volcano::Generated
       if attributes.key?(:'auto_trigger')
         self.auto_trigger = attributes[:'auto_trigger']
       end
-
-      if attributes.key?(:'provider')
-        self.provider = attributes[:'provider']
-      end
-
-      if attributes.key?(:'model')
-        self.model = attributes[:'model']
-      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -145,9 +129,7 @@ module Volcano::Generated
       self.class == o.class &&
           enabled == o.enabled &&
           max_stage == o.max_stage &&
-          auto_trigger == o.auto_trigger &&
-          provider == o.provider &&
-          model == o.model
+          auto_trigger == o.auto_trigger
     end
 
     # @see the `==` method
@@ -159,7 +141,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [enabled, max_stage, auto_trigger, provider, model].hash
+      [enabled, max_stage, auto_trigger].hash
     end
 
     # Builds the object from hash

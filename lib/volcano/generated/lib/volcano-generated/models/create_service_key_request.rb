@@ -18,7 +18,7 @@ module Volcano::Generated
     # Descriptive name for the key (e.g., \"admin-dashboard\", \"background-jobs\"). Can only contain letters, numbers, underscores, and hyphens. 
     attr_accessor :name
 
-    # Optional least-privilege scope for the key. When omitted, empty, or containing only blank strings, the key is granted full access ([\"*\"]) for backward compatibility. Provide an explicit list (e.g. [\"functions.invoke\", \"locks.manage\"]) to restrict the key; \"*\" grants everything. Scope enforcement applies to function invocation, storage object operations, and project locks. 
+    # Optional least-privilege scope for the key. When omitted, empty, or containing only blank strings, the key is granted full access ([\"*\"]) for backward compatibility. Provide an explicit list (e.g. [\"functions.invoke\", \"locks.manage\"]) to restrict the key; \"*\" grants everything. Scope enforcement applies to function invocation, storage object operations, project locks, and server-side auth proxy metadata (auth.signin, auth.signup, auth.refresh, auth.logout, auth.password_reset). 
     attr_accessor :permissions
 
     # Attribute mapping from ruby-style variable name to JSON key.

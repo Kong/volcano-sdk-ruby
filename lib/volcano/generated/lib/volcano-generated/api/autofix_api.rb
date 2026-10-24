@@ -19,31 +19,37 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
-    # Delete the API key
-    # Deletes the project's stored API key and returns the settings. Autofix on the key's provider runs on that key, so it turns off; on another provider it stays as it is. Deleting when no key is stored succeeds.  Turning autofix off or switching providers never deletes the key, and neither does applying a project configuration. This works where autofix is not available, for a project that saved settings.  Project access tokens are refused. 
+    # Get an autofix run
+    # Returns one run: its status, the diagnosis once it succeeds, and why it failed or was canceled. Runs stay readable where autofix is not available.  Project access tokens can read runs, including read-only ones. 
     # @param id [String] Project ID
+    # @param run_id [String] Autofix run ID
     # @param [Hash] opts the optional parameters
-    # @return [AutofixSettings]
-    def delete_autofix_api_key(id, opts = {})
-      data, _status_code, _headers = delete_autofix_api_key_with_http_info(id, opts)
+    # @return [AutofixRun]
+    def get_autofix_run(id, run_id, opts = {})
+      data, _status_code, _headers = get_autofix_run_with_http_info(id, run_id, opts)
       data
     end
 
-    # Delete the API key
-    # Deletes the project&#39;s stored API key and returns the settings. Autofix on the key&#39;s provider runs on that key, so it turns off; on another provider it stays as it is. Deleting when no key is stored succeeds.  Turning autofix off or switching providers never deletes the key, and neither does applying a project configuration. This works where autofix is not available, for a project that saved settings.  Project access tokens are refused. 
+    # Get an autofix run
+    # Returns one run: its status, the diagnosis once it succeeds, and why it failed or was canceled. Runs stay readable where autofix is not available.  Project access tokens can read runs, including read-only ones. 
     # @param id [String] Project ID
+    # @param run_id [String] Autofix run ID
     # @param [Hash] opts the optional parameters
-    # @return [Array<(AutofixSettings, Integer, Hash)>] AutofixSettings data, response status code and response headers
-    def delete_autofix_api_key_with_http_info(id, opts = {})
+    # @return [Array<(AutofixRun, Integer, Hash)>] AutofixRun data, response status code and response headers
+    def get_autofix_run_with_http_info(id, run_id, opts = {})
       if @api_client.config.debugging
-        @api_client.config.logger.debug 'Calling API: AutofixApi.delete_autofix_api_key ...'
+        @api_client.config.logger.debug 'Calling API: AutofixApi.get_autofix_run ...'
       end
       # verify the required parameter 'id' is set
       if @api_client.config.client_side_validation && id.nil?
-        fail ArgumentError, "Missing the required parameter 'id' when calling AutofixApi.delete_autofix_api_key"
+        fail ArgumentError, "Missing the required parameter 'id' when calling AutofixApi.get_autofix_run"
+      end
+      # verify the required parameter 'run_id' is set
+      if @api_client.config.client_side_validation && run_id.nil?
+        fail ArgumentError, "Missing the required parameter 'run_id' when calling AutofixApi.get_autofix_run"
       end
       # resource path
-      local_var_path = '/projects/{id}/autofix/api-key'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+      local_var_path = '/projects/{id}/autofix-runs/{runId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'runId' + '}', CGI.escape(run_id.to_s))
 
       # query parameters
       query_params = opts[:query_params] || {}
@@ -60,13 +66,13 @@ module Volcano::Generated
       post_body = opts[:debug_body]
 
       # return_type
-      return_type = opts[:debug_return_type] || 'AutofixSettings'
+      return_type = opts[:debug_return_type] || 'AutofixRun'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
-        :operation => :"AutofixApi.delete_autofix_api_key",
+        :operation => :"AutofixApi.get_autofix_run",
         :header_params => header_params,
         :query_params => query_params,
         :form_params => form_params,
@@ -75,15 +81,15 @@ module Volcano::Generated
         :return_type => return_type
       )
 
-      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
-        @api_client.config.logger.debug "API called: AutofixApi#delete_autofix_api_key\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+        @api_client.config.logger.debug "API called: AutofixApi#get_autofix_run\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
 
     # Get autofix settings
-    # Returns whether Volcano diagnoses the project's issues with AI, how far a run may go, and which model it uses. A project that never saved settings returns the defaults, with autofix off.  Your API key is never returned. `api_key_configured`, `api_key_provider`, and `api_key_last4` show whether one is set and which provider it belongs to.  Where autofix is not available, saved settings stay readable. A project that never saved any answers `404` with code `feature_unavailable`. 
+    # Returns whether Volcano diagnoses the project's issues with AI and how far a run may go. A project that never saved settings returns the defaults, with autofix off.  Where autofix is not available, saved settings stay readable. A project that never saved any answers `404` with code `feature_unavailable`. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [AutofixSettings]
@@ -93,7 +99,7 @@ module Volcano::Generated
     end
 
     # Get autofix settings
-    # Returns whether Volcano diagnoses the project&#39;s issues with AI, how far a run may go, and which model it uses. A project that never saved settings returns the defaults, with autofix off.  Your API key is never returned. &#x60;api_key_configured&#x60;, &#x60;api_key_provider&#x60;, and &#x60;api_key_last4&#x60; show whether one is set and which provider it belongs to.  Where autofix is not available, saved settings stay readable. A project that never saved any answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
+    # Returns whether Volcano diagnoses the project&#39;s issues with AI and how far a run may go. A project that never saved settings returns the defaults, with autofix off.  Where autofix is not available, saved settings stay readable. A project that never saved any answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [Array<(AutofixSettings, Integer, Hash)>] AutofixSettings data, response status code and response headers
@@ -145,8 +151,160 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
-    # Replace autofix settings
-    # Replaces the project's autofix settings. Omitted fields take their defaults, except three: an omitted `provider` or `model` keeps its saved value, and an omitted `api_key` keeps the stored key. So `{\"enabled\": false}` turns autofix off and keeps the key.  Project access tokens are refused. Autofix opens pull requests in the project's repository, so a person turns it on with a platform token or in the dashboard.  Turning autofix on needs a plan that includes it. Settings that are already on stay stored after a downgrade, and saving them again is not refused, but no run starts until the plan includes autofix again. Other saves need no plan.  Provider `anthropic` runs on your own API key. A key belongs to the provider it was saved with, and turning autofix on with a provider that runs on your own key needs one for it. Turning autofix off or switching providers keeps the stored key; only `DELETE /projects/{id}/autofix/api-key` removes it. Turning autofix on with provider `volcano` needs the `autofix.managed_models` capability; without it the request answers `400` with code `feature_unavailable`.  Where autofix is not available, a project with saved settings can still change them with `enabled: false`. Turning autofix on answers `404` with code `feature_unavailable`. 
+    # List autofix runs
+    # Lists the project's autofix runs, newest first. Runs stay readable after autofix is turned off, and where autofix is not available.  Project access tokens can list runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
+    # @option opts [String] :issue_id Return only runs for this issue.
+    # @option opts [AutofixRunStatus] :status Return only runs in this status.
+    # @return [PaginatedAutofixRuns]
+    def list_autofix_runs(id, opts = {})
+      data, _status_code, _headers = list_autofix_runs_with_http_info(id, opts)
+      data
+    end
+
+    # List autofix runs
+    # Lists the project&#39;s autofix runs, newest first. Runs stay readable after autofix is turned off, and where autofix is not available.  Project access tokens can list runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
+    # @option opts [String] :issue_id Return only runs for this issue.
+    # @option opts [AutofixRunStatus] :status Return only runs in this status.
+    # @return [Array<(PaginatedAutofixRuns, Integer, Hash)>] PaginatedAutofixRuns data, response status code and response headers
+    def list_autofix_runs_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AutofixApi.list_autofix_runs ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AutofixApi.list_autofix_runs"
+      end
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 100
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling AutofixApi.list_autofix_runs, must be smaller than or equal to 100.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling AutofixApi.list_autofix_runs, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/autofix-runs'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'issue_id'] = opts[:'issue_id'] if !opts[:'issue_id'].nil?
+      query_params[:'status'] = opts[:'status'] if !opts[:'status'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'PaginatedAutofixRuns'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"AutofixApi.list_autofix_runs",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AutofixApi#list_autofix_runs\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Diagnose an issue
+    # Queues a run that diagnoses the issue with AI. The run reads the issue's runtime logs and, when a push to the project's connected repository built the deployment that was live when the issue was last seen, its source at that commit. Poll the run until its status is `succeeded`, `failed`, or `canceled`.  Autofix must be on for the project. An issue has at most one queued or running run, a project runs one at a time, and a project starts at most 25 runs, manual and automatic, in any 24 hours.  Project access tokens are refused. A run can open a pull request in the project's repository, so a person starts it with a platform token or in the dashboard. 
+    # @param id [String] Project ID
+    # @param issue_id [String] Issue ID
+    # @param [Hash] opts the optional parameters
+    # @return [AutofixRun]
+    def start_autofix_run(id, issue_id, opts = {})
+      data, _status_code, _headers = start_autofix_run_with_http_info(id, issue_id, opts)
+      data
+    end
+
+    # Diagnose an issue
+    # Queues a run that diagnoses the issue with AI. The run reads the issue&#39;s runtime logs and, when a push to the project&#39;s connected repository built the deployment that was live when the issue was last seen, its source at that commit. Poll the run until its status is &#x60;succeeded&#x60;, &#x60;failed&#x60;, or &#x60;canceled&#x60;.  Autofix must be on for the project. An issue has at most one queued or running run, a project runs one at a time, and a project starts at most 25 runs, manual and automatic, in any 24 hours.  Project access tokens are refused. A run can open a pull request in the project&#39;s repository, so a person starts it with a platform token or in the dashboard. 
+    # @param id [String] Project ID
+    # @param issue_id [String] Issue ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(AutofixRun, Integer, Hash)>] AutofixRun data, response status code and response headers
+    def start_autofix_run_with_http_info(id, issue_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: AutofixApi.start_autofix_run ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling AutofixApi.start_autofix_run"
+      end
+      # verify the required parameter 'issue_id' is set
+      if @api_client.config.client_side_validation && issue_id.nil?
+        fail ArgumentError, "Missing the required parameter 'issue_id' when calling AutofixApi.start_autofix_run"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/issues/{issueId}/autofix-runs'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'issueId' + '}', CGI.escape(issue_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'AutofixRun'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken']
+
+      new_options = opts.merge(
+        :operation => :"AutofixApi.start_autofix_run",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: AutofixApi#start_autofix_run\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Save autofix settings
+    # Saves the project's autofix settings. An omitted `max_stage` or `auto_trigger` keeps its saved value, or takes its default when the project has no saved settings, so `{\"enabled\": true}` on a new project diagnoses every new or regressed issue and opens a draft pull request with each fix. Set `max_stage` and `auto_trigger` to stop at a diagnosis or to start runs only on request. Volcano picks the models a run uses.  Project access tokens are refused. Autofix opens pull requests in the project's repository, so a person turns it on with a platform token.  During the preview, turning autofix on needs the SUPERAGENT plan, and nothing is charged yet. Settings that are already on stay stored after a downgrade, and saving them again is not refused, but no run starts until the plan allows autofix again. Other saves need no plan.  Where autofix is not available, a project with saved settings can still change them with `enabled: false`. Saving `enabled: true` answers `404` with code `feature_unavailable`. 
     # @param id [String] Project ID
     # @param update_autofix_settings_request [UpdateAutofixSettingsRequest] 
     # @param [Hash] opts the optional parameters
@@ -156,8 +314,8 @@ module Volcano::Generated
       data
     end
 
-    # Replace autofix settings
-    # Replaces the project&#39;s autofix settings. Omitted fields take their defaults, except three: an omitted &#x60;provider&#x60; or &#x60;model&#x60; keeps its saved value, and an omitted &#x60;api_key&#x60; keeps the stored key. So &#x60;{\&quot;enabled\&quot;: false}&#x60; turns autofix off and keeps the key.  Project access tokens are refused. Autofix opens pull requests in the project&#39;s repository, so a person turns it on with a platform token or in the dashboard.  Turning autofix on needs a plan that includes it. Settings that are already on stay stored after a downgrade, and saving them again is not refused, but no run starts until the plan includes autofix again. Other saves need no plan.  Provider &#x60;anthropic&#x60; runs on your own API key. A key belongs to the provider it was saved with, and turning autofix on with a provider that runs on your own key needs one for it. Turning autofix off or switching providers keeps the stored key; only &#x60;DELETE /projects/{id}/autofix/api-key&#x60; removes it. Turning autofix on with provider &#x60;volcano&#x60; needs the &#x60;autofix.managed_models&#x60; capability; without it the request answers &#x60;400&#x60; with code &#x60;feature_unavailable&#x60;.  Where autofix is not available, a project with saved settings can still change them with &#x60;enabled: false&#x60;. Turning autofix on answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
+    # Save autofix settings
+    # Saves the project&#39;s autofix settings. An omitted &#x60;max_stage&#x60; or &#x60;auto_trigger&#x60; keeps its saved value, or takes its default when the project has no saved settings, so &#x60;{\&quot;enabled\&quot;: true}&#x60; on a new project diagnoses every new or regressed issue and opens a draft pull request with each fix. Set &#x60;max_stage&#x60; and &#x60;auto_trigger&#x60; to stop at a diagnosis or to start runs only on request. Volcano picks the models a run uses.  Project access tokens are refused. Autofix opens pull requests in the project&#39;s repository, so a person turns it on with a platform token.  During the preview, turning autofix on needs the SUPERAGENT plan, and nothing is charged yet. Settings that are already on stay stored after a downgrade, and saving them again is not refused, but no run starts until the plan allows autofix again. Other saves need no plan.  Where autofix is not available, a project with saved settings can still change them with &#x60;enabled: false&#x60;. Saving &#x60;enabled: true&#x60; answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
     # @param id [String] Project ID
     # @param update_autofix_settings_request [UpdateAutofixSettingsRequest] 
     # @param [Hash] opts the optional parameters

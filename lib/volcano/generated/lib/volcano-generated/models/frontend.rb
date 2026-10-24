@@ -57,6 +57,9 @@ module Volcano::Generated
     # Paths on this frontend that forward to a public function, ordered from most to least specific. Anyone who can load the frontend can reach the target function at these paths without a credential. 
     attr_accessor :function_routes
 
+    # Paths on this frontend served by another frontend in the project, ordered from most to least specific. Function and Frontend routes share one path namespace and the 64-route limit. 
+    attr_accessor :frontend_routes
+
     # Recorded completion time of the most recent deploy or redeploy with status active. Omitted when no such deployment has a recorded completion time. Site traffic, pending deployments, degraded deployments, failed deployments, and deletion do not change this value.
     attr_accessor :last_deployed_at
 
@@ -107,6 +110,7 @@ module Volcano::Generated
         :'custom_domain' => :'custom_domain',
         :'custom_domain_status' => :'custom_domain_status',
         :'function_routes' => :'function_routes',
+        :'frontend_routes' => :'frontend_routes',
         :'last_deployed_at' => :'last_deployed_at',
         :'last_invoked_at' => :'last_invoked_at',
         :'created_at' => :'created_at',
@@ -143,6 +147,7 @@ module Volcano::Generated
         :'custom_domain' => :'String',
         :'custom_domain_status' => :'String',
         :'function_routes' => :'Array<FrontendFunctionRoute>',
+        :'frontend_routes' => :'Array<FrontendRoute>',
         :'last_deployed_at' => :'Time',
         :'last_invoked_at' => :'Time',
         :'created_at' => :'Time',
@@ -256,6 +261,14 @@ module Volcano::Generated
         self.function_routes = nil
       end
 
+      if attributes.key?(:'frontend_routes')
+        if (value = attributes[:'frontend_routes']).is_a?(Array)
+          self.frontend_routes = value
+        end
+      else
+        self.frontend_routes = nil
+      end
+
       if attributes.key?(:'last_deployed_at')
         self.last_deployed_at = attributes[:'last_deployed_at']
       end
@@ -327,6 +340,14 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "function_routes", number of items must be less than or equal to 64.')
       end
 
+      if @frontend_routes.nil?
+        invalid_properties.push('invalid value for "frontend_routes", frontend_routes cannot be nil.')
+      end
+
+      if @frontend_routes.length > 64
+        invalid_properties.push('invalid value for "frontend_routes", number of items must be less than or equal to 64.')
+      end
+
       if @created_at.nil?
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
@@ -361,6 +382,8 @@ module Volcano::Generated
       return false unless custom_domain_status_validator.valid?(@custom_domain_status)
       return false if @function_routes.nil?
       return false if @function_routes.length > 64
+      return false if @frontend_routes.nil?
+      return false if @frontend_routes.length > 64
       return false if @created_at.nil?
       return false if @updated_at.nil?
       true
@@ -494,6 +517,20 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] frontend_routes Value to be assigned
+    def frontend_routes=(frontend_routes)
+      if frontend_routes.nil?
+        fail ArgumentError, 'frontend_routes cannot be nil'
+      end
+
+      if frontend_routes.length > 64
+        fail ArgumentError, 'invalid value for "frontend_routes", number of items must be less than or equal to 64.'
+      end
+
+      @frontend_routes = frontend_routes
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] created_at Value to be assigned
     def created_at=(created_at)
       if created_at.nil?
@@ -534,6 +571,7 @@ module Volcano::Generated
           custom_domain == o.custom_domain &&
           custom_domain_status == o.custom_domain_status &&
           function_routes == o.function_routes &&
+          frontend_routes == o.frontend_routes &&
           last_deployed_at == o.last_deployed_at &&
           last_invoked_at == o.last_invoked_at &&
           created_at == o.created_at &&
@@ -549,7 +587,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, function_routes, last_deployed_at, last_invoked_at, created_at, updated_at].hash
+      [variable_scope, declared_variables, id, project_id, name, framework, app_root, status, provisioning_started_at, deployed_regions, current_deployment_id, pending_deployment_id, site_url, custom_domain, custom_domain_status, function_routes, frontend_routes, last_deployed_at, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

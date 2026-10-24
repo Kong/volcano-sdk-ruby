@@ -198,7 +198,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableFunction'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.create_durable_function",
@@ -278,7 +278,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.create_durable_function_scheduler",
@@ -347,7 +347,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.delete_durable_function",
@@ -420,7 +420,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type]
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.delete_durable_function_scheduler",
@@ -720,7 +720,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableExecution'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.get_durable_execution",
@@ -787,7 +787,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableFunction'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.get_durable_function",
@@ -860,7 +860,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.get_durable_function_scheduler",
@@ -1039,7 +1039,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableExecutionOperationList'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.list_durable_execution_operations",
@@ -1129,7 +1129,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedDurableExecutions'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.list_durable_executions",
@@ -1214,7 +1214,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedFunctionDeployments'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.list_durable_function_deployments",
@@ -1283,7 +1283,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionSchedulerListResponse'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.list_durable_function_schedulers",
@@ -1371,7 +1371,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'PaginatedDurableFunctions'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.list_durable_functions",
@@ -1759,11 +1759,11 @@ module Volcano::Generated
     end
 
     # Publish a message from inside a workflow
-    # Publishes a named message from a running workflow. The Volcano SDK calls this from `ctx.publish`; applications do not call it directly.  The message is stored, listed with the execution's messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project's Realtime messages.  The SDK sends an `Idempotency-Key` that a rerun of the publishing step repeats, so a step that runs again returns the first message with `200` and publishes nothing. 
+    # Publishes a named message from a running workflow. The Volcano SDK calls this from `ctx.publish`; applications do not call it directly.  The message is stored, listed with the execution's messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project's Realtime messages.  The SDK sends an `Idempotency-Key` that a rerun of the publishing step repeats, so a step that runs again returns the first message with `200` and stores nothing new. That message is delivered live again, and counts again, because the first run may have stopped before subscribers got it. The SDKs deliver it to a subscriber once. 
     # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
     # @param publish_durable_message_request [PublishDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @return [DurableMessage]
     def publish_durable_message(x_volcano_durable_session, publish_durable_message_request, opts = {})
       data, _status_code, _headers = publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts)
@@ -1771,11 +1771,11 @@ module Volcano::Generated
     end
 
     # Publish a message from inside a workflow
-    # Publishes a named message from a running workflow. The Volcano SDK calls this from &#x60;ctx.publish&#x60;; applications do not call it directly.  The message is stored, listed with the execution&#39;s messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project&#39;s Realtime messages.  The SDK sends an &#x60;Idempotency-Key&#x60; that a rerun of the publishing step repeats, so a step that runs again returns the first message with &#x60;200&#x60; and publishes nothing. 
+    # Publishes a named message from a running workflow. The Volcano SDK calls this from &#x60;ctx.publish&#x60;; applications do not call it directly.  The message is stored, listed with the execution&#39;s messages, and delivered live to clients subscribed to the execution. Live delivery counts against the project&#39;s Realtime messages.  The SDK sends an &#x60;Idempotency-Key&#x60; that a rerun of the publishing step repeats, so a step that runs again returns the first message with &#x60;200&#x60; and stores nothing new. That message is delivered live again, and counts again, because the first run may have stopped before subscribers got it. The SDKs deliver it to a subscriber once. 
     # @param x_volcano_durable_session [String] The session token the workflow received when its session opened.
     # @param publish_durable_message_request [PublishDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def publish_durable_message_with_http_info(x_volcano_durable_session, publish_durable_message_request, opts = {})
       if @api_client.config.debugging
@@ -1803,6 +1803,11 @@ module Volcano::Generated
 
       if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
         fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.publish_durable_message, the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[ -~]+$/)
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"idempotency_key\"]' when calling DurableFunctionsApi.publish_durable_message, must conform to the pattern #{pattern}."
       end
 
       # resource path
@@ -1995,7 +2000,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @return [DurableMessage]
     def send_durable_message(id, function_id, execution_id, send_durable_message_request, opts = {})
       data, _status_code, _headers = send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts)
@@ -2009,7 +2014,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def send_durable_message_with_http_info(id, function_id, execution_id, send_durable_message_request, opts = {})
       if @api_client.config.debugging
@@ -2037,6 +2042,11 @@ module Volcano::Generated
 
       if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
         fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message, the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[ -~]+$/)
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"idempotency_key\"]' when calling DurableFunctionsApi.send_durable_message, must conform to the pattern #{pattern}."
       end
 
       # resource path
@@ -2091,7 +2101,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
     # @return [DurableMessage]
     def send_durable_message_from_application(function_id, execution_id, send_durable_message_request, opts = {})
@@ -2105,7 +2115,7 @@ module Volcano::Generated
     # @param execution_id [String] Durable execution ID
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
+    # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 printable ASCII characters. 
     # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts = {})
@@ -2130,6 +2140,11 @@ module Volcano::Generated
 
       if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'].to_s.length < 1
         fail ArgumentError, 'invalid value for "opts[:"idempotency_key"]" when calling DurableFunctionsApi.send_durable_message_from_application, the character length must be greater than or equal to 1.'
+      end
+
+      pattern = Regexp.new(/^[ -~]+$/)
+      if @api_client.config.client_side_validation && !opts[:'idempotency_key'].nil? && opts[:'idempotency_key'] !~ pattern
+        fail ArgumentError, "invalid value for 'opts[:\"idempotency_key\"]' when calling DurableFunctionsApi.send_durable_message_from_application, must conform to the pattern #{pattern}."
       end
 
       if @api_client.config.client_side_validation && !opts[:'x_volcano_client_token'].nil? && opts[:'x_volcano_client_token'].to_s.length > 128
@@ -2252,7 +2267,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableExecution'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.start_durable_execution",
@@ -2409,7 +2424,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'DurableExecution'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.stop_durable_execution",
@@ -2493,7 +2508,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'FunctionScheduler'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
 
       new_options = opts.merge(
         :operation => :"DurableFunctionsApi.update_durable_function_scheduler",

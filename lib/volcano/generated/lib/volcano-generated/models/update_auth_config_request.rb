@@ -89,8 +89,10 @@ module Volcano::Generated
     # Enable transactional email sending. Cannot be false while require_email_confirmation is true.
     attr_accessor :email_enabled
 
+    # Sender email address. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is ignored when sending.
     attr_accessor :email_from_address
 
+    # Sender display name; supports punctuation and Unicode. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is ignored when sending.
     attr_accessor :email_from_name
 
     attr_accessor :smtp_host
@@ -104,10 +106,13 @@ module Volcano::Generated
 
     attr_accessor :smtp_use_tls
 
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 400. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :email_confirmation_subject
 
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 400. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :email_password_reset_subject
 
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 400. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :email_password_changed_subject
 
     # Enable or disable managed auth hosted pages for the project.

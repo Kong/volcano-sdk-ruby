@@ -17,16 +17,11 @@ module Volcano::Generated
   class UpdateAutofixSettingsRequest < ApiModelBase
     attr_accessor :enabled
 
+    # How far a run goes. Omitted, it keeps the saved value, or is `pull_request` when the project has no saved settings.
     attr_accessor :max_stage
 
+    # Whether a new or regressed issue starts a run on its own. Omitted, it keeps the saved value, or is `true` when the project has no saved settings.
     attr_accessor :auto_trigger
-
-    attr_accessor :provider
-
-    attr_accessor :model
-
-    # Your own API key for `provider`, such as an Anthropic key for `anthropic`. Omit it to keep the stored key. Encrypted at rest and never returned.
-    attr_accessor :api_key
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -55,10 +50,7 @@ module Volcano::Generated
       {
         :'enabled' => :'enabled',
         :'max_stage' => :'max_stage',
-        :'auto_trigger' => :'auto_trigger',
-        :'provider' => :'provider',
-        :'model' => :'model',
-        :'api_key' => :'api_key'
+        :'auto_trigger' => :'auto_trigger'
       }
     end
 
@@ -77,10 +69,7 @@ module Volcano::Generated
       {
         :'enabled' => :'Boolean',
         :'max_stage' => :'AutofixStage',
-        :'auto_trigger' => :'Boolean',
-        :'provider' => :'AutofixProvider',
-        :'model' => :'AutofixModel',
-        :'api_key' => :'String'
+        :'auto_trigger' => :'Boolean'
       }
     end
 
@@ -118,20 +107,6 @@ module Volcano::Generated
 
       if attributes.key?(:'auto_trigger')
         self.auto_trigger = attributes[:'auto_trigger']
-      else
-        self.auto_trigger = false
-      end
-
-      if attributes.key?(:'provider')
-        self.provider = attributes[:'provider']
-      end
-
-      if attributes.key?(:'model')
-        self.model = attributes[:'model']
-      end
-
-      if attributes.key?(:'api_key')
-        self.api_key = attributes[:'api_key']
       end
     end
 
@@ -144,19 +119,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "enabled", enabled cannot be nil.')
       end
 
-      if !@api_key.nil? && @api_key.to_s.length > 512
-        invalid_properties.push('invalid value for "api_key", the character length must be smaller than or equal to 512.')
-      end
-
-      if !@api_key.nil? && @api_key.to_s.length < 20
-        invalid_properties.push('invalid value for "api_key", the character length must be greater than or equal to 20.')
-      end
-
-      pattern = Regexp.new(/^[!-~]+$/)
-      if !@api_key.nil? && @api_key !~ pattern
-        invalid_properties.push("invalid value for \"api_key\", must conform to the pattern #{pattern}.")
-      end
-
       invalid_properties
     end
 
@@ -165,9 +127,6 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @enabled.nil?
-      return false if !@api_key.nil? && @api_key.to_s.length > 512
-      return false if !@api_key.nil? && @api_key.to_s.length < 20
-      return false if !@api_key.nil? && @api_key !~ Regexp.new(/^[!-~]+$/)
       true
     end
 
@@ -181,29 +140,6 @@ module Volcano::Generated
       @enabled = enabled
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] api_key Value to be assigned
-    def api_key=(api_key)
-      if api_key.nil?
-        fail ArgumentError, 'api_key cannot be nil'
-      end
-
-      if api_key.to_s.length > 512
-        fail ArgumentError, 'invalid value for "api_key", the character length must be smaller than or equal to 512.'
-      end
-
-      if api_key.to_s.length < 20
-        fail ArgumentError, 'invalid value for "api_key", the character length must be greater than or equal to 20.'
-      end
-
-      pattern = Regexp.new(/^[!-~]+$/)
-      if api_key !~ pattern
-        fail ArgumentError, "invalid value for \"api_key\", must conform to the pattern #{pattern}."
-      end
-
-      @api_key = api_key
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -211,10 +147,7 @@ module Volcano::Generated
       self.class == o.class &&
           enabled == o.enabled &&
           max_stage == o.max_stage &&
-          auto_trigger == o.auto_trigger &&
-          provider == o.provider &&
-          model == o.model &&
-          api_key == o.api_key
+          auto_trigger == o.auto_trigger
     end
 
     # @see the `==` method
@@ -226,7 +159,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [enabled, max_stage, auto_trigger, provider, model, api_key].hash
+      [enabled, max_stage, auto_trigger].hash
     end
 
     # Builds the object from hash

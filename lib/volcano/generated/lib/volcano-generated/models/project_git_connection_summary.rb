@@ -25,6 +25,7 @@ module Volcano::Generated
 
     attr_accessor :production_branch
 
+    # When the connection last changed: its repository, root directory or production branch. Naming the branch it already uses, and other changes to the project, leave it alone. A connection that has not changed since Volcano began tracking this reports the project's last change before then.
     attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.

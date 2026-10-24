@@ -20,23 +20,11 @@ module Volcano::Generated
     # Whether Volcano diagnoses the project's issues with AI.
     attr_accessor :enabled
 
+    # How far a run goes. Defaults to `pull_request`.
     attr_accessor :max_stage
 
-    # Whether a new or reopened issue starts a run on its own. When false, runs start only on request.
+    # Whether a new or regressed issue starts a run on its own. Defaults to true. When false, runs start only on request.
     attr_accessor :auto_trigger
-
-    attr_accessor :provider
-
-    attr_accessor :model
-
-    # Whether your own API key is stored. The key itself is never returned.
-    attr_accessor :api_key_configured
-
-    # The provider the stored key belongs to, present when one is stored.
-    attr_accessor :api_key_provider
-
-    # The stored key's last four characters, present when one is stored.
-    attr_accessor :api_key_last4
 
     # Whether the owner's plan includes autofix. When false, saved settings stay stored and no run starts. Absent when a save that needed no plan succeeded but the plan could not be resolved.
     attr_accessor :plan_includes_autofix
@@ -73,11 +61,6 @@ module Volcano::Generated
         :'enabled' => :'enabled',
         :'max_stage' => :'max_stage',
         :'auto_trigger' => :'auto_trigger',
-        :'provider' => :'provider',
-        :'model' => :'model',
-        :'api_key_configured' => :'api_key_configured',
-        :'api_key_provider' => :'api_key_provider',
-        :'api_key_last4' => :'api_key_last4',
         :'plan_includes_autofix' => :'plan_includes_autofix',
         :'updated_at' => :'updated_at'
       }
@@ -100,11 +83,6 @@ module Volcano::Generated
         :'enabled' => :'Boolean',
         :'max_stage' => :'AutofixStage',
         :'auto_trigger' => :'Boolean',
-        :'provider' => :'AutofixProvider',
-        :'model' => :'AutofixModel',
-        :'api_key_configured' => :'Boolean',
-        :'api_key_provider' => :'AutofixProvider',
-        :'api_key_last4' => :'String',
         :'plan_includes_autofix' => :'Boolean',
         :'updated_at' => :'Time'
       }
@@ -156,32 +134,6 @@ module Volcano::Generated
         self.auto_trigger = nil
       end
 
-      if attributes.key?(:'provider')
-        self.provider = attributes[:'provider']
-      else
-        self.provider = nil
-      end
-
-      if attributes.key?(:'model')
-        self.model = attributes[:'model']
-      else
-        self.model = nil
-      end
-
-      if attributes.key?(:'api_key_configured')
-        self.api_key_configured = attributes[:'api_key_configured']
-      else
-        self.api_key_configured = nil
-      end
-
-      if attributes.key?(:'api_key_provider')
-        self.api_key_provider = attributes[:'api_key_provider']
-      end
-
-      if attributes.key?(:'api_key_last4')
-        self.api_key_last4 = attributes[:'api_key_last4']
-      end
-
       if attributes.key?(:'plan_includes_autofix')
         self.plan_includes_autofix = attributes[:'plan_includes_autofix']
       end
@@ -212,18 +164,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "auto_trigger", auto_trigger cannot be nil.')
       end
 
-      if @provider.nil?
-        invalid_properties.push('invalid value for "provider", provider cannot be nil.')
-      end
-
-      if @model.nil?
-        invalid_properties.push('invalid value for "model", model cannot be nil.')
-      end
-
-      if @api_key_configured.nil?
-        invalid_properties.push('invalid value for "api_key_configured", api_key_configured cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -235,9 +175,6 @@ module Volcano::Generated
       return false if @enabled.nil?
       return false if @max_stage.nil?
       return false if @auto_trigger.nil?
-      return false if @provider.nil?
-      return false if @model.nil?
-      return false if @api_key_configured.nil?
       true
     end
 
@@ -281,36 +218,6 @@ module Volcano::Generated
       @auto_trigger = auto_trigger
     end
 
-    # Custom attribute writer method with validation
-    # @param [Object] provider Value to be assigned
-    def provider=(provider)
-      if provider.nil?
-        fail ArgumentError, 'provider cannot be nil'
-      end
-
-      @provider = provider
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] model Value to be assigned
-    def model=(model)
-      if model.nil?
-        fail ArgumentError, 'model cannot be nil'
-      end
-
-      @model = model
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] api_key_configured Value to be assigned
-    def api_key_configured=(api_key_configured)
-      if api_key_configured.nil?
-        fail ArgumentError, 'api_key_configured cannot be nil'
-      end
-
-      @api_key_configured = api_key_configured
-    end
-
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -320,11 +227,6 @@ module Volcano::Generated
           enabled == o.enabled &&
           max_stage == o.max_stage &&
           auto_trigger == o.auto_trigger &&
-          provider == o.provider &&
-          model == o.model &&
-          api_key_configured == o.api_key_configured &&
-          api_key_provider == o.api_key_provider &&
-          api_key_last4 == o.api_key_last4 &&
           plan_includes_autofix == o.plan_includes_autofix &&
           updated_at == o.updated_at
     end
@@ -338,7 +240,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [project_id, enabled, max_stage, auto_trigger, provider, model, api_key_configured, api_key_provider, api_key_last4, plan_includes_autofix, updated_at].hash
+      [project_id, enabled, max_stage, auto_trigger, plan_includes_autofix, updated_at].hash
     end
 
     # Builds the object from hash

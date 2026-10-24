@@ -83,7 +83,7 @@ module Volcano::Generated
     end
 
     # Connect or update a project's repo connection
-    # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
+    # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response.  Project access tokens are refused. Which repository a project deploys from is a person's decision, made with a platform token or in the dashboard. A project access token can still change the root directory and production branch through PUT /projects/{id}/git-connection/root-directory and PUT /projects/{id}/git-connection/production-branch. 
     # @param id [String] Project ID
     # @param connect_project_git_request [ConnectProjectGitRequest] 
     # @param [Hash] opts the optional parameters
@@ -94,7 +94,7 @@ module Volcano::Generated
     end
 
     # Connect or update a project&#39;s repo connection
-    # Full replace, following Vercel&#39;s model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id&#39;s stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
+    # Full replace, following Vercel&#39;s model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id&#39;s stored GitHub user token, then persists repository metadata only from that validated GitHub response.  Project access tokens are refused. Which repository a project deploys from is a person&#39;s decision, made with a platform token or in the dashboard. A project access token can still change the root directory and production branch through PUT /projects/{id}/git-connection/root-directory and PUT /projects/{id}/git-connection/production-branch. 
     # @param id [String] Project ID
     # @param connect_project_git_request [ConnectProjectGitRequest] 
     # @param [Hash] opts the optional parameters
@@ -137,7 +137,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"GitConnectionsApi.connect_project_git",
@@ -864,6 +864,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: GitConnectionsApi#set_project_git_production_branch\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Set the directory a project builds from
+    # Changes only the root directory, leaving the repository and production branch alone. Unlike PUT /projects/{id}/git-connection, this accepts a project access token, so CI or an agent can move a project within its repository without being able to change the repository.  The directory is a path relative to the repository root. An empty string, `.` or `/` means the repository root. The response carries it in the form a deploy reads it: `./apps/web/` comes back as `apps/web`. 
+    # @param id [String] Project ID
+    # @param set_project_git_root_directory_request [SetProjectGitRootDirectoryRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectGitConnection]
+    def set_project_git_root_directory(id, set_project_git_root_directory_request, opts = {})
+      data, _status_code, _headers = set_project_git_root_directory_with_http_info(id, set_project_git_root_directory_request, opts)
+      data
+    end
+
+    # Set the directory a project builds from
+    # Changes only the root directory, leaving the repository and production branch alone. Unlike PUT /projects/{id}/git-connection, this accepts a project access token, so CI or an agent can move a project within its repository without being able to change the repository.  The directory is a path relative to the repository root. An empty string, &#x60;.&#x60; or &#x60;/&#x60; means the repository root. The response carries it in the form a deploy reads it: &#x60;./apps/web/&#x60; comes back as &#x60;apps/web&#x60;. 
+    # @param id [String] Project ID
+    # @param set_project_git_root_directory_request [SetProjectGitRootDirectoryRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectGitConnection, Integer, Hash)>] ProjectGitConnection data, response status code and response headers
+    def set_project_git_root_directory_with_http_info(id, set_project_git_root_directory_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: GitConnectionsApi.set_project_git_root_directory ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling GitConnectionsApi.set_project_git_root_directory"
+      end
+      # verify the required parameter 'set_project_git_root_directory_request' is set
+      if @api_client.config.client_side_validation && set_project_git_root_directory_request.nil?
+        fail ArgumentError, "Missing the required parameter 'set_project_git_root_directory_request' when calling GitConnectionsApi.set_project_git_root_directory"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/git-connection/root-directory'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(set_project_git_root_directory_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectGitConnection'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"GitConnectionsApi.set_project_git_root_directory",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: GitConnectionsApi#set_project_git_root_directory\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

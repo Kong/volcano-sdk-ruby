@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class FunctionInvocationRequest < ApiModelBase
-    # Payload to send to the function.  If invoked with auth user token, Volcano automatically injects `__volcano_auth` context: ```javascript {   ...yourPayload,   __volcano_auth: {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" | \"anonymous\"   } } ``` 
+    # Payload to send to the function.  If invoked with auth user token, Volcano automatically injects `__volcano_auth` context: ```javascript {   ...yourPayload,   __volcano_auth: {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" | \"anonymous\"   } } ```  The top-level `__volcano_auth` and `__volcano_http` keys are reserved; Volcano removes caller-supplied values for both. 
     attr_accessor :payload
 
     # Attribute mapping from ruby-style variable name to JSON key.

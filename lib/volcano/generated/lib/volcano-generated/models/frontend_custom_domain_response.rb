@@ -41,6 +41,9 @@ module Volcano::Generated
 
     attr_accessor :effective_urls
 
+    # Where the domain redirects every request, or null when it serves the frontend.
+    attr_accessor :redirect
+
     attr_accessor :created_at
 
     attr_accessor :updated_at
@@ -80,6 +83,7 @@ module Volcano::Generated
         :'required_routing_record' => :'required_routing_record',
         :'routing_target_hostname' => :'routing_target_hostname',
         :'effective_urls' => :'effective_urls',
+        :'redirect' => :'redirect',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -108,6 +112,7 @@ module Volcano::Generated
         :'required_routing_record' => :'FrontendDomainRoutingRecord',
         :'routing_target_hostname' => :'String',
         :'effective_urls' => :'Array<String>',
+        :'redirect' => :'FrontendCustomDomainRedirect',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -116,6 +121,7 @@ module Volcano::Generated
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'redirect',
       ])
     end
 
@@ -187,6 +193,12 @@ module Volcano::Generated
         end
       else
         self.effective_urls = nil
+      end
+
+      if attributes.key?(:'redirect')
+        self.redirect = attributes[:'redirect']
+      else
+        self.redirect = nil
       end
 
       if attributes.key?(:'created_at')
@@ -355,6 +367,7 @@ module Volcano::Generated
           required_routing_record == o.required_routing_record &&
           routing_target_hostname == o.routing_target_hostname &&
           effective_urls == o.effective_urls &&
+          redirect == o.redirect &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -368,7 +381,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [domain, tls_mode, domain_status, verification_status, serving_certificate, failure_reason, verification_records, required_routing_record, routing_target_hostname, effective_urls, created_at, updated_at].hash
+      [domain, tls_mode, domain_status, verification_status, serving_certificate, failure_reason, verification_records, required_routing_record, routing_target_hostname, effective_urls, redirect, created_at, updated_at].hash
     end
 
     # Builds the object from hash

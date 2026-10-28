@@ -58,7 +58,7 @@ end
 
 desc 'Run the specs against the runtime gems a fresh gem install resolves'
 task 'quality:fresh_install' do
-  lockfile = File.read('Gemfile.lock')
+  bundle = %w[Gemfile Gemfile.lock].to_h { |name| [name, File.read(name)] }
   Dir.mktmpdir('volcano-sdk-fresh-') do |directory|
     artifact = File.join(directory, 'volcano-sdk.gem')
     Bundler.with_unbundled_env do
@@ -68,9 +68,10 @@ task 'quality:fresh_install' do
       FreshResolution.relock!(__dir__, installed)
     end
   end
+  Rake::Task['quality:spec'].reenable
   Rake::Task['quality:spec'].invoke
 ensure
-  File.write('Gemfile.lock', lockfile) if lockfile
+  bundle&.each { |name, content| File.write(name, content) }
 end
 
 desc 'Require tests to detect the five injected SDK defects'

@@ -6,20 +6,22 @@ require 'open3'
 
 # Relocks the bundle to the runtime gems a fresh `gem install volcano-sdk`
 # resolves, so the specs test what customers install instead of Gemfile.lock.
+# Bundler alone cannot: it resolves runtime gems together with development gems
+# and prefers the newest release over a satisfying Ruby default gem.
 module FreshResolution
   # Lists the gems RubyGems activates for the SDK as name => [version, default gem?].
   CLOSURE = <<~RUBY
     gem 'volcano-sdk'
-    pending = ['volcano-sdk']
+    pending = Gem.loaded_specs.fetch('volcano-sdk').runtime_dependencies
     closure = {}
     until pending.empty?
-      spec = Gem.loaded_specs.fetch(pending.shift)
-      next if closure.key?(spec.name)
+      dependency = pending.shift
+      next if closure.key?(dependency.name)
 
+      spec = Gem.loaded_specs[dependency.name] || dependency.to_spec
       closure[spec.name] = [spec.version.to_s, spec.default_gem?]
-      pending.concat(spec.runtime_dependencies.map(&:name))
+      pending.concat(spec.runtime_dependencies)
     end
-    closure.delete('volcano-sdk')
     puts JSON.generate(closure)
   RUBY
 
@@ -28,7 +30,7 @@ module FreshResolution
     environment = { 'GEM_HOME' => home, 'GEM_PATH' => home, 'GEM_SPEC_CACHE' => File.join(directory, 'spec-cache'),
                     'RUBYOPT' => nil, 'RUBYLIB' => nil, 'BUNDLE_GEMFILE' => nil }
     run!(environment, Gem.ruby, '-S', 'gem', 'install', artifact, '--no-document', '--clear-sources',
-         '--source', 'https://rubygems.org', chdir: directory)
+         '--source', 'https://rubygems.org', '--no-user-install', chdir: directory)
     JSON.parse(run!(environment, Gem.ruby, '-rjson', '-e', CLOSURE, chdir: directory))
   end
 
@@ -37,14 +39,13 @@ module FreshResolution
     closure(specs, 'volcano-sdk', Set.new).to_h { |name| [name, specs.fetch(name).version.to_s] }
   end
 
+  # Appends exact requirements to the Gemfile; Bundler fails to resolve if a
+  # development gem rules out a version the fresh install chose.
   def self.relock!(root, installed)
+    pins = installed.map { |name, (version, _)| "gem #{name.dump}, #{"= #{version}".dump}\n" }
+    File.write(File.join(root, 'Gemfile'), pins.join, mode: 'a')
     run!({}, 'bundle', 'lock', '--update', *(installed.keys & lock_specs(root).keys), chdir: root)
     run!({}, 'bundle', 'install', chdir: root)
-    resolved = locked(root)
-    held = installed.reject { |name, (version, default)| default || resolved[name] == version }
-    return if held.empty?
-
-    raise "Development dependencies hold runtime gems below a fresh install: #{held.keys.join(', ')}"
   end
 
   def self.report(locked, installed, summary = ENV.fetch('GITHUB_STEP_SUMMARY', nil))

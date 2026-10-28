@@ -9,6 +9,9 @@ on:
   push:
     branches:
       - main
+  # Catch upstream gem releases that break a fresh install between PRs.
+  schedule:
+    - cron: "23 7 * * *"
 
 permissions: {}
 
@@ -72,14 +75,50 @@ jobs:
             reports/defects/
           if-no-files-found: ignore
 
+  fresh-install:
+    name: fresh-install (${{ matrix.series }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - series: "3.3"
+            ruby-version: "3.3.12"
+          - series: "3.4"
+            ruby-version: "3.4.10"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21.0.12+101.0.LTS"
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - run: npm ci
+      # setup-ruby freezes the bundle; this job relocks its runtime gems.
+      - run: bundle config set --local deployment false
+      - name: Run the specs against a fresh install's runtime gems
+        run: bundle exec rake quality:fresh_install
+
   quality:
     name: Quality Gate
     if: ${{ always() }}
-    needs: [test]
+    needs: [test, fresh-install]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Require every mandatory job to succeed
         env:
           RESULTS: ${{ toJSON(needs.*.result) }}
-        run: jq -e 'length == 1 and all(. == "success")' <<< "$RESULTS"
+        run: jq -e 'length == 2 and all(. == "success")' <<< "$RESULTS"

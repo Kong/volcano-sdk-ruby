@@ -988,18 +988,20 @@ delivery.
 ## Dependencies
 
 Installing `volcano-sdk` pulls in ten gems, plus their own transitive
-dependencies:
+dependencies. The gemspec pins each of the ten to the exact version CI tests.
+CI also tests the newest transitive versions those pins allow, daily and on
+every change.
 
 | Gem                                                          | Why                                                                     |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | [`typhoeus`](https://rubygems.org/gems/typhoeus)             | The HTTP library the generated REST client uses                         |
-| [`ethon`](https://rubygems.org/gems/ethon)                   | The libcurl binding under `typhoeus`, capped below 0.19, which stopped sending uploads with an explicit content type as multipart |
+| [`ethon`](https://rubygems.org/gems/ethon)                   | The libcurl binding under `typhoeus`; 0.19 stopped sending uploads with an explicit content type as multipart |
 | [`logger`](https://rubygems.org/gems/logger)                 | Required by that client, and no longer a default gem                    |
 | [`async`](https://rubygems.org/gems/async)                   | The reactor realtime runs its connection and delivery on                |
 | [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |
 | [`async-websocket`](https://rubygems.org/gems/async-websocket) | The realtime transport itself                                         |
 | [`protocol-rack`](https://rubygems.org/gems/protocol-rack)   | A requirement of `async-websocket`, pinned here so the version is ours  |
-| [`io-event`](https://rubygems.org/gems/io-event)             | The event loop under `async`, with a floor at the release that fixes AIKIDO-2026-10943 |
+| [`io-event`](https://rubygems.org/gems/io-event)             | The event loop under `async`, at a release that fixes AIKIDO-2026-10943 |
 | [`base64`](https://rubygems.org/gems/base64)                 | Required by the generated client, and no longer a default gem since Ruby 3.4 |
 | [`json`](https://rubygems.org/gems/json)                     | Request and response encoding for the generated client                  |
 

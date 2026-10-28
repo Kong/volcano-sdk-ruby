@@ -3,6 +3,7 @@
 require 'bundler/gem_tasks'
 require 'securerandom'
 require 'tmpdir'
+require_relative 'maintainers/quality/fresh_resolution'
 require_relative 'maintainers/quality/native_gate'
 
 desc 'Run the same SDK checks locally and in CI'
@@ -53,6 +54,23 @@ task 'quality:package' do
       sh 'bash', '.github/scripts/smoke-gem.sh', artifact
     end
   end
+end
+
+desc 'Run the specs against the runtime gems a fresh gem install resolves'
+task 'quality:fresh_install' do
+  lockfile = File.read('Gemfile.lock')
+  Dir.mktmpdir('volcano-sdk-fresh-') do |directory|
+    artifact = File.join(directory, 'volcano-sdk.gem')
+    Bundler.with_unbundled_env do
+      sh Gem.ruby, '-S', 'gem', 'build', 'volcano-sdk.gemspec', '--output', artifact
+      installed = FreshResolution.installed(artifact, directory)
+      FreshResolution.report(FreshResolution.locked(__dir__), installed)
+      FreshResolution.relock!(__dir__, installed)
+    end
+  end
+  Rake::Task['quality:spec'].invoke
+ensure
+  File.write('Gemfile.lock', lockfile) if lockfile
 end
 
 desc 'Require tests to detect the five injected SDK defects'

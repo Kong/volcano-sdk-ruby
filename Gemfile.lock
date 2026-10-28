@@ -5,13 +5,13 @@ PATH
       async (= 2.46.0)
       async-http (= 0.105.0)
       async-websocket (= 0.30.1)
-      base64 (~> 0.2)
-      ethon (< 0.19)
-      io-event (~> 1.16)
-      json (~> 2.17)
-      logger (~> 1.7)
+      base64 (= 0.3.0)
+      ethon (= 0.18.0)
+      io-event (= 1.22.1)
+      json (= 2.21.2)
+      logger (= 1.7.0)
       protocol-rack (= 0.23.0)
-      typhoeus (>= 1.4, < 1.7)
+      typhoeus (= 1.6.0)
 
 GEM
   remote: https://rubygems.org/

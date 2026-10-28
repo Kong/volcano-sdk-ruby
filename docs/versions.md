@@ -18,6 +18,8 @@ Commit `Gemfile` and `Gemfile.lock`. Install in Bundler frozen mode in CI and de
 
 Use Ruby 3.3 or later. Native CI tests Ruby 3.3 and 3.4; it does not test every intervening interpreter release. REST methods are synchronous, while realtime uses an asynchronous task lifecycle.
 
+Each SDK release pins its runtime gems, such as `typhoeus` and `async`, to the exact versions its CI tested. If another gem in your bundle needs a different version of one of them, Bundler reports a conflict instead of installing an untested combination. Resolve it by moving to the SDK release that pins a compatible version.
+
 The gem is currently on the 0.x release line. Treat a minor-version update as potentially incompatible and read its release notes before upgrading.
 JavaScript, Python and Ruby releases have independent version numbers; matching numbers are not a compatibility requirement.
 Ruby raises typed exceptions; JavaScript keeps its result-envelope API.

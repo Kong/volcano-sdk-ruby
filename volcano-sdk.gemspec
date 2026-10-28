@@ -25,10 +25,14 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'async-http', '0.105.0'
   spec.add_dependency 'async-websocket', '0.30.1'
   spec.add_dependency 'base64', '~> 0.2'
+  # Ethon 0.19 URL-encodes the [filename, type, path] form value that uploads
+  # with an explicit content type send instead of building a multipart part.
+  # Typhoeus 1.7 requires Ethon 0.19, so it is capped below 1.7.
+  spec.add_dependency 'ethon', '< 0.19'
   spec.add_dependency 'io-event', '~> 1.16'
   spec.add_dependency 'json', '~> 2.17'
   spec.add_dependency 'logger', '~> 1.7'
   spec.add_dependency 'protocol-rack', '0.23.0'
-  spec.add_dependency 'typhoeus', '~> 1.4'
+  spec.add_dependency 'typhoeus', '>= 1.4', '< 1.7'
   spec.metadata['rubygems_mfa_required'] = 'true'
 end

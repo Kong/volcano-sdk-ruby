@@ -987,12 +987,13 @@ delivery.
 
 ## Dependencies
 
-Installing `volcano-sdk` pulls in nine gems, plus their own transitive
+Installing `volcano-sdk` pulls in ten gems, plus their own transitive
 dependencies:
 
 | Gem                                                          | Why                                                                     |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | [`typhoeus`](https://rubygems.org/gems/typhoeus)             | The HTTP library the generated REST client uses                         |
+| [`ethon`](https://rubygems.org/gems/ethon)                   | The libcurl binding under `typhoeus`, capped below 0.19, which stopped sending uploads with an explicit content type as multipart |
 | [`logger`](https://rubygems.org/gems/logger)                 | Required by that client, and no longer a default gem                    |
 | [`async`](https://rubygems.org/gems/async)                   | The reactor realtime runs its connection and delivery on                |
 | [`async-http`](https://rubygems.org/gems/async-http)         | The endpoint realtime dials                                             |

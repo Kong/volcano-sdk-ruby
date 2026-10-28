@@ -50,9 +50,9 @@ module FreshResolution
 
   def self.report(locked, installed, summary = ENV.fetch('GITHUB_STEP_SUMMARY', nil))
     rows = installed.sort
-    rows.map! { |name, (version, default)| [name, locked.fetch(name, 'none'), label(version, default)] }
-    rows.each do |name, before, after|
-      puts "::warning::#{name}: Gemfile.lock #{before}, fresh install #{after}" unless before == after
+    rows.map! { |name, (version, default)| [name, locked.fetch(name, 'none'), version, default] }
+    rows.each do |name, before, after, default|
+      puts "::warning::#{name}: Gemfile.lock #{before}, fresh install #{label(after, default)}" unless before == after
     end
     table = markdown(rows)
     puts table
@@ -63,7 +63,7 @@ module FreshResolution
 
   def self.markdown(rows)
     lines = ['| Gem | Gemfile.lock | Fresh install |', '| --- | --- | --- |']
-    lines.concat(rows.map { |row| "| #{row.join(' | ')} |" })
+    lines.concat(rows.map { |name, before, after, default| "| #{name} | #{before} | #{label(after, default)} |" })
     "#{lines.join("\n")}\n"
   end
 

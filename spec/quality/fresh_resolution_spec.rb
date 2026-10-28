@@ -44,8 +44,9 @@ RSpec.describe FreshResolution do
 
   it 'warns about each gem a fresh install resolves differently and writes the step summary' do
     summary = File.join(directory, 'summary.md')
-    locked = { 'ethon' => '0.18.0', 'typhoeus' => '1.6.0' }
-    installed = { 'ethon' => ['0.19.0', false], 'openssl' => ['3.3.0', true], 'typhoeus' => ['1.6.0', false] }
+    locked = { 'ethon' => '0.18.0', 'logger' => '1.7.0', 'typhoeus' => '1.6.0' }
+    installed = { 'ethon' => ['0.19.0', false], 'logger' => ['1.7.0', true], 'openssl' => ['3.3.0', true],
+                  'typhoeus' => ['1.6.0', false] }
 
     expect { described_class.report(locked, installed, summary) }.to output(
       a_string_starting_with(
@@ -54,6 +55,10 @@ RSpec.describe FreshResolution do
         "| Gem | Gemfile.lock | Fresh install |\n"
       )
     ).to_stdout
-    expect(File.read(summary)).to include("| ethon | 0.18.0 | 0.19.0 |\n", "| typhoeus | 1.6.0 | 1.6.0 |\n")
+    expect(File.read(summary)).to include(
+      "| ethon | 0.18.0 | 0.19.0 |\n",
+      "| logger | 1.7.0 | 1.7.0 (Ruby default gem) |\n",
+      "| typhoeus | 1.6.0 | 1.6.0 |\n"
+    )
   end
 end

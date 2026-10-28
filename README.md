@@ -989,8 +989,8 @@ delivery.
 
 Installing `volcano-sdk` pulls in ten gems, plus their own transitive
 dependencies. The gemspec pins each of the ten to the exact version CI tests.
-CI also tests the newest transitive versions those pins allow, daily and on
-every change.
+Daily and on every change, CI also installs the gem with no lockfile and runs
+the specs against whatever that install resolves.
 
 | Gem                                                          | Why                                                                     |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------- |

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.0...v0.35.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **deps:** keep explicit upload content types multipart by capping Ethon below 0.19 ([#362](https://github.com/Kong/volcano-sdk-ruby/issues/362)) ([f38cea3](https://github.com/Kong/volcano-sdk-ruby/commit/f38cea39fce6da0cbaedaf7615eef0cf0743ba91))
+
 ## [0.35.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.34.0...v0.35.0) (2026-10-16)
 
 

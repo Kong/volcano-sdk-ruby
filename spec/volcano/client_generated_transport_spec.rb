@@ -1235,8 +1235,8 @@ RSpec.describe Volcano::Client do
       execution_id: '00000000-0000-4000-8000-000000000041', client_token: nil
     )
 
-    # Omitted rather than sent as nil: a session or service key reaches the
-    # execution without one.
+    # Omitted rather than sent as nil: a session, or a service key holding
+    # `*`, reaches the execution without one.
     expect(response).to have_attributes(status: 200)
     expect(response.body).to include('status' => 'stopped')
     expect(authorizations.last).to eq('service-key')

@@ -9,6 +9,8 @@ module Volcano
 
   interface _DurableTransport
     def start_durable_execution_from_application: (authorization: String, function_id: String, payload: sdk_payload, execution_name: String?) -> Transport::Response
+    def get_durable_execution_from_application: (authorization: String, function_id: String, execution_id: String, client_token: String?) -> Transport::Response
+    def stop_durable_execution_from_application: (authorization: String, function_id: String, execution_id: String, client_token: String?) -> Transport::Response
     def get_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
     def list_durable_executions: (authorization: String, project_id: String, function_id: String, options: Hash[Symbol, String | Integer]) -> Transport::Response
     def stop_durable_execution: (authorization: String, project_id: String, function_id: String, execution_id: String) -> Transport::Response
@@ -127,6 +129,7 @@ module Volcano
 
   class Durable
     include DurableArguments
+    include DurableMessageArguments
     include DurableResponses
     @client: _DurableClient
     @transport: _DurableTransport
@@ -138,6 +141,7 @@ module Volcano
     def initialize: (_DurableClient client, _DurableTransport & _DurableApprovalsTransport & _DurableMessagesTransport transport, Realtime realtime) -> void
 
     private def execution_path: (String project_id, String function_name, String execution_id) -> [String, String, String]
+    private def application_target: (Object? function_name, Object? execution_id, Object? client_token) -> [String, String, String?]
     private def execution_name_argument: (Object? value) -> String
   end
 

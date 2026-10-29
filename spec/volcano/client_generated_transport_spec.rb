@@ -1212,6 +1212,39 @@ RSpec.describe Volcano::Client do
     expect(apis.durable.calls.last.first).to eq(:stop)
   end
 
+  it 'reads a durable execution on the application route with its client token', :aggregate_failures do
+    response = transport.get_durable_execution_from_application(
+      authorization: 'anon-key', function_id: 'charge-order',
+      execution_id: '00000000-0000-4000-8000-000000000041', client_token: 'client-token'
+    )
+
+    expect(response).to have_attributes(status: 200)
+    expect(response.body).to include('id' => '00000000-0000-4000-8000-000000000041', 'status' => 'running')
+    expect(authorizations.last).to eq('anon-key')
+    expect(apis.durable.calls.last).to eq(
+      [
+        :get_from_application, 'charge-order', '00000000-0000-4000-8000-000000000041',
+        { x_volcano_client_token: 'client-token' }
+      ]
+    )
+  end
+
+  it 'stops a durable execution on the application route without a client token', :aggregate_failures do
+    response = transport.stop_durable_execution_from_application(
+      authorization: 'service-key', function_id: 'charge-order',
+      execution_id: '00000000-0000-4000-8000-000000000041', client_token: nil
+    )
+
+    # Omitted rather than sent as nil: a session or service key reaches the
+    # execution without one.
+    expect(response).to have_attributes(status: 200)
+    expect(response.body).to include('status' => 'stopped')
+    expect(authorizations.last).to eq('service-key')
+    expect(apis.durable.calls.last).to eq(
+      [:stop_from_application, 'charge-order', '00000000-0000-4000-8000-000000000041', {}]
+    )
+  end
+
   it 'rejects a non-string email-change acknowledgement' do
     apis.authentication.email_change_body = 42
 

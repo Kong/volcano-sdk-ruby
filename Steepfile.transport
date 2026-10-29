@@ -11,6 +11,7 @@ target :client_transport do
   check 'lib/volcano/generated_transport_confirmation.rb'
   check 'lib/volcano/generated_transport_database.rb'
   check 'lib/volcano/generated_transport_durable.rb'
+  check 'lib/volcano/generated_transport_durable_application.rb'
   check 'lib/volcano/generated_transport_durable_messages.rb'
   check 'lib/volcano/generated_transport_email_change.rb'
   check 'lib/volcano/generated_transport_functions.rb'

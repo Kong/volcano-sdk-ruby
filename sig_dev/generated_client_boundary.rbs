@@ -192,6 +192,8 @@ module Volcano
       def list_durable_executions_with_http_info: (String id, String function_id, ?api_options opts) -> api_result
       def start_durable_execution_from_application_with_http_info: (String function_id, ?api_options opts) -> api_result
       def stop_durable_execution_with_http_info: (String id, String function_id, String execution_id, ?api_options opts) -> api_result
+      def get_durable_execution_from_application_with_http_info: (String function_id, String execution_id, ?api_options opts) -> api_result
+      def stop_durable_execution_from_application_with_http_info: (String function_id, String execution_id, ?api_options opts) -> api_result
       def list_durable_approvals_with_http_info: (String id, ?api_options opts) -> api_result
       def get_durable_approval_with_http_info: (String id, String approval_id, ?api_options opts) -> api_result
       def get_durable_approval_stats_with_http_info: (String id, ?api_options opts) -> api_result

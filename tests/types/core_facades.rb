@@ -25,6 +25,12 @@ def typed_timestamp_calls(client)
   client.logs.search('project', resource: { id: 'worker' }, start_time: Time.utc(2026), end_time: Time.utc(2026, 2))
 end
 
+# @type method typed_application_execution_calls: (Volcano::Client) -> Volcano::DurableExecution
+def typed_application_execution_calls(client)
+  client.durable.get_from_application('worker', 'execution', client_token: 'token').result
+  client.durable.stop_from_application('worker', 'execution')
+end
+
 # @type method typed_approval_calls: (Volcano::Client) -> Volcano::DurableApproval
 def typed_approval_calls(client)
   approvals = client.durable.approvals

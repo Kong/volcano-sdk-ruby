@@ -12,6 +12,7 @@ RSpec.describe Volcano::Client do
       %i[
         start_durable_execution_from_application get_durable_execution
         list_durable_executions stop_durable_execution
+        get_durable_execution_from_application stop_durable_execution_from_application
       ].each do |operation|
         fake.define_singleton_method(operation) do |**arguments|
           call_log << [operation, arguments]
@@ -218,6 +219,111 @@ RSpec.describe Volcano::Client do
 
     expect(again).to eq(first)
     expect(again.terminal?).to be(true)
+  end
+
+  it 'reads an execution from the application with the credential start uses', :aggregate_failures do
+    responses[:get_durable_execution_from_application] = transport_response(
+      200,
+      execution(status: 'succeeded', completed_at: '2026-09-14T12:04:00Z', result: { 'charge' => 'charge-1' })
+    )
+
+    result = client.durable.get_from_application('charge-order', 'execution-1')
+
+    expect(result).to have_attributes(
+      id: 'execution-1', status: 'succeeded', completed_at: Time.utc(2026, 9, 14, 12, 4), client_token: nil
+    )
+    expect(result.result).to eq('charge' => 'charge-1').and be_frozen
+    expect(calls).to eq(
+      [[
+        :get_durable_execution_from_application,
+        { authorization: 'service-key', function_id: 'charge-order', execution_id: 'execution-1', client_token: nil }
+      ]]
+    )
+  end
+
+  it 'reads an execution with an anon key and its client token' do
+    responses[:get_durable_execution_from_application] = transport_response(200, execution(status: 'running'))
+    public_client = described_class.new(anon_key: 'anon-key', _transport: transport)
+
+    public_client.durable.get_from_application('charge-order', 'execution-1', client_token: 'client-token')
+
+    expect(calls.first.last).to eq(
+      authorization: 'anon-key', function_id: 'charge-order', execution_id: 'execution-1',
+      client_token: 'client-token'
+    )
+  end
+
+  it 'stops an execution from the application and returns it as read back', :aggregate_failures do
+    responses[:stop_durable_execution_from_application] = transport_response(200, execution(status: 'running'))
+    public_client = described_class.new(anon_key: 'anon-key', _transport: transport)
+
+    result = public_client.durable.stop_from_application('charge-order', 'execution-1', client_token: 'client-token')
+
+    expect(result).to have_attributes(id: 'execution-1', status: 'running')
+    expect(result.terminal?).to be(false)
+    expect(calls).to eq(
+      [[
+        :stop_durable_execution_from_application,
+        { authorization: 'anon-key', function_id: 'charge-order', execution_id: 'execution-1',
+          client_token: 'client-token' }
+      ]]
+    )
+  end
+
+  it 'prefers a session over the service key for application reads and stops' do
+    responses[:get_durable_execution_from_application] = transport_response(200, execution(status: 'running'))
+    responses[:stop_durable_execution_from_application] = transport_response(200, execution(status: 'stopped'))
+
+    owner.durable.get_from_application('charge-order', 'execution-1')
+    owner.durable.stop_from_application('charge-order', 'execution-1')
+
+    expect(calls.map { |_, arguments| arguments.fetch(:authorization) }).to eq(%w[access-token access-token])
+  end
+
+  it 'raises for an execution the application credential cannot reach' do
+    responses[:get_durable_execution_from_application] = transport_response(
+      404, 'error' => 'durable execution not found', 'code' => 'execution_not_found'
+    )
+
+    expect { client.durable.get_from_application('charge-order', 'execution-1', client_token: 'stale') }
+      .to raise_error(Volcano::Error::NotFoundError, 'durable execution not found') do |error|
+        expect(error).to have_attributes(status: 404, code: 'execution_not_found')
+      end
+  end
+
+  it 'raises when an application stop reaches no execution' do
+    responses[:stop_durable_execution_from_application] = transport_response(
+      404, 'error' => 'durable execution not found', 'code' => 'execution_not_found'
+    )
+
+    expect { client.durable.stop_from_application('charge-order', 'execution-1') }
+      .to raise_error(Volcano::Error::NotFoundError, 'durable execution not found')
+  end
+
+  it 'raises for an application stop of an execution that has not started' do
+    responses[:stop_durable_execution_from_application] = transport_response(
+      409, 'error' => 'durable execution has not started', 'code' => 'execution_not_started'
+    )
+
+    expect { client.durable.stop_from_application('charge-order', 'execution-1') }
+      .to raise_error(Volcano::Error::ConflictError) { |error| expect(error.status).to eq(409) }
+  end
+
+  it 'refuses application arguments before transport', :aggregate_failures do
+    ['', '   '].each do |blank|
+      expect { client.durable.get_from_application(blank, 'execution-1') }
+        .to raise_error(ArgumentError, /function_name/)
+      expect { client.durable.stop_from_application('charge-order', blank) }
+        .to raise_error(ArgumentError, /execution_id/)
+    end
+    ['', 'token with é', 'x' * 129, 42].each do |token|
+      expect { client.durable.get_from_application('charge-order', 'execution-1', client_token: token) }
+        .to raise_error(ArgumentError, /client_token must be 1 to 128 printable ASCII characters/)
+      expect { client.durable.stop_from_application('charge-order', 'execution-1', client_token: token) }
+        .to raise_error(ArgumentError, /client_token must be 1 to 128 printable ASCII characters/)
+    end
+
+    expect(calls).to be_empty
   end
 
   it 'rejects blank path segments before transport', :aggregate_failures do

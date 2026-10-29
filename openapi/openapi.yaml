@@ -4376,10 +4376,11 @@ paths:
         A `private` durable function answers every credential but a service key
         exactly as a missing one, with 404.
 
-        Starting is all this endpoint does. Reading a result or stopping an
-        execution requires the project owner's token, because an anon key is
-        shared by everyone who loads the page and an execution is addressed by
-        id alone.
+        The start returns a `client_token`. An anon key, or a user who did not
+        start the execution, sends it as `X-Volcano-Client-Token` to read the
+        execution, stop it, and reach its messages. An anon key is shared by
+        everyone who loads the page, so the id alone never reaches an
+        execution. Listing executions requires the project owner's token.
 
         Send `X-Volcano-Execution-Name` to make the start idempotent: repeating
         a start with the same name returns the existing execution instead of
@@ -4492,6 +4493,177 @@ paths:
             plan terms for the start could not be read. The first means the
             capability is paused or this deployment cannot serve it, so it is
             not one to retry in a loop; the second is transient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /durable-functions/{functionId}/executions/{executionId}:
+    get:
+      tags:
+        - Durable Functions
+      summary: Get a durable execution from an application
+      description: |
+        Returns the execution's current state with the credential that started
+        it, including its `result` once it has succeeded. Poll this to wait for
+        an execution to finish.
+
+        **With a service key:** any execution in the project.
+
+        **With an auth user token:** an execution the user started, or one
+        whose `X-Volcano-Client-Token` the request carries, of a durable
+        function whose `visibility` is `authenticated` or `public`.
+
+        **With an anon key:** an execution whose `X-Volcano-Client-Token` the
+        request carries, of a function with `visibility: public`.
+
+        Only the service key reaches an execution that is still `pending`. Any
+        other execution answers `404`, as a missing one does.
+
+        The response is the one `GET
+        /projects/{id}/durable-functions/{functionId}/executions/{executionId}`
+        returns. It never carries `client_token`.
+      operationId: getDurableExecutionFromApplication
+      security:
+        - AnonKey: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/DurableExecutionId'
+        - $ref: '#/components/parameters/DurableClientToken'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '401':
+          description: Missing or invalid credential
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The anon key lacks `functions.invoke`, the service key is scoped
+            without it, or the function is `authenticated` and the request
+            carries an anon key. Also returned when the request's origin is
+            refused by the project's CORS policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            Durable function or execution not found, or the credential cannot
+            reach the execution. A `private` function answers every credential
+            but a service key this way.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            The function's or the project's function rate limit, which reads
+            share with invocations and starts, or the project is over its
+            bandwidth cap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment, or the plan
+            terms for the request could not be read. The first is not one to
+            retry in a loop; the second is transient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /durable-functions/{functionId}/executions/{executionId}/stop:
+    post:
+      tags:
+        - Durable Functions
+      summary: Stop a durable execution from an application
+      description: |
+        Cancels a running execution with the credential that started it. Its
+        completed steps are not undone.
+
+        Access follows the same rules as reading the execution.
+
+        The call is accepted rather than awaited: the response reports the
+        execution as it was read back and may still say `running`. Poll
+        `GET /durable-functions/{functionId}/executions/{executionId}` to see
+        it settle into `stopped`.
+
+        Stopping an execution that already finished is not an error: the
+        response carries the state it settled in.
+      operationId: stopDurableExecutionFromApplication
+      security:
+        - AnonKey: []
+        - ServiceRoleKey: []
+        - AuthUserAccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/DurableFunctionId'
+        - $ref: '#/components/parameters/DurableExecutionId'
+        - $ref: '#/components/parameters/DurableClientToken'
+      responses:
+        '200':
+          description: |
+            Stop accepted. The body is the execution as it was read back, which
+            may still report `running`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DurableExecution'
+        '401':
+          description: Missing or invalid credential
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The anon key lacks `functions.invoke`, the service key is scoped
+            without it, or the function is `authenticated` and the request
+            carries an anon key. Also returned when the request's origin is
+            refused by the project's CORS policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            Durable function or execution not found, or the credential cannot
+            reach the execution. A `private` function answers every credential
+            but a service key this way.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            The execution has not started yet. Only a service key can reach an
+            execution in that state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: |
+            The function's or the project's function rate limit, which stops
+            share with invocations and starts, or the project is over its
+            bandwidth cap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: |
+            Durable execution is not available in this environment, or the plan
+            terms for the request could not be read. The first is not one to
+            retry in a loop; the second is transient.
           content:
             application/json:
               schema:
@@ -21031,9 +21203,10 @@ components:
         client_token:
           type: string
           description: |
-            Lets a browser read and send the execution's messages. Returned only
-            by the start that created the execution, never by a repeat under the
-            same name or by a read. Send it as `X-Volcano-Client-Token`.
+            Lets a browser read the execution, stop it, and read and send its
+            messages. Returned only by the start that created the execution,
+            never by a repeat under the same name or by a read. Send it as
+            `X-Volcano-Client-Token`.
       required:
         - id
         - function_id

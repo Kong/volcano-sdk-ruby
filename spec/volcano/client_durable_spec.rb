@@ -282,18 +282,18 @@ RSpec.describe Volcano::Client do
 
   it 'raises for an execution the application credential cannot reach' do
     responses[:get_durable_execution_from_application] = transport_response(
-      404, 'error' => 'durable execution not found', 'code' => 'execution_not_found'
+      404, 'error' => 'durable execution not found'
     )
 
     expect { client.durable.get_from_application('charge-order', 'execution-1', client_token: 'stale') }
       .to raise_error(Volcano::Error::NotFoundError, 'durable execution not found') do |error|
-        expect(error).to have_attributes(status: 404, code: 'execution_not_found')
+        expect(error).to have_attributes(status: 404, code: nil)
       end
   end
 
   it 'raises when an application stop reaches no execution' do
     responses[:stop_durable_execution_from_application] = transport_response(
-      404, 'error' => 'durable execution not found', 'code' => 'execution_not_found'
+      404, 'error' => 'durable execution not found'
     )
 
     expect { client.durable.stop_from_application('charge-order', 'execution-1') }
@@ -302,7 +302,7 @@ RSpec.describe Volcano::Client do
 
   it 'raises for an application stop of an execution that has not started' do
     responses[:stop_durable_execution_from_application] = transport_response(
-      409, 'error' => 'durable execution has not started', 'code' => 'execution_not_started'
+      409, 'error' => 'durable execution was never started'
     )
 
     expect { client.durable.stop_from_application('charge-order', 'execution-1') }

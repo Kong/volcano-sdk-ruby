@@ -80,9 +80,9 @@ client.durable.stop_from_application("charge-order", handle.id, client_token: to
 
 `start`, `get_from_application`, and `stop_from_application` use the same credential as `functions.invoke`: the active session, then a service key, then the anonymous key. An execution name makes a start idempotent. The start that creates an execution returns its `client_token`; a repeated start returns nil there. Inspecting the execution masks the token.
 
-A service key reads and stops any execution of the project. A signed-in user reaches the executions they started without the client token. An anonymous key, or a user who did not start the execution, passes `client_token:`. An execution the credential cannot reach raises `Volcano::Error::NotFoundError`, as a missing one does, and so does one still `pending` unless the credential is a service key. Reads never return `client_token`, so keep the one the start returned.
+A service key holding `*`, the default, reads and stops any execution of the project. A signed-in user reaches the executions they started without the client token. An anonymous key, a user who did not start the execution, or a service key scoped to a list without `*` passes `client_token:`. An execution the credential cannot reach raises `Volcano::Error::NotFoundError`, as a missing one does, and so does one still `pending` unless the credential is a service key holding `*`. Reads never return `client_token`, so keep the one the start returned.
 
-`stop_from_application` and `stop` return after the stop request is accepted, often while the execution still reports `running`; poll the matching read until `terminal?` is true. Stopping an execution that already finished returns the state it settled in.
+`stop_from_application` and `stop` return after the stop request is accepted, often while the execution still reports `running`; poll the matching read until `terminal?` is true. Stopping an execution that already finished returns the state it settled in. A `stop_from_application` answered with a `503` `Volcano::Error::ServerError` may already have been sent, so read the execution before stopping it again.
 
 Tooling that manages a project uses the owner-scoped `get`, `list`, and `stop`, which reach any execution without a client token:
 

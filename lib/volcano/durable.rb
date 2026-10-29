@@ -49,12 +49,14 @@ module Volcano
     end
 
     # Reads an execution with the credential #start uses, including its result
-    # once it has succeeded. A service key reaches any execution of the
-    # project. A signed-in user reaches the executions they started; an anon
-    # key, or a user who did not start the execution, passes the
-    # +client_token+ its start returned. An execution the credential cannot
-    # reach, or one still +pending+ for any credential but a service key,
-    # raises Error::NotFoundError, as a missing one does.
+    # once it has succeeded. A service key holding `*`, the default, reaches
+    # any execution of the project. A signed-in user reaches the executions
+    # they started. An anon key, a user who did not start the execution, or a
+    # service key scoped to a list without `*` passes the +client_token+ its
+    # start returned; it is sent with whichever credential is in use. An
+    # execution the credential cannot reach, or one still +pending+ for any
+    # credential but a service key holding `*`, raises Error::NotFoundError,
+    # as a missing one does.
     def get_from_application(function_name, execution_id, client_token: nil)
       function_id, execution, token = application_target(function_name, execution_id, client_token)
       response = Transport.invoke do
@@ -69,8 +71,9 @@ module Volcano
     # Asks a running execution to stop, with the credential and +client_token+
     # #get_from_application takes. Accepted rather than awaited, as #stop is:
     # poll #get_from_application to see it reach +stopped+. Only a service key
-    # reaches an execution still +pending+, and stopping one raises
-    # Error::ConflictError.
+    # holding `*` reaches an execution still +pending+, and stopping one raises
+    # Error::ConflictError. A stop answered with a 503 Error::ServerError may
+    # already have been sent, so read the execution before stopping again.
     def stop_from_application(function_name, execution_id, client_token: nil)
       function_id, execution, token = application_target(function_name, execution_id, client_token)
       response = Transport.invoke do

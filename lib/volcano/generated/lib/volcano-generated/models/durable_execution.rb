@@ -27,7 +27,7 @@ module Volcano::Generated
     # Region the execution runs in. An execution is pinned to one region for its whole life because its checkpoints live there. 
     attr_accessor :region
 
-    # Whatever the function returned, verbatim. Absent while the execution is still running, absent when the result was too large to return and was checkpointed instead, and absent once the retention period has lapsed. 
+    # Whatever the function returned, verbatim. Absent while the execution is still running, absent when the result was too large to return and was checkpointed instead, and absent once the retention period has lapsed. A result Volcano has just read can still be returned for up to five minutes after that. 
     attr_accessor :result
 
     # `true` when the execution is terminal but its result is no longer retained, which distinguishes a discarded result from an empty one. Shortly after that the execution itself is dropped and reads answer `404`.  A result that was checkpointed rather than returned leaves this unset, so it reads like a function that returned nothing. 
@@ -40,7 +40,7 @@ module Volcano::Generated
     # Present once the execution has reached a terminal status.
     attr_accessor :completed_at
 
-    # Lets a browser read the execution, stop it, and read and send its messages. Returned only by the start that created the execution, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
+    # Lets a browser read the execution, stop it, and read and send its messages, and a service key scoped to a list without `*` read and stop it. Returned only by the start whose input the execution runs, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
     attr_accessor :client_token
 
     class EnumAttributeValidator

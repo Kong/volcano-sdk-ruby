@@ -14,19 +14,8 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class UpdateAutofixSettingsRequest < ApiModelBase
-    attr_accessor :enabled
-
-    attr_accessor :max_stage
-
-    attr_accessor :auto_trigger
-
-    attr_accessor :provider
-
-    attr_accessor :model
-
-    # Your own API key for `provider`, such as an Anthropic key for `anthropic`. Omit it to keep the stored key. Encrypted at rest and never returned.
-    attr_accessor :api_key
+  class DurableCallbackOutcome < ApiModelBase
+    attr_accessor :status
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -53,12 +42,7 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'enabled' => :'enabled',
-        :'max_stage' => :'max_stage',
-        :'auto_trigger' => :'auto_trigger',
-        :'provider' => :'provider',
-        :'model' => :'model',
-        :'api_key' => :'api_key'
+        :'status' => :'status'
       }
     end
 
@@ -75,12 +59,7 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'enabled' => :'Boolean',
-        :'max_stage' => :'AutofixStage',
-        :'auto_trigger' => :'Boolean',
-        :'provider' => :'AutofixProvider',
-        :'model' => :'AutofixModel',
-        :'api_key' => :'String'
+        :'status' => :'DurableCallbackStatus'
       }
     end
 
@@ -94,44 +73,22 @@ module Volcano::Generated
     # @param [Hash] attributes Model attributes in the form of hash
     def initialize(attributes = {})
       if (!attributes.is_a?(Hash))
-        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::UpdateAutofixSettingsRequest` initialize method"
+        fail ArgumentError, "The input argument (attributes) must be a hash in `Volcano::Generated::DurableCallbackOutcome` initialize method"
       end
 
       # check to see if the attribute exists and convert string to symbol for hash key
       acceptable_attribute_map = self.class.acceptable_attribute_map
       attributes = attributes.each_with_object({}) { |(k, v), h|
         if (!acceptable_attribute_map.key?(k.to_sym))
-          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::UpdateAutofixSettingsRequest`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
+          fail ArgumentError, "`#{k}` is not a valid attribute in `Volcano::Generated::DurableCallbackOutcome`. Please check the name to make sure it's valid. List of attributes: " + acceptable_attribute_map.keys.inspect
         end
         h[k.to_sym] = v
       }
 
-      if attributes.key?(:'enabled')
-        self.enabled = attributes[:'enabled']
+      if attributes.key?(:'status')
+        self.status = attributes[:'status']
       else
-        self.enabled = nil
-      end
-
-      if attributes.key?(:'max_stage')
-        self.max_stage = attributes[:'max_stage']
-      end
-
-      if attributes.key?(:'auto_trigger')
-        self.auto_trigger = attributes[:'auto_trigger']
-      else
-        self.auto_trigger = false
-      end
-
-      if attributes.key?(:'provider')
-        self.provider = attributes[:'provider']
-      end
-
-      if attributes.key?(:'model')
-        self.model = attributes[:'model']
-      end
-
-      if attributes.key?(:'api_key')
-        self.api_key = attributes[:'api_key']
+        self.status = nil
       end
     end
 
@@ -140,21 +97,8 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
-      if @enabled.nil?
-        invalid_properties.push('invalid value for "enabled", enabled cannot be nil.')
-      end
-
-      if !@api_key.nil? && @api_key.to_s.length > 512
-        invalid_properties.push('invalid value for "api_key", the character length must be smaller than or equal to 512.')
-      end
-
-      if !@api_key.nil? && @api_key.to_s.length < 20
-        invalid_properties.push('invalid value for "api_key", the character length must be greater than or equal to 20.')
-      end
-
-      pattern = Regexp.new(/^[!-~]+$/)
-      if !@api_key.nil? && @api_key !~ pattern
-        invalid_properties.push("invalid value for \"api_key\", must conform to the pattern #{pattern}.")
+      if @status.nil?
+        invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
       invalid_properties
@@ -164,44 +108,18 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
-      return false if @enabled.nil?
-      return false if !@api_key.nil? && @api_key.to_s.length > 512
-      return false if !@api_key.nil? && @api_key.to_s.length < 20
-      return false if !@api_key.nil? && @api_key !~ Regexp.new(/^[!-~]+$/)
+      return false if @status.nil?
       true
     end
 
     # Custom attribute writer method with validation
-    # @param [Object] enabled Value to be assigned
-    def enabled=(enabled)
-      if enabled.nil?
-        fail ArgumentError, 'enabled cannot be nil'
+    # @param [Object] status Value to be assigned
+    def status=(status)
+      if status.nil?
+        fail ArgumentError, 'status cannot be nil'
       end
 
-      @enabled = enabled
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] api_key Value to be assigned
-    def api_key=(api_key)
-      if api_key.nil?
-        fail ArgumentError, 'api_key cannot be nil'
-      end
-
-      if api_key.to_s.length > 512
-        fail ArgumentError, 'invalid value for "api_key", the character length must be smaller than or equal to 512.'
-      end
-
-      if api_key.to_s.length < 20
-        fail ArgumentError, 'invalid value for "api_key", the character length must be greater than or equal to 20.'
-      end
-
-      pattern = Regexp.new(/^[!-~]+$/)
-      if api_key !~ pattern
-        fail ArgumentError, "invalid value for \"api_key\", must conform to the pattern #{pattern}."
-      end
-
-      @api_key = api_key
+      @status = status
     end
 
     # Checks equality by comparing each attribute.
@@ -209,12 +127,7 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          enabled == o.enabled &&
-          max_stage == o.max_stage &&
-          auto_trigger == o.auto_trigger &&
-          provider == o.provider &&
-          model == o.model &&
-          api_key == o.api_key
+          status == o.status
     end
 
     # @see the `==` method
@@ -226,7 +139,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [enabled, max_stage, auto_trigger, provider, model, api_key].hash
+      [status].hash
     end
 
     # Builds the object from hash

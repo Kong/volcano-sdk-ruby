@@ -132,20 +132,14 @@ module Volcano::Generated
 
       if attributes.key?(:'subject')
         self.subject = attributes[:'subject']
-      else
-        self.subject = nil
       end
 
       if attributes.key?(:'html_body')
         self.html_body = attributes[:'html_body']
-      else
-        self.html_body = nil
       end
 
       if attributes.key?(:'text_body')
         self.text_body = attributes[:'text_body']
-      else
-        self.text_body = nil
       end
 
       if attributes.key?(:'created_at')
@@ -166,18 +160,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "template_type", template_type cannot be nil.')
       end
 
-      if @subject.nil?
-        invalid_properties.push('invalid value for "subject", subject cannot be nil.')
-      end
-
-      if @html_body.nil?
-        invalid_properties.push('invalid value for "html_body", html_body cannot be nil.')
-      end
-
-      if @text_body.nil?
-        invalid_properties.push('invalid value for "text_body", text_body cannot be nil.')
-      end
-
       invalid_properties
     end
 
@@ -188,9 +170,6 @@ module Volcano::Generated
       return false if @template_type.nil?
       template_type_validator = EnumAttributeValidator.new('String', ["welcome", "confirmation", "password_reset", "password_changed"])
       return false unless template_type_validator.valid?(@template_type)
-      return false if @subject.nil?
-      return false if @html_body.nil?
-      return false if @text_body.nil?
       true
     end
 
@@ -202,36 +181,6 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for \"template_type\", must be one of #{validator.allowable_values}."
       end
       @template_type = template_type
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] subject Value to be assigned
-    def subject=(subject)
-      if subject.nil?
-        fail ArgumentError, 'subject cannot be nil'
-      end
-
-      @subject = subject
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] html_body Value to be assigned
-    def html_body=(html_body)
-      if html_body.nil?
-        fail ArgumentError, 'html_body cannot be nil'
-      end
-
-      @html_body = html_body
-    end
-
-    # Custom attribute writer method with validation
-    # @param [Object] text_body Value to be assigned
-    def text_body=(text_body)
-      if text_body.nil?
-        fail ArgumentError, 'text_body cannot be nil'
-      end
-
-      @text_body = text_body
     end
 
     # Checks equality by comparing each attribute.

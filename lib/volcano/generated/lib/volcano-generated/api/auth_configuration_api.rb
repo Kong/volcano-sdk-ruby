@@ -620,7 +620,7 @@ module Volcano::Generated
     # Get default email template by type
     # @param type [String] 
     # @param [Hash] opts the optional parameters
-    # @return [EmailTemplate]
+    # @return [DefaultEmailTemplate]
     def get_default_email_template(type, opts = {})
       data, _status_code, _headers = get_default_email_template_with_http_info(type, opts)
       data
@@ -629,7 +629,7 @@ module Volcano::Generated
     # Get default email template by type
     # @param type [String] 
     # @param [Hash] opts the optional parameters
-    # @return [Array<(EmailTemplate, Integer, Hash)>] EmailTemplate data, response status code and response headers
+    # @return [Array<(DefaultEmailTemplate, Integer, Hash)>] DefaultEmailTemplate data, response status code and response headers
     def get_default_email_template_with_http_info(type, opts = {})
       if @api_client.config.debugging
         @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.get_default_email_template ...'
@@ -661,7 +661,7 @@ module Volcano::Generated
       post_body = opts[:debug_body]
 
       # return_type
-      return_type = opts[:debug_return_type] || 'EmailTemplate'
+      return_type = opts[:debug_return_type] || 'DefaultEmailTemplate'
 
       # auth_names
       auth_names = opts[:debug_auth_names] || []
@@ -686,7 +686,7 @@ module Volcano::Generated
     # Get default email templates
     # Returns the default email templates used when no custom template is configured.
     # @param [Hash] opts the optional parameters
-    # @return [ListEmailTemplates200Response]
+    # @return [GetDefaultEmailTemplates200Response]
     def get_default_email_templates(opts = {})
       data, _status_code, _headers = get_default_email_templates_with_http_info(opts)
       data
@@ -695,7 +695,7 @@ module Volcano::Generated
     # Get default email templates
     # Returns the default email templates used when no custom template is configured.
     # @param [Hash] opts the optional parameters
-    # @return [Array<(ListEmailTemplates200Response, Integer, Hash)>] ListEmailTemplates200Response data, response status code and response headers
+    # @return [Array<(GetDefaultEmailTemplates200Response, Integer, Hash)>] GetDefaultEmailTemplates200Response data, response status code and response headers
     def get_default_email_templates_with_http_info(opts = {})
       if @api_client.config.debugging
         @api_client.config.logger.debug 'Calling API: AuthConfigurationApi.get_default_email_templates ...'
@@ -718,7 +718,7 @@ module Volcano::Generated
       post_body = opts[:debug_body]
 
       # return_type
-      return_type = opts[:debug_return_type] || 'ListEmailTemplates200Response'
+      return_type = opts[:debug_return_type] || 'GetDefaultEmailTemplates200Response'
 
       # auth_names
       auth_names = opts[:debug_auth_names] || []
@@ -1337,7 +1337,7 @@ module Volcano::Generated
     end
 
     # Send a test email using the project's saved SMTP config
-    # Sends a diagnostic email to `to_email` using the project's persisted `auth_config` SMTP credentials. If `html_body` or `text_body` is supplied, the override path is taken: those values (plus optional `subject`) are rendered through html/text templates against the project's `Data` and used as the body — used by the template editor's \"Send Test\" affordance to preview an unsaved template. With both bodies omitted, a hardcoded diagnostic message is sent and any `subject` field is ignored. Sending `subject` alone (no bodies) is rejected with 400 to avoid a silently-dropped subject or a blank message. Also rejects with 400 if `email_enabled=false`, `smtp_host` is empty, or the saved `smtp_password` can't be read and must be set again. 
+    # Sends a diagnostic email to `to_email` using the project's persisted `auth_config` SMTP credentials. If `html_body` or `text_body` is supplied, the override path is taken: those values (plus optional `subject`) are rendered through html/text templates against the project's `Data` and used as the body — used by the template editor's \"Send Test\" affordance to preview an unsaved template. With both bodies omitted, a hardcoded diagnostic message is sent and any `subject` field is ignored. Sending `subject` alone (no bodies) is rejected with 400 to avoid a silently-dropped subject or a blank message. Also rejects with 400 if `email_enabled=false`, `smtp_host` is empty, or the saved `smtp_password` can't be read and must be set again. Sender values with interior line breaks return 400 before SMTP delivery. Rendered override subjects containing a line break have outer whitespace trimmed; any remaining interior line break returns 400 before delivery. 
     # @param id [String] Project ID
     # @param test_email_request [TestEmailRequest] 
     # @param [Hash] opts the optional parameters
@@ -1348,7 +1348,7 @@ module Volcano::Generated
     end
 
     # Send a test email using the project&#39;s saved SMTP config
-    # Sends a diagnostic email to &#x60;to_email&#x60; using the project&#39;s persisted &#x60;auth_config&#x60; SMTP credentials. If &#x60;html_body&#x60; or &#x60;text_body&#x60; is supplied, the override path is taken: those values (plus optional &#x60;subject&#x60;) are rendered through html/text templates against the project&#39;s &#x60;Data&#x60; and used as the body — used by the template editor&#39;s \&quot;Send Test\&quot; affordance to preview an unsaved template. With both bodies omitted, a hardcoded diagnostic message is sent and any &#x60;subject&#x60; field is ignored. Sending &#x60;subject&#x60; alone (no bodies) is rejected with 400 to avoid a silently-dropped subject or a blank message. Also rejects with 400 if &#x60;email_enabled&#x3D;false&#x60;, &#x60;smtp_host&#x60; is empty, or the saved &#x60;smtp_password&#x60; can&#39;t be read and must be set again. 
+    # Sends a diagnostic email to &#x60;to_email&#x60; using the project&#39;s persisted &#x60;auth_config&#x60; SMTP credentials. If &#x60;html_body&#x60; or &#x60;text_body&#x60; is supplied, the override path is taken: those values (plus optional &#x60;subject&#x60;) are rendered through html/text templates against the project&#39;s &#x60;Data&#x60; and used as the body — used by the template editor&#39;s \&quot;Send Test\&quot; affordance to preview an unsaved template. With both bodies omitted, a hardcoded diagnostic message is sent and any &#x60;subject&#x60; field is ignored. Sending &#x60;subject&#x60; alone (no bodies) is rejected with 400 to avoid a silently-dropped subject or a blank message. Also rejects with 400 if &#x60;email_enabled&#x3D;false&#x60;, &#x60;smtp_host&#x60; is empty, or the saved &#x60;smtp_password&#x60; can&#39;t be read and must be set again. Sender values with interior line breaks return 400 before SMTP delivery. Rendered override subjects containing a line break have outer whitespace trimmed; any remaining interior line break returns 400 before delivery. 
     # @param id [String] Project ID
     # @param test_email_request [TestEmailRequest] 
     # @param [Hash] opts the optional parameters

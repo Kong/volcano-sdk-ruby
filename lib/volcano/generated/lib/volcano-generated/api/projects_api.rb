@@ -160,7 +160,7 @@ module Volcano::Generated
     end
 
     # Connect or update a project's repo connection
-    # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
+    # Full replace, following Vercel's model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id's stored GitHub user token, then persists repository metadata only from that validated GitHub response.  Omitting production_branch follows the repository's default and discards a pinned branch. To keep a pin when rebinding the same repository, read the connection first and send production_branch back when `production_branch_follows_default` is false. The response reports the result in the same field.  Project access tokens are refused. Which repository a project deploys from is a person's decision, made with a platform token or in the dashboard. A project access token can still change the root directory and production branch through PUT /projects/{id}/git-connection/root-directory and PUT /projects/{id}/git-connection/production-branch. 
     # @param id [String] Project ID
     # @param connect_project_git_request [ConnectProjectGitRequest] 
     # @param [Hash] opts the optional parameters
@@ -171,7 +171,7 @@ module Volcano::Generated
     end
 
     # Connect or update a project&#39;s repo connection
-    # Full replace, following Vercel&#39;s model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id&#39;s stored GitHub user token, then persists repository metadata only from that validated GitHub response. 
+    # Full replace, following Vercel&#39;s model: many projects may point at the same repo, so this only binds the project — it never creates or deletes git-provider state. Used for both the initial connect and later edits (repo change, root directory, production branch). Resolves the repository_id or repo_full_name selector against the repos accessible through installation_id via connection_id&#39;s stored GitHub user token, then persists repository metadata only from that validated GitHub response.  Omitting production_branch follows the repository&#39;s default and discards a pinned branch. To keep a pin when rebinding the same repository, read the connection first and send production_branch back when &#x60;production_branch_follows_default&#x60; is false. The response reports the result in the same field.  Project access tokens are refused. Which repository a project deploys from is a person&#39;s decision, made with a platform token or in the dashboard. A project access token can still change the root directory and production branch through PUT /projects/{id}/git-connection/root-directory and PUT /projects/{id}/git-connection/production-branch. 
     # @param id [String] Project ID
     # @param connect_project_git_request [ConnectProjectGitRequest] 
     # @param [Hash] opts the optional parameters
@@ -214,7 +214,7 @@ module Volcano::Generated
       return_type = opts[:debug_return_type] || 'ProjectGitConnection'
 
       # auth_names
-      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+      auth_names = opts[:debug_auth_names] || ['UserToken']
 
       new_options = opts.merge(
         :operation => :"ProjectsApi.connect_project_git",
@@ -234,7 +234,7 @@ module Volcano::Generated
     end
 
     # Create a new project
-    # Creates a project for the authenticated user. Each user can create up to 1,000 projects. Requests over this cap return 403. 
+    # Creates a project for the authenticated user. Projects have no plan limit; usage allowances apply across all of a user's projects. Accounts on an older paid pricing revision keep the project cap that revision set, and requests over it return 403. 
     # @param create_project_request [CreateProjectRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Project]
@@ -244,7 +244,7 @@ module Volcano::Generated
     end
 
     # Create a new project
-    # Creates a project for the authenticated user. Each user can create up to 1,000 projects. Requests over this cap return 403. 
+    # Creates a project for the authenticated user. Projects have no plan limit; usage allowances apply across all of a user&#39;s projects. Accounts on an older paid pricing revision keep the project cap that revision set, and requests over it return 403. 
     # @param create_project_request [CreateProjectRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Array<(Project, Integer, Hash)>] Project data, response status code and response headers
@@ -489,7 +489,7 @@ module Volcano::Generated
     end
 
     # Initialize an empty repository with a project's stored source
-    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (`skipped`), and things no export can hand back (`omitted`) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export, and optionally the repository by its `repo_id`. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the connected repository or the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (`skipped`), and things no export can hand back (`omitted`) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
     # @param id [String] Project ID
     # @param export_project_source_request [ExportProjectSourceRequest] 
     # @param [Hash] opts the optional parameters
@@ -500,7 +500,7 @@ module Volcano::Generated
     end
 
     # Initialize an empty repository with a project&#39;s stored source
-    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (&#x60;skipped&#x60;), and things no export can hand back (&#x60;omitted&#x60;) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
+    # Creates the first commit in the connected repository and pushes it directly to the configured production branch. The push enters the ordinary Git auto-deploy flow. Direct source writes remain frozen until that deployment succeeds and the repository becomes the source of truth.  The caller confirms the production branch shown before export, and optionally the repository by its &#x60;repo_id&#x60;. Starting export pins that branch: later GitHub default-branch changes do not repoint the project. If the connected repository or the configured branch changed after the caller read it, the request fails without exporting so the caller can show and confirm the new value.  The response lists what the export could not carry: resources with no successful deployment to take source from (&#x60;skipped&#x60;), and things no export can hand back (&#x60;omitted&#x60;) — migrations, which Volcano stores no copy of, and credential-shaped files, which are left for their owner to add.  Requires a connected repository with no commits or branches, and runs once. Volcano never creates the repository. If GitHub did not confirm the push, retrying creates the same commit and adopts it when it already reached the repository. 
     # @param id [String] Project ID
     # @param export_project_source_request [ExportProjectSourceRequest] 
     # @param [Hash] opts the optional parameters
@@ -558,6 +558,75 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#export_project_source\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get a Git deployment run
+    # Returns one deployment run: the commit it deployed, its status, the migration runs it started, and why it failed or was skipped.  Project access tokens can read runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param run_id [String] Deployment run ID
+    # @param [Hash] opts the optional parameters
+    # @return [GitDeploymentRun]
+    def get_git_deployment_run(id, run_id, opts = {})
+      data, _status_code, _headers = get_git_deployment_run_with_http_info(id, run_id, opts)
+      data
+    end
+
+    # Get a Git deployment run
+    # Returns one deployment run: the commit it deployed, its status, the migration runs it started, and why it failed or was skipped.  Project access tokens can read runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param run_id [String] Deployment run ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(GitDeploymentRun, Integer, Hash)>] GitDeploymentRun data, response status code and response headers
+    def get_git_deployment_run_with_http_info(id, run_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.get_git_deployment_run ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.get_git_deployment_run"
+      end
+      # verify the required parameter 'run_id' is set
+      if @api_client.config.client_side_validation && run_id.nil?
+        fail ArgumentError, "Missing the required parameter 'run_id' when calling ProjectsApi.get_git_deployment_run"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/git-deployment-runs/{runId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'runId' + '}', CGI.escape(run_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'GitDeploymentRun'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.get_git_deployment_run",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#get_git_deployment_run\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -694,6 +763,7 @@ module Volcano::Generated
     end
 
     # Get a project's repo connection
+    # Returns the repository binding. `production_branch_follows_default` tells a branch that tracks the repository's default from one the project pinned: a client rebinding the same repository sends a pinned branch back to keep it. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [ProjectGitConnection]
@@ -703,6 +773,7 @@ module Volcano::Generated
     end
 
     # Get a project&#39;s repo connection
+    # Returns the repository binding. &#x60;production_branch_follows_default&#x60; tells a branch that tracks the repository&#39;s default from one the project pinned: a client rebinding the same repository sends a pinned branch back to keep it. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [Array<(ProjectGitConnection, Integer, Hash)>] ProjectGitConnection data, response status code and response headers
@@ -815,8 +886,71 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Check whether the project owner can push to the connected repository
+    # Answers whether the project owner's GitHub account can push to the repository the project is connected to. Volcano makes the same check before it writes to that repository for the project. The repository is always the project's connected one; the route takes no repository.  When `can_push` is false, `reason` says why. The answer can be a few seconds old: repeated checks within that time are answered without asking GitHub again.  Checks that ask GitHub draw on an hourly budget for the project and another for its owner, shared by all of the owner's projects. Over either, the route answers `429` with `Retry-After`. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectGitOwnerPush]
+    def get_project_git_owner_push(id, opts = {})
+      data, _status_code, _headers = get_project_git_owner_push_with_http_info(id, opts)
+      data
+    end
+
+    # Check whether the project owner can push to the connected repository
+    # Answers whether the project owner&#39;s GitHub account can push to the repository the project is connected to. Volcano makes the same check before it writes to that repository for the project. The repository is always the project&#39;s connected one; the route takes no repository.  When &#x60;can_push&#x60; is false, &#x60;reason&#x60; says why. The answer can be a few seconds old: repeated checks within that time are answered without asking GitHub again.  Checks that ask GitHub draw on an hourly budget for the project and another for its owner, shared by all of the owner&#39;s projects. Over either, the route answers &#x60;429&#x60; with &#x60;Retry-After&#x60;. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectGitOwnerPush, Integer, Hash)>] ProjectGitOwnerPush data, response status code and response headers
+    def get_project_git_owner_push_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.get_project_git_owner_push ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.get_project_git_owner_push"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/git-connection/owner-push'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectGitOwnerPush'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.get_project_git_owner_push",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#get_project_git_owner_push\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get project health
-    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is `unhealthy`; transport and authorization failures use HTTP errors. 
+    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is `degraded` or `critical`; transport and authorization failures use HTTP errors. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [ProjectHealthResponse]
@@ -826,7 +960,7 @@ module Volcano::Generated
     end
 
     # Get project health
-    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is &#x60;unhealthy&#x60;; transport and authorization failures use HTTP errors. 
+    # Returns a fast control-plane health snapshot for the project and its deployed resources. The endpoint does not run live provider probes. A successful request returns 200 even when the project status is &#x60;degraded&#x60; or &#x60;critical&#x60;; transport and authorization failures use HTTP errors. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @return [Array<(ProjectHealthResponse, Integer, Hash)>] ProjectHealthResponse data, response status code and response headers
@@ -1192,6 +1326,97 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#list_deployments\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a project's Git deployment runs
+    # Lists the deployment runs Git auto deploy recorded for the project, newest push first. Each push to the production branch records one run, which says whether the push deployed and, when it failed or was skipped, why.  A run that applied migrations names the migration run it started on each database. Get one at `GET /projects/{id}/databases/{databaseName}/migration-runs/{runId}` for its files.  Project access tokens can list runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
+    # @option opts [GitDeploymentRunStatus] :status Return only runs in this status.
+    # @option opts [String] :branch Return only runs for pushes to this branch.
+    # @return [PaginatedGitDeploymentRuns]
+    def list_git_deployment_runs(id, opts = {})
+      data, _status_code, _headers = list_git_deployment_runs_with_http_info(id, opts)
+      data
+    end
+
+    # List a project&#39;s Git deployment runs
+    # Lists the deployment runs Git auto deploy recorded for the project, newest push first. Each push to the production branch records one run, which says whether the push deployed and, when it failed or was skipped, why.  A run that applied migrations names the migration run it started on each database. Get one at &#x60;GET /projects/{id}/databases/{databaseName}/migration-runs/{runId}&#x60; for its files.  Project access tokens can list runs, including read-only ones. 
+    # @param id [String] Project ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
+    # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
+    # @option opts [GitDeploymentRunStatus] :status Return only runs in this status.
+    # @option opts [String] :branch Return only runs for pushes to this branch.
+    # @return [Array<(PaginatedGitDeploymentRuns, Integer, Hash)>] PaginatedGitDeploymentRuns data, response status code and response headers
+    def list_git_deployment_runs_with_http_info(id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.list_git_deployment_runs ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.list_git_deployment_runs"
+      end
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 100
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling ProjectsApi.list_git_deployment_runs, must be smaller than or equal to 100.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling ProjectsApi.list_git_deployment_runs, must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'branch'].nil? && opts[:'branch'].to_s.length > 255
+        fail ArgumentError, 'invalid value for "opts[:"branch"]" when calling ProjectsApi.list_git_deployment_runs, the character length must be smaller than or equal to 255.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'branch'].nil? && opts[:'branch'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"branch"]" when calling ProjectsApi.list_git_deployment_runs, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/git-deployment-runs'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'status'] = opts[:'status'] if !opts[:'status'].nil?
+      query_params[:'branch'] = opts[:'branch'] if !opts[:'branch'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'PaginatedGitDeploymentRuns'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.list_git_deployment_runs",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#list_git_deployment_runs\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1635,7 +1860,7 @@ module Volcano::Generated
     end
 
     # Set the branch a project deploys from
-    # Changes only the production branch, leaving the repository binding alone. PUT /projects/{id}/git-connection can also set it, but that is a full rebind: it needs connection_id, installation_id and a repository selector resent, and re-resolves the repository against GitHub for a field that does not depend on it.  The branch does not have to exist. It is validated as a Git branch name and nothing more, so a project can be pointed at a branch that is about to be pushed — the case a repository created empty depends on.  Setting the branch here marks it as the project's own choice, so a later default-branch rename on GitHub no longer moves it. Projects that never set one keep following the repository's default branch. 
+    # Changes only the production branch, leaving the repository binding alone. PUT /projects/{id}/git-connection can also set it, but that is a full rebind: it needs connection_id, installation_id and a repository selector resent, and re-resolves the repository against GitHub for a field that does not depend on it.  The branch does not have to exist. It is validated as a Git branch name and nothing more, so a project can be pointed at a branch that is about to be pushed — the case a repository created empty depends on.  Setting the branch here marks it as the project's own choice, so a later default-branch rename on GitHub no longer moves it, and the response reports `production_branch_follows_default: false`. Projects that never set one keep following the repository's default branch.  An empty string undoes that choice: the project deploys from the repository's default branch again and follows later renames. Volcano reads the default branch from GitHub through the project owner's connection, and the response carries it with `production_branch_follows_default: true`. 
     # @param id [String] Project ID
     # @param set_project_git_production_branch_request [SetProjectGitProductionBranchRequest] 
     # @param [Hash] opts the optional parameters
@@ -1646,7 +1871,7 @@ module Volcano::Generated
     end
 
     # Set the branch a project deploys from
-    # Changes only the production branch, leaving the repository binding alone. PUT /projects/{id}/git-connection can also set it, but that is a full rebind: it needs connection_id, installation_id and a repository selector resent, and re-resolves the repository against GitHub for a field that does not depend on it.  The branch does not have to exist. It is validated as a Git branch name and nothing more, so a project can be pointed at a branch that is about to be pushed — the case a repository created empty depends on.  Setting the branch here marks it as the project&#39;s own choice, so a later default-branch rename on GitHub no longer moves it. Projects that never set one keep following the repository&#39;s default branch. 
+    # Changes only the production branch, leaving the repository binding alone. PUT /projects/{id}/git-connection can also set it, but that is a full rebind: it needs connection_id, installation_id and a repository selector resent, and re-resolves the repository against GitHub for a field that does not depend on it.  The branch does not have to exist. It is validated as a Git branch name and nothing more, so a project can be pointed at a branch that is about to be pushed — the case a repository created empty depends on.  Setting the branch here marks it as the project&#39;s own choice, so a later default-branch rename on GitHub no longer moves it, and the response reports &#x60;production_branch_follows_default: false&#x60;. Projects that never set one keep following the repository&#39;s default branch.  An empty string undoes that choice: the project deploys from the repository&#39;s default branch again and follows later renames. Volcano reads the default branch from GitHub through the project owner&#39;s connection, and the response carries it with &#x60;production_branch_follows_default: true&#x60;. 
     # @param id [String] Project ID
     # @param set_project_git_production_branch_request [SetProjectGitProductionBranchRequest] 
     # @param [Hash] opts the optional parameters
@@ -1704,6 +1929,80 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: ProjectsApi#set_project_git_production_branch\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Set the directory a project builds from
+    # Changes only the root directory, leaving the repository, the production branch and `production_branch_follows_default` alone. Unlike PUT /projects/{id}/git-connection, this accepts a project access token, so CI or an agent can move a project within its repository without being able to change the repository.  The directory is a path relative to the repository root. An empty string, `.` or `/` means the repository root. The response carries it in the form a deploy reads it: `./apps/web/` comes back as `apps/web`. 
+    # @param id [String] Project ID
+    # @param set_project_git_root_directory_request [SetProjectGitRootDirectoryRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [ProjectGitConnection]
+    def set_project_git_root_directory(id, set_project_git_root_directory_request, opts = {})
+      data, _status_code, _headers = set_project_git_root_directory_with_http_info(id, set_project_git_root_directory_request, opts)
+      data
+    end
+
+    # Set the directory a project builds from
+    # Changes only the root directory, leaving the repository, the production branch and &#x60;production_branch_follows_default&#x60; alone. Unlike PUT /projects/{id}/git-connection, this accepts a project access token, so CI or an agent can move a project within its repository without being able to change the repository.  The directory is a path relative to the repository root. An empty string, &#x60;.&#x60; or &#x60;/&#x60; means the repository root. The response carries it in the form a deploy reads it: &#x60;./apps/web/&#x60; comes back as &#x60;apps/web&#x60;. 
+    # @param id [String] Project ID
+    # @param set_project_git_root_directory_request [SetProjectGitRootDirectoryRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(ProjectGitConnection, Integer, Hash)>] ProjectGitConnection data, response status code and response headers
+    def set_project_git_root_directory_with_http_info(id, set_project_git_root_directory_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ProjectsApi.set_project_git_root_directory ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling ProjectsApi.set_project_git_root_directory"
+      end
+      # verify the required parameter 'set_project_git_root_directory_request' is set
+      if @api_client.config.client_side_validation && set_project_git_root_directory_request.nil?
+        fail ArgumentError, "Missing the required parameter 'set_project_git_root_directory_request' when calling ProjectsApi.set_project_git_root_directory"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/git-connection/root-directory'.sub('{' + 'id' + '}', CGI.escape(id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(set_project_git_root_directory_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'ProjectGitConnection'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"ProjectsApi.set_project_git_root_directory",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ProjectsApi#set_project_git_root_directory\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1865,7 +2164,7 @@ module Volcano::Generated
     end
 
     # Update a project's Git auto-deploy settings
-    # Full replace of the project's Git auto-deploy settings: what a push to the connected repo's production branch deploys.  Connecting a repository sets auto_deploy_enabled and deploy_functions to true for a project that has never called this endpoint, so a push deploys without any further setup. Once these settings have been saved here they are the project's own: connecting, rebinding, disconnecting and reconnecting all leave them untouched, including when they were saved before any repository was connected. Frontend settings are off until set here; the frontend need not exist when they are saved, since frontend_name is resolved at deploy time. 
+    # Full replace of the project's Git auto-deploy settings: what a push to the connected repo's production branch deploys.  Connecting a repository sets auto_deploy_enabled and deploy_functions to true for a project that has never called this endpoint, so a push deploys without any further setup. Once these settings have been saved here they are the project's own: connecting, rebinding, disconnecting and reconnecting all leave them untouched, including when they were saved before any repository was connected. Frontend settings are off until set here; the frontend need not exist when they are saved, since frontend_name is resolved at deploy time.  apply_migrations is the exception to the full replace: omitting it leaves the saved value unchanged. It is off until set here. 
     # @param id [String] Project ID
     # @param update_project_git_deploy_settings_request [UpdateProjectGitDeploySettingsRequest] 
     # @param [Hash] opts the optional parameters
@@ -1876,7 +2175,7 @@ module Volcano::Generated
     end
 
     # Update a project&#39;s Git auto-deploy settings
-    # Full replace of the project&#39;s Git auto-deploy settings: what a push to the connected repo&#39;s production branch deploys.  Connecting a repository sets auto_deploy_enabled and deploy_functions to true for a project that has never called this endpoint, so a push deploys without any further setup. Once these settings have been saved here they are the project&#39;s own: connecting, rebinding, disconnecting and reconnecting all leave them untouched, including when they were saved before any repository was connected. Frontend settings are off until set here; the frontend need not exist when they are saved, since frontend_name is resolved at deploy time. 
+    # Full replace of the project&#39;s Git auto-deploy settings: what a push to the connected repo&#39;s production branch deploys.  Connecting a repository sets auto_deploy_enabled and deploy_functions to true for a project that has never called this endpoint, so a push deploys without any further setup. Once these settings have been saved here they are the project&#39;s own: connecting, rebinding, disconnecting and reconnecting all leave them untouched, including when they were saved before any repository was connected. Frontend settings are off until set here; the frontend need not exist when they are saved, since frontend_name is resolved at deploy time.  apply_migrations is the exception to the full replace: omitting it leaves the saved value unchanged. It is off until set here. 
     # @param id [String] Project ID
     # @param update_project_git_deploy_settings_request [UpdateProjectGitDeploySettingsRequest] 
     # @param [Hash] opts the optional parameters

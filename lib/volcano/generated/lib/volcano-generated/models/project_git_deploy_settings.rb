@@ -28,6 +28,10 @@ module Volcano::Generated
     # App root (subdirectory) the frontend builds from. Omitted for the repo root.
     attr_accessor :frontend_app_root
 
+    # Whether a push applies the commit's pending migrations, the SQL files under volcano/migrations, before it deploys anything. Each database gets a migration run with source `git_deploy`; when one fails, nothing from the push deploys and the live version keeps serving. A push starts a migration run only while the project owner's account is `active`; otherwise a push that would start one starts none, deploys nothing, and fails with code `owner_not_active`. That check does not stop runs a push started before the account changed, but a run that has not started applying then fails with `owner_not_active` and the push ends with `migration_failed`; the push deploys after its runs succeed only when it needs no new run. Nothing retries that push; push again once the account is `active`. Reads back as saved even where the `databases.migrations` capability is unavailable; there, a push whose commit has migrations deploys nothing.
+    attr_accessor :apply_migrations
+
+    # When the settings were last saved, or last changed by connecting a repository. Other changes to the project leave it alone. Settings a connection turned on before Volcano began tracking this report the project's last change before then; settings never saved or changed report when the project was created.
     attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.
@@ -37,6 +41,7 @@ module Volcano::Generated
         :'deploy_functions' => :'deploy_functions',
         :'frontend_name' => :'frontend_name',
         :'frontend_app_root' => :'frontend_app_root',
+        :'apply_migrations' => :'apply_migrations',
         :'updated_at' => :'updated_at'
       }
     end
@@ -58,6 +63,7 @@ module Volcano::Generated
         :'deploy_functions' => :'Boolean',
         :'frontend_name' => :'String',
         :'frontend_app_root' => :'String',
+        :'apply_migrations' => :'Boolean',
         :'updated_at' => :'Time'
       }
     end
@@ -104,6 +110,12 @@ module Volcano::Generated
         self.frontend_app_root = attributes[:'frontend_app_root']
       end
 
+      if attributes.key?(:'apply_migrations')
+        self.apply_migrations = attributes[:'apply_migrations']
+      else
+        self.apply_migrations = nil
+      end
+
       if attributes.key?(:'updated_at')
         self.updated_at = attributes[:'updated_at']
       else
@@ -124,6 +136,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "deploy_functions", deploy_functions cannot be nil.')
       end
 
+      if @apply_migrations.nil?
+        invalid_properties.push('invalid value for "apply_migrations", apply_migrations cannot be nil.')
+      end
+
       if @updated_at.nil?
         invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
       end
@@ -137,6 +153,7 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @auto_deploy_enabled.nil?
       return false if @deploy_functions.nil?
+      return false if @apply_migrations.nil?
       return false if @updated_at.nil?
       true
     end
@@ -162,6 +179,16 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] apply_migrations Value to be assigned
+    def apply_migrations=(apply_migrations)
+      if apply_migrations.nil?
+        fail ArgumentError, 'apply_migrations cannot be nil'
+      end
+
+      @apply_migrations = apply_migrations
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] updated_at Value to be assigned
     def updated_at=(updated_at)
       if updated_at.nil?
@@ -180,6 +207,7 @@ module Volcano::Generated
           deploy_functions == o.deploy_functions &&
           frontend_name == o.frontend_name &&
           frontend_app_root == o.frontend_app_root &&
+          apply_migrations == o.apply_migrations &&
           updated_at == o.updated_at
     end
 
@@ -192,7 +220,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [auto_deploy_enabled, deploy_functions, frontend_name, frontend_app_root, updated_at].hash
+      [auto_deploy_enabled, deploy_functions, frontend_name, frontend_app_root, apply_migrations, updated_at].hash
     end
 
     # Builds the object from hash

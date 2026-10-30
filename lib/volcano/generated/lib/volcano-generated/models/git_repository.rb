@@ -15,9 +15,10 @@ require 'time'
 
 module Volcano::Generated
   class GitRepository < ApiModelBase
-    # Stable GitHub repository id (repository.id), unchanged by renames.
+    # GitHub's repository id. It stays the same through a rename or a transfer.
     attr_accessor :id
 
+    # The repository's owner and name, such as `acme/shop`.
     attr_accessor :full_name
 
     attr_accessor :default_branch
@@ -63,6 +64,13 @@ module Volcano::Generated
     def self.openapi_nullable
       Set.new([
       ])
+    end
+
+    # List of class defined in allOf (OpenAPI v3)
+    def self.openapi_all_of
+      [
+      :'GitRepositoryReference'
+      ]
     end
 
     # Initializes the object

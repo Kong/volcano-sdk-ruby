@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Full replace of a project's Git auto-deploy settings.
+  # Full replace of a project's Git auto-deploy settings, except apply_migrations, which keeps its saved value when omitted.
   class UpdateProjectGitDeploySettingsRequest < ApiModelBase
     attr_accessor :auto_deploy_enabled
 
@@ -26,13 +26,17 @@ module Volcano::Generated
     # App root the frontend builds from. Requires frontend_name; omit for the repo root.
     attr_accessor :frontend_app_root
 
+    # Apply the commit's pending migrations before each push deploys. Anyone who can push to the production branch can then run any SQL as the database owner, so protect that branch first. Off until set. Omit to leave the saved value unchanged. Turning it on answers `400` with code `feature_unavailable` where the `databases.migrations` capability is unavailable; `false`, or the saved `true` sent back, is accepted even there. While the project owner's account is `read_only`, the request answers `403` whatever it sends; an `inactive` owner's credentials answer `401`.
+    attr_accessor :apply_migrations
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'auto_deploy_enabled' => :'auto_deploy_enabled',
         :'deploy_functions' => :'deploy_functions',
         :'frontend_name' => :'frontend_name',
-        :'frontend_app_root' => :'frontend_app_root'
+        :'frontend_app_root' => :'frontend_app_root',
+        :'apply_migrations' => :'apply_migrations'
       }
     end
 
@@ -52,7 +56,8 @@ module Volcano::Generated
         :'auto_deploy_enabled' => :'Boolean',
         :'deploy_functions' => :'Boolean',
         :'frontend_name' => :'String',
-        :'frontend_app_root' => :'String'
+        :'frontend_app_root' => :'String',
+        :'apply_migrations' => :'Boolean'
       }
     end
 
@@ -96,6 +101,10 @@ module Volcano::Generated
 
       if attributes.key?(:'frontend_app_root')
         self.frontend_app_root = attributes[:'frontend_app_root']
+      end
+
+      if attributes.key?(:'apply_migrations')
+        self.apply_migrations = attributes[:'apply_migrations']
       end
     end
 
@@ -152,7 +161,8 @@ module Volcano::Generated
           auto_deploy_enabled == o.auto_deploy_enabled &&
           deploy_functions == o.deploy_functions &&
           frontend_name == o.frontend_name &&
-          frontend_app_root == o.frontend_app_root
+          frontend_app_root == o.frontend_app_root &&
+          apply_migrations == o.apply_migrations
     end
 
     # @see the `==` method
@@ -164,7 +174,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [auto_deploy_enabled, deploy_functions, frontend_name, frontend_app_root].hash
+      [auto_deploy_enabled, deploy_functions, frontend_name, frontend_app_root, apply_migrations].hash
     end
 
     # Builds the object from hash

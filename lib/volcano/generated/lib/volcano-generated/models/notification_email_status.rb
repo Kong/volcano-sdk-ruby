@@ -14,12 +14,13 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  class AutofixProvider
-    AutofixProviderVolcano = "volcano".freeze
-    AutofixProviderAnthropic = "anthropic".freeze
+  class NotificationEmailStatus
+    DELIVERING = "delivering".freeze
+    DISABLED = "disabled".freeze
+    OWNER_EMAIL_UNVERIFIED = "owner_email_unverified".freeze
 
     def self.all_vars
-      @all_vars ||= [AutofixProviderVolcano, AutofixProviderAnthropic].freeze
+      @all_vars ||= [DELIVERING, DISABLED, OWNER_EMAIL_UNVERIFIED].freeze
     end
 
     # Builds the enum from string
@@ -33,8 +34,8 @@ module Volcano::Generated
     # @param [String] The enum value in the form of the string
     # @return [String] The enum value
     def build_from_hash(value)
-      return value if AutofixProvider.all_vars.include?(value)
-      raise "Invalid ENUM value #{value} for class #AutofixProvider"
+      return value if NotificationEmailStatus.all_vars.include?(value)
+      raise "Invalid ENUM value #{value} for class #NotificationEmailStatus"
     end
   end
 end

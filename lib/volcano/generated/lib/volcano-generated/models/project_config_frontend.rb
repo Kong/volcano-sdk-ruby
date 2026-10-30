@@ -14,7 +14,7 @@ require 'date'
 require 'time'
 
 module Volcano::Generated
-  # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. A declared frontend entry without `custom_domain` deletes an existing custom domain. 
+  # Configuration for an existing (deployed) frontend. Frontends are never created or deleted through the manifest. 
   class ProjectConfigFrontend < ApiModelBase
     # All preserves access to all project variables. Shared includes the project frontend_shared_variables list. Scoped includes only explicitly declared variables in builds and runtime. Omission preserves the stored selection.
     attr_accessor :variable_scope
@@ -24,10 +24,17 @@ module Volcano::Generated
 
     attr_accessor :name
 
+    # The frontend's custom domain. Omission leaves an existing domain untouched; null deletes it. For a frontend with more than one domain, or a redirect, use `custom_domains`; an entry may not set both. 
     attr_accessor :custom_domain
+
+    # Complete set of the frontend's custom domains when declared. Domains not listed are deleted; an empty list deletes all of them. Omission leaves existing domains untouched. More than one domain needs a plan that allows it. 
+    attr_accessor :custom_domains
 
     # Complete set of same-origin Function path mappings when declared. Omission preserves existing mappings; an empty list deletes all mappings.
     attr_accessor :function_routes
+
+    # Complete set of paths this frontend serves from another frontend in the project when declared. Omission preserves existing routes; an empty list deletes all of them. Function and Frontend routes share one path namespace and the 64-route limit. 
+    attr_accessor :frontend_routes
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -58,7 +65,9 @@ module Volcano::Generated
         :'variables' => :'variables',
         :'name' => :'name',
         :'custom_domain' => :'custom_domain',
-        :'function_routes' => :'function_routes'
+        :'custom_domains' => :'custom_domains',
+        :'function_routes' => :'function_routes',
+        :'frontend_routes' => :'frontend_routes'
       }
     end
 
@@ -79,13 +88,16 @@ module Volcano::Generated
         :'variables' => :'Array<String>',
         :'name' => :'String',
         :'custom_domain' => :'ProjectConfigCustomDomain',
-        :'function_routes' => :'Array<ProjectConfigFrontendFunctionRoute>'
+        :'custom_domains' => :'Array<ProjectConfigFrontendCustomDomain>',
+        :'function_routes' => :'Array<ProjectConfigFrontendFunctionRoute>',
+        :'frontend_routes' => :'Array<ProjectConfigFrontendRoute>'
       }
     end
 
     # List of attributes with nullable: true
     def self.openapi_nullable
       Set.new([
+        :'custom_domain',
       ])
     end
 
@@ -125,9 +137,21 @@ module Volcano::Generated
         self.custom_domain = attributes[:'custom_domain']
       end
 
+      if attributes.key?(:'custom_domains')
+        if (value = attributes[:'custom_domains']).is_a?(Array)
+          self.custom_domains = value
+        end
+      end
+
       if attributes.key?(:'function_routes')
         if (value = attributes[:'function_routes']).is_a?(Array)
           self.function_routes = value
+        end
+      end
+
+      if attributes.key?(:'frontend_routes')
+        if (value = attributes[:'frontend_routes']).is_a?(Array)
+          self.frontend_routes = value
         end
       end
     end
@@ -145,8 +169,16 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "name", the character length must be greater than or equal to 1.')
       end
 
+      if !@custom_domains.nil? && @custom_domains.length > 100
+        invalid_properties.push('invalid value for "custom_domains", number of items must be less than or equal to 100.')
+      end
+
       if !@function_routes.nil? && @function_routes.length > 64
         invalid_properties.push('invalid value for "function_routes", number of items must be less than or equal to 64.')
+      end
+
+      if !@frontend_routes.nil? && @frontend_routes.length > 64
+        invalid_properties.push('invalid value for "frontend_routes", number of items must be less than or equal to 64.')
       end
 
       invalid_properties
@@ -160,7 +192,9 @@ module Volcano::Generated
       return false unless variable_scope_validator.valid?(@variable_scope)
       return false if @name.nil?
       return false if @name.to_s.length < 1
+      return false if !@custom_domains.nil? && @custom_domains.length > 100
       return false if !@function_routes.nil? && @function_routes.length > 64
+      return false if !@frontend_routes.nil? && @frontend_routes.length > 64
       true
     end
 
@@ -199,6 +233,20 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] custom_domains Value to be assigned
+    def custom_domains=(custom_domains)
+      if custom_domains.nil?
+        fail ArgumentError, 'custom_domains cannot be nil'
+      end
+
+      if custom_domains.length > 100
+        fail ArgumentError, 'invalid value for "custom_domains", number of items must be less than or equal to 100.'
+      end
+
+      @custom_domains = custom_domains
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] function_routes Value to be assigned
     def function_routes=(function_routes)
       if function_routes.nil?
@@ -212,6 +260,20 @@ module Volcano::Generated
       @function_routes = function_routes
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] frontend_routes Value to be assigned
+    def frontend_routes=(frontend_routes)
+      if frontend_routes.nil?
+        fail ArgumentError, 'frontend_routes cannot be nil'
+      end
+
+      if frontend_routes.length > 64
+        fail ArgumentError, 'invalid value for "frontend_routes", number of items must be less than or equal to 64.'
+      end
+
+      @frontend_routes = frontend_routes
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -221,7 +283,9 @@ module Volcano::Generated
           variables == o.variables &&
           name == o.name &&
           custom_domain == o.custom_domain &&
-          function_routes == o.function_routes
+          custom_domains == o.custom_domains &&
+          function_routes == o.function_routes &&
+          frontend_routes == o.frontend_routes
     end
 
     # @see the `==` method
@@ -233,7 +297,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [variable_scope, variables, name, custom_domain, function_routes].hash
+      [variable_scope, variables, name, custom_domain, custom_domains, function_routes, frontend_routes].hash
     end
 
     # Builds the object from hash

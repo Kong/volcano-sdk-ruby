@@ -33,6 +33,8 @@ module Volcano::Generated
     # Platform user that triggered a request-initiated deployment; absent for git and system deployments.
     attr_accessor :initiated_by
 
+    attr_accessor :commit
+
     # Total build time recorded for this deployment, in seconds.
     attr_accessor :build_duration_seconds
 
@@ -85,6 +87,7 @@ module Volcano::Generated
         :'status' => :'status',
         :'deploy_source' => :'deploy_source',
         :'initiated_by' => :'initiated_by',
+        :'commit' => :'commit',
         :'build_duration_seconds' => :'build_duration_seconds',
         :'build_count' => :'build_count',
         :'build_duration_recorded_at' => :'build_duration_recorded_at',
@@ -117,6 +120,7 @@ module Volcano::Generated
         :'status' => :'String',
         :'deploy_source' => :'String',
         :'initiated_by' => :'String',
+        :'commit' => :'DeploymentCommit',
         :'build_duration_seconds' => :'Integer',
         :'build_count' => :'Integer',
         :'build_duration_recorded_at' => :'Time',
@@ -192,6 +196,10 @@ module Volcano::Generated
 
       if attributes.key?(:'initiated_by')
         self.initiated_by = attributes[:'initiated_by']
+      end
+
+      if attributes.key?(:'commit')
+        self.commit = attributes[:'commit']
       end
 
       if attributes.key?(:'build_duration_seconds')
@@ -385,6 +393,7 @@ module Volcano::Generated
           status == o.status &&
           deploy_source == o.deploy_source &&
           initiated_by == o.initiated_by &&
+          commit == o.commit &&
           build_duration_seconds == o.build_duration_seconds &&
           build_count == o.build_count &&
           build_duration_recorded_at == o.build_duration_recorded_at &&
@@ -404,7 +413,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, function_id, project_id, batch_id, operation, status, deploy_source, initiated_by, build_duration_seconds, build_count, build_duration_recorded_at, progress, error_message, completed_at, created_at, updated_at].hash
+      [id, function_id, project_id, batch_id, operation, status, deploy_source, initiated_by, commit, build_duration_seconds, build_count, build_duration_recorded_at, progress, error_message, completed_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

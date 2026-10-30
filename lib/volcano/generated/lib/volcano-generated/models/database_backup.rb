@@ -19,7 +19,7 @@ module Volcano::Generated
     # Backup name, unique within the database. Backups you create are named by you; scheduled backups are named by the storage provider. 
     attr_accessor :name
 
-    # Whether the backup was requested explicitly or produced by the backup schedule. Only `manual` backups count against the plan's backup allowance. 
+    # Whether the backup was requested explicitly, produced by the backup schedule, or taken before migrations were applied to the database. Only `manual` backups count against the plan's backup allowance. 
     attr_accessor :source
 
     # Storage the backup occupies. Absent until the provider has costed it, which takes a few minutes after the backup is taken; absent is not the same as empty. 
@@ -164,7 +164,7 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @name.nil?
       return false if @source.nil?
-      source_validator = EnumAttributeValidator.new('String', ["manual", "scheduled"])
+      source_validator = EnumAttributeValidator.new('String', ["manual", "scheduled", "migration"])
       return false unless source_validator.valid?(@source)
       return false if !@size_bytes.nil? && @size_bytes < 0
       return false if @created_at.nil?
@@ -184,7 +184,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] source Object to be assigned
     def source=(source)
-      validator = EnumAttributeValidator.new('String', ["manual", "scheduled"])
+      validator = EnumAttributeValidator.new('String', ["manual", "scheduled", "migration"])
       unless validator.valid?(source)
         fail ArgumentError, "invalid value for \"source\", must be one of #{validator.allowable_values}."
       end

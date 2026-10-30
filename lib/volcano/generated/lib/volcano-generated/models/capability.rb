@@ -16,7 +16,7 @@ require 'time'
 module Volcano::Generated
   # A product capability and whether it accepts new work in this environment.
   class Capability < ApiModelBase
-    # Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, `sandboxes.custom_templates`, `issues`, or `autofix`. New IDs may appear at any time.
+    # Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, `sandboxes.custom_templates`, or `issues`. New IDs may appear at any time.
     attr_accessor :id
 
     attr_accessor :status

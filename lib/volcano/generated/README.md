@@ -65,23 +65,25 @@ Volcano::Generated.configure do |config|
   config.access_token = 'YOUR_BEARER_TOKEN'
   # Configure a proc to get access tokens in lieu of the static access_token configuration
   config.access_token_getter = -> { 'YOUR TOKEN GETTER PROC' } 
-
-  # Configure Bearer authorization (opaque): ProjectAccessToken
-  config.access_token = 'YOUR_BEARER_TOKEN'
-  # Configure a proc to get access tokens in lieu of the static access_token configuration
-  config.access_token_getter = -> { 'YOUR TOKEN GETTER PROC' } 
 end
 
-api_instance = Volcano::Generated::AnonKeysApi.new
-id = '38400000-8cf0-11bd-b23e-10b96e4ef00d' # String | Project ID
-create_anon_key_request = Volcano::Generated::CreateAnonKeyRequest.new({name: 'frontend-app'}) # CreateAnonKeyRequest | 
+api_instance = Volcano::Generated::AccountSessionsApi.new
+opts = {
+  page: 56, # Integer | Page number (1-indexed). Omit it for the first page, and always with `cursor` or `ending_before`. 
+  limit: 56, # Integer | Number of sessions per page (max 100, default 20)
+  sort: 'last_activity', # String | Sort key. `last_activity` (default) orders by most recent activity and supports offset pagination only. `created_at` orders by session start and supports both offset and cursor pagination. 
+  status: 'active', # String | Filter by whether the session can still be refreshed. Omit for every stored session, including expired ones. `expired` is not supported with cursor pagination. 
+  cursor: 'cursor_example', # String | Opaque keyset cursor from a previous response's `next_cursor`. Requires `sort=created_at`; mutually exclusive with `page` and `ending_before`. 
+  ending_before: 'ending_before_example', # String | Opaque keyset cursor from a previous response's `prev_cursor`, paging backward. Requires `sort=created_at`; mutually exclusive with `page` and `cursor`. 
+  offset: 56 # Integer | Bounded number of rows to skip past the cursor anchor (the hybrid jump, maximum 100000). Ignored unless `cursor` or `ending_before` is supplied. 
+}
 
 begin
-  #Create anon key
-  result = api_instance.create_anon_key(id, create_anon_key_request)
+  #List your account's sign-in sessions
+  result = api_instance.list_account_sessions(opts)
   p result
 rescue Volcano::Generated::ApiError => e
-  puts "Exception when calling AnonKeysApi->create_anon_key: #{e}"
+  puts "Exception when calling AccountSessionsApi->list_account_sessions: #{e}"
 end
 
 ```
@@ -92,6 +94,10 @@ All URIs are relative to *https://api.volcano.dev*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*Volcano::Generated::AccountSessionsApi* | [**list_account_sessions**](docs/AccountSessionsApi.md#list_account_sessions) | **GET** /user/sessions | List your account's sign-in sessions
+*Volcano::Generated::AccountSessionsApi* | [**revoke_account_session**](docs/AccountSessionsApi.md#revoke_account_session) | **DELETE** /user/sessions/{sessionId} | Sign out one session
+*Volcano::Generated::AccountSessionsApi* | [**revoke_current_user_token**](docs/AccountSessionsApi.md#revoke_current_user_token) | **DELETE** /user/tokens/current | Revoke the calling platform token
+*Volcano::Generated::AccountSessionsApi* | [**revoke_other_account_sessions**](docs/AccountSessionsApi.md#revoke_other_account_sessions) | **DELETE** /user/sessions | Sign out every other session
 *Volcano::Generated::AnonKeysApi* | [**create_anon_key**](docs/AnonKeysApi.md#create_anon_key) | **POST** /projects/{id}/anon-keys | Create anon key
 *Volcano::Generated::AnonKeysApi* | [**get_anon_key**](docs/AnonKeysApi.md#get_anon_key) | **GET** /projects/{id}/anon-keys/{keyId} | Get anon key
 *Volcano::Generated::AnonKeysApi* | [**list_anon_keys**](docs/AnonKeysApi.md#list_anon_keys) | **GET** /projects/{id}/anon-keys | List anon keys
@@ -155,9 +161,6 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::AuthenticationApi* | [**auth_signup_anonymous**](docs/AuthenticationApi.md#auth_signup_anonymous) | **POST** /auth/signup-anonymous | Create anonymous user
 *Volcano::Generated::AuthenticationApi* | [**auth_unlink_identity**](docs/AuthenticationApi.md#auth_unlink_identity) | **DELETE** /auth/user/identities/{identityId} | Unlink an identity from the current user
 *Volcano::Generated::AuthenticationApi* | [**auth_update_user**](docs/AuthenticationApi.md#auth_update_user) | **PUT** /auth/user | Update user profile
-*Volcano::Generated::AutofixApi* | [**delete_autofix_api_key**](docs/AutofixApi.md#delete_autofix_api_key) | **DELETE** /projects/{id}/autofix/api-key | Delete the API key
-*Volcano::Generated::AutofixApi* | [**get_autofix_settings**](docs/AutofixApi.md#get_autofix_settings) | **GET** /projects/{id}/autofix | Get autofix settings
-*Volcano::Generated::AutofixApi* | [**update_autofix_settings**](docs/AutofixApi.md#update_autofix_settings) | **PUT** /projects/{id}/autofix | Replace autofix settings
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_backup**](docs/DatabaseBackupsApi.md#create_database_backup) | **POST** /projects/{id}/databases/{databaseName}/backups | Back up a database
 *Volcano::Generated::DatabaseBackupsApi* | [**create_database_restore**](docs/DatabaseBackupsApi.md#create_database_restore) | **POST** /projects/{id}/databases/{databaseName}/restores | Restore a database
 *Volcano::Generated::DatabaseBackupsApi* | [**delete_database_backup**](docs/DatabaseBackupsApi.md#delete_database_backup) | **DELETE** /projects/{id}/databases/{databaseName}/backups/{backupName} | Delete a backup
@@ -174,6 +177,11 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DatabaseBranchesApi* | [**reset_database_branch**](docs/DatabaseBranchesApi.md#reset_database_branch) | **POST** /projects/{id}/databases/{databaseName}/branches/{branchName}/reset | Reset a branch to its parent's current state
 *Volcano::Generated::DatabaseBranchesApi* | [**reset_database_branch_password**](docs/DatabaseBranchesApi.md#reset_database_branch_password) | **POST** /projects/{id}/databases/{databaseName}/branches/{branchName}/reset-password | Rotate a branch's password
 *Volcano::Generated::DatabaseBranchesApi* | [**update_database_branch**](docs/DatabaseBranchesApi.md#update_database_branch) | **PATCH** /projects/{id}/databases/{databaseName}/branches/{branchName} | Extend a branch's lifetime
+*Volcano::Generated::DatabaseMigrationsApi* | [**baseline_database_migrations**](docs/DatabaseMigrationsApi.md#baseline_database_migrations) | **POST** /projects/{id}/databases/{databaseName}/migrations/baseline | Record migrations as applied without running them
+*Volcano::Generated::DatabaseMigrationsApi* | [**create_database_migration_run**](docs/DatabaseMigrationsApi.md#create_database_migration_run) | **POST** /projects/{id}/databases/{databaseName}/migration-runs | Apply migrations to a database
+*Volcano::Generated::DatabaseMigrationsApi* | [**get_database_migration_run**](docs/DatabaseMigrationsApi.md#get_database_migration_run) | **GET** /projects/{id}/databases/{databaseName}/migration-runs/{runId} | Get a migration run
+*Volcano::Generated::DatabaseMigrationsApi* | [**get_database_migrations**](docs/DatabaseMigrationsApi.md#get_database_migrations) | **GET** /projects/{id}/databases/{databaseName}/migrations | Get a database's migration history
+*Volcano::Generated::DatabaseMigrationsApi* | [**list_database_migration_runs**](docs/DatabaseMigrationsApi.md#list_database_migration_runs) | **GET** /projects/{id}/databases/{databaseName}/migration-runs | List a database's migration runs
 *Volcano::Generated::DatabaseQueriesApi* | [**query_database_branch_delete**](docs/DatabaseQueriesApi.md#query_database_branch_delete) | **POST** /databases/{databaseName}/branches/{branchName}/query/delete | Delete data from database (REST API)
 *Volcano::Generated::DatabaseQueriesApi* | [**query_database_branch_insert**](docs/DatabaseQueriesApi.md#query_database_branch_insert) | **POST** /databases/{databaseName}/branches/{branchName}/query/insert | Insert data into database (REST API)
 *Volcano::Generated::DatabaseQueriesApi* | [**query_database_branch_ping**](docs/DatabaseQueriesApi.md#query_database_branch_ping) | **POST** /databases/{databaseName}/branches/{branchName}/query/ping | Database connectivity probe (REST API)
@@ -200,12 +208,14 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function**](docs/DurableFunctionsApi.md#delete_durable_function) | **DELETE** /projects/{id}/durable-functions/{functionId} | Delete a durable function
 *Volcano::Generated::DurableFunctionsApi* | [**delete_durable_function_scheduler**](docs/DurableFunctionsApi.md#delete_durable_function_scheduler) | **DELETE** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Delete a durable function scheduler
 *Volcano::Generated::DurableFunctionsApi* | [**deny_durable_approval**](docs/DurableFunctionsApi.md#deny_durable_approval) | **POST** /projects/{id}/durable-approvals/{approvalId}/deny | Deny a durable approval
+*Volcano::Generated::DurableFunctionsApi* | [**fail_durable_callback**](docs/DurableFunctionsApi.md#fail_durable_callback) | **POST** /durable-callbacks/fail | Fail a waiting step
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_approval**](docs/DurableFunctionsApi.md#get_durable_approval) | **GET** /projects/{id}/durable-approvals/{approvalId} | Get a durable approval
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_approval_stats**](docs/DurableFunctionsApi.md#get_durable_approval_stats) | **GET** /projects/{id}/durable-approvals/stats | Get durable approval statistics
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_execution**](docs/DurableFunctionsApi.md#get_durable_execution) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId} | Get a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_execution_from_application**](docs/DurableFunctionsApi.md#get_durable_execution_from_application) | **GET** /durable-functions/{functionId}/executions/{executionId} | Get a durable execution from an application
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_function**](docs/DurableFunctionsApi.md#get_durable_function) | **GET** /projects/{id}/durable-functions/{functionId} | Get durable function by ID or name
 *Volcano::Generated::DurableFunctionsApi* | [**get_durable_function_scheduler**](docs/DurableFunctionsApi.md#get_durable_function_scheduler) | **GET** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Get a durable function scheduler
+*Volcano::Generated::DurableFunctionsApi* | [**heartbeat_durable_callback**](docs/DurableFunctionsApi.md#heartbeat_durable_callback) | **POST** /durable-callbacks/heartbeat | Keep a waiting step alive
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_approvals**](docs/DurableFunctionsApi.md#list_durable_approvals) | **GET** /projects/{id}/durable-approvals | List durable approvals
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_execution_operations**](docs/DurableFunctionsApi.md#list_durable_execution_operations) | **GET** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/operations | List a durable execution's operations
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_executions**](docs/DurableFunctionsApi.md#list_durable_executions) | **GET** /projects/{id}/durable-functions/{functionId}/executions | List a durable function's executions
@@ -217,6 +227,7 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**list_durable_messages_from_application**](docs/DurableFunctionsApi.md#list_durable_messages_from_application) | **GET** /durable-functions/{functionId}/executions/{executionId}/messages | List a durable execution's messages from an application
 *Volcano::Generated::DurableFunctionsApi* | [**open_durable_message_session**](docs/DurableFunctionsApi.md#open_durable_message_session) | **POST** /durable-messages/sessions | Open a messages session from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**publish_durable_message**](docs/DurableFunctionsApi.md#publish_durable_message) | **POST** /durable-messages/publish | Publish a message from inside a workflow
+*Volcano::Generated::DurableFunctionsApi* | [**register_durable_callback**](docs/DurableFunctionsApi.md#register_durable_callback) | **POST** /durable-callbacks | Get a callback token from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**register_durable_message_wait**](docs/DurableFunctionsApi.md#register_durable_message_wait) | **POST** /durable-messages/waits | Wait for a message from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**request_durable_approval**](docs/DurableFunctionsApi.md#request_durable_approval) | **POST** /durable-approvals | Request an approval from inside a workflow
 *Volcano::Generated::DurableFunctionsApi* | [**send_durable_message**](docs/DurableFunctionsApi.md#send_durable_message) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/messages | Send a message to a durable execution
@@ -225,22 +236,41 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::DurableFunctionsApi* | [**start_durable_execution_from_application**](docs/DurableFunctionsApi.md#start_durable_execution_from_application) | **POST** /durable-functions/{functionId}/executions | Start a durable execution from an application
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution**](docs/DurableFunctionsApi.md#stop_durable_execution) | **POST** /projects/{id}/durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution
 *Volcano::Generated::DurableFunctionsApi* | [**stop_durable_execution_from_application**](docs/DurableFunctionsApi.md#stop_durable_execution_from_application) | **POST** /durable-functions/{functionId}/executions/{executionId}/stop | Stop a durable execution from an application
+*Volcano::Generated::DurableFunctionsApi* | [**succeed_durable_callback**](docs/DurableFunctionsApi.md#succeed_durable_callback) | **POST** /durable-callbacks/succeed | Complete a waiting step with a result
 *Volcano::Generated::DurableFunctionsApi* | [**update_durable_function_scheduler**](docs/DurableFunctionsApi.md#update_durable_function_scheduler) | **PATCH** /projects/{id}/durable-functions/{functionId}/schedulers/{schedulerId} | Update a durable function scheduler
 *Volcano::Generated::FrontendsApi* | [**create_frontend**](docs/FrontendsApi.md#create_frontend) | **POST** /projects/{id}/frontends | Create a new frontend deployment
+*Volcano::Generated::FrontendsApi* | [**create_frontend_candidate**](docs/FrontendsApi.md#create_frontend_candidate) | **POST** /projects/{id}/frontends/{frontendId}/candidates | Create a frontend Candidate
 *Volcano::Generated::FrontendsApi* | [**create_frontend_custom_domain**](docs/FrontendsApi.md#create_frontend_custom_domain) | **POST** /projects/{id}/frontends/{frontendId}/domain | Configure frontend custom domain
+*Volcano::Generated::FrontendsApi* | [**create_frontend_deployment**](docs/FrontendsApi.md#create_frontend_deployment) | **POST** /projects/{id}/frontends/{frontendId}/deployments | Deploy an existing build to a frontend
+*Volcano::Generated::FrontendsApi* | [**create_frontend_domain**](docs/FrontendsApi.md#create_frontend_domain) | **POST** /projects/{id}/frontends/{frontendId}/domains | Add a custom domain to a frontend
 *Volcano::Generated::FrontendsApi* | [**create_frontend_function_route**](docs/FrontendsApi.md#create_frontend_function_route) | **POST** /projects/{id}/frontends/{frontendId}/function-routes | Route a Frontend path to an HTTP Function
+*Volcano::Generated::FrontendsApi* | [**create_frontend_route**](docs/FrontendsApi.md#create_frontend_route) | **POST** /projects/{id}/frontends/{frontendId}/frontend-routes | Mount another Frontend at a path
 *Volcano::Generated::FrontendsApi* | [**delete_frontend**](docs/FrontendsApi.md#delete_frontend) | **DELETE** /projects/{id}/frontends/{frontendId} | Delete a frontend
+*Volcano::Generated::FrontendsApi* | [**delete_frontend_candidate**](docs/FrontendsApi.md#delete_frontend_candidate) | **DELETE** /projects/{id}/frontends/{frontendId}/candidates/{candidateId} | Delete a frontend Candidate
 *Volcano::Generated::FrontendsApi* | [**delete_frontend_custom_domain**](docs/FrontendsApi.md#delete_frontend_custom_domain) | **DELETE** /projects/{id}/frontends/{frontendId}/domain | Delete frontend custom domain
+*Volcano::Generated::FrontendsApi* | [**delete_frontend_domain**](docs/FrontendsApi.md#delete_frontend_domain) | **DELETE** /projects/{id}/frontends/{frontendId}/domains/{domain} | Remove a custom domain from a frontend
 *Volcano::Generated::FrontendsApi* | [**delete_frontend_function_route**](docs/FrontendsApi.md#delete_frontend_function_route) | **DELETE** /projects/{id}/frontends/{frontendId}/function-routes/{routeId} | Delete a Frontend Function route
+*Volcano::Generated::FrontendsApi* | [**delete_frontend_route**](docs/FrontendsApi.md#delete_frontend_route) | **DELETE** /projects/{id}/frontends/{frontendId}/frontend-routes/{routeId} | Delete a Frontend route
 *Volcano::Generated::FrontendsApi* | [**get_frontend**](docs/FrontendsApi.md#get_frontend) | **GET** /projects/{id}/frontends/{frontendId} | Get frontend details
+*Volcano::Generated::FrontendsApi* | [**get_frontend_candidate**](docs/FrontendsApi.md#get_frontend_candidate) | **GET** /projects/{id}/frontends/{frontendId}/candidates/{candidateId} | Get a frontend Candidate
 *Volcano::Generated::FrontendsApi* | [**get_frontend_custom_domain**](docs/FrontendsApi.md#get_frontend_custom_domain) | **GET** /projects/{id}/frontends/{frontendId}/domain | Get frontend custom domain status
+*Volcano::Generated::FrontendsApi* | [**get_frontend_domain**](docs/FrontendsApi.md#get_frontend_domain) | **GET** /projects/{id}/frontends/{frontendId}/domains/{domain} | Get a frontend custom domain
+*Volcano::Generated::FrontendsApi* | [**get_frontend_serving**](docs/FrontendsApi.md#get_frontend_serving) | **GET** /projects/{id}/frontends/{frontendId}/serving | Get what a frontend serves
 *Volcano::Generated::FrontendsApi* | [**get_frontend_usage_history**](docs/FrontendsApi.md#get_frontend_usage_history) | **GET** /projects/{id}/frontends/{frontendId}/usage | Per-day request and error counts for a single frontend
+*Volcano::Generated::FrontendsApi* | [**list_frontend_candidates**](docs/FrontendsApi.md#list_frontend_candidates) | **GET** /projects/{id}/frontends/{frontendId}/candidates | List a frontend's Candidates
 *Volcano::Generated::FrontendsApi* | [**list_frontend_deployments**](docs/FrontendsApi.md#list_frontend_deployments) | **GET** /projects/{id}/frontends/{frontendId}/deployments | List frontend deployments
+*Volcano::Generated::FrontendsApi* | [**list_frontend_domains**](docs/FrontendsApi.md#list_frontend_domains) | **GET** /projects/{id}/frontends/{frontendId}/domains | List a frontend's custom domains
 *Volcano::Generated::FrontendsApi* | [**list_frontend_function_routes**](docs/FrontendsApi.md#list_frontend_function_routes) | **GET** /projects/{id}/frontends/{frontendId}/function-routes | List a Frontend's Function routes
+*Volcano::Generated::FrontendsApi* | [**list_frontend_routes**](docs/FrontendsApi.md#list_frontend_routes) | **GET** /projects/{id}/frontends/{frontendId}/frontend-routes | List a Frontend's Frontend routes
 *Volcano::Generated::FrontendsApi* | [**list_frontends**](docs/FrontendsApi.md#list_frontends) | **GET** /projects/{id}/frontends | List all frontends in a project
 *Volcano::Generated::FrontendsApi* | [**list_project_custom_domains**](docs/FrontendsApi.md#list_project_custom_domains) | **GET** /projects/{id}/domains | List all custom domains in a project
+*Volcano::Generated::FrontendsApi* | [**promote_frontend_candidate**](docs/FrontendsApi.md#promote_frontend_candidate) | **POST** /projects/{id}/frontends/{frontendId}/candidates/{candidateId}/promote | Promote a frontend Candidate
 *Volcano::Generated::FrontendsApi* | [**redeploy_frontend**](docs/FrontendsApi.md#redeploy_frontend) | **POST** /projects/{id}/frontends/{frontendId}/redeploy | Redeploy frontend using latest uploaded artifact
+*Volcano::Generated::FrontendsApi* | [**redeploy_frontend_candidate**](docs/FrontendsApi.md#redeploy_frontend_candidate) | **POST** /projects/{id}/frontends/{frontendId}/candidates/{candidateId}/deployments | Deploy a new archive to a frontend Candidate
+*Volcano::Generated::FrontendsApi* | [**rollback_frontend_serving**](docs/FrontendsApi.md#rollback_frontend_serving) | **POST** /projects/{id}/frontends/{frontendId}/serving/rollback | Roll a frontend back to the runtime it served before
+*Volcano::Generated::FrontendsApi* | [**update_frontend_domain**](docs/FrontendsApi.md#update_frontend_domain) | **PATCH** /projects/{id}/frontends/{frontendId}/domains/{domain} | Set or clear a custom domain's redirect
 *Volcano::Generated::FrontendsApi* | [**update_frontend_function_route**](docs/FrontendsApi.md#update_frontend_function_route) | **PUT** /projects/{id}/frontends/{frontendId}/function-routes/{routeId} | Replace a Frontend Function route
+*Volcano::Generated::FrontendsApi* | [**update_frontend_route**](docs/FrontendsApi.md#update_frontend_route) | **PUT** /projects/{id}/frontends/{frontendId}/frontend-routes/{routeId} | Replace a Frontend route
 *Volcano::Generated::FunctionsApi* | [**create_function**](docs/FunctionsApi.md#create_function) | **POST** /projects/{id}/functions | Create or update function code
 *Volcano::Generated::FunctionsApi* | [**create_function_scheduler**](docs/FunctionsApi.md#create_function_scheduler) | **POST** /projects/{id}/functions/{functionId}/schedulers | Create a scheduler for a function
 *Volcano::Generated::FunctionsApi* | [**create_functions_batch**](docs/FunctionsApi.md#create_functions_batch) | **POST** /projects/{id}/functions/batch | Deploy multiple functions in one request
@@ -263,14 +293,18 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::GitConnectionsApi* | [**delete_git_connection**](docs/GitConnectionsApi.md#delete_git_connection) | **DELETE** /user/git/connections/{connectionId} | Delete a git provider connection
 *Volcano::Generated::GitConnectionsApi* | [**disconnect_project_git**](docs/GitConnectionsApi.md#disconnect_project_git) | **DELETE** /projects/{id}/git-connection | Disconnect a project's repo connection
 *Volcano::Generated::GitConnectionsApi* | [**export_project_source**](docs/GitConnectionsApi.md#export_project_source) | **POST** /projects/{id}/source-export | Initialize an empty repository with a project's stored source
+*Volcano::Generated::GitConnectionsApi* | [**get_git_deployment_run**](docs/GitConnectionsApi.md#get_git_deployment_run) | **GET** /projects/{id}/git-deployment-runs/{runId} | Get a Git deployment run
 *Volcano::Generated::GitConnectionsApi* | [**get_project_git_connection**](docs/GitConnectionsApi.md#get_project_git_connection) | **GET** /projects/{id}/git-connection | Get a project's repo connection
 *Volcano::Generated::GitConnectionsApi* | [**get_project_git_deploy_settings**](docs/GitConnectionsApi.md#get_project_git_deploy_settings) | **GET** /projects/{id}/git-deploy-settings | Get a project's Git auto-deploy settings
+*Volcano::Generated::GitConnectionsApi* | [**get_project_git_owner_push**](docs/GitConnectionsApi.md#get_project_git_owner_push) | **GET** /projects/{id}/git-connection/owner-push | Check whether the project owner can push to the connected repository
 *Volcano::Generated::GitConnectionsApi* | [**get_project_source_export**](docs/GitConnectionsApi.md#get_project_source_export) | **GET** /projects/{id}/source-export | Report the project's source-of-truth state
 *Volcano::Generated::GitConnectionsApi* | [**git_connect_callback**](docs/GitConnectionsApi.md#git_connect_callback) | **GET** /github/callback | Complete a GitHub App connection callback
 *Volcano::Generated::GitConnectionsApi* | [**list_git_connections**](docs/GitConnectionsApi.md#list_git_connections) | **GET** /user/git/connections | List git provider connections
+*Volcano::Generated::GitConnectionsApi* | [**list_git_deployment_runs**](docs/GitConnectionsApi.md#list_git_deployment_runs) | **GET** /projects/{id}/git-deployment-runs | List a project's Git deployment runs
 *Volcano::Generated::GitConnectionsApi* | [**list_git_installation_repositories**](docs/GitConnectionsApi.md#list_git_installation_repositories) | **GET** /user/git/connections/{connectionId}/installations/{installationId}/repositories | List repos accessible to a connection through an installation
 *Volcano::Generated::GitConnectionsApi* | [**list_git_installations**](docs/GitConnectionsApi.md#list_git_installations) | **GET** /user/git/connections/{connectionId}/installations | List GitHub App installations accessible to a connection
 *Volcano::Generated::GitConnectionsApi* | [**set_project_git_production_branch**](docs/GitConnectionsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
+*Volcano::Generated::GitConnectionsApi* | [**set_project_git_root_directory**](docs/GitConnectionsApi.md#set_project_git_root_directory) | **PUT** /projects/{id}/git-connection/root-directory | Set the directory a project builds from
 *Volcano::Generated::GitConnectionsApi* | [**start_git_connect**](docs/GitConnectionsApi.md#start_git_connect) | **POST** /user/git/connect | Start a git provider connection
 *Volcano::Generated::GitConnectionsApi* | [**update_project_git_deploy_settings**](docs/GitConnectionsApi.md#update_project_git_deploy_settings) | **PUT** /projects/{id}/git-deploy-settings | Update a project's Git auto-deploy settings
 *Volcano::Generated::IssuesApi* | [**get_issue**](docs/IssuesApi.md#get_issue) | **GET** /projects/{id}/issues/{issueId} | Get an issue
@@ -284,6 +318,10 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::LogsApi* | [**get_project_log_activity**](docs/LogsApi.md#get_project_log_activity) | **POST** /projects/{id}/logs/activity | Get project log activity
 *Volcano::Generated::LogsApi* | [**search_project_logs**](docs/LogsApi.md#search_project_logs) | **POST** /projects/{id}/logs/search | Search project logs
 *Volcano::Generated::LogsApi* | [**stream_project_logs**](docs/LogsApi.md#stream_project_logs) | **POST** /projects/{id}/logs/stream | Stream project logs
+*Volcano::Generated::NotificationsApi* | [**get_notification_settings**](docs/NotificationsApi.md#get_notification_settings) | **GET** /projects/{id}/notifications | Get notification settings
+*Volcano::Generated::NotificationsApi* | [**rotate_notification_webhook_secret**](docs/NotificationsApi.md#rotate_notification_webhook_secret) | **POST** /projects/{id}/notifications/webhook-secret | Rotate the webhook signing secret
+*Volcano::Generated::NotificationsApi* | [**send_test_notification**](docs/NotificationsApi.md#send_test_notification) | **POST** /projects/{id}/notifications/test | Send a test notification
+*Volcano::Generated::NotificationsApi* | [**update_notification_settings**](docs/NotificationsApi.md#update_notification_settings) | **PUT** /projects/{id}/notifications | Update notification settings
 *Volcano::Generated::OAuthAuthenticationApi* | [**auth_device_authorize**](docs/OAuthAuthenticationApi.md#auth_device_authorize) | **POST** /auth/device/authorize | Start RFC8628 device authorization
 *Volcano::Generated::OAuthAuthenticationApi* | [**auth_device_token**](docs/OAuthAuthenticationApi.md#auth_device_token) | **POST** /auth/device/token | Poll device token endpoint
 *Volcano::Generated::OAuthAuthenticationApi* | [**auth_device_verify**](docs/OAuthAuthenticationApi.md#auth_device_verify) | **POST** /auth/device/verify | Approve or deny a device code
@@ -325,21 +363,25 @@ Class | Method | HTTP request | Description
 *Volcano::Generated::ProjectsApi* | [**delete_project_logo**](docs/ProjectsApi.md#delete_project_logo) | **DELETE** /projects/{id}/logo | Remove the project logo
 *Volcano::Generated::ProjectsApi* | [**disconnect_project_git**](docs/ProjectsApi.md#disconnect_project_git) | **DELETE** /projects/{id}/git-connection | Disconnect a project's repo connection
 *Volcano::Generated::ProjectsApi* | [**export_project_source**](docs/ProjectsApi.md#export_project_source) | **POST** /projects/{id}/source-export | Initialize an empty repository with a project's stored source
+*Volcano::Generated::ProjectsApi* | [**get_git_deployment_run**](docs/ProjectsApi.md#get_git_deployment_run) | **GET** /projects/{id}/git-deployment-runs/{runId} | Get a Git deployment run
 *Volcano::Generated::ProjectsApi* | [**get_project**](docs/ProjectsApi.md#get_project) | **GET** /projects/{id} | Get project by ID
 *Volcano::Generated::ProjectsApi* | [**get_project_config**](docs/ProjectsApi.md#get_project_config) | **GET** /projects/{id}/config | Export project configuration
 *Volcano::Generated::ProjectsApi* | [**get_project_git_connection**](docs/ProjectsApi.md#get_project_git_connection) | **GET** /projects/{id}/git-connection | Get a project's repo connection
 *Volcano::Generated::ProjectsApi* | [**get_project_git_deploy_settings**](docs/ProjectsApi.md#get_project_git_deploy_settings) | **GET** /projects/{id}/git-deploy-settings | Get a project's Git auto-deploy settings
+*Volcano::Generated::ProjectsApi* | [**get_project_git_owner_push**](docs/ProjectsApi.md#get_project_git_owner_push) | **GET** /projects/{id}/git-connection/owner-push | Check whether the project owner can push to the connected repository
 *Volcano::Generated::ProjectsApi* | [**get_project_health**](docs/ProjectsApi.md#get_project_health) | **GET** /projects/{id}/health | Get project health
 *Volcano::Generated::ProjectsApi* | [**get_project_logo**](docs/ProjectsApi.md#get_project_logo) | **GET** /projects/{id}/logo | Get the project logo image
 *Volcano::Generated::ProjectsApi* | [**get_project_source_export**](docs/ProjectsApi.md#get_project_source_export) | **GET** /projects/{id}/source-export | Report the project's source-of-truth state
 *Volcano::Generated::ProjectsApi* | [**get_project_usage**](docs/ProjectsApi.md#get_project_usage) | **GET** /projects/{id}/usage | Get usage metrics for a project
 *Volcano::Generated::ProjectsApi* | [**list_deployments**](docs/ProjectsApi.md#list_deployments) | **GET** /deployments | List deployments across a user's projects
+*Volcano::Generated::ProjectsApi* | [**list_git_deployment_runs**](docs/ProjectsApi.md#list_git_deployment_runs) | **GET** /projects/{id}/git-deployment-runs | List a project's Git deployment runs
 *Volcano::Generated::ProjectsApi* | [**list_project_deployments**](docs/ProjectsApi.md#list_project_deployments) | **GET** /projects/{id}/deployments | List deployments in a project
 *Volcano::Generated::ProjectsApi* | [**list_projects**](docs/ProjectsApi.md#list_projects) | **GET** /projects | List all projects for authenticated user
 *Volcano::Generated::ProjectsApi* | [**query_project_metrics**](docs/ProjectsApi.md#query_project_metrics) | **POST** /projects/{id}/metrics/query | Query project runtime metrics
 *Volcano::Generated::ProjectsApi* | [**replace_frontend_shared_variables**](docs/ProjectsApi.md#replace_frontend_shared_variables) | **PUT** /projects/{id}/frontend-shared-variables | Replace frontend shared variable names
 *Volcano::Generated::ProjectsApi* | [**replace_shared_variables**](docs/ProjectsApi.md#replace_shared_variables) | **PUT** /projects/{id}/shared-variables | Replace shared variable names
 *Volcano::Generated::ProjectsApi* | [**set_project_git_production_branch**](docs/ProjectsApi.md#set_project_git_production_branch) | **PUT** /projects/{id}/git-connection/production-branch | Set the branch a project deploys from
+*Volcano::Generated::ProjectsApi* | [**set_project_git_root_directory**](docs/ProjectsApi.md#set_project_git_root_directory) | **PUT** /projects/{id}/git-connection/root-directory | Set the directory a project builds from
 *Volcano::Generated::ProjectsApi* | [**summarize_project_deployments**](docs/ProjectsApi.md#summarize_project_deployments) | **GET** /projects/{id}/deployments/summary | Summarize deployments in a project
 *Volcano::Generated::ProjectsApi* | [**update_project**](docs/ProjectsApi.md#update_project) | **PATCH** /projects/{id} | Update project metadata and region policy
 *Volcano::Generated::ProjectsApi* | [**update_project_git_deploy_settings**](docs/ProjectsApi.md#update_project_git_deploy_settings) | **PUT** /projects/{id}/git-deploy-settings | Update a project's Git auto-deploy settings
@@ -419,6 +461,8 @@ Class | Method | HTTP request | Description
 
 ## Documentation for Models
 
+ - [Volcano::Generated::AccountSession](docs/AccountSession.md)
+ - [Volcano::Generated::AccountSessionList](docs/AccountSessionList.md)
  - [Volcano::Generated::AnonKey](docs/AnonKey.md)
  - [Volcano::Generated::AuthConfig](docs/AuthConfig.md)
  - [Volcano::Generated::AuthConfirmEmail200Response](docs/AuthConfirmEmail200Response.md)
@@ -475,10 +519,6 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::AuthTokenResponse](docs/AuthTokenResponse.md)
  - [Volcano::Generated::AuthUpdateUserRequest](docs/AuthUpdateUserRequest.md)
  - [Volcano::Generated::AuthUser](docs/AuthUser.md)
- - [Volcano::Generated::AutofixModel](docs/AutofixModel.md)
- - [Volcano::Generated::AutofixProvider](docs/AutofixProvider.md)
- - [Volcano::Generated::AutofixSettings](docs/AutofixSettings.md)
- - [Volcano::Generated::AutofixStage](docs/AutofixStage.md)
  - [Volcano::Generated::BYOCProjectConfigFrontendCustomDomainTLSConfig](docs/BYOCProjectConfigFrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::BYOCProjectConfigFrontendCustomDomainTLSConfigNot](docs/BYOCProjectConfigFrontendCustomDomainTLSConfigNot.md)
  - [Volcano::Generated::BanAuthUserRequest](docs/BanAuthUserRequest.md)
@@ -506,7 +546,10 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::CreateDatabaseRestoreRequest](docs/CreateDatabaseRestoreRequest.md)
  - [Volcano::Generated::CreateEmailTemplateRequest](docs/CreateEmailTemplateRequest.md)
  - [Volcano::Generated::CreateFrontendCustomDomainRequest](docs/CreateFrontendCustomDomainRequest.md)
+ - [Volcano::Generated::CreateFrontendDeploymentRequest](docs/CreateFrontendDeploymentRequest.md)
+ - [Volcano::Generated::CreateFrontendDomainRequest](docs/CreateFrontendDomainRequest.md)
  - [Volcano::Generated::CreateFrontendFunctionRouteRequest](docs/CreateFrontendFunctionRouteRequest.md)
+ - [Volcano::Generated::CreateFrontendRouteRequest](docs/CreateFrontendRouteRequest.md)
  - [Volcano::Generated::CreateFunctionSchedulerRequest](docs/CreateFunctionSchedulerRequest.md)
  - [Volcano::Generated::CreateOAuthConfigRequest](docs/CreateOAuthConfigRequest.md)
  - [Volcano::Generated::CreateProjectAccessTokenRequest](docs/CreateProjectAccessTokenRequest.md)
@@ -531,6 +574,18 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DatabaseBranchStorage](docs/DatabaseBranchStorage.md)
  - [Volcano::Generated::DatabaseDeleteRequest](docs/DatabaseDeleteRequest.md)
  - [Volcano::Generated::DatabaseInsertRequest](docs/DatabaseInsertRequest.md)
+ - [Volcano::Generated::DatabaseMigrationBaseline](docs/DatabaseMigrationBaseline.md)
+ - [Volcano::Generated::DatabaseMigrationConflictError](docs/DatabaseMigrationConflictError.md)
+ - [Volcano::Generated::DatabaseMigrationFile](docs/DatabaseMigrationFile.md)
+ - [Volcano::Generated::DatabaseMigrationFileError](docs/DatabaseMigrationFileError.md)
+ - [Volcano::Generated::DatabaseMigrationFilesRequest](docs/DatabaseMigrationFilesRequest.md)
+ - [Volcano::Generated::DatabaseMigrationHistoryEntry](docs/DatabaseMigrationHistoryEntry.md)
+ - [Volcano::Generated::DatabaseMigrationRun](docs/DatabaseMigrationRun.md)
+ - [Volcano::Generated::DatabaseMigrationRunError](docs/DatabaseMigrationRunError.md)
+ - [Volcano::Generated::DatabaseMigrationRunFile](docs/DatabaseMigrationRunFile.md)
+ - [Volcano::Generated::DatabaseMigrationRunList](docs/DatabaseMigrationRunList.md)
+ - [Volcano::Generated::DatabaseMigrationWarning](docs/DatabaseMigrationWarning.md)
+ - [Volcano::Generated::DatabaseMigrations](docs/DatabaseMigrations.md)
  - [Volcano::Generated::DatabaseQueryFilter](docs/DatabaseQueryFilter.md)
  - [Volcano::Generated::DatabaseQueryFilterValue](docs/DatabaseQueryFilterValue.md)
  - [Volcano::Generated::DatabaseQueryFilterValueOneOfInner](docs/DatabaseQueryFilterValueOneOfInner.md)
@@ -540,14 +595,17 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DatabaseQueryPerformanceResponse](docs/DatabaseQueryPerformanceResponse.md)
  - [Volcano::Generated::DatabaseQueryResult](docs/DatabaseQueryResult.md)
  - [Volcano::Generated::DatabaseRestore](docs/DatabaseRestore.md)
+ - [Volcano::Generated::DatabaseRestoreConflictError](docs/DatabaseRestoreConflictError.md)
  - [Volcano::Generated::DatabaseRestoreList](docs/DatabaseRestoreList.md)
  - [Volcano::Generated::DatabaseRestoreWindow](docs/DatabaseRestoreWindow.md)
  - [Volcano::Generated::DatabaseSelectRequest](docs/DatabaseSelectRequest.md)
  - [Volcano::Generated::DatabaseStats](docs/DatabaseStats.md)
  - [Volcano::Generated::DatabaseUpdateRequest](docs/DatabaseUpdateRequest.md)
+ - [Volcano::Generated::DefaultEmailTemplate](docs/DefaultEmailTemplate.md)
  - [Volcano::Generated::DeleteDatabase202Response](docs/DeleteDatabase202Response.md)
  - [Volcano::Generated::DeleteDatabaseBackup200Response](docs/DeleteDatabaseBackup200Response.md)
  - [Volcano::Generated::DeleteDatabaseBranch202Response](docs/DeleteDatabaseBranch202Response.md)
+ - [Volcano::Generated::DeploymentCommit](docs/DeploymentCommit.md)
  - [Volcano::Generated::DeploymentPhase](docs/DeploymentPhase.md)
  - [Volcano::Generated::DeploymentProgress](docs/DeploymentProgress.md)
  - [Volcano::Generated::DeploymentReference](docs/DeploymentReference.md)
@@ -564,6 +622,10 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::DurableApprovalRegistration](docs/DurableApprovalRegistration.md)
  - [Volcano::Generated::DurableApprovalStats](docs/DurableApprovalStats.md)
  - [Volcano::Generated::DurableApprovalStatus](docs/DurableApprovalStatus.md)
+ - [Volcano::Generated::DurableCallbackError](docs/DurableCallbackError.md)
+ - [Volcano::Generated::DurableCallbackOutcome](docs/DurableCallbackOutcome.md)
+ - [Volcano::Generated::DurableCallbackRegistration](docs/DurableCallbackRegistration.md)
+ - [Volcano::Generated::DurableCallbackStatus](docs/DurableCallbackStatus.md)
  - [Volcano::Generated::DurableExecution](docs/DurableExecution.md)
  - [Volcano::Generated::DurableExecutionError](docs/DurableExecutionError.md)
  - [Volcano::Generated::DurableExecutionInvocation](docs/DurableExecutionInvocation.md)
@@ -586,8 +648,15 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::EmailTemplate](docs/EmailTemplate.md)
  - [Volcano::Generated::Error](docs/Error.md)
  - [Volcano::Generated::ExportProjectSourceRequest](docs/ExportProjectSourceRequest.md)
+ - [Volcano::Generated::FailDurableCallbackRequest](docs/FailDurableCallbackRequest.md)
  - [Volcano::Generated::Frontend](docs/Frontend.md)
+ - [Volcano::Generated::FrontendCandidate](docs/FrontendCandidate.md)
+ - [Volcano::Generated::FrontendCandidateDeployment](docs/FrontendCandidateDeployment.md)
+ - [Volcano::Generated::FrontendCandidateList](docs/FrontendCandidateList.md)
  - [Volcano::Generated::FrontendCustomDomainConflictError](docs/FrontendCustomDomainConflictError.md)
+ - [Volcano::Generated::FrontendCustomDomainList](docs/FrontendCustomDomainList.md)
+ - [Volcano::Generated::FrontendCustomDomainRedirect](docs/FrontendCustomDomainRedirect.md)
+ - [Volcano::Generated::FrontendCustomDomainRedirectRequest](docs/FrontendCustomDomainRedirectRequest.md)
  - [Volcano::Generated::FrontendCustomDomainResponse](docs/FrontendCustomDomainResponse.md)
  - [Volcano::Generated::FrontendCustomDomainTLSConfig](docs/FrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::FrontendCustomDomainTLSConfigNot](docs/FrontendCustomDomainTLSConfigNot.md)
@@ -598,6 +667,9 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::FrontendDomainVerificationRecord](docs/FrontendDomainVerificationRecord.md)
  - [Volcano::Generated::FrontendFunctionRoute](docs/FrontendFunctionRoute.md)
  - [Volcano::Generated::FrontendFunctionRouteList](docs/FrontendFunctionRouteList.md)
+ - [Volcano::Generated::FrontendRoute](docs/FrontendRoute.md)
+ - [Volcano::Generated::FrontendRouteList](docs/FrontendRouteList.md)
+ - [Volcano::Generated::FrontendServing](docs/FrontendServing.md)
  - [Volcano::Generated::FrontendUsageDailyEntry](docs/FrontendUsageDailyEntry.md)
  - [Volcano::Generated::FrontendUsageData](docs/FrontendUsageData.md)
  - [Volcano::Generated::FrontendUsageHistoryResponse](docs/FrontendUsageHistoryResponse.md)
@@ -618,13 +690,20 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::GetAuthMethods200Response](docs/GetAuthMethods200Response.md)
  - [Volcano::Generated::GetAuthMethods200ResponseEmailPassword](docs/GetAuthMethods200ResponseEmailPassword.md)
  - [Volcano::Generated::GetAuthMethods200ResponseOauthProvidersInner](docs/GetAuthMethods200ResponseOauthProvidersInner.md)
+ - [Volcano::Generated::GetDefaultEmailTemplates200Response](docs/GetDefaultEmailTemplates200Response.md)
  - [Volcano::Generated::GitConnectStartResponse](docs/GitConnectStartResponse.md)
  - [Volcano::Generated::GitConnection](docs/GitConnection.md)
  - [Volcano::Generated::GitConnectionsResponse](docs/GitConnectionsResponse.md)
+ - [Volcano::Generated::GitDeploymentMigrationRun](docs/GitDeploymentMigrationRun.md)
+ - [Volcano::Generated::GitDeploymentRun](docs/GitDeploymentRun.md)
+ - [Volcano::Generated::GitDeploymentRunError](docs/GitDeploymentRunError.md)
+ - [Volcano::Generated::GitDeploymentRunStatus](docs/GitDeploymentRunStatus.md)
  - [Volcano::Generated::GitInstallation](docs/GitInstallation.md)
  - [Volcano::Generated::GitInstallationsResponse](docs/GitInstallationsResponse.md)
  - [Volcano::Generated::GitRepositoriesResponse](docs/GitRepositoriesResponse.md)
  - [Volcano::Generated::GitRepository](docs/GitRepository.md)
+ - [Volcano::Generated::GitRepositoryReference](docs/GitRepositoryReference.md)
+ - [Volcano::Generated::HeartbeatDurableCallbackRequest](docs/HeartbeatDurableCallbackRequest.md)
  - [Volcano::Generated::HostedAuthPageType](docs/HostedAuthPageType.md)
  - [Volcano::Generated::HostedLoginEmailCheckRequest](docs/HostedLoginEmailCheckRequest.md)
  - [Volcano::Generated::HostedLoginEmailCheckResponse](docs/HostedLoginEmailCheckResponse.md)
@@ -667,6 +746,12 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::LogStreamRequest](docs/LogStreamRequest.md)
  - [Volcano::Generated::ManagedProjectConfigFrontendCustomDomainTLSConfig](docs/ManagedProjectConfigFrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::MetricUsageData](docs/MetricUsageData.md)
+ - [Volcano::Generated::NotificationEmailSettings](docs/NotificationEmailSettings.md)
+ - [Volcano::Generated::NotificationEmailStatus](docs/NotificationEmailStatus.md)
+ - [Volcano::Generated::NotificationSettings](docs/NotificationSettings.md)
+ - [Volcano::Generated::NotificationTestDelivery](docs/NotificationTestDelivery.md)
+ - [Volcano::Generated::NotificationTestResult](docs/NotificationTestResult.md)
+ - [Volcano::Generated::NotificationWebhookSettings](docs/NotificationWebhookSettings.md)
  - [Volcano::Generated::OAuthConfig](docs/OAuthConfig.md)
  - [Volcano::Generated::OAuthErrorResponse](docs/OAuthErrorResponse.md)
  - [Volcano::Generated::OpenDurableMessageSessionRequest](docs/OpenDurableMessageSessionRequest.md)
@@ -679,6 +764,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::PaginatedFrontends](docs/PaginatedFrontends.md)
  - [Volcano::Generated::PaginatedFunctionDeployments](docs/PaginatedFunctionDeployments.md)
  - [Volcano::Generated::PaginatedFunctions](docs/PaginatedFunctions.md)
+ - [Volcano::Generated::PaginatedGitDeploymentRuns](docs/PaginatedGitDeploymentRuns.md)
  - [Volcano::Generated::PaginatedIssues](docs/PaginatedIssues.md)
  - [Volcano::Generated::PaginatedProjectAccessTokens](docs/PaginatedProjectAccessTokens.md)
  - [Volcano::Generated::PaginatedProjectCustomDomains](docs/PaginatedProjectCustomDomains.md)
@@ -717,20 +803,23 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectConfigAuthSessions](docs/ProjectConfigAuthSessions.md)
  - [Volcano::Generated::ProjectConfigAuthSignup](docs/ProjectConfigAuthSignup.md)
  - [Volcano::Generated::ProjectConfigAuthTokens](docs/ProjectConfigAuthTokens.md)
- - [Volcano::Generated::ProjectConfigAutofix](docs/ProjectConfigAutofix.md)
  - [Volcano::Generated::ProjectConfigBucket](docs/ProjectConfigBucket.md)
  - [Volcano::Generated::ProjectConfigBucketPolicy](docs/ProjectConfigBucketPolicy.md)
  - [Volcano::Generated::ProjectConfigCustomDomain](docs/ProjectConfigCustomDomain.md)
+ - [Volcano::Generated::ProjectConfigCustomDomainRedirect](docs/ProjectConfigCustomDomainRedirect.md)
  - [Volcano::Generated::ProjectConfigDatabase](docs/ProjectConfigDatabase.md)
  - [Volcano::Generated::ProjectConfigEmailTemplate](docs/ProjectConfigEmailTemplate.md)
  - [Volcano::Generated::ProjectConfigEmailTemplates](docs/ProjectConfigEmailTemplates.md)
  - [Volcano::Generated::ProjectConfigFrontend](docs/ProjectConfigFrontend.md)
+ - [Volcano::Generated::ProjectConfigFrontendCustomDomain](docs/ProjectConfigFrontendCustomDomain.md)
  - [Volcano::Generated::ProjectConfigFrontendCustomDomainTLSConfig](docs/ProjectConfigFrontendCustomDomainTLSConfig.md)
  - [Volcano::Generated::ProjectConfigFrontendFunctionRoute](docs/ProjectConfigFrontendFunctionRoute.md)
+ - [Volcano::Generated::ProjectConfigFrontendRoute](docs/ProjectConfigFrontendRoute.md)
  - [Volcano::Generated::ProjectConfigFunction](docs/ProjectConfigFunction.md)
  - [Volcano::Generated::ProjectConfigHostedPage](docs/ProjectConfigHostedPage.md)
  - [Volcano::Generated::ProjectConfigHostedPages](docs/ProjectConfigHostedPages.md)
  - [Volcano::Generated::ProjectConfigMissingResource](docs/ProjectConfigMissingResource.md)
+ - [Volcano::Generated::ProjectConfigNotifications](docs/ProjectConfigNotifications.md)
  - [Volcano::Generated::ProjectConfigOAuthProvider](docs/ProjectConfigOAuthProvider.md)
  - [Volcano::Generated::ProjectConfigProject](docs/ProjectConfigProject.md)
  - [Volcano::Generated::ProjectConfigRealtime](docs/ProjectConfigRealtime.md)
@@ -748,6 +837,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectGitConnection](docs/ProjectGitConnection.md)
  - [Volcano::Generated::ProjectGitConnectionSummary](docs/ProjectGitConnectionSummary.md)
  - [Volcano::Generated::ProjectGitDeploySettings](docs/ProjectGitDeploySettings.md)
+ - [Volcano::Generated::ProjectGitOwnerPush](docs/ProjectGitOwnerPush.md)
  - [Volcano::Generated::ProjectHealthCategory](docs/ProjectHealthCategory.md)
  - [Volcano::Generated::ProjectHealthCheck](docs/ProjectHealthCheck.md)
  - [Volcano::Generated::ProjectHealthDataStatus](docs/ProjectHealthDataStatus.md)
@@ -795,12 +885,14 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ProjectSourceExportState](docs/ProjectSourceExportState.md)
  - [Volcano::Generated::ProjectTemplateInstallation](docs/ProjectTemplateInstallation.md)
  - [Volcano::Generated::ProjectUsageResponse](docs/ProjectUsageResponse.md)
+ - [Volcano::Generated::PromoteFrontendCandidateRequest](docs/PromoteFrontendCandidateRequest.md)
  - [Volcano::Generated::PublishDurableMessageRequest](docs/PublishDurableMessageRequest.md)
  - [Volcano::Generated::PublishSandboxPresetRequest](docs/PublishSandboxPresetRequest.md)
  - [Volcano::Generated::RealtimeConfig](docs/RealtimeConfig.md)
  - [Volcano::Generated::RealtimePlanLimits](docs/RealtimePlanLimits.md)
  - [Volcano::Generated::RealtimeStats](docs/RealtimeStats.md)
  - [Volcano::Generated::RefreshOAuthProviderToken200Response](docs/RefreshOAuthProviderToken200Response.md)
+ - [Volcano::Generated::RegisterDurableCallbackRequest](docs/RegisterDurableCallbackRequest.md)
  - [Volcano::Generated::RegisterDurableMessageWaitRequest](docs/RegisterDurableMessageWaitRequest.md)
  - [Volcano::Generated::RenameVariableEnvironmentRequest](docs/RenameVariableEnvironmentRequest.md)
  - [Volcano::Generated::ReplaceFrontendSharedVariablesRequest](docs/ReplaceFrontendSharedVariablesRequest.md)
@@ -809,6 +901,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::ResetDatabasePassword200Response](docs/ResetDatabasePassword200Response.md)
  - [Volcano::Generated::ResolveFunctionResponse](docs/ResolveFunctionResponse.md)
  - [Volcano::Generated::ResourceReference](docs/ResourceReference.md)
+ - [Volcano::Generated::RollbackFrontendServingRequest](docs/RollbackFrontendServingRequest.md)
  - [Volcano::Generated::SandboxAccess](docs/SandboxAccess.md)
  - [Volcano::Generated::SandboxAccessRequest](docs/SandboxAccessRequest.md)
  - [Volcano::Generated::SandboxBuildLogPage](docs/SandboxBuildLogPage.md)
@@ -833,9 +926,12 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::SandboxTemplate](docs/SandboxTemplate.md)
  - [Volcano::Generated::SandboxTemplatePage](docs/SandboxTemplatePage.md)
  - [Volcano::Generated::ScheduleRequest](docs/ScheduleRequest.md)
+ - [Volcano::Generated::SchedulerFailureAlertPolicy](docs/SchedulerFailureAlertPolicy.md)
+ - [Volcano::Generated::SchedulerFailureNotifyOn](docs/SchedulerFailureNotifyOn.md)
  - [Volcano::Generated::SendDurableMessageRequest](docs/SendDurableMessageRequest.md)
  - [Volcano::Generated::ServiceKey](docs/ServiceKey.md)
  - [Volcano::Generated::SetProjectGitProductionBranchRequest](docs/SetProjectGitProductionBranchRequest.md)
+ - [Volcano::Generated::SetProjectGitRootDirectoryRequest](docs/SetProjectGitRootDirectoryRequest.md)
  - [Volcano::Generated::StorageBucket](docs/StorageBucket.md)
  - [Volcano::Generated::StorageCopyRequest](docs/StorageCopyRequest.md)
  - [Volcano::Generated::StorageListResponse](docs/StorageListResponse.md)
@@ -845,6 +941,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::StoragePolicy](docs/StoragePolicy.md)
  - [Volcano::Generated::StorageStats](docs/StorageStats.md)
  - [Volcano::Generated::StorageVisibilityRequest](docs/StorageVisibilityRequest.md)
+ - [Volcano::Generated::SucceedDurableCallbackRequest](docs/SucceedDurableCallbackRequest.md)
  - [Volcano::Generated::TestEmailRequest](docs/TestEmailRequest.md)
  - [Volcano::Generated::TestEmailResponse](docs/TestEmailResponse.md)
  - [Volcano::Generated::UnbanUserResponse](docs/UnbanUserResponse.md)
@@ -852,18 +949,22 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::UpdateAuthHostedPageRequest](docs/UpdateAuthHostedPageRequest.md)
  - [Volcano::Generated::UpdateAuthPageLayoutRequest](docs/UpdateAuthPageLayoutRequest.md)
  - [Volcano::Generated::UpdateAuthPageThemeRequest](docs/UpdateAuthPageThemeRequest.md)
- - [Volcano::Generated::UpdateAutofixSettingsRequest](docs/UpdateAutofixSettingsRequest.md)
  - [Volcano::Generated::UpdateDatabaseBranchRequest](docs/UpdateDatabaseBranchRequest.md)
  - [Volcano::Generated::UpdateDatabaseTypeRequest](docs/UpdateDatabaseTypeRequest.md)
  - [Volcano::Generated::UpdateEmailTemplateRequest](docs/UpdateEmailTemplateRequest.md)
+ - [Volcano::Generated::UpdateFrontendCustomDomainRequest](docs/UpdateFrontendCustomDomainRequest.md)
  - [Volcano::Generated::UpdateFunctionRequest](docs/UpdateFunctionRequest.md)
  - [Volcano::Generated::UpdateFunctionSchedulerRequest](docs/UpdateFunctionSchedulerRequest.md)
  - [Volcano::Generated::UpdateIssueRequest](docs/UpdateIssueRequest.md)
+ - [Volcano::Generated::UpdateNotificationEmail](docs/UpdateNotificationEmail.md)
+ - [Volcano::Generated::UpdateNotificationSettingsRequest](docs/UpdateNotificationSettingsRequest.md)
+ - [Volcano::Generated::UpdateNotificationWebhook](docs/UpdateNotificationWebhook.md)
  - [Volcano::Generated::UpdateOAuthConfigRequest](docs/UpdateOAuthConfigRequest.md)
  - [Volcano::Generated::UpdateProjectGitDeploySettingsRequest](docs/UpdateProjectGitDeploySettingsRequest.md)
  - [Volcano::Generated::UpdateProjectRequest](docs/UpdateProjectRequest.md)
  - [Volcano::Generated::UpdateRealtimeConfigRequest](docs/UpdateRealtimeConfigRequest.md)
  - [Volcano::Generated::UpdateSandboxTemplateRequest](docs/UpdateSandboxTemplateRequest.md)
+ - [Volcano::Generated::UpdateSchedulerFailureAlertPolicy](docs/UpdateSchedulerFailureAlertPolicy.md)
  - [Volcano::Generated::UpdateStorageBucketRequest](docs/UpdateStorageBucketRequest.md)
  - [Volcano::Generated::UpdateVariableRequest](docs/UpdateVariableRequest.md)
  - [Volcano::Generated::UploadSessionPart](docs/UploadSessionPart.md)

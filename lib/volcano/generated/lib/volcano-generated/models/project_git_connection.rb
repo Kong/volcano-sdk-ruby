@@ -27,6 +27,10 @@ module Volcano::Generated
     # The branch a push must land on to deploy. Follows the repository's GitHub default branch unless the project set its own, which a default-branch rename on GitHub then leaves alone.
     attr_accessor :production_branch
 
+    # True when `production_branch` follows the repository's default branch and moves with a default-branch rename on GitHub. False when the project pinned a branch, even one that matches the current default. Pin a branch with `PUT /projects/{id}/git-connection/production-branch`; send an empty `production_branch` there to follow the default again.
+    attr_accessor :production_branch_follows_default
+
+    # When the connection last changed: its repository, root directory or production branch. Naming the branch it already uses, and other changes to the project, leave it alone. A connection that has not changed since Volcano began tracking this reports the project's last change before then.
     attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.
@@ -37,6 +41,7 @@ module Volcano::Generated
         :'repo_full_name' => :'repo_full_name',
         :'root_directory' => :'root_directory',
         :'production_branch' => :'production_branch',
+        :'production_branch_follows_default' => :'production_branch_follows_default',
         :'updated_at' => :'updated_at'
       }
     end
@@ -59,6 +64,7 @@ module Volcano::Generated
         :'repo_full_name' => :'String',
         :'root_directory' => :'String',
         :'production_branch' => :'String',
+        :'production_branch_follows_default' => :'Boolean',
         :'updated_at' => :'Time'
       }
     end
@@ -115,6 +121,12 @@ module Volcano::Generated
         self.production_branch = nil
       end
 
+      if attributes.key?(:'production_branch_follows_default')
+        self.production_branch_follows_default = attributes[:'production_branch_follows_default']
+      else
+        self.production_branch_follows_default = nil
+      end
+
       if attributes.key?(:'updated_at')
         self.updated_at = attributes[:'updated_at']
       else
@@ -147,6 +159,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "production_branch", production_branch cannot be nil.')
       end
 
+      if @production_branch_follows_default.nil?
+        invalid_properties.push('invalid value for "production_branch_follows_default", production_branch_follows_default cannot be nil.')
+      end
+
       if @updated_at.nil?
         invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
       end
@@ -163,6 +179,7 @@ module Volcano::Generated
       return false if @repo_full_name.nil?
       return false if @root_directory.nil?
       return false if @production_branch.nil?
+      return false if @production_branch_follows_default.nil?
       return false if @updated_at.nil?
       true
     end
@@ -218,6 +235,16 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] production_branch_follows_default Value to be assigned
+    def production_branch_follows_default=(production_branch_follows_default)
+      if production_branch_follows_default.nil?
+        fail ArgumentError, 'production_branch_follows_default cannot be nil'
+      end
+
+      @production_branch_follows_default = production_branch_follows_default
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] updated_at Value to be assigned
     def updated_at=(updated_at)
       if updated_at.nil?
@@ -237,6 +264,7 @@ module Volcano::Generated
           repo_full_name == o.repo_full_name &&
           root_directory == o.root_directory &&
           production_branch == o.production_branch &&
+          production_branch_follows_default == o.production_branch_follows_default &&
           updated_at == o.updated_at
     end
 
@@ -249,7 +277,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [repo_installation_id, repo_id, repo_full_name, root_directory, production_branch, updated_at].hash
+      [repo_installation_id, repo_id, repo_full_name, root_directory, production_branch, production_branch_follows_default, updated_at].hash
     end
 
     # Builds the object from hash

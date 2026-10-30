@@ -28,10 +28,13 @@ module Volcano::Generated
     # The exception class, such as `TypeError`. Omitted when the error has none.
     attr_accessor :error_type
 
-    # The innermost frame of your code in the stack, as `function (file)`. Omitted without a stack.
+    # The innermost frame of your code in the stack, as `function (file)`. For a frontend's Next.js build output, the outermost route or page file of the build in the stack, such as `.next/server/app/checkout/route.js`, or without one, the outermost file of the build. Omitted without a stack.
     attr_accessor :culprit
 
     attr_accessor :status
+
+    # Whether the issue holds an exception: one your code threw, or one it logged with `console.error(err)` or Python's `logger.exception()`. `false` for an error logged any other way, such as a structured log line, a logger's error line, or a printed traceback. Once `true`, it stays `true`. 
+    attr_accessor :exception
 
     # Errors counted in this issue. A retried delivery can count an error twice.
     attr_accessor :event_count
@@ -91,6 +94,7 @@ module Volcano::Generated
         :'error_type' => :'error_type',
         :'culprit' => :'culprit',
         :'status' => :'status',
+        :'exception' => :'exception',
         :'event_count' => :'event_count',
         :'first_seen_at' => :'first_seen_at',
         :'last_seen_at' => :'last_seen_at',
@@ -124,6 +128,7 @@ module Volcano::Generated
         :'error_type' => :'String',
         :'culprit' => :'String',
         :'status' => :'IssueStatus',
+        :'exception' => :'Boolean',
         :'event_count' => :'Integer',
         :'first_seen_at' => :'Time',
         :'last_seen_at' => :'Time',
@@ -195,6 +200,12 @@ module Volcano::Generated
         self.status = attributes[:'status']
       else
         self.status = nil
+      end
+
+      if attributes.key?(:'exception')
+        self.exception = attributes[:'exception']
+      else
+        self.exception = nil
       end
 
       if attributes.key?(:'event_count')
@@ -273,6 +284,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "status", status cannot be nil.')
       end
 
+      if @exception.nil?
+        invalid_properties.push('invalid value for "exception", exception cannot be nil.')
+      end
+
       if @event_count.nil?
         invalid_properties.push('invalid value for "event_count", event_count cannot be nil.')
       end
@@ -305,6 +320,7 @@ module Volcano::Generated
       return false if @resource.nil?
       return false if @title.nil?
       return false if @status.nil?
+      return false if @exception.nil?
       return false if @event_count.nil?
       return false if @first_seen_at.nil?
       return false if @last_seen_at.nil?
@@ -361,6 +377,16 @@ module Volcano::Generated
       end
 
       @status = status
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] exception Value to be assigned
+    def exception=(exception)
+      if exception.nil?
+        fail ArgumentError, 'exception cannot be nil'
+      end
+
+      @exception = exception
     end
 
     # Custom attribute writer method with validation
@@ -425,6 +451,7 @@ module Volcano::Generated
           error_type == o.error_type &&
           culprit == o.culprit &&
           status == o.status &&
+          exception == o.exception &&
           event_count == o.event_count &&
           first_seen_at == o.first_seen_at &&
           last_seen_at == o.last_seen_at &&
@@ -446,7 +473,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, resource, title, error_type, culprit, status, event_count, first_seen_at, last_seen_at, last_region, sample_event_id, sample_event_at, resolved_at, regressed_at, created_at, updated_at].hash
+      [id, project_id, resource, title, error_type, culprit, status, exception, event_count, first_seen_at, last_seen_at, last_region, sample_event_id, sample_event_at, resolved_at, regressed_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

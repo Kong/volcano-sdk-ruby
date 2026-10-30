@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class CreateDatabaseBranchRequest < ApiModelBase
-    # Branch name (must be unique within the parent database)
+    # Branch name, unique within the parent database. Names beginning with `migration_rehearsal_` are reserved for the branches migration runs rehearse on. 
     attr_accessor :name
 
     # How long the branch should live, between one hour and 30 days. Defaults to 7 days when omitted. 

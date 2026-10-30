@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class CreateDatabaseBackupRequest < ApiModelBase
-    # Backup name, unique within the database. Names beginning with `volcano-` are reserved for the platform's own snapshots. 
+    # Backup name, unique within the database. Names beginning with `volcano-` are reserved for the platform's own snapshots, and names beginning with `before-migration-` for the backups migration runs take. 
     attr_accessor :name
 
     # Attribute mapping from ruby-style variable name to JSON key.

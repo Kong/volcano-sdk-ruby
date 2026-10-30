@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Create a new frontend deployment
-    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns `status: provisioning`, then transitions to `active`, `degraded`, or `failed`. If another deployment is running, the response preserves the frontend's current status and exposes the queued deployment through `pending_deployment_id`. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build's assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend `active` on the previous deployment, and records the attempted deployment as failed. `degraded` means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide `app_root` as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package's `engines.node` constraint. Volcano tests Next 15.5.27 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.4.0 (`>=20.9.0`). Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. This operation is limited by plan-based frontend deployment quotas (`FREE_FRONTEND_DEPLOYMENTS`, `PRO_FRONTEND_DEPLOYMENTS`). Each project can contain up to 10,000 frontends regardless of plan. 
+    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns `status: provisioning`, then transitions to `active`, `degraded`, or `failed`. If another deployment is running, the response preserves the frontend's current status and exposes the queued deployment through `pending_deployment_id`. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build's assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend `active` on the previous deployment, and records the attempted deployment as failed. `degraded` means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide `app_root` as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from `package.json` `engines.node`; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package's `engines.node` constraint. Volcano tests Next 15.5.28 (`^18.18.0 || ^19.8.0 || >=20.0.0`) and Next 16.4.2 (`>=20.9.0`). Source archive size is enforced by the API with `SOURCE_ARCHIVE_SIZE_LIMIT_MB`; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` before pushing. Plans do not limit how many frontends a project has; usage allowances apply across all of a user's frontends. Each project can contain up to 10,000 frontends regardless of plan. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe frontend name
     # @param archive [File] ZIP or tar.gz archive of the frontend project directory or monorepo workspace root. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz archive.
@@ -29,6 +29,7 @@ module Volcano::Generated
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
     # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
     # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
+    # @option opts [String] :commit JSON-encoded commit the uploaded source came from: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false, \\\&quot;root\\\&quot;: \\\&quot;apps/web\\\&quot;}&#x60;. &#x60;repository&#x60; is &#x60;owner/name&#x60; or a github.com remote URL (&#x60;https://github.com/acme/app.git&#x60;, &#x60;git@github.com:acme/app.git&#x60;, or &#x60;ssh://git@github.com/acme/app.git&#x60;); Volcano drops any credentials in the URL and records &#x60;owner/name&#x60;. &#x60;dirty&#x60; is &#x60;true&#x60; when the uploaded files differ from the commit. &#x60;root&#x60; is the uploaded directory&#39;s path from the repository root, &#x60;\\\&quot;\\\&quot;&#x60; for the root itself. &#x60;repository&#x60;, &#x60;sha&#x60;, and &#x60;dirty&#x60; are required, and fields Volcano does not know are ignored. An empty value, &#x60;null&#x60;, or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. A malformed commit, or a repository not on GitHub, returns 400 before anything is deployed. Volcano checks the commit against the project&#39;s connected repository and each uploaded file against the commit&#39;s file at &#x60;root&#x60;, and returns the result in the deployment&#39;s &#x60;commit.verified&#x60;; an uploaded file in the project&#39;s root directory that the commit does not hold sets &#x60;commit.dirty&#x60;, and one outside it leaves the commit unverified. A commit it cannot verify is still recorded and never fails the deploy. 
     # @return [Frontend]
     def create_frontend(id, name, archive, opts = {})
       data, _status_code, _headers = create_frontend_with_http_info(id, name, archive, opts)
@@ -36,7 +37,7 @@ module Volcano::Generated
     end
 
     # Create a new frontend deployment
-    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60;, &#x60;degraded&#x60;, or &#x60;failed&#x60;. If another deployment is running, the response preserves the frontend&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build&#39;s assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend &#x60;active&#x60; on the previous deployment, and records the attempted deployment as failed. &#x60;degraded&#x60; means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide &#x60;app_root&#x60; as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from &#x60;package.json&#x60; &#x60;engines.node&#x60;; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package&#39;s &#x60;engines.node&#x60; constraint. Volcano tests Next 15.5.27 (&#x60;^18.18.0 || ^19.8.0 || &gt;&#x3D;20.0.0&#x60;) and Next 16.4.0 (&#x60;&gt;&#x3D;20.9.0&#x60;). Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. This operation is limited by plan-based frontend deployment quotas (&#x60;FREE_FRONTEND_DEPLOYMENTS&#x60;, &#x60;PRO_FRONTEND_DEPLOYMENTS&#x60;). Each project can contain up to 10,000 frontends regardless of plan. 
+    # Creates and deploys a frontend for the project. If a frontend with the same name already exists in the project, this operation updates that frontend using the uploaded archive and starts a new deployment. A deployment that starts immediately returns &#x60;status: provisioning&#x60;, then transitions to &#x60;active&#x60;, &#x60;degraded&#x60;, or &#x60;failed&#x60;. If another deployment is running, the response preserves the frontend&#39;s current status and exposes the queued deployment through &#x60;pending_deployment_id&#x60;. Existing frontend traffic continues to use an available runtime while the new deployment builds and provisions. Each deployment publishes its own static assets before the runtimes switch to its build, and the live build&#39;s assets keep serving until the new deployment is live, so a page loaded mid-deployment resolves its assets whichever build served it. A failed redeploy puts the runtimes back on the build they were running, leaves the frontend &#x60;active&#x60; on the previous deployment, and records the attempted deployment as failed. &#x60;degraded&#x60; means the runtime remains available but edge synchronization requires recovery; Volcano retries the edge step without rebuilding. Only one deployment may run for a given frontend, while independent frontends and projects can deploy concurrently. For monorepos, provide &#x60;app_root&#x60; as a relative path from the uploaded archive root to the Next.js app that should be built. Omit it for single-app archives. Supported frontend environments are Next.js 15.x and 16.x with Node.js 22.x or 24.x. The Node.js runtime is inferred from &#x60;package.json&#x60; &#x60;engines.node&#x60;; if omitted, Volcano uses Node.js 22.x. The selected Node.js family must also satisfy the installed Next.js package&#39;s &#x60;engines.node&#x60; constraint. Volcano tests Next 15.5.28 (&#x60;^18.18.0 || ^19.8.0 || &gt;&#x3D;20.0.0&#x60;) and Next 16.4.2 (&#x60;&gt;&#x3D;20.9.0&#x60;). Source archive size is enforced by the API with &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60;; the CLI does not apply its own source archive size limit. After the final container images are built, the publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; before pushing. Plans do not limit how many frontends a project has; usage allowances apply across all of a user&#39;s frontends. Each project can contain up to 10,000 frontends regardless of plan. 
     # @param id [String] Project ID
     # @param name [String] DNS-safe frontend name
     # @param archive [File] ZIP or tar.gz archive of the frontend project directory or monorepo workspace root. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz archive.
@@ -45,6 +46,7 @@ module Volcano::Generated
     # @option opts [String] :app_root Optional relative POSIX path from the uploaded archive root to the Next.js app to build, for example &#x60;apps/web&#x60;.
     # @option opts [String] :variable_scope Variable selection for this deployment. New frontends default to &#x60;scoped&#x60;; omitting this field for an existing frontend preserves its current selection.
     # @option opts [Array<String>] :variables Project variable names selected when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Submit each name as a repeated multipart field.
+    # @option opts [String] :commit JSON-encoded commit the uploaded source came from: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false, \\\&quot;root\\\&quot;: \\\&quot;apps/web\\\&quot;}&#x60;. &#x60;repository&#x60; is &#x60;owner/name&#x60; or a github.com remote URL (&#x60;https://github.com/acme/app.git&#x60;, &#x60;git@github.com:acme/app.git&#x60;, or &#x60;ssh://git@github.com/acme/app.git&#x60;); Volcano drops any credentials in the URL and records &#x60;owner/name&#x60;. &#x60;dirty&#x60; is &#x60;true&#x60; when the uploaded files differ from the commit. &#x60;root&#x60; is the uploaded directory&#39;s path from the repository root, &#x60;\\\&quot;\\\&quot;&#x60; for the root itself. &#x60;repository&#x60;, &#x60;sha&#x60;, and &#x60;dirty&#x60; are required, and fields Volcano does not know are ignored. An empty value, &#x60;null&#x60;, or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. A malformed commit, or a repository not on GitHub, returns 400 before anything is deployed. Volcano checks the commit against the project&#39;s connected repository and each uploaded file against the commit&#39;s file at &#x60;root&#x60;, and returns the result in the deployment&#39;s &#x60;commit.verified&#x60;; an uploaded file in the project&#39;s root directory that the commit does not hold sets &#x60;commit.dirty&#x60;, and one outside it leaves the commit unverified. A commit it cannot verify is still recorded and never fails the deploy. 
     # @return [Array<(Frontend, Integer, Hash)>] Frontend data, response status code and response headers
     def create_frontend_with_http_info(id, name, archive, opts = {})
       if @api_client.config.debugging
@@ -107,6 +109,7 @@ module Volcano::Generated
       form_params['app_root'] = opts[:'app_root'] if !opts[:'app_root'].nil?
       form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
       form_params['variables'] = @api_client.build_collection_param(opts[:'variables'], :csv) if !opts[:'variables'].nil?
+      form_params['commit'] = opts[:'commit'] if !opts[:'commit'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -134,8 +137,115 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Create a frontend Candidate
+    # Builds a copy of the frontend from the uploaded archive, with the frontend's own variable selection, and deploys it to one region: the first region the frontend deploys to, or the project's first region by name if it has not deployed yet. The Candidate is served at its own URL, so it can be checked without changing what the frontend serves. The URL is reachable by anyone who holds it and is not indexed; a Candidate is never public and does not claim to be private. The response is `202` while the first deployment runs; read the Candidate for its `status` and `url`.  Creating a Candidate is available while the `frontends.candidates` capability is. While it is not, this operation, redeploying, promoting and rolling back to a Candidate answer `404` with code `feature_unavailable`; reading and deleting existing Candidates, and rolling back to the frontend's own runtime, keep working.  A Candidate builds like any deploy and spends the project's build minutes. A frontend has at most 20 live Candidates, and each name is unique within the frontend. Without `ttl_seconds` a Candidate is kept until it is deleted. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param name [String] Names the Candidate within the frontend. Cannot be &#x60;production&#x60;.
+    # @param archive [File] ZIP or tar.gz archive of the frontend project, as for creating a frontend. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :ttl_seconds Deletes the Candidate this many seconds after it is created, at most 30 days. Omit to keep it until deleted.
+    # @return [FrontendCandidate]
+    def create_frontend_candidate(id, frontend_id, name, archive, opts = {})
+      data, _status_code, _headers = create_frontend_candidate_with_http_info(id, frontend_id, name, archive, opts)
+      data
+    end
+
+    # Create a frontend Candidate
+    # Builds a copy of the frontend from the uploaded archive, with the frontend&#39;s own variable selection, and deploys it to one region: the first region the frontend deploys to, or the project&#39;s first region by name if it has not deployed yet. The Candidate is served at its own URL, so it can be checked without changing what the frontend serves. The URL is reachable by anyone who holds it and is not indexed; a Candidate is never public and does not claim to be private. The response is &#x60;202&#x60; while the first deployment runs; read the Candidate for its &#x60;status&#x60; and &#x60;url&#x60;.  Creating a Candidate is available while the &#x60;frontends.candidates&#x60; capability is. While it is not, this operation, redeploying, promoting and rolling back to a Candidate answer &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;; reading and deleting existing Candidates, and rolling back to the frontend&#39;s own runtime, keep working.  A Candidate builds like any deploy and spends the project&#39;s build minutes. A frontend has at most 20 live Candidates, and each name is unique within the frontend. Without &#x60;ttl_seconds&#x60; a Candidate is kept until it is deleted. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param name [String] Names the Candidate within the frontend. Cannot be &#x60;production&#x60;.
+    # @param archive [File] ZIP or tar.gz archive of the frontend project, as for creating a frontend. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :ttl_seconds Deletes the Candidate this many seconds after it is created, at most 30 days. Omit to keep it until deleted.
+    # @return [Array<(FrontendCandidate, Integer, Hash)>] FrontendCandidate data, response status code and response headers
+    def create_frontend_candidate_with_http_info(id, frontend_id, name, archive, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.create_frontend_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.create_frontend_candidate"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.create_frontend_candidate"
+      end
+      # verify the required parameter 'name' is set
+      if @api_client.config.client_side_validation && name.nil?
+        fail ArgumentError, "Missing the required parameter 'name' when calling FrontendsApi.create_frontend_candidate"
+      end
+      if @api_client.config.client_side_validation && name.to_s.length > 128
+        fail ArgumentError, 'invalid value for "name" when calling FrontendsApi.create_frontend_candidate, the character length must be smaller than or equal to 128.'
+      end
+
+      if @api_client.config.client_side_validation && name.to_s.length < 1
+        fail ArgumentError, 'invalid value for "name" when calling FrontendsApi.create_frontend_candidate, the character length must be greater than or equal to 1.'
+      end
+
+      # verify the required parameter 'archive' is set
+      if @api_client.config.client_side_validation && archive.nil?
+        fail ArgumentError, "Missing the required parameter 'archive' when calling FrontendsApi.create_frontend_candidate"
+      end
+      if @api_client.config.client_side_validation && !opts[:'ttl_seconds'].nil? && opts[:'ttl_seconds'] > 2592000
+        fail ArgumentError, 'invalid value for "opts[:"ttl_seconds"]" when calling FrontendsApi.create_frontend_candidate, must be smaller than or equal to 2592000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'ttl_seconds'].nil? && opts[:'ttl_seconds'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"ttl_seconds"]" when calling FrontendsApi.create_frontend_candidate, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['name'] = name
+      form_params['archive'] = archive
+      form_params['ttl_seconds'] = opts[:'ttl_seconds'] if !opts[:'ttl_seconds'].nil?
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCandidate'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.create_frontend_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Configure frontend custom domain
-    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. The account must own the hostname: it must have verified the hostname or a domain above it (see `POST /user/domains`). A certificate does not prove ownership. When the account owns no domain covering the hostname, Volcano asks for a TXT record at `_volcano.<registrable domain>`, such as `_volcano.example.com`. Publishing it verifies the whole domain, so later subdomains need no record. A managed TLS request reserves the hostname and returns that record in `verification_records`; the reservation expires after 72 hours unless the record is published. A BYOC request gets `409` with `code: ownership_verification_required` and the record in `required_record`; publish it and send the same request again. Managed TLS then returns the CNAME that authorizes certificate issuance and renewal. To move an active BYOC domain to managed TLS without downtime, send `tls.mode: managed` for the same hostname. The response is `200` with the CNAME to publish; the uploaded certificate keeps serving until Volcano issues the managed one, and `serving_certificate` changes from `uploaded` to `managed`. To move an active managed domain to BYOC without downtime, send `tls.mode: byoc` with the certificate for the same hostname. The response is `200`; the uploaded certificate replaces the managed one at once, and Volcano stops renewing the managed certificate. An unverified reservation does not block an account that proves ownership. When another account holds one, a request gets `409` with `code: ownership_verification_required` and the caller's own `required_record`; after publishing it, the same request takes over the reservation. When another account verified the domain, the same `409` names the record that moves the domain to the caller once the other account's record is no longer published. A hostname below a domain another account owns otherwise returns `409` without `code`. 
+    # Deprecated: use `POST /projects/{id}/frontends/{frontendId}/domains`, which adds a domain beside the frontend's others. Configures one custom domain for a frontend. When the frontend already has a domain, a request for another hostname returns `409`. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. The account must own the hostname: it must have verified the hostname or a domain above it (see `POST /user/domains`). A certificate does not prove ownership. When the account owns no domain covering the hostname, Volcano asks for a TXT record at `_volcano.<registrable domain>`, such as `_volcano.example.com`. Publishing it verifies the whole domain, so later subdomains need no record. A managed TLS request reserves the hostname and returns that record in `verification_records`; the reservation expires after 72 hours unless the record is published. A BYOC request gets `409` with `code: ownership_verification_required` and the record in `required_record`; publish it and send the same request again. Managed TLS then returns the CNAME that authorizes certificate issuance and renewal. To move an active BYOC domain to managed TLS without downtime, send `tls.mode: managed` for the same hostname. The response is `200` with the CNAME to publish; the uploaded certificate keeps serving until Volcano issues the managed one, and `serving_certificate` changes from `uploaded` to `managed`. To move an active managed domain to BYOC without downtime, send `tls.mode: byoc` with the certificate for the same hostname. The response is `200`; the uploaded certificate replaces the managed one at once, and Volcano stops renewing the managed certificate. An unverified reservation does not block an account that proves ownership. When another account holds one, a request gets `409` with `code: ownership_verification_required` and the caller's own `required_record`; after publishing it, the same request takes over the reservation. When another account verified the domain, the same `409` names the record that moves the domain to the caller once the other account's record is no longer published. A hostname below a domain another account owns otherwise returns `409` without `code`. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param create_frontend_custom_domain_request [CreateFrontendCustomDomainRequest] 
@@ -147,7 +257,7 @@ module Volcano::Generated
     end
 
     # Configure frontend custom domain
-    # Configures one custom domain for a frontend. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. The account must own the hostname: it must have verified the hostname or a domain above it (see &#x60;POST /user/domains&#x60;). A certificate does not prove ownership. When the account owns no domain covering the hostname, Volcano asks for a TXT record at &#x60;_volcano.&lt;registrable domain&gt;&#x60;, such as &#x60;_volcano.example.com&#x60;. Publishing it verifies the whole domain, so later subdomains need no record. A managed TLS request reserves the hostname and returns that record in &#x60;verification_records&#x60;; the reservation expires after 72 hours unless the record is published. A BYOC request gets &#x60;409&#x60; with &#x60;code: ownership_verification_required&#x60; and the record in &#x60;required_record&#x60;; publish it and send the same request again. Managed TLS then returns the CNAME that authorizes certificate issuance and renewal. To move an active BYOC domain to managed TLS without downtime, send &#x60;tls.mode: managed&#x60; for the same hostname. The response is &#x60;200&#x60; with the CNAME to publish; the uploaded certificate keeps serving until Volcano issues the managed one, and &#x60;serving_certificate&#x60; changes from &#x60;uploaded&#x60; to &#x60;managed&#x60;. To move an active managed domain to BYOC without downtime, send &#x60;tls.mode: byoc&#x60; with the certificate for the same hostname. The response is &#x60;200&#x60;; the uploaded certificate replaces the managed one at once, and Volcano stops renewing the managed certificate. An unverified reservation does not block an account that proves ownership. When another account holds one, a request gets &#x60;409&#x60; with &#x60;code: ownership_verification_required&#x60; and the caller&#39;s own &#x60;required_record&#x60;; after publishing it, the same request takes over the reservation. When another account verified the domain, the same &#x60;409&#x60; names the record that moves the domain to the caller once the other account&#39;s record is no longer published. A hostname below a domain another account owns otherwise returns &#x60;409&#x60; without &#x60;code&#x60;. 
+    # Deprecated: use &#x60;POST /projects/{id}/frontends/{frontendId}/domains&#x60;, which adds a domain beside the frontend&#39;s others. Configures one custom domain for a frontend. When the frontend already has a domain, a request for another hostname returns &#x60;409&#x60;. The default Volcano-generated frontend URL remains active. Wildcard Volcano frontend TLS remains valid and isolated from custom-domain certificate changes. The account must own the hostname: it must have verified the hostname or a domain above it (see &#x60;POST /user/domains&#x60;). A certificate does not prove ownership. When the account owns no domain covering the hostname, Volcano asks for a TXT record at &#x60;_volcano.&lt;registrable domain&gt;&#x60;, such as &#x60;_volcano.example.com&#x60;. Publishing it verifies the whole domain, so later subdomains need no record. A managed TLS request reserves the hostname and returns that record in &#x60;verification_records&#x60;; the reservation expires after 72 hours unless the record is published. A BYOC request gets &#x60;409&#x60; with &#x60;code: ownership_verification_required&#x60; and the record in &#x60;required_record&#x60;; publish it and send the same request again. Managed TLS then returns the CNAME that authorizes certificate issuance and renewal. To move an active BYOC domain to managed TLS without downtime, send &#x60;tls.mode: managed&#x60; for the same hostname. The response is &#x60;200&#x60; with the CNAME to publish; the uploaded certificate keeps serving until Volcano issues the managed one, and &#x60;serving_certificate&#x60; changes from &#x60;uploaded&#x60; to &#x60;managed&#x60;. To move an active managed domain to BYOC without downtime, send &#x60;tls.mode: byoc&#x60; with the certificate for the same hostname. The response is &#x60;200&#x60;; the uploaded certificate replaces the managed one at once, and Volcano stops renewing the managed certificate. An unverified reservation does not block an account that proves ownership. When another account holds one, a request gets &#x60;409&#x60; with &#x60;code: ownership_verification_required&#x60; and the caller&#39;s own &#x60;required_record&#x60;; after publishing it, the same request takes over the reservation. When another account verified the domain, the same &#x60;409&#x60; names the record that moves the domain to the caller once the other account&#39;s record is no longer published. A hostname below a domain another account owns otherwise returns &#x60;409&#x60; without &#x60;code&#x60;. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param create_frontend_custom_domain_request [CreateFrontendCustomDomainRequest] 
@@ -210,6 +320,166 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Deploy an existing build to a frontend
+    # Deploys the build of another frontend's deployment in the same project to this frontend, without compiling it again. Use it to serve one build from several frontends, such as one per region or brand. This frontend gets its own copy of the source archive and the build, so later changes to the source frontend do not reach it, and a later redeploy of this frontend compiles that copied source.  The build-time variables this frontend would build with must equal those the source build read, compared by name and value. Volcano records a keyed digest of each value, unique to the build, and never stores the values. A mismatch returns `409` with `code: build_variables_differ` and the differing names in `error`. The source deployment must be `active` or `degraded`, and both frontends must use the same framework and app root.  Admission is the redeploy's: the deployment starts with `status: provisioning`, or, while another deployment is in progress, is exposed through `pending_deployment_id` and supersedes any older queued deployment. Nothing is compiled: the deployment's build minutes cover publishing the build alone. The checks run again when a queued deployment starts. A refusal then fails the deployment without a retry, its `error_message` starting with the refusal's code. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_deployment_request [CreateFrontendDeploymentRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Frontend]
+    def create_frontend_deployment(id, frontend_id, create_frontend_deployment_request, opts = {})
+      data, _status_code, _headers = create_frontend_deployment_with_http_info(id, frontend_id, create_frontend_deployment_request, opts)
+      data
+    end
+
+    # Deploy an existing build to a frontend
+    # Deploys the build of another frontend&#39;s deployment in the same project to this frontend, without compiling it again. Use it to serve one build from several frontends, such as one per region or brand. This frontend gets its own copy of the source archive and the build, so later changes to the source frontend do not reach it, and a later redeploy of this frontend compiles that copied source.  The build-time variables this frontend would build with must equal those the source build read, compared by name and value. Volcano records a keyed digest of each value, unique to the build, and never stores the values. A mismatch returns &#x60;409&#x60; with &#x60;code: build_variables_differ&#x60; and the differing names in &#x60;error&#x60;. The source deployment must be &#x60;active&#x60; or &#x60;degraded&#x60;, and both frontends must use the same framework and app root.  Admission is the redeploy&#39;s: the deployment starts with &#x60;status: provisioning&#x60;, or, while another deployment is in progress, is exposed through &#x60;pending_deployment_id&#x60; and supersedes any older queued deployment. Nothing is compiled: the deployment&#39;s build minutes cover publishing the build alone. The checks run again when a queued deployment starts. A refusal then fails the deployment without a retry, its &#x60;error_message&#x60; starting with the refusal&#39;s code. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_deployment_request [CreateFrontendDeploymentRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(Frontend, Integer, Hash)>] Frontend data, response status code and response headers
+    def create_frontend_deployment_with_http_info(id, frontend_id, create_frontend_deployment_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.create_frontend_deployment ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.create_frontend_deployment"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.create_frontend_deployment"
+      end
+      # verify the required parameter 'create_frontend_deployment_request' is set
+      if @api_client.config.client_side_validation && create_frontend_deployment_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_deployment_request' when calling FrontendsApi.create_frontend_deployment"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/deployments'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_deployment_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'Frontend'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.create_frontend_deployment",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_deployment\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Add a custom domain to a frontend
+    # Adds a custom domain beside the frontend's others, up to the plan's custom domains per frontend. The domain serves the frontend, or, with `redirect`, redirects every request to `redirect.to`, another active domain of the same frontend that serves it, keeping the path and query string. A redirecting domain still needs TLS, so it takes `tls` like any other.  Ownership, verification records, TLS mode switches, and the `409` codes work as on `POST /projects/{id}/frontends/{frontendId}/domain`. A request for a hostname the frontend already has returns it with `200`, or switches its TLS mode in place. When the request's redirect differs from the domain's, it returns `409`; change a redirect with `PATCH`. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_domain_request [CreateFrontendDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCustomDomainResponse]
+    def create_frontend_domain(id, frontend_id, create_frontend_domain_request, opts = {})
+      data, _status_code, _headers = create_frontend_domain_with_http_info(id, frontend_id, create_frontend_domain_request, opts)
+      data
+    end
+
+    # Add a custom domain to a frontend
+    # Adds a custom domain beside the frontend&#39;s others, up to the plan&#39;s custom domains per frontend. The domain serves the frontend, or, with &#x60;redirect&#x60;, redirects every request to &#x60;redirect.to&#x60;, another active domain of the same frontend that serves it, keeping the path and query string. A redirecting domain still needs TLS, so it takes &#x60;tls&#x60; like any other.  Ownership, verification records, TLS mode switches, and the &#x60;409&#x60; codes work as on &#x60;POST /projects/{id}/frontends/{frontendId}/domain&#x60;. A request for a hostname the frontend already has returns it with &#x60;200&#x60;, or switches its TLS mode in place. When the request&#39;s redirect differs from the domain&#39;s, it returns &#x60;409&#x60;; change a redirect with &#x60;PATCH&#x60;. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_domain_request [CreateFrontendDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCustomDomainResponse, Integer, Hash)>] FrontendCustomDomainResponse data, response status code and response headers
+    def create_frontend_domain_with_http_info(id, frontend_id, create_frontend_domain_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.create_frontend_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.create_frontend_domain"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.create_frontend_domain"
+      end
+      # verify the required parameter 'create_frontend_domain_request' is set
+      if @api_client.config.client_side_validation && create_frontend_domain_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_domain_request' when calling FrontendsApi.create_frontend_domain"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/domains'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_domain_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.create_frontend_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -294,6 +564,86 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Mount another Frontend at a path
+    # Serves `path_prefix` and everything under it on this Frontend's hostnames from another Frontend in the same Project. The path is forwarded unchanged, so the mounted Frontend must serve its pages under the prefix (page directories or a matching `basePath`). Its root `/_next/static` files and `/_next/image` requests are sent to it too. A Frontend may be mounted at several prefixes. Function and Frontend routes share one path namespace and the 64-route limit; the most specific prefix wins. A mounted Frontend's own routes do not apply to requests it receives through a route. The route applies to every hostname that resolves to this Frontend, including generated, custom-domain, and local hostnames. While the mounted Frontend has no active deployment, its paths answer 502, as its own hostname does. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_route_request [CreateFrontendRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendRoute]
+    def create_frontend_route(id, frontend_id, create_frontend_route_request, opts = {})
+      data, _status_code, _headers = create_frontend_route_with_http_info(id, frontend_id, create_frontend_route_request, opts)
+      data
+    end
+
+    # Mount another Frontend at a path
+    # Serves &#x60;path_prefix&#x60; and everything under it on this Frontend&#39;s hostnames from another Frontend in the same Project. The path is forwarded unchanged, so the mounted Frontend must serve its pages under the prefix (page directories or a matching &#x60;basePath&#x60;). Its root &#x60;/_next/static&#x60; files and &#x60;/_next/image&#x60; requests are sent to it too. A Frontend may be mounted at several prefixes. Function and Frontend routes share one path namespace and the 64-route limit; the most specific prefix wins. A mounted Frontend&#39;s own routes do not apply to requests it receives through a route. The route applies to every hostname that resolves to this Frontend, including generated, custom-domain, and local hostnames. While the mounted Frontend has no active deployment, its paths answer 502, as its own hostname does. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param create_frontend_route_request [CreateFrontendRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendRoute, Integer, Hash)>] FrontendRoute data, response status code and response headers
+    def create_frontend_route_with_http_info(id, frontend_id, create_frontend_route_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.create_frontend_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.create_frontend_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.create_frontend_route"
+      end
+      # verify the required parameter 'create_frontend_route_request' is set
+      if @api_client.config.client_side_validation && create_frontend_route_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_route_request' when calling FrontendsApi.create_frontend_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/frontend-routes'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_route_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendRoute'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.create_frontend_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#create_frontend_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Delete a frontend
     # Schedules asynchronous frontend deletion. If another deployment is running, the frontend preserves its current status and exposes the queued deletion through `pending_deployment_id`. Its status changes to `deleting` when cleanup starts. After cleanup, it returns 404 and no longer appears in frontend lists. 
     # @param id [String] Project ID
@@ -363,7 +713,83 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Delete a frontend Candidate
+    # Starts deleting the Candidate: its regional runtime, images, edge state and stored source are removed once any running deployment finishes. Asking again for a Candidate that is already being deleted is the same request. The Candidate answers `404` once it is gone.  A Candidate the frontend serves cannot be deleted: roll back first. A Candidate the frontend only keeps as the runtime a rollback returns to can be deleted, and doing so gives up that rollback; rolling back to the frontend's own runtime stays possible. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_frontend_candidate(id, frontend_id, candidate_id, opts = {})
+      delete_frontend_candidate_with_http_info(id, frontend_id, candidate_id, opts)
+      nil
+    end
+
+    # Delete a frontend Candidate
+    # Starts deleting the Candidate: its regional runtime, images, edge state and stored source are removed once any running deployment finishes. Asking again for a Candidate that is already being deleted is the same request. The Candidate answers &#x60;404&#x60; once it is gone.  A Candidate the frontend serves cannot be deleted: roll back first. A Candidate the frontend only keeps as the runtime a rollback returns to can be deleted, and doing so gives up that rollback; rolling back to the frontend&#39;s own runtime stays possible. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_frontend_candidate_with_http_info(id, frontend_id, candidate_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.delete_frontend_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.delete_frontend_candidate"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.delete_frontend_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FrontendsApi.delete_frontend_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates/{candidateId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.delete_frontend_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Delete frontend custom domain
+    # Deprecated: use `DELETE /projects/{id}/frontends/{frontendId}/domains/{domain}`. Deletes the frontend's custom domain. A frontend with several domains returns `409`; name the one to delete on the collection route. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param [Hash] opts the optional parameters
@@ -374,6 +800,7 @@ module Volcano::Generated
     end
 
     # Delete frontend custom domain
+    # Deprecated: use &#x60;DELETE /projects/{id}/frontends/{frontendId}/domains/{domain}&#x60;. Deletes the frontend&#39;s custom domain. A frontend with several domains returns &#x60;409&#x60;; name the one to delete on the collection route. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param [Hash] opts the optional parameters
@@ -426,6 +853,89 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Remove a custom domain from a frontend
+    # Detaches the domain. A domain other domains redirect to cannot be removed until those redirects are removed or retargeted. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_frontend_domain(id, frontend_id, domain, opts = {})
+      delete_frontend_domain_with_http_info(id, frontend_id, domain, opts)
+      nil
+    end
+
+    # Remove a custom domain from a frontend
+    # Detaches the domain. A domain other domains redirect to cannot be removed until those redirects are removed or retargeted. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_frontend_domain_with_http_info(id, frontend_id, domain, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.delete_frontend_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.delete_frontend_domain"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.delete_frontend_domain"
+      end
+      # verify the required parameter 'domain' is set
+      if @api_client.config.client_side_validation && domain.nil?
+        fail ArgumentError, "Missing the required parameter 'domain' when calling FrontendsApi.delete_frontend_domain"
+      end
+      if @api_client.config.client_side_validation && domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.delete_frontend_domain, the character length must be smaller than or equal to 253.'
+      end
+
+      if @api_client.config.client_side_validation && domain.to_s.length < 1
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.delete_frontend_domain, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/domains/{domain}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'domain' + '}', CGI.escape(domain.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.delete_frontend_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -503,6 +1013,79 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Delete a Frontend route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend route ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_frontend_route(id, frontend_id, route_id, opts = {})
+      delete_frontend_route_with_http_info(id, frontend_id, route_id, opts)
+      nil
+    end
+
+    # Delete a Frontend route
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend route ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_frontend_route_with_http_info(id, frontend_id, route_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.delete_frontend_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.delete_frontend_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.delete_frontend_route"
+      end
+      # verify the required parameter 'route_id' is set
+      if @api_client.config.client_side_validation && route_id.nil?
+        fail ArgumentError, "Missing the required parameter 'route_id' when calling FrontendsApi.delete_frontend_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/frontend-routes/{routeId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'routeId' + '}', CGI.escape(route_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.delete_frontend_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#delete_frontend_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get frontend details
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
@@ -570,7 +1153,81 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Get a frontend Candidate
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCandidate]
+    def get_frontend_candidate(id, frontend_id, candidate_id, opts = {})
+      data, _status_code, _headers = get_frontend_candidate_with_http_info(id, frontend_id, candidate_id, opts)
+      data
+    end
+
+    # Get a frontend Candidate
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCandidate, Integer, Hash)>] FrontendCandidate data, response status code and response headers
+    def get_frontend_candidate_with_http_info(id, frontend_id, candidate_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.get_frontend_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.get_frontend_candidate"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.get_frontend_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FrontendsApi.get_frontend_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates/{candidateId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCandidate'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.get_frontend_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#get_frontend_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get frontend custom domain status
+    # Deprecated: use `GET /projects/{id}/frontends/{frontendId}/domains`. Returns the frontend's oldest domain that serves it rather than redirecting. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param [Hash] opts the optional parameters
@@ -581,6 +1238,7 @@ module Volcano::Generated
     end
 
     # Get frontend custom domain status
+    # Deprecated: use &#x60;GET /projects/{id}/frontends/{frontendId}/domains&#x60;. Returns the frontend&#39;s oldest domain that serves it rather than redirecting. 
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
     # @param [Hash] opts the optional parameters
@@ -633,6 +1291,156 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#get_frontend_custom_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get a frontend custom domain
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCustomDomainResponse]
+    def get_frontend_domain(id, frontend_id, domain, opts = {})
+      data, _status_code, _headers = get_frontend_domain_with_http_info(id, frontend_id, domain, opts)
+      data
+    end
+
+    # Get a frontend custom domain
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCustomDomainResponse, Integer, Hash)>] FrontendCustomDomainResponse data, response status code and response headers
+    def get_frontend_domain_with_http_info(id, frontend_id, domain, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.get_frontend_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.get_frontend_domain"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.get_frontend_domain"
+      end
+      # verify the required parameter 'domain' is set
+      if @api_client.config.client_side_validation && domain.nil?
+        fail ArgumentError, "Missing the required parameter 'domain' when calling FrontendsApi.get_frontend_domain"
+      end
+      if @api_client.config.client_side_validation && domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.get_frontend_domain, the character length must be smaller than or equal to 253.'
+      end
+
+      if @api_client.config.client_side_validation && domain.to_s.length < 1
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.get_frontend_domain, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/domains/{domain}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'domain' + '}', CGI.escape(domain.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.get_frontend_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#get_frontend_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Get what a frontend serves
+    # Reports whether the frontend serves its own runtime or a promoted Candidate's, and the revision a promotion or rollback must name. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendServing]
+    def get_frontend_serving(id, frontend_id, opts = {})
+      data, _status_code, _headers = get_frontend_serving_with_http_info(id, frontend_id, opts)
+      data
+    end
+
+    # Get what a frontend serves
+    # Reports whether the frontend serves its own runtime or a promoted Candidate&#39;s, and the revision a promotion or rollback must name. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendServing, Integer, Hash)>] FrontendServing data, response status code and response headers
+    def get_frontend_serving_with_http_info(id, frontend_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.get_frontend_serving ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.get_frontend_serving"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.get_frontend_serving"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/serving'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.get_frontend_serving",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#get_frontend_serving\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -713,6 +1521,75 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#get_frontend_usage_history\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a frontend's Candidates
+    # Returns the frontend's Candidates, oldest first, each with its latest deployment. A frontend has at most 20 live Candidates. Reading never depends on the `frontends.candidates` capability. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCandidateList]
+    def list_frontend_candidates(id, frontend_id, opts = {})
+      data, _status_code, _headers = list_frontend_candidates_with_http_info(id, frontend_id, opts)
+      data
+    end
+
+    # List a frontend&#39;s Candidates
+    # Returns the frontend&#39;s Candidates, oldest first, each with its latest deployment. A frontend has at most 20 live Candidates. Reading never depends on the &#x60;frontends.candidates&#x60; capability. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCandidateList, Integer, Hash)>] FrontendCandidateList data, response status code and response headers
+    def list_frontend_candidates_with_http_info(id, frontend_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.list_frontend_candidates ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.list_frontend_candidates"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.list_frontend_candidates"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCandidateList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.list_frontend_candidates",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_candidates\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -802,6 +1679,75 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # List a frontend's custom domains
+    # Lists the frontend's custom domains, oldest first. Each domain either serves the frontend or, with `redirect` set, redirects every request to another domain of the frontend. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCustomDomainList]
+    def list_frontend_domains(id, frontend_id, opts = {})
+      data, _status_code, _headers = list_frontend_domains_with_http_info(id, frontend_id, opts)
+      data
+    end
+
+    # List a frontend&#39;s custom domains
+    # Lists the frontend&#39;s custom domains, oldest first. Each domain either serves the frontend or, with &#x60;redirect&#x60; set, redirects every request to another domain of the frontend. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCustomDomainList, Integer, Hash)>] FrontendCustomDomainList data, response status code and response headers
+    def list_frontend_domains_with_http_info(id, frontend_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.list_frontend_domains ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.list_frontend_domains"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.list_frontend_domains"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/domains'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCustomDomainList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.list_frontend_domains",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_domains\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # List a Frontend's Function routes
     # @param id [String] Project ID
     # @param frontend_id [String] Frontend ID
@@ -865,6 +1811,73 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_function_routes\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a Frontend's Frontend routes
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendRouteList]
+    def list_frontend_routes(id, frontend_id, opts = {})
+      data, _status_code, _headers = list_frontend_routes_with_http_info(id, frontend_id, opts)
+      data
+    end
+
+    # List a Frontend&#39;s Frontend routes
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendRouteList, Integer, Hash)>] FrontendRouteList data, response status code and response headers
+    def list_frontend_routes_with_http_info(id, frontend_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.list_frontend_routes ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.list_frontend_routes"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.list_frontend_routes"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/frontend-routes'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendRouteList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.list_frontend_routes",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#list_frontend_routes\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1071,6 +2084,92 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Promote a frontend Candidate
+    # Makes the Candidate what the frontend serves. Nothing is rebuilt or copied: the frontend's traffic is routed to the Candidate's runtime, its own custom domains and metering are unchanged, and what it served becomes the runtime a rollback returns to.  The Candidate must be ready and serving an active deployment, and that deployment must have been built with the variables the frontend selects now. A Candidate that serves stops expiring and cannot be deleted. While one serves, deploying the frontend itself answers `409`; roll back to the frontend's own runtime first. Promotion names the revision the caller read from `serving`; a competing activation makes it fail with `409`. Once the project's repository is the source of truth, promotion is refused with `409`, as a direct deploy is, and so is rolling back to a Candidate; rolling back to the frontend's own runtime is not. While the `frontends.candidates` capability is unavailable, promotion and rolling back to a Candidate answer `404` with code `feature_unavailable`; rolling back to the frontend's own runtime does not. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param promote_frontend_candidate_request [PromoteFrontendCandidateRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendServing]
+    def promote_frontend_candidate(id, frontend_id, candidate_id, promote_frontend_candidate_request, opts = {})
+      data, _status_code, _headers = promote_frontend_candidate_with_http_info(id, frontend_id, candidate_id, promote_frontend_candidate_request, opts)
+      data
+    end
+
+    # Promote a frontend Candidate
+    # Makes the Candidate what the frontend serves. Nothing is rebuilt or copied: the frontend&#39;s traffic is routed to the Candidate&#39;s runtime, its own custom domains and metering are unchanged, and what it served becomes the runtime a rollback returns to.  The Candidate must be ready and serving an active deployment, and that deployment must have been built with the variables the frontend selects now. A Candidate that serves stops expiring and cannot be deleted. While one serves, deploying the frontend itself answers &#x60;409&#x60;; roll back to the frontend&#39;s own runtime first. Promotion names the revision the caller read from &#x60;serving&#x60;; a competing activation makes it fail with &#x60;409&#x60;. Once the project&#39;s repository is the source of truth, promotion is refused with &#x60;409&#x60;, as a direct deploy is, and so is rolling back to a Candidate; rolling back to the frontend&#39;s own runtime is not. While the &#x60;frontends.candidates&#x60; capability is unavailable, promotion and rolling back to a Candidate answer &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;; rolling back to the frontend&#39;s own runtime does not. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param promote_frontend_candidate_request [PromoteFrontendCandidateRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendServing, Integer, Hash)>] FrontendServing data, response status code and response headers
+    def promote_frontend_candidate_with_http_info(id, frontend_id, candidate_id, promote_frontend_candidate_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.promote_frontend_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.promote_frontend_candidate"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.promote_frontend_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FrontendsApi.promote_frontend_candidate"
+      end
+      # verify the required parameter 'promote_frontend_candidate_request' is set
+      if @api_client.config.client_side_validation && promote_frontend_candidate_request.nil?
+        fail ArgumentError, "Missing the required parameter 'promote_frontend_candidate_request' when calling FrontendsApi.promote_frontend_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates/{candidateId}/promote'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(promote_frontend_candidate_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.promote_frontend_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#promote_frontend_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Redeploy frontend using latest uploaded artifact
     # Starts a new frontend workflow using the latest stored artifact. A deployment that starts immediately returns `status: provisioning`, then transitions to `active`, `degraded`, or `failed`. An overlapping deployment preserves the frontend's current status, is exposed through `pending_deployment_id`, and supersedes any older queued deployment. The previous runtime and its published static assets remain available during provisioning, and a failed redeploy restores the regional runtimes to that build and keeps it serving while the attempted deployment is recorded as failed. 
     # @param id [String] Project ID
@@ -1136,6 +2235,267 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#redeploy_frontend\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Deploy a new archive to a frontend Candidate
+    # Builds the uploaded archive with the frontend's own variable selection and deploys it to the Candidate. The Candidate keeps serving its previous deployment until this one succeeds, and a failed deployment leaves it on the previous one. A Candidate takes one deployment at a time. While the `frontends.candidates` capability is unavailable, it answers `404` with code `feature_unavailable`. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param archive [File] ZIP or tar.gz archive of the frontend project, as for creating a frontend.
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCandidateDeployment]
+    def redeploy_frontend_candidate(id, frontend_id, candidate_id, archive, opts = {})
+      data, _status_code, _headers = redeploy_frontend_candidate_with_http_info(id, frontend_id, candidate_id, archive, opts)
+      data
+    end
+
+    # Deploy a new archive to a frontend Candidate
+    # Builds the uploaded archive with the frontend&#39;s own variable selection and deploys it to the Candidate. The Candidate keeps serving its previous deployment until this one succeeds, and a failed deployment leaves it on the previous one. A Candidate takes one deployment at a time. While the &#x60;frontends.candidates&#x60; capability is unavailable, it answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param candidate_id [String] Frontend Candidate ID
+    # @param archive [File] ZIP or tar.gz archive of the frontend project, as for creating a frontend.
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCandidateDeployment, Integer, Hash)>] FrontendCandidateDeployment data, response status code and response headers
+    def redeploy_frontend_candidate_with_http_info(id, frontend_id, candidate_id, archive, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.redeploy_frontend_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.redeploy_frontend_candidate"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.redeploy_frontend_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FrontendsApi.redeploy_frontend_candidate"
+      end
+      # verify the required parameter 'archive' is set
+      if @api_client.config.client_side_validation && archive.nil?
+        fail ArgumentError, "Missing the required parameter 'archive' when calling FrontendsApi.redeploy_frontend_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/candidates/{candidateId}/deployments'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['archive'] = archive
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCandidateDeployment'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.redeploy_frontend_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#redeploy_frontend_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Roll a frontend back to the runtime it served before
+    # Returns the frontend's traffic to the runtime it served before the last activation, or to its own runtime with `to_production`. A rollback is a new activation, so what it leaves becomes the runtime a further rollback returns to, and it can itself be undone. It names the revision the caller read; a competing activation makes it fail with `409`.  Rolling back to a Candidate promotes it again and is refused with `409` when promoting it would be. Rolling back to the frontend's own runtime is not. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param rollback_frontend_serving_request [RollbackFrontendServingRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendServing]
+    def rollback_frontend_serving(id, frontend_id, rollback_frontend_serving_request, opts = {})
+      data, _status_code, _headers = rollback_frontend_serving_with_http_info(id, frontend_id, rollback_frontend_serving_request, opts)
+      data
+    end
+
+    # Roll a frontend back to the runtime it served before
+    # Returns the frontend&#39;s traffic to the runtime it served before the last activation, or to its own runtime with &#x60;to_production&#x60;. A rollback is a new activation, so what it leaves becomes the runtime a further rollback returns to, and it can itself be undone. It names the revision the caller read; a competing activation makes it fail with &#x60;409&#x60;.  Rolling back to a Candidate promotes it again and is refused with &#x60;409&#x60; when promoting it would be. Rolling back to the frontend&#39;s own runtime is not. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param rollback_frontend_serving_request [RollbackFrontendServingRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendServing, Integer, Hash)>] FrontendServing data, response status code and response headers
+    def rollback_frontend_serving_with_http_info(id, frontend_id, rollback_frontend_serving_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.rollback_frontend_serving ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.rollback_frontend_serving"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.rollback_frontend_serving"
+      end
+      # verify the required parameter 'rollback_frontend_serving_request' is set
+      if @api_client.config.client_side_validation && rollback_frontend_serving_request.nil?
+        fail ArgumentError, "Missing the required parameter 'rollback_frontend_serving_request' when calling FrontendsApi.rollback_frontend_serving"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/serving/rollback'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(rollback_frontend_serving_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.rollback_frontend_serving",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#rollback_frontend_serving\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Set or clear a custom domain's redirect
+    # `{\"redirect\": {\"to\": \"www.example.com\", \"status\": 308}}` makes the domain redirect to another active domain of the frontend that serves it. `{\"redirect\": null}` makes it serve the frontend again. A domain other domains redirect to cannot become a redirect itself. `status` defaults to `308`. Proxies apply the change within seconds. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param update_frontend_custom_domain_request [UpdateFrontendCustomDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendCustomDomainResponse]
+    def update_frontend_domain(id, frontend_id, domain, update_frontend_custom_domain_request, opts = {})
+      data, _status_code, _headers = update_frontend_domain_with_http_info(id, frontend_id, domain, update_frontend_custom_domain_request, opts)
+      data
+    end
+
+    # Set or clear a custom domain&#39;s redirect
+    # &#x60;{\&quot;redirect\&quot;: {\&quot;to\&quot;: \&quot;www.example.com\&quot;, \&quot;status\&quot;: 308}}&#x60; makes the domain redirect to another active domain of the frontend that serves it. &#x60;{\&quot;redirect\&quot;: null}&#x60; makes it serve the frontend again. A domain other domains redirect to cannot become a redirect itself. &#x60;status&#x60; defaults to &#x60;308&#x60;. Proxies apply the change within seconds. 
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param domain [String] The custom domain&#39;s hostname, such as &#x60;www.example.com&#x60;
+    # @param update_frontend_custom_domain_request [UpdateFrontendCustomDomainRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendCustomDomainResponse, Integer, Hash)>] FrontendCustomDomainResponse data, response status code and response headers
+    def update_frontend_domain_with_http_info(id, frontend_id, domain, update_frontend_custom_domain_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.update_frontend_domain ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.update_frontend_domain"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.update_frontend_domain"
+      end
+      # verify the required parameter 'domain' is set
+      if @api_client.config.client_side_validation && domain.nil?
+        fail ArgumentError, "Missing the required parameter 'domain' when calling FrontendsApi.update_frontend_domain"
+      end
+      if @api_client.config.client_side_validation && domain.to_s.length > 253
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.update_frontend_domain, the character length must be smaller than or equal to 253.'
+      end
+
+      if @api_client.config.client_side_validation && domain.to_s.length < 1
+        fail ArgumentError, 'invalid value for "domain" when calling FrontendsApi.update_frontend_domain, the character length must be greater than or equal to 1.'
+      end
+
+      # verify the required parameter 'update_frontend_custom_domain_request' is set
+      if @api_client.config.client_side_validation && update_frontend_custom_domain_request.nil?
+        fail ArgumentError, "Missing the required parameter 'update_frontend_custom_domain_request' when calling FrontendsApi.update_frontend_domain"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/domains/{domain}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'domain' + '}', CGI.escape(domain.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(update_frontend_custom_domain_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendCustomDomainResponse'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.update_frontend_domain",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PATCH, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#update_frontend_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1222,6 +2582,92 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FrontendsApi#update_frontend_function_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Replace a Frontend route
+    # Replaces the route's mounted Frontend and path. The new values must meet the same rules as on create.
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend route ID
+    # @param create_frontend_route_request [CreateFrontendRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FrontendRoute]
+    def update_frontend_route(id, frontend_id, route_id, create_frontend_route_request, opts = {})
+      data, _status_code, _headers = update_frontend_route_with_http_info(id, frontend_id, route_id, create_frontend_route_request, opts)
+      data
+    end
+
+    # Replace a Frontend route
+    # Replaces the route&#39;s mounted Frontend and path. The new values must meet the same rules as on create.
+    # @param id [String] Project ID
+    # @param frontend_id [String] Frontend ID
+    # @param route_id [String] Frontend route ID
+    # @param create_frontend_route_request [CreateFrontendRouteRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FrontendRoute, Integer, Hash)>] FrontendRoute data, response status code and response headers
+    def update_frontend_route_with_http_info(id, frontend_id, route_id, create_frontend_route_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FrontendsApi.update_frontend_route ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FrontendsApi.update_frontend_route"
+      end
+      # verify the required parameter 'frontend_id' is set
+      if @api_client.config.client_side_validation && frontend_id.nil?
+        fail ArgumentError, "Missing the required parameter 'frontend_id' when calling FrontendsApi.update_frontend_route"
+      end
+      # verify the required parameter 'route_id' is set
+      if @api_client.config.client_side_validation && route_id.nil?
+        fail ArgumentError, "Missing the required parameter 'route_id' when calling FrontendsApi.update_frontend_route"
+      end
+      # verify the required parameter 'create_frontend_route_request' is set
+      if @api_client.config.client_side_validation && create_frontend_route_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_frontend_route_request' when calling FrontendsApi.update_frontend_route"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/frontends/{frontendId}/frontend-routes/{routeId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'frontendId' + '}', CGI.escape(frontend_id.to_s)).sub('{' + 'routeId' + '}', CGI.escape(route_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_frontend_route_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FrontendRoute'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FrontendsApi.update_frontend_route",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FrontendsApi#update_frontend_route\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

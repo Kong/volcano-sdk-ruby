@@ -36,7 +36,10 @@ module Volcano::Generated
 
     attr_accessor :realtime
 
-    attr_accessor :autofix
+    # Ignored. LavaFlow is no longer part of the platform. A manifest that still declares this section applies as before, without it, and the result reports it as `unchanged` with a notice. Export never includes it.
+    attr_accessor :lavaflow
+
+    attr_accessor :notifications
 
     attr_accessor :auth
 
@@ -80,7 +83,8 @@ module Volcano::Generated
         :'variables' => :'variables',
         :'buckets' => :'buckets',
         :'realtime' => :'realtime',
-        :'autofix' => :'autofix',
+        :'lavaflow' => :'lavaflow',
+        :'notifications' => :'notifications',
         :'auth' => :'auth',
         :'functions' => :'functions',
         :'frontends' => :'frontends',
@@ -109,7 +113,8 @@ module Volcano::Generated
         :'variables' => :'Array<ProjectConfigVariable>',
         :'buckets' => :'Array<ProjectConfigBucket>',
         :'realtime' => :'ProjectConfigRealtime',
-        :'autofix' => :'ProjectConfigAutofix',
+        :'lavaflow' => :'Object',
+        :'notifications' => :'ProjectConfigNotifications',
         :'auth' => :'ProjectConfigAuth',
         :'functions' => :'Array<ProjectConfigFunction>',
         :'frontends' => :'Array<ProjectConfigFrontend>',
@@ -183,8 +188,12 @@ module Volcano::Generated
         self.realtime = attributes[:'realtime']
       end
 
-      if attributes.key?(:'autofix')
-        self.autofix = attributes[:'autofix']
+      if attributes.key?(:'lavaflow')
+        self.lavaflow = attributes[:'lavaflow']
+      end
+
+      if attributes.key?(:'notifications')
+        self.notifications = attributes[:'notifications']
       end
 
       if attributes.key?(:'auth')
@@ -275,7 +284,8 @@ module Volcano::Generated
           variables == o.variables &&
           buckets == o.buckets &&
           realtime == o.realtime &&
-          autofix == o.autofix &&
+          lavaflow == o.lavaflow &&
+          notifications == o.notifications &&
           auth == o.auth &&
           functions == o.functions &&
           frontends == o.frontends &&
@@ -291,7 +301,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [version, project, databases, shared_variables, frontend_shared_variables, variables, buckets, realtime, autofix, auth, functions, frontends, sandboxes].hash
+      [version, project, databases, shared_variables, frontend_shared_variables, variables, buckets, realtime, lavaflow, notifications, auth, functions, frontends, sandboxes].hash
     end
 
     # Builds the object from hash

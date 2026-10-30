@@ -524,11 +524,13 @@ never return it.
 A service key holding `*`, the default, reads and stops any execution of the
 project. A signed-in user reaches the executions they started without the
 client token. An anonymous key, a user who did not start the execution, or a
-service key scoped to a list without `*` passes `client_token:`. A service key
-scoped without `*` also needs `functions.invoke`. The function's visibility must
-also admit the credential; a visibility refusal raises
-`Volcano::Error::PermissionDeniedError`, for example for an anonymous key holding
-the token on an `authenticated` function. An execution the credential cannot
+service key scoped to a list without `*` passes `client_token:`. An anonymous
+key or a service key scoped without `*` also needs `functions.invoke`; without it
+the call raises `Volcano::Error::PermissionDeniedError`. The function's
+visibility must also admit the credential: an anonymous key on an
+`authenticated` function raises `Volcano::Error::PermissionDeniedError`, even
+with the token, and a `private` function raises `Volcano::Error::NotFoundError`
+for every credential but a service key. An execution the credential cannot
 reach raises `Volcano::Error::NotFoundError`, as a missing one does, and so does
 one still `pending` unless the credential is a service key holding `*`. A stop
 answered with a `503` `Volcano::Error::ServerError` may already have been sent,

@@ -54,13 +54,14 @@ module Volcano
     # execution of the project. A signed-in user reaches the executions they
     # started. An anon key, a user who did not start the execution, or a
     # service key scoped to a list without `*` passes the +client_token+ its
-    # start returned; it is sent with whichever credential is in use. A
-    # service key scoped without `*` also needs `functions.invoke`. An
-    # execution the credential cannot reach, or one still +pending+ for any
-    # credential but a service key holding `*`, raises Error::NotFoundError,
-    # as a missing one does. A visibility refusal raises
-    # Error::PermissionDeniedError instead, for example for an anon key holding
-    # the token on an +authenticated+ function.
+    # start returned; it is sent with whichever credential is in use. An anon
+    # key or a service key scoped without `*` also needs `functions.invoke`;
+    # without it the call raises Error::PermissionDeniedError. An anon key on
+    # an +authenticated+ function raises Error::PermissionDeniedError too, even
+    # with the token, and a +private+ function raises Error::NotFoundError for
+    # every credential but a service key. An execution the credential cannot
+    # reach, or one still +pending+ for any credential but a service key
+    # holding `*`, raises Error::NotFoundError, as a missing one does.
     def get_from_application(function_name, execution_id, client_token: nil)
       function_id, execution, token = application_target(function_name, execution_id, client_token)
       response = Transport.invoke do

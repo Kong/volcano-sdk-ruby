@@ -22,6 +22,21 @@ Dependabot titles updates to the gemspec's runtime gems, and to the gems they
 pull in, `fix(deps)`, so Release Please releases them. Development gems, GitHub
 Actions and the npm generator wrapper use `chore`, which does not.
 
+The gemspec pins each runtime gem to the exact version in `Gemfile.lock`, and
+`spec/gem/specification_spec.rb` fails if the two differ. RuboCop's
+`Gemspec/DependencyVersion` can require a version but not that one. Dependabot
+raises a pin and the lock together.
+
+Gems those pins pull in still float for customers, so the `fresh-install` CI
+job (`bundle exec rake quality:fresh_install`) builds the gem, installs it with
+`gem install` and no lockfile, pins the test bundle to exactly what that install
+resolved, and runs the specs. A lockfile-free `bundle install` cannot stand in
+for it: Bundler resolves runtime gems together with development gems and picks
+the newest release over a Ruby default gem that `gem install` keeps. The job
+reports each gem that differs from `Gemfile.lock` and runs on every PR, in the
+merge queue, and daily. When it fails on a new upstream release, pin or fix the
+SDK, then let Dependabot bring the lock up to date.
+
 For an `openapi-codegen` update to `@openapitools/openapi-generator-cli`, run
 `npm ci && bin/generate-openapi`, commit any change under `lib/volcano/generated`,
 and update the versions in the README's "Generated boundary" section. If the

@@ -72,7 +72,21 @@ handle = client.durable.start(
   { order_id: "order-9" },
   execution_name: "order-9"
 )
+token = handle.client_token
 
+execution = client.durable.get_from_application("charge-order", handle.id, client_token: token)
+client.durable.stop_from_application("charge-order", handle.id, client_token: token)
+```
+
+`start`, `get_from_application`, and `stop_from_application` use the same credential as `functions.invoke`: the active session, then a service key, then the anonymous key. An execution name makes a start idempotent. The start that creates an execution returns its `client_token`; a repeated start returns nil there. Inspecting the execution masks the token.
+
+A service key holding `*`, the default, reads and stops any execution of the project. A signed-in user reaches the executions they started without the client token. An anonymous key, a user who did not start the execution, or a service key scoped to a list without `*` passes `client_token:`. An anonymous key or a service key scoped without `*` also needs `functions.invoke`; without it the call raises `Volcano::Error::PermissionDeniedError`. The function's visibility must also admit the credential: an anonymous key on an `authenticated` function raises `Volcano::Error::PermissionDeniedError`, even with the token, and a `private` function raises `Volcano::Error::NotFoundError` for every credential but a service key. An execution the credential cannot reach raises `Volcano::Error::NotFoundError`, as a missing one does, and so does one still `pending` unless the credential is a service key holding `*`. Reads never return `client_token`, so keep the one the start returned.
+
+`stop_from_application` and `stop` return after the stop request is accepted, often while the execution still reports `running`; poll the matching read until `terminal?` is true. Stopping an execution that already finished returns the state it settled in. A `stop_from_application` answered with a `503` `Volcano::Error::ServerError` may already have been sent, so read the execution before stopping it again.
+
+Tooling that manages a project uses the owner-scoped `get`, `list`, and `stop`, which reach any execution without a client token:
+
+```ruby
 owner_client = Volcano::Client.new(
   anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
   api_url: ENV.fetch("VOLCANO_API_URL", "https://api.volcano.dev"),
@@ -83,9 +97,7 @@ page = owner_client.durable.list(project_id, "charge-order", status: "running")
 owner_client.durable.stop(project_id, "charge-order", handle.id)
 ```
 
-`start` accepts the same active session, service key, or anonymous key as `functions.invoke`. With `messages`, it is the only durable operation available to application credentials. An execution name makes a start idempotent. The start that creates an execution returns its `client_token`; a repeated start returns nil there. Inspecting the execution masks the token.
-
-`get`, `list`, and `stop` are owner-scoped. Call them from a trusted backend with the project owner's platform user token or a project access token; a `read_only` token can read and list but not stop. Auth-user sessions, anonymous keys, and service keys are not accepted. `stop` returns after the stop request is accepted, so poll `get` until `terminal?` is true.
+Call them from a trusted backend with the project owner's platform user token or a project access token; a `read_only` token can read and list but not stop. Auth-user sessions, anonymous keys, and service keys are not accepted.
 
 `list` returns executions and pagination metadata. A successful response must include `data`, `page`, `limit`, `total`, and `has_more` with the API's declared types. Missing or malformed fields raise `TypeError`; a complete response with `data: []` returns an empty execution list.
 

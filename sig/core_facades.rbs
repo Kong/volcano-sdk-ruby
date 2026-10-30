@@ -98,6 +98,8 @@ module Volcano
     attr_reader messages: DurableMessages
 
     def start: (String function_name, ?sdk_payload payload, ?execution_name: String?) -> DurableExecution
+    def get_from_application: (String function_name, String execution_id, ?client_token: String?) -> DurableExecution
+    def stop_from_application: (String function_name, String execution_id, ?client_token: String?) -> DurableExecution
     def get: (String project_id, String function_name, String execution_id) -> DurableExecution
     def list: (String project_id, String function_name, ?status: String?, ?page: Integer?, ?limit: Integer?) -> DurableExecutionPage
     def stop: (String project_id, String function_name, String execution_id) -> DurableExecution

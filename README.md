@@ -498,20 +498,56 @@ See the [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/doc
 ### Start and follow a durable execution
 
 ```ruby
-project_id = "00000000-0000-4000-8000-000000000001"
 handle = client.durable.start(
   "charge-order",
   { order_id: "order-9" },
   execution_name: "order-9"
 )
+token = handle.client_token
 
+execution = client.durable.get_from_application("charge-order", handle.id, client_token: token)
+puts [execution.status, execution.terminal?, execution.result]
+
+client.durable.stop_from_application("charge-order", handle.id, client_token: token)
+```
+
+`start` takes a durable function's name or its id and returns a handle, never a
+result: an execution can run for up to 366 days, so its result is read back with
+`get_from_application`. `start`, `get_from_application`, and
+`stop_from_application` use the same credential `invoke` does — the active user
+session, then a configured service key, then the anonymous key. An
+`execution_name` makes the start idempotent: starting again under the same name
+returns the execution that already exists rather than beginning a second one.
+Only the start that creates the execution returns its `client_token`; reads
+never return it.
+
+A service key holding `*`, the default, reads and stops any execution of the
+project. A signed-in user reaches the executions they started without the
+client token. An anonymous key, a user who did not start the execution, or a
+service key scoped to a list without `*` passes `client_token:`. An anonymous
+key or a service key scoped without `*` also needs `functions.invoke`; without it
+the call raises `Volcano::Error::PermissionDeniedError`. The function's
+visibility must also admit the credential: an anonymous key on an
+`authenticated` function raises `Volcano::Error::PermissionDeniedError`, even
+with the token, and a `private` function raises `Volcano::Error::NotFoundError`
+for every credential but a service key. An execution the credential cannot
+reach raises `Volcano::Error::NotFoundError`, as a missing one does, and so does
+one still `pending` unless the credential is a service key holding `*`. A stop
+answered with a `503` `Volcano::Error::ServerError` may already have been sent,
+so read the execution before stopping it again.
+
+Tooling that manages a project reads, lists, and stops executions with the
+owner-scoped `get`, `list`, and `stop`, which reach any execution without a
+client token:
+
+```ruby
+project_id = "00000000-0000-4000-8000-000000000001"
 owner_client = Volcano::Client.new(
   api_url: "https://api.volcano.dev",
   anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
   access_token: ENV.fetch("VOLCANO_PLATFORM_TOKEN")
 )
 execution = owner_client.durable.get(project_id, "charge-order", handle.id)
-puts [execution.status, execution.terminal?, execution.result]
 
 page = owner_client.durable.list(project_id, "charge-order", status: "running")
 puts [page.total, page.has_more]
@@ -519,29 +555,19 @@ puts [page.total, page.has_more]
 owner_client.durable.stop(project_id, "charge-order", handle.id)
 ```
 
-`start` takes a durable function's name or its id and returns a handle, never a
-result: an execution can run for up to 366 days, so its result is read back with `get`.
-It uses the same credential `invoke` does — the active user session, then a
-configured service key, then the anonymous key — and is, with `messages`, the
-only durable operation an application credential may perform. An
-`execution_name` makes the start idempotent: starting again under the same name
-returns the execution that already exists rather than beginning a second one.
-Only the start that creates the execution returns its `client_token`.
+They require the project owner's platform user token or a project access token.
+A `read_only` project access token can read and list but not stop. Auth-user
+sessions, anonymous keys, and service keys are not accepted.
 
-`get`, `list`, and `stop` are owner-scoped and require the project owner's
-platform user token or a project access token, because an execution is
-addressed by its id alone. A `read_only` project access token can read and list
-but not stop. Auth-user sessions, anonymous keys, and service keys are not
-accepted. `get` carries the deeply
-frozen `result` once the execution has succeeded, and `error` when it failed;
-`result_expired` separates a result the platform has discarded from a function
-that returned nothing. `terminal?` reports whether the execution has stopped
-changing, and counts `unknown` — the status the platform writes for an outcome
-it could not determine — as finished. `list` returns one page of executions,
-most recent first, each carrying the status last observed rather than a live
-one. `stop` is accepted rather than awaited: what it returns is the execution
-read back after asking, often still `running`, so poll `get` to see it reach
-`stopped`. Repeating a stop is safe.
+Either read carries the deeply frozen `result` once the execution has succeeded,
+and `error` when it failed; `result_expired` separates a result the platform has
+discarded from a function that returned nothing. `terminal?` reports whether the
+execution has stopped changing, and counts `unknown` — the status the platform
+writes for an outcome it could not determine — as finished. `list` returns one
+page of executions, most recent first, each carrying the status last observed
+rather than a live one. A stop is accepted rather than awaited: what it returns
+is the execution read back after asking, often still `running`, so poll a read
+to see it reach `stopped`. Repeating a stop is safe.
 
 This gem starts and follows durable executions; it cannot write the durable
 function itself. Checkpointing a handler needs a durable authoring API, and

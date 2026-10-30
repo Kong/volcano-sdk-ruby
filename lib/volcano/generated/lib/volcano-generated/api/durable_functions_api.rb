@@ -739,6 +739,82 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Get a durable execution from an application
+    # Returns the execution's current state with the credential that started it, including its `result` once it has succeeded. Poll this to wait for an execution to finish.  **With a service key:** any execution in the project when the key holds `*`, the default. A key scoped to a list without `*` reaches an execution whose `X-Volcano-Client-Token` the request carries, as an anon key does; the start returns that token.  **With an auth user token:** an execution the user started, or one whose `X-Volcano-Client-Token` the request carries, of a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** an execution whose `X-Volcano-Client-Token` the request carries, of a function with `visibility: public`.  Only a service key holding `*` reaches an execution that is still `pending`. Any other execution answers `404`, as a missing one does.  The response is the one `GET /projects/{id}/durable-functions/{functionId}/executions/{executionId}` returns. It never carries `client_token`. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
+    # @return [DurableExecution]
+    def get_durable_execution_from_application(function_id, execution_id, opts = {})
+      data, _status_code, _headers = get_durable_execution_from_application_with_http_info(function_id, execution_id, opts)
+      data
+    end
+
+    # Get a durable execution from an application
+    # Returns the execution&#39;s current state with the credential that started it, including its &#x60;result&#x60; once it has succeeded. Poll this to wait for an execution to finish.  **With a service key:** any execution in the project when the key holds &#x60;*&#x60;, the default. A key scoped to a list without &#x60;*&#x60; reaches an execution whose &#x60;X-Volcano-Client-Token&#x60; the request carries, as an anon key does; the start returns that token.  **With an auth user token:** an execution the user started, or one whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** an execution whose &#x60;X-Volcano-Client-Token&#x60; the request carries, of a function with &#x60;visibility: public&#x60;.  Only a service key holding &#x60;*&#x60; reaches an execution that is still &#x60;pending&#x60;. Any other execution answers &#x60;404&#x60;, as a missing one does.  The response is the one &#x60;GET /projects/{id}/durable-functions/{functionId}/executions/{executionId}&#x60; returns. It never carries &#x60;client_token&#x60;. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
+    # @return [Array<(DurableExecution, Integer, Hash)>] DurableExecution data, response status code and response headers
+    def get_durable_execution_from_application_with_http_info(function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.get_durable_execution_from_application ...'
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.get_durable_execution_from_application"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.get_durable_execution_from_application"
+      end
+      if @api_client.config.client_side_validation && !opts[:'x_volcano_client_token'].nil? && opts[:'x_volcano_client_token'].to_s.length > 128
+        fail ArgumentError, 'invalid value for "opts[:"x_volcano_client_token"]" when calling DurableFunctionsApi.get_durable_execution_from_application, the character length must be smaller than or equal to 128.'
+      end
+
+      # resource path
+      local_var_path = '/durable-functions/{functionId}/executions/{executionId}'.sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'X-Volcano-Client-Token'] = opts[:'x_volcano_client_token'] if !opts[:'x_volcano_client_token'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableExecution'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'AnonKey']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.get_durable_execution_from_application",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#get_durable_execution_from_application\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get durable function by ID or name
     # @param id [String] Project ID
     # @param function_id [String] Durable function ID, or its name within the project
@@ -1582,7 +1658,7 @@ module Volcano::Generated
     # @param function_id [String] Durable function ID, or its name within the project
     # @param execution_id [String] Durable execution ID
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
     # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
     # @option opts [String] :name Return only messages with this name.
     # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
@@ -1598,7 +1674,7 @@ module Volcano::Generated
     # @param function_id [String] Durable function ID, or its name within the project
     # @param execution_id [String] Durable execution ID
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
     # @option opts [DurableMessageDirection] :direction Return only messages travelling this way.
     # @option opts [String] :name Return only messages with this name.
     # @option opts [Integer] :after Return only messages whose &#x60;seq&#x60; is greater than this. (default to 0)
@@ -2092,7 +2168,7 @@ module Volcano::Generated
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
-    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
     # @return [DurableMessage]
     def send_durable_message_from_application(function_id, execution_id, send_durable_message_request, opts = {})
       data, _status_code, _headers = send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts)
@@ -2106,7 +2182,7 @@ module Volcano::Generated
     # @param send_durable_message_request [SendDurableMessageRequest] 
     # @param [Hash] opts the optional parameters
     # @option opts [String] :idempotency_key Makes a send safe to retry. A repeat with a key the same sender has used on the execution returns the first message and sends nothing. Keys of different senders never collide. Up to 255 characters. 
-    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it. 
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
     # @return [Array<(DurableMessage, Integer, Hash)>] DurableMessage data, response status code and response headers
     def send_durable_message_from_application_with_http_info(function_id, execution_id, send_durable_message_request, opts = {})
       if @api_client.config.debugging
@@ -2272,7 +2348,7 @@ module Volcano::Generated
     end
 
     # Start a durable execution from an application
-    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of `POST /functions/{functionId}/invoke`, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under `/projects/{id}/durable-functions/...` remains the owner's management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** requires the `functions.invoke` permission, and the function must have `visibility: public`.  A `private` durable function answers every credential but a service key exactly as a missing one, with 404.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner's token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send `X-Volcano-Execution-Name` to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project's durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
+    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of `POST /functions/{functionId}/invoke`, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under `/projects/{id}/durable-functions/...` remains the owner's management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose `visibility` is `authenticated` or `public`.  **With an anon key:** requires the `functions.invoke` permission, and the function must have `visibility: public`.  A `private` durable function answers every credential but a service key exactly as a missing one, with 404.  The start returns a `client_token`. An anon key, or a user who did not start the execution, sends it as `X-Volcano-Client-Token` to read the execution, stop it, and reach its messages. A service key scoped to a list without `*` sends it to read and stop the execution. An anon key is shared by everyone who loads the page, so the id alone never reaches an execution. Listing executions takes the project owner's token or a project access token.  Send `X-Volcano-Execution-Name` to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project's durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
     # @option opts [String] :x_volcano_execution_name Idempotency key for this execution. Generated when omitted. A repeat under a name that already names a running execution returns that execution and is not charged again.  Letters, digits, &#x60;-&#x60;, &#x60;_&#x60; and &#x60;.&#x60;, up to 255 characters. Anything else is rejected with &#x60;400&#x60;. 
@@ -2284,7 +2360,7 @@ module Volcano::Generated
     end
 
     # Start a durable execution from an application
-    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of &#x60;POST /functions/{functionId}/invoke&#x60;, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under &#x60;/projects/{id}/durable-functions/...&#x60; remains the owner&#39;s management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** requires the &#x60;functions.invoke&#x60; permission, and the function must have &#x60;visibility: public&#x60;.  A &#x60;private&#x60; durable function answers every credential but a service key exactly as a missing one, with 404.  Starting is all this endpoint does. Reading a result or stopping an execution requires the project owner&#39;s token, because an anon key is shared by everyone who loads the page and an execution is addressed by id alone.  Send &#x60;X-Volcano-Execution-Name&#x60; to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project&#39;s durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
+    # Starts an execution of a durable function using an application credential, and returns its handle.  This is the durable counterpart of &#x60;POST /functions/{functionId}/invoke&#x60;, and it is the endpoint an application calls. Like that one, it is not project-scoped: an anon key, a service key and an auth user token each carry their own project. The project-scoped collection under &#x60;/projects/{id}/durable-functions/...&#x60; remains the owner&#39;s management surface.  **With a service key:** any durable function in the project.  **With an auth user token:** a durable function whose &#x60;visibility&#x60; is &#x60;authenticated&#x60; or &#x60;public&#x60;.  **With an anon key:** requires the &#x60;functions.invoke&#x60; permission, and the function must have &#x60;visibility: public&#x60;.  A &#x60;private&#x60; durable function answers every credential but a service key exactly as a missing one, with 404.  The start returns a &#x60;client_token&#x60;. An anon key, or a user who did not start the execution, sends it as &#x60;X-Volcano-Client-Token&#x60; to read the execution, stop it, and reach its messages. A service key scoped to a list without &#x60;*&#x60; sends it to read and stop the execution. An anon key is shared by everyone who loads the page, so the id alone never reaches an execution. Listing executions takes the project owner&#39;s token or a project access token.  Send &#x60;X-Volcano-Execution-Name&#x60; to make the start idempotent: repeating a start with the same name returns the existing execution instead of beginning a second one.  Each execution counts once against the project&#39;s durable execution allowance, however many times the start is retried under the same execution name, and the number in flight at once is capped by the plan. The operations the execution performs are counted against the durable operations allowance when it finishes. 
     # @param function_id [String] Durable function ID, or its name within the project
     # @param [Hash] opts the optional parameters
     # @option opts [String] :x_volcano_execution_name Idempotency key for this execution. Generated when omitted. A repeat under a name that already names a running execution returns that execution and is not charged again.  Letters, digits, &#x60;-&#x60;, &#x60;_&#x60; and &#x60;.&#x60;, up to 255 characters. Anything else is rejected with &#x60;400&#x60;. 
@@ -2424,6 +2500,82 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: DurableFunctionsApi#stop_durable_execution\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Stop a durable execution from an application
+    # Cancels a running execution with the credential that started it. Its completed steps are not undone.  Access follows the same rules as reading the execution.  The call is accepted rather than awaited: the response reports the execution as it was read back and may still say `running`. Poll `GET /durable-functions/{functionId}/executions/{executionId}` to see it settle into `stopped`.  Stopping an execution that already finished is not an error: the response carries the state it settled in. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
+    # @return [DurableExecution]
+    def stop_durable_execution_from_application(function_id, execution_id, opts = {})
+      data, _status_code, _headers = stop_durable_execution_from_application_with_http_info(function_id, execution_id, opts)
+      data
+    end
+
+    # Stop a durable execution from an application
+    # Cancels a running execution with the credential that started it. Its completed steps are not undone.  Access follows the same rules as reading the execution.  The call is accepted rather than awaited: the response reports the execution as it was read back and may still say &#x60;running&#x60;. Poll &#x60;GET /durable-functions/{functionId}/executions/{executionId}&#x60; to see it settle into &#x60;stopped&#x60;.  Stopping an execution that already finished is not an error: the response carries the state it settled in. 
+    # @param function_id [String] Durable function ID, or its name within the project
+    # @param execution_id [String] Durable execution ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :x_volcano_client_token The &#x60;client_token&#x60; the execution&#39;s start returned. Lets an anon key, or a user who did not start the execution, reach it, and a service key scoped to a list without &#x60;*&#x60; read and stop it. 
+    # @return [Array<(DurableExecution, Integer, Hash)>] DurableExecution data, response status code and response headers
+    def stop_durable_execution_from_application_with_http_info(function_id, execution_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: DurableFunctionsApi.stop_durable_execution_from_application ...'
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling DurableFunctionsApi.stop_durable_execution_from_application"
+      end
+      # verify the required parameter 'execution_id' is set
+      if @api_client.config.client_side_validation && execution_id.nil?
+        fail ArgumentError, "Missing the required parameter 'execution_id' when calling DurableFunctionsApi.stop_durable_execution_from_application"
+      end
+      if @api_client.config.client_side_validation && !opts[:'x_volcano_client_token'].nil? && opts[:'x_volcano_client_token'].to_s.length > 128
+        fail ArgumentError, 'invalid value for "opts[:"x_volcano_client_token"]" when calling DurableFunctionsApi.stop_durable_execution_from_application, the character length must be smaller than or equal to 128.'
+      end
+
+      # resource path
+      local_var_path = '/durable-functions/{functionId}/executions/{executionId}/stop'.sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'executionId' + '}', CGI.escape(execution_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      header_params[:'X-Volcano-Client-Token'] = opts[:'x_volcano_client_token'] if !opts[:'x_volcano_client_token'].nil?
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'DurableExecution'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'AnonKey']
+
+      new_options = opts.merge(
+        :operation => :"DurableFunctionsApi.stop_durable_execution_from_application",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: DurableFunctionsApi#stop_durable_execution_from_application\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

@@ -31,6 +31,16 @@ module SpecSupport
         [FakeGeneratedModel.new(execution.merge(status: 'stopped')), 200, {}]
       end
 
+      def get_durable_execution_from_application_with_http_info(function_id, execution_id, options = {})
+        @calls << [:get_from_application, function_id, execution_id, options]
+        [FakeGeneratedModel.new(execution), 200, {}]
+      end
+
+      def stop_durable_execution_from_application_with_http_info(function_id, execution_id, options = {})
+        @calls << [:stop_from_application, function_id, execution_id, options]
+        [FakeGeneratedModel.new(execution.merge(status: 'stopped')), 200, {}]
+      end
+
       private
 
       def execution

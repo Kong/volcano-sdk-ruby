@@ -29,6 +29,7 @@ module Volcano
   require_relative 'generated_transport_logs'
   require_relative 'generated_transport_functions'
   require_relative 'generated_transport_durable'
+  require_relative 'generated_transport_durable_application'
   require_relative 'generated_transport_durable_messages'
   require_relative 'generated_transport_sandbox'
   require_relative 'generated_transport_storage'

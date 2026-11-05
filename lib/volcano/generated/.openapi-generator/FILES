@@ -52,6 +52,7 @@ lib/volcano-generated/models/auth_confirm_email_change200_response.rb
 lib/volcano-generated/models/auth_confirm_email_change_request.rb
 lib/volcano-generated/models/auth_confirm_email_request.rb
 lib/volcano-generated/models/auth_convert_anonymous200_response.rb
+lib/volcano-generated/models/auth_convert_anonymous_request.rb
 lib/volcano-generated/models/auth_device_authorize_request.rb
 lib/volcano-generated/models/auth_device_token_request.rb
 lib/volcano-generated/models/auth_device_verify200_response.rb

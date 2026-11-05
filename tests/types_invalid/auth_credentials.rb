@@ -7,6 +7,7 @@ def invalid_credentials(auth)
   auth.sign_in_anonymously(metadata: 'device')
   auth.convert_anonymous(email: 'user@example.test', password: 'secret', metadata: 12)
   auth.confirm_email(token: 12)
+  auth.sign_up(email: 'user@example.test', password: 'secret', redirect_to: 12)
   auth.reset_password(token: 'recovery')
   auth.current_session = 'not a session'
   auth.on_auth_state_change

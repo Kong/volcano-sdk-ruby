@@ -316,7 +316,8 @@ RSpec.describe Volcano::Client do
         authorization: 'anon-key',
         email: 'new@example.com',
         password: 'secret',
-        metadata: { display_name: 'New User' }
+        metadata: { display_name: 'New User' },
+        redirect_to: nil
       )
     end
 
@@ -325,6 +326,14 @@ RSpec.describe Volcano::Client do
 
       expect(client.auth.current_session).to be_nil
       expect(transport.calls_for(:auth_signup).last.fetch(1).fetch(:metadata)).to eq({})
+    end
+
+    it 'passes the confirmation redirect to the transport' do
+      client.auth.sign_up(email: 'new@example.com', password: 'secret', redirect_to: 'https://app.example.com/welcome')
+
+      expect(transport.calls_for(:auth_signup).last.fetch(1).fetch(:redirect_to)).to eq(
+        'https://app.example.com/welcome'
+      )
     end
 
     it 'raises a typed error without changing the session' do
@@ -1298,11 +1307,51 @@ RSpec.describe Volcano::Client do
 
       result = client.auth.confirm_email(token: 'confirmation-token')
 
-      expect(result).to be_nil
+      expect(result).to eq(
+        Volcano::ConfirmEmailResult.new(message: 'Email confirmed successfully', redirect_to: nil)
+      )
+      expect(result.message).to be_frozen
       expect(transport.calls_for(:auth_confirm_email).last.fetch(1)).to eq(
         authorization: 'anon-key', token: 'confirmation-token'
       )
       expect(client.auth.current_session).to be(established)
+    end
+
+    it 'returns the redirect stored at sign-up', :aggregate_failures do
+      transport.confirm_email_response = Volcano::Transport::Response.new(
+        status: 200,
+        body: { 'message' => 'Email confirmed successfully', 'redirect_to' => 'https://app.example.com/welcome' },
+        headers: {}, data: nil
+      )
+
+      result = client.auth.confirm_email(token: 'confirmation-token')
+
+      expect(result).to eq(
+        Volcano::ConfirmEmailResult.new(
+          message: 'Email confirmed successfully', redirect_to: 'https://app.example.com/welcome'
+        )
+      )
+      expect(result.redirect_to).to be_frozen
+    end
+
+    it 'accepts an acknowledgement without optional fields' do
+      transport.confirm_email_response = Volcano::Transport::Response.new(status: 200, body: {}, headers: {}, data: nil)
+
+      result = client.auth.confirm_email(token: 'confirmation-token')
+
+      expect(result).to eq(Volcano::ConfirmEmailResult.new(message: nil, redirect_to: nil))
+    end
+
+    [[], { 'message' => 7 }, { 'message' => 'Email confirmed successfully', 'redirect_to' => 7 }].each do |body|
+      it "rejects a malformed acknowledgement #{body.inspect}" do
+        transport.confirm_email_response = Volcano::Transport::Response.new(
+          status: 200, body: body, headers: {}, data: nil
+        )
+
+        expect do
+          client.auth.confirm_email(token: 'confirmation-token')
+        end.to raise_error(TypeError, 'Expected a valid email confirmation acknowledgement')
+      end
     end
 
     it 'raises a typed error without changing the session' do

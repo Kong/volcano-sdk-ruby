@@ -426,6 +426,7 @@ Class | Method | HTTP request | Description
  - [Volcano::Generated::AuthConfirmEmailChangeRequest](docs/AuthConfirmEmailChangeRequest.md)
  - [Volcano::Generated::AuthConfirmEmailRequest](docs/AuthConfirmEmailRequest.md)
  - [Volcano::Generated::AuthConvertAnonymous200Response](docs/AuthConvertAnonymous200Response.md)
+ - [Volcano::Generated::AuthConvertAnonymousRequest](docs/AuthConvertAnonymousRequest.md)
  - [Volcano::Generated::AuthDeviceAuthorizeRequest](docs/AuthDeviceAuthorizeRequest.md)
  - [Volcano::Generated::AuthDeviceTokenRequest](docs/AuthDeviceTokenRequest.md)
  - [Volcano::Generated::AuthDeviceVerify200Response](docs/AuthDeviceVerify200Response.md)

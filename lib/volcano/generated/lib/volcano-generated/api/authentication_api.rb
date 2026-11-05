@@ -212,26 +212,26 @@ module Volcano::Generated
 
     # Convert anonymous user to authenticated
     # Add email and password to anonymous user. Requires auth user access token. If require_email_confirmation is enabled for the project, the converted user remains unconfirmed until /auth/confirm succeeds. When email sending is enabled, a confirmation email is sent during conversion. 
-    # @param auth_signup_request [AuthSignupRequest] 
+    # @param auth_convert_anonymous_request [AuthConvertAnonymousRequest] 
     # @param [Hash] opts the optional parameters
     # @return [AuthConvertAnonymous200Response]
-    def auth_convert_anonymous(auth_signup_request, opts = {})
-      data, _status_code, _headers = auth_convert_anonymous_with_http_info(auth_signup_request, opts)
+    def auth_convert_anonymous(auth_convert_anonymous_request, opts = {})
+      data, _status_code, _headers = auth_convert_anonymous_with_http_info(auth_convert_anonymous_request, opts)
       data
     end
 
     # Convert anonymous user to authenticated
     # Add email and password to anonymous user. Requires auth user access token. If require_email_confirmation is enabled for the project, the converted user remains unconfirmed until /auth/confirm succeeds. When email sending is enabled, a confirmation email is sent during conversion. 
-    # @param auth_signup_request [AuthSignupRequest] 
+    # @param auth_convert_anonymous_request [AuthConvertAnonymousRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Array<(AuthConvertAnonymous200Response, Integer, Hash)>] AuthConvertAnonymous200Response data, response status code and response headers
-    def auth_convert_anonymous_with_http_info(auth_signup_request, opts = {})
+    def auth_convert_anonymous_with_http_info(auth_convert_anonymous_request, opts = {})
       if @api_client.config.debugging
         @api_client.config.logger.debug 'Calling API: AuthenticationApi.auth_convert_anonymous ...'
       end
-      # verify the required parameter 'auth_signup_request' is set
-      if @api_client.config.client_side_validation && auth_signup_request.nil?
-        fail ArgumentError, "Missing the required parameter 'auth_signup_request' when calling AuthenticationApi.auth_convert_anonymous"
+      # verify the required parameter 'auth_convert_anonymous_request' is set
+      if @api_client.config.client_side_validation && auth_convert_anonymous_request.nil?
+        fail ArgumentError, "Missing the required parameter 'auth_convert_anonymous_request' when calling AuthenticationApi.auth_convert_anonymous"
       end
       # resource path
       local_var_path = '/auth/user/convert-anonymous'
@@ -253,7 +253,7 @@ module Volcano::Generated
       form_params = opts[:form_params] || {}
 
       # http body (model)
-      post_body = opts[:debug_body] || @api_client.object_to_http_body(auth_signup_request)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(auth_convert_anonymous_request)
 
       # return_type
       return_type = opts[:debug_return_type] || 'AuthConvertAnonymous200Response'
@@ -1058,7 +1058,7 @@ module Volcano::Generated
     end
 
     # Resend confirmation email
-    # Resend email confirmation link. Returns generic message to prevent email enumeration. No email is sent when the account does not exist or is already confirmed. If the account exists and is unconfirmed, a new token is generated and any previous confirmation token is invalidated. 
+    # Resend email confirmation link. Returns generic message to prevent email enumeration. No email is sent when the account does not exist or is already confirmed. If the account exists and is unconfirmed, a new token is generated and any previous confirmation token is invalidated. The `redirect_to` given at signup carries over to the new token. 
     # @param auth_forgot_password_request [AuthForgotPasswordRequest] 
     # @param [Hash] opts the optional parameters
     # @return [AuthResetPassword200Response]
@@ -1068,7 +1068,7 @@ module Volcano::Generated
     end
 
     # Resend confirmation email
-    # Resend email confirmation link. Returns generic message to prevent email enumeration. No email is sent when the account does not exist or is already confirmed. If the account exists and is unconfirmed, a new token is generated and any previous confirmation token is invalidated. 
+    # Resend email confirmation link. Returns generic message to prevent email enumeration. No email is sent when the account does not exist or is already confirmed. If the account exists and is unconfirmed, a new token is generated and any previous confirmation token is invalidated. The &#x60;redirect_to&#x60; given at signup carries over to the new token. 
     # @param auth_forgot_password_request [AuthForgotPasswordRequest] 
     # @param [Hash] opts the optional parameters
     # @return [Array<(AuthResetPassword200Response, Integer, Hash)>] AuthResetPassword200Response data, response status code and response headers

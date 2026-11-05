@@ -77,6 +77,7 @@ module Volcano
     end
   end
   EmailChangeResult = Data.define(:message, :new_email)
+  ConfirmEmailResult = Data.define(:message, :redirect_to)
   LockLease = Data.define(:key, :token, :expires_at, :fencing_token)
 
   # Reopens the generated record for checked initialization.

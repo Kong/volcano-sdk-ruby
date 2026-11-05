@@ -24,9 +24,18 @@ def adopt_credentials(auth, session)
   auth.current_session
 end
 
+# @type method redirected_sign_up: (Volcano::Auth) -> Volcano::SignUpResult
+def redirected_sign_up(auth)
+  auth.sign_up(email: 'user@example.test', password: 'secret', redirect_to: 'https://app.example.test/welcome')
+end
+
+# @type method email_confirmation: (Volcano::Auth) -> String?
+def email_confirmation(auth)
+  auth.confirm_email(token: 'confirmation').redirect_to
+end
+
 # @type method credential_messages: (Volcano::Auth) -> nil
 def credential_messages(auth)
-  auth.confirm_email(token: 'confirmation')
   auth.resend_confirmation(email: 'user@example.test')
   auth.reset_password_for_email(email: 'user@example.test')
   auth.reset_password(token: 'recovery', new_password: 'secret')

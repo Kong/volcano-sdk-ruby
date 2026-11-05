@@ -6,9 +6,9 @@ module Volcano
     INVALID_SIGN_UP_RESULT = 'Expected a complete sign-up acknowledgement'
     private_constant :INVALID_SIGN_UP_RESULT
 
-    def sign_up(email:, password:, metadata: {}, sign_in_when_allowed: false)
+    def sign_up(email:, password:, metadata: {}, sign_in_when_allowed: false, redirect_to: nil)
       generation, = @client.capture_session
-      payload = Transport.body(sign_up_response(email:, password:, metadata:), 201)
+      payload = Transport.body(sign_up_response(email:, password:, metadata:, redirect_to:), 201)
       result = build_sign_up_result(payload)
       return result unless sign_in_when_allowed && !result.confirmation_required
 
@@ -17,13 +17,14 @@ module Volcano
 
     private
 
-    def sign_up_response(email:, password:, metadata:)
+    def sign_up_response(email:, password:, metadata:, redirect_to:)
       Transport.invoke do
         @transport.auth_signup(
           authorization: @client.anon_token,
           email: email,
           password: password,
-          metadata: Hash(metadata)
+          metadata: Hash(metadata),
+          redirect_to: redirect_to
         )
       end
     end

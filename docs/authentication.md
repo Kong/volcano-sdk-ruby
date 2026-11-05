@@ -123,11 +123,43 @@ unchanged.
 ## Confirm an email address
 
 ```ruby
-client.auth.confirm_email(token: "confirmation-token")
+result = client.auth.confirm_email(token: "confirmation-token")
+puts result.message
 ```
 
-Success returns `nil`. Confirmation does not sign in the confirmed account or
-change an unrelated local session.
+Success returns an immutable `Volcano::ConfirmEmailResult`. Its `message` and
+`redirect_to` fields may be `nil`. Confirmation does not sign in the confirmed
+account or change an unrelated local session.
+
+## Return the user after confirmation
+
+Pass `redirect_to` at sign-up to say where the user should go after they
+confirm. Use a full URL from the project's allowed redirect URLs:
+
+```ruby
+client.auth.sign_up(
+  email: "new-user@example.com",
+  password: "correct-horse-battery-staple",
+  redirect_to: "https://app.example.com/onboarding"
+)
+
+# In the handler for the confirmation link:
+result = client.auth.confirm_email(token: token)
+location = result.redirect_to || "https://app.example.com/login"
+```
+
+The server keeps the target with the account, so it works when the email is
+opened on another device, and a resent confirmation keeps it. It is stored only
+when the sign-up creates the account and the project requires confirmation; a
+later sign-up cannot change it. The managed verify page shows it as a Continue
+link.
+
+`confirm_email` returns `redirect_to` once, as a full URL, and `nil` after that
+or when none was stored. A path such as `/login` is also accepted, but it
+resolves against the Volcano site URL, so it only suits the Volcano dashboard.
+A value outside the allowed redirect URLs raises
+`Volcano::Error::ValidationError`. A value over 2,048 characters raises
+`ArgumentError` before the request is sent.
 
 ## Resend a confirmation email
 

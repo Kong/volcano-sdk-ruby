@@ -133,11 +133,14 @@ unchanged.
 ### Confirm an email address
 
 ```ruby
-client.auth.confirm_email(token: "confirmation-token")
+result = client.auth.confirm_email(token: "confirmation-token")
+location = result.redirect_to || "https://app.example.com/login"
 ```
 
-Success returns `nil`. Confirmation does not sign in the confirmed account or
-change an unrelated local session.
+Success returns an immutable `Volcano::ConfirmEmailResult`. Its `message` and
+`redirect_to` fields may be `nil`. `redirect_to` is the target given to
+`sign_up(redirect_to:)`, returned once as a full URL. Confirmation does not sign
+in the confirmed account or change an unrelated local session.
 
 ### Resend a confirmation email
 

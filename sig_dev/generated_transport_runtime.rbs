@@ -64,7 +64,7 @@ module Volcano
   class GeneratedTransport
     MALFORMED_USER_PROFILE: "Expected a complete user profile"
 
-    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input, ?redirect_to: String?) -> Transport::Response
 
     def auth_signin: (authorization: String, email: String, password: String) -> Transport::Response
 

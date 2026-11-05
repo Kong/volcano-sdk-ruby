@@ -390,6 +390,23 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'sends the confirmation redirect only when given', :aggregate_failures do
+    transport.auth_signup(
+      authorization: 'anon-key', email: 'new@example.com', password: 'secret', metadata: {},
+      redirect_to: 'https://app.example.com/welcome'
+    )
+    transport.auth_signup(
+      authorization: 'anon-key', email: 'new@example.com', password: 'secret', metadata: {}, redirect_to: nil
+    )
+
+    with_redirect, without_redirect = apis.authentication.signup_calls
+    expect(with_redirect.to_hash).to eq(
+      email: 'new@example.com', password: 'secret', user_metadata: {},
+      redirect_to: 'https://app.example.com/welcome'
+    )
+    expect(without_redirect.to_hash).to eq(email: 'new@example.com', password: 'secret', user_metadata: {})
+  end
+
   it 'signs in anonymously through the generated operation' do
     response = transport.auth_signup_anonymous(
       authorization: 'anon-key', metadata: { device: 'mobile' }
@@ -412,7 +429,7 @@ RSpec.describe Volcano::Client do
     )
 
     request, options = apis.authentication.anonymous_conversion_calls.fetch(0)
-    expect(request).to be_a(generated_namespace::AuthSignupRequest)
+    expect(request).to be_a(generated_namespace::AuthConvertAnonymousRequest)
       .and have_attributes(
         email: 'converted@example.com',
         password: 'secret',

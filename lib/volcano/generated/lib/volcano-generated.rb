@@ -25,6 +25,7 @@ Volcano::Generated.autoload :AuthConfirmEmailChange200Response, 'volcano-generat
 Volcano::Generated.autoload :AuthConfirmEmailChangeRequest, 'volcano-generated/models/auth_confirm_email_change_request'
 Volcano::Generated.autoload :AuthConfirmEmailRequest, 'volcano-generated/models/auth_confirm_email_request'
 Volcano::Generated.autoload :AuthConvertAnonymous200Response, 'volcano-generated/models/auth_convert_anonymous200_response'
+Volcano::Generated.autoload :AuthConvertAnonymousRequest, 'volcano-generated/models/auth_convert_anonymous_request'
 Volcano::Generated.autoload :AuthDeviceAuthorizeRequest, 'volcano-generated/models/auth_device_authorize_request'
 Volcano::Generated.autoload :AuthDeviceTokenRequest, 'volcano-generated/models/auth_device_token_request'
 Volcano::Generated.autoload :AuthDeviceVerify200Response, 'volcano-generated/models/auth_device_verify200_response'

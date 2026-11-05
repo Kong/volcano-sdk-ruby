@@ -17,6 +17,9 @@ module Volcano::Generated
   class AuthConfirmEmail200Response < ApiModelBase
     attr_accessor :message
 
+    # The `redirect_to` given at signup, as a full URL: a path is joined to the Volcano site URL. Returned once; the next confirm call does not return it. 
+    attr_accessor :redirect_to
+
     class EnumAttributeValidator
       attr_reader :datatype
       attr_reader :allowable_values
@@ -42,7 +45,8 @@ module Volcano::Generated
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'message' => :'message'
+        :'message' => :'message',
+        :'redirect_to' => :'redirect_to'
       }
     end
 
@@ -59,7 +63,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'message' => :'String'
+        :'message' => :'String',
+        :'redirect_to' => :'String'
       }
     end
 
@@ -87,6 +92,10 @@ module Volcano::Generated
 
       if attributes.key?(:'message')
         self.message = attributes[:'message']
+      end
+
+      if attributes.key?(:'redirect_to')
+        self.redirect_to = attributes[:'redirect_to']
       end
     end
 
@@ -122,7 +131,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          message == o.message
+          message == o.message &&
+          redirect_to == o.redirect_to
     end
 
     # @see the `==` method
@@ -134,7 +144,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [message].hash
+      [message, redirect_to].hash
     end
 
     # Builds the object from hash

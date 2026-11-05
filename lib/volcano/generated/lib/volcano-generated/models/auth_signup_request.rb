@@ -22,12 +22,16 @@ module Volcano::Generated
 
     attr_accessor :user_metadata
 
+    # Where to send the user after they confirm their email: a URL in the project's allowed redirect URLs, or a path on the Volcano site, such as `/login`. Stored only when the signup creates the account and the project requires email confirmation. Returned once by `POST /auth/confirm`, and shown as a Continue link on the managed verify page. 
+    attr_accessor :redirect_to
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'email' => :'email',
         :'password' => :'password',
-        :'user_metadata' => :'user_metadata'
+        :'user_metadata' => :'user_metadata',
+        :'redirect_to' => :'redirect_to'
       }
     end
 
@@ -46,7 +50,8 @@ module Volcano::Generated
       {
         :'email' => :'String',
         :'password' => :'String',
-        :'user_metadata' => :'Hash<String, Object>'
+        :'user_metadata' => :'Hash<String, Object>',
+        :'redirect_to' => :'String'
       }
     end
 
@@ -89,6 +94,10 @@ module Volcano::Generated
           self.user_metadata = value
         end
       end
+
+      if attributes.key?(:'redirect_to')
+        self.redirect_to = attributes[:'redirect_to']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -104,6 +113,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "password", password cannot be nil.')
       end
 
+      if !@redirect_to.nil? && @redirect_to.to_s.length > 2048
+        invalid_properties.push('invalid value for "redirect_to", the character length must be smaller than or equal to 2048.')
+      end
+
       invalid_properties
     end
 
@@ -113,6 +126,7 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @email.nil?
       return false if @password.nil?
+      return false if !@redirect_to.nil? && @redirect_to.to_s.length > 2048
       true
     end
 
@@ -136,6 +150,20 @@ module Volcano::Generated
       @password = password
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] redirect_to Value to be assigned
+    def redirect_to=(redirect_to)
+      if redirect_to.nil?
+        fail ArgumentError, 'redirect_to cannot be nil'
+      end
+
+      if redirect_to.to_s.length > 2048
+        fail ArgumentError, 'invalid value for "redirect_to", the character length must be smaller than or equal to 2048.'
+      end
+
+      @redirect_to = redirect_to
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -143,7 +171,8 @@ module Volcano::Generated
       self.class == o.class &&
           email == o.email &&
           password == o.password &&
-          user_metadata == o.user_metadata
+          user_metadata == o.user_metadata &&
+          redirect_to == o.redirect_to
     end
 
     # @see the `==` method
@@ -155,7 +184,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [email, password, user_metadata].hash
+      [email, password, user_metadata, redirect_to].hash
     end
 
     # Builds the object from hash

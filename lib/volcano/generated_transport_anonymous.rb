@@ -18,7 +18,7 @@ module Volcano
       invoke do
         apis = @api_factory.call(authorization)
         attributes = { email:, password:, user_metadata: metadata }
-        request = Generated::AuthSignupRequest.new(email:, password:, user_metadata: metadata)
+        request = Generated::AuthConvertAnonymousRequest.new(email:, password:, user_metadata: metadata)
         body, status, headers = apis.authentication.auth_convert_anonymous_with_http_info(
           request,
           debug_body: attributes,

@@ -41,6 +41,10 @@ module Volcano
       def initialize: ({ token: String } attributes) -> void
     end
 
+    class AuthConvertAnonymousRequest < ApiModelBase
+      def initialize: ({ email: String, password: String, user_metadata: session_user_input } attributes) -> void
+    end
+
     class AuthForgotPasswordRequest < ApiModelBase
       def initialize: ({ email: String } attributes) -> void
     end
@@ -70,7 +74,7 @@ module Volcano
     end
 
     class AuthSignupRequest < ApiModelBase
-      def initialize: ({ email: String, password: String, user_metadata: session_user_input } attributes) -> void
+      def initialize: ({ email: String, password: String, user_metadata: session_user_input, ?redirect_to: String } attributes) -> void
     end
 
     class AuthUpdateUserRequest < ApiModelBase
@@ -134,7 +138,7 @@ module Volcano
       def auth_cancel_email_change_with_http_info: (?api_options opts) -> api_result
       def auth_confirm_email_with_http_info: (AuthConfirmEmailRequest auth_confirm_email_request, ?api_options opts) -> api_result
       def auth_confirm_email_change_with_http_info: (AuthConfirmEmailChangeRequest auth_confirm_email_change_request, ?api_options opts) -> api_result
-      def auth_convert_anonymous_with_http_info: (AuthSignupRequest auth_signup_request, ?api_options opts) -> api_result
+      def auth_convert_anonymous_with_http_info: (AuthConvertAnonymousRequest auth_convert_anonymous_request, ?api_options opts) -> api_result
       def auth_delete_all_my_sessions_with_http_info: (?api_options opts) -> api_result
       def auth_delete_my_session_with_http_info: (String session_id, ?api_options opts) -> api_result
       def auth_forgot_password_with_http_info: (AuthForgotPasswordRequest auth_forgot_password_request, ?api_options opts) -> api_result

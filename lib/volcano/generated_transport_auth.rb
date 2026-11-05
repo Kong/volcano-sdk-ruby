@@ -6,14 +6,14 @@ module Volcano
     MALFORMED_USER_PROFILE = 'Expected a complete user profile'
     private_constant :MALFORMED_USER_PROFILE
 
-    def auth_signup(authorization:, email:, password:, metadata:)
+    def auth_signup(authorization:, email:, password:, metadata:, redirect_to: nil)
       invoke do
         apis = @api_factory.call(authorization)
-        request = Generated::AuthSignupRequest.new(
-          email: email,
-          password: password,
-          user_metadata: metadata
-        )
+        request = if redirect_to.nil?
+                    Generated::AuthSignupRequest.new(email:, password:, user_metadata: metadata)
+                  else
+                    Generated::AuthSignupRequest.new(email:, password:, user_metadata: metadata, redirect_to:)
+                  end
         data, status, headers = apis.authentication.auth_signup_with_http_info(request)
         response(data, status, headers)
       end

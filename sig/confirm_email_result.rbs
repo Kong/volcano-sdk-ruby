@@ -1,0 +1,21 @@
+module Volcano
+  class ConfirmEmailResult < Data
+    attr_reader message: String?
+    attr_reader redirect_to: String?
+
+    def self.new: (String? message, String? redirect_to) -> ConfirmEmailResult
+                | (message: String?, redirect_to: String?) -> ConfirmEmailResult
+    def self.[]: (String? message, String? redirect_to) -> ConfirmEmailResult
+               | (message: String?, redirect_to: String?) -> ConfirmEmailResult
+    def self.members: () -> [:message, :redirect_to]
+
+    def initialize: (String? message, String? redirect_to) -> void
+                  | (message: String?, redirect_to: String?) -> void
+    def members: () -> [:message, :redirect_to]
+    def with: (?message: String?, ?redirect_to: String?) -> ConfirmEmailResult
+    def to_h: () -> { message: String?, redirect_to: String? }
+            | [K, V] () { (Symbol, String?) -> [K, V] } -> Hash[K, V]
+    def deconstruct: () -> [String?, String?]
+    def deconstruct_keys: (Array[Symbol]?) -> Hash[Symbol, String?]
+  end
+end

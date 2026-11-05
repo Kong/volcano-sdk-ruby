@@ -35,7 +35,7 @@ module Volcano
     def auth_get_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
     def auth_refresh_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response
     def auth_call_oauth_api: (authorization: String, provider: String, endpoint: String, method: String, body: json_value) -> Transport::Response
-    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response
+    def auth_signup: (authorization: String, email: String, password: String, metadata: session_user_input, ?redirect_to: String?) -> Transport::Response
     def auth_signin: (authorization: String, email: String, password: String) -> Transport::Response
     def auth_signup_anonymous: (authorization: String, metadata: session_user_input) -> Transport::Response
     def auth_convert_anonymous: (authorization: String, email: String, password: String, metadata: session_user_input) -> Transport::Response

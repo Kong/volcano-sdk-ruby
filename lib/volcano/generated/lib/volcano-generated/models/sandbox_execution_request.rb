@@ -23,7 +23,7 @@ module Volcano::Generated
     # Baseline memory in MiB. Cloud HOBBY supports 1024; SUPERAGENT supports 1024 or 2048. Omission uses the preset or template default; a template requiring more than the plan permits is rejected. Local sessions are exempt from cloud plan limits.
     attr_accessor :memory_mb
 
-    # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
+    # Region such as `us-east-1`, from the preset catalog. Region IDs issued by earlier versions of the API are still accepted. A temporarily unavailable region answers 400 with code `sandbox_region_unavailable`.
     attr_accessor :region
 
     # Absolute VM lifetime including startup, bounded by environment capacity policy. Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud HOBBY accepts 30–3600 seconds; SUPERAGENT accepts 30–28800 seconds. Inherited template defaults are clamped to the plan limit; explicit values above it are rejected. Local accepts 0 for unlimited or a positive lifetime. The VM is reclaimed early when the command finishes.
@@ -36,6 +36,11 @@ module Volcano::Generated
 
     attr_accessor :environment
 
+    attr_accessor :network
+
+    # Set false to keep no output. stdout and stderr are returned once in this response, and Volcano's control plane never stores them in the execution journal, database, logs or traces. This does not cover the Sandbox's memory or a suspended session's snapshot. A retry with the same Idempotency-Key returns the exit code with `output_kept` false and empty streams, without running the command again. False is refused with 400 and code `feature_unavailable` while the `sandboxes.output_not_kept` capability is unavailable.
+    attr_accessor :keep_output
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
@@ -46,7 +51,9 @@ module Volcano::Generated
         :'max_duration_seconds' => :'max_duration_seconds',
         :'command' => :'command',
         :'timeout_seconds' => :'timeout_seconds',
-        :'environment' => :'environment'
+        :'environment' => :'environment',
+        :'network' => :'network',
+        :'keep_output' => :'keep_output'
       }
     end
 
@@ -70,7 +77,9 @@ module Volcano::Generated
         :'max_duration_seconds' => :'Integer',
         :'command' => :'String',
         :'timeout_seconds' => :'Integer',
-        :'environment' => :'Hash<String, String>'
+        :'environment' => :'Hash<String, String>',
+        :'network' => :'SandboxSessionNetworkRequest',
+        :'keep_output' => :'Boolean'
       }
     end
 
@@ -132,6 +141,16 @@ module Volcano::Generated
         if (value = attributes[:'environment']).is_a?(Hash)
           self.environment = value
         end
+      end
+
+      if attributes.key?(:'network')
+        self.network = attributes[:'network']
+      end
+
+      if attributes.key?(:'keep_output')
+        self.keep_output = attributes[:'keep_output']
+      else
+        self.keep_output = true
       end
     end
 
@@ -308,7 +327,9 @@ module Volcano::Generated
           max_duration_seconds == o.max_duration_seconds &&
           command == o.command &&
           timeout_seconds == o.timeout_seconds &&
-          environment == o.environment
+          environment == o.environment &&
+          network == o.network &&
+          keep_output == o.keep_output
     end
 
     # @see the `==` method
@@ -320,7 +341,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [preset, sandbox_id, memory_mb, region, max_duration_seconds, command, timeout_seconds, environment].hash
+      [preset, sandbox_id, memory_mb, region, max_duration_seconds, command, timeout_seconds, environment, network, keep_output].hash
     end
 
     # Builds the object from hash

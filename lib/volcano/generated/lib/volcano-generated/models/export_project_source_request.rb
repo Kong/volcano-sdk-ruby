@@ -18,10 +18,14 @@ module Volcano::Generated
     # The currently configured production branch the user confirmed for export.
     attr_accessor :production_branch
 
+    # The `repo_id` of the connected repository the user confirmed for export, as the git connection reports it. When set, export answers `409` if the project is now connected to a different repository, so source is written only to the repository the user was shown. 
+    attr_accessor :repo_id
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
-        :'production_branch' => :'production_branch'
+        :'production_branch' => :'production_branch',
+        :'repo_id' => :'repo_id'
       }
     end
 
@@ -38,7 +42,8 @@ module Volcano::Generated
     # Attribute type mapping.
     def self.openapi_types
       {
-        :'production_branch' => :'String'
+        :'production_branch' => :'String',
+        :'repo_id' => :'Integer'
       }
     end
 
@@ -68,6 +73,10 @@ module Volcano::Generated
         self.production_branch = attributes[:'production_branch']
       else
         self.production_branch = nil
+      end
+
+      if attributes.key?(:'repo_id')
+        self.repo_id = attributes[:'repo_id']
       end
     end
 
@@ -115,7 +124,8 @@ module Volcano::Generated
     def ==(o)
       return true if self.equal?(o)
       self.class == o.class &&
-          production_branch == o.production_branch
+          production_branch == o.production_branch &&
+          repo_id == o.repo_id
     end
 
     # @see the `==` method
@@ -127,7 +137,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [production_branch].hash
+      [production_branch, repo_id].hash
     end
 
     # Builds the object from hash

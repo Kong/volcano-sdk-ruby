@@ -15,6 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class UpdateEmailTemplateRequest < ApiModelBase
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 400. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :subject
 
     attr_accessor :html_body

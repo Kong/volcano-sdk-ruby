@@ -23,11 +23,17 @@ module Volcano::Generated
     # Baseline memory in MiB. Cloud HOBBY supports 1024; SUPERAGENT supports 1024 or 2048. Omission uses the preset or template default; a template requiring more than the plan permits is rejected. Local sessions are exempt from cloud plan limits.
     attr_accessor :memory_mb
 
-    # Region such as `us-east-1`. Region IDs issued by earlier versions of the API are still accepted.
+    # Region such as `us-east-1`, from the preset catalog. Region IDs issued by earlier versions of the API are still accepted. A temporarily unavailable region answers 400 with code `sandbox_region_unavailable`.
     attr_accessor :region
 
     # Inherits the template TTL when omitted (cloud default 3600 seconds; local default 0, unlimited). Cloud HOBBY accepts 30–3600 seconds; SUPERAGENT accepts 30–28800 seconds. Inherited template defaults are clamped to the plan limit; explicit values above it are rejected. Local accepts 0 for unlimited or a positive lifetime.
     attr_accessor :max_duration_seconds
+
+    attr_accessor :network
+
+    attr_accessor :executions
+
+    attr_accessor :limits
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
@@ -36,7 +42,10 @@ module Volcano::Generated
         :'sandbox_id' => :'sandbox_id',
         :'memory_mb' => :'memory_mb',
         :'region' => :'region',
-        :'max_duration_seconds' => :'max_duration_seconds'
+        :'max_duration_seconds' => :'max_duration_seconds',
+        :'network' => :'network',
+        :'executions' => :'executions',
+        :'limits' => :'limits'
       }
     end
 
@@ -57,7 +66,10 @@ module Volcano::Generated
         :'sandbox_id' => :'String',
         :'memory_mb' => :'Integer',
         :'region' => :'String',
-        :'max_duration_seconds' => :'Integer'
+        :'max_duration_seconds' => :'Integer',
+        :'network' => :'SandboxSessionNetworkRequest',
+        :'executions' => :'SandboxSessionExecutions',
+        :'limits' => :'SandboxSessionLimits'
       }
     end
 
@@ -103,6 +115,18 @@ module Volcano::Generated
 
       if attributes.key?(:'max_duration_seconds')
         self.max_duration_seconds = attributes[:'max_duration_seconds']
+      end
+
+      if attributes.key?(:'network')
+        self.network = attributes[:'network']
+      end
+
+      if attributes.key?(:'executions')
+        self.executions = attributes[:'executions']
+      end
+
+      if attributes.key?(:'limits')
+        self.limits = attributes[:'limits']
       end
     end
 
@@ -196,7 +220,10 @@ module Volcano::Generated
           sandbox_id == o.sandbox_id &&
           memory_mb == o.memory_mb &&
           region == o.region &&
-          max_duration_seconds == o.max_duration_seconds
+          max_duration_seconds == o.max_duration_seconds &&
+          network == o.network &&
+          executions == o.executions &&
+          limits == o.limits
     end
 
     # @see the `==` method
@@ -208,7 +235,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [preset, sandbox_id, memory_mb, region, max_duration_seconds].hash
+      [preset, sandbox_id, memory_mb, region, max_duration_seconds, network, executions, limits].hash
     end
 
     # Builds the object from hash

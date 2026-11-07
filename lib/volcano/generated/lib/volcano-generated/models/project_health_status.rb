@@ -15,13 +15,15 @@ require 'time'
 
 module Volcano::Generated
   class ProjectHealthStatus
+    EMPTY = "empty".freeze
     HEALTHY = "healthy".freeze
+    NEEDS_ATTENTION = "needs_attention".freeze
     DEGRADED = "degraded".freeze
     CRITICAL = "critical".freeze
     UNKNOWN = "unknown".freeze
 
     def self.all_vars
-      @all_vars ||= [HEALTHY, DEGRADED, CRITICAL, UNKNOWN].freeze
+      @all_vars ||= [EMPTY, HEALTHY, NEEDS_ATTENTION, DEGRADED, CRITICAL, UNKNOWN].freeze
     end
 
     # Builds the enum from string

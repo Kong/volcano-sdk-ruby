@@ -18,7 +18,7 @@ module Volcano::Generated
     # Type of email template
     attr_accessor :template_type
 
-    # Email subject line
+    # Subject template. After Go template whitespace trimming, literal interior carriage returns or newlines return 400. Outer whitespace and trailing block-scalar newlines are allowed.
     attr_accessor :subject
 
     # HTML template body. Available placeholders: - {{.Token}} - The confirmation/reset token - {{.ProjectName}} - The project name - {{.Email}} - User's email address 

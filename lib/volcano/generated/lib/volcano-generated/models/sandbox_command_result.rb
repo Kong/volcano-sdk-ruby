@@ -15,17 +15,24 @@ require 'time'
 
 module Volcano::Generated
   class SandboxCommandResult < ApiModelBase
+    # The first 1 MiB (1,048,576 bytes) the command wrote to stdout. Empty in a replay of a command that kept no output.
     attr_accessor :stdout
 
+    # The first 1 MiB (1,048,576 bytes) the command wrote to stderr. Empty in a replay of a command that kept no output.
     attr_accessor :stderr
 
     attr_accessor :exit_code
 
+    # True when the command wrote more than 1 MiB to stdout. False in a replay of a command that kept no output.
     attr_accessor :stdout_truncated
 
+    # True when the command wrote more than 1 MiB to stderr. False in a replay of a command that kept no output.
     attr_accessor :stderr_truncated
 
     attr_accessor :timed_out
+
+    # False when the command kept no output. Its streams appear only in the response to the request that ran it, and Volcano's control plane never stores them in the execution journal, database, logs or traces. This does not cover the Sandbox's memory or a suspended session's snapshot. A retry with the same Idempotency-Key returns them empty.
+    attr_accessor :output_kept
 
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
@@ -35,7 +42,8 @@ module Volcano::Generated
         :'exit_code' => :'exit_code',
         :'stdout_truncated' => :'stdout_truncated',
         :'stderr_truncated' => :'stderr_truncated',
-        :'timed_out' => :'timed_out'
+        :'timed_out' => :'timed_out',
+        :'output_kept' => :'output_kept'
       }
     end
 
@@ -57,7 +65,8 @@ module Volcano::Generated
         :'exit_code' => :'Integer',
         :'stdout_truncated' => :'Boolean',
         :'stderr_truncated' => :'Boolean',
-        :'timed_out' => :'Boolean'
+        :'timed_out' => :'Boolean',
+        :'output_kept' => :'Boolean'
       }
     end
 
@@ -118,6 +127,12 @@ module Volcano::Generated
       else
         self.timed_out = nil
       end
+
+      if attributes.key?(:'output_kept')
+        self.output_kept = attributes[:'output_kept']
+      else
+        self.output_kept = nil
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -149,6 +164,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "timed_out", timed_out cannot be nil.')
       end
 
+      if @output_kept.nil?
+        invalid_properties.push('invalid value for "output_kept", output_kept cannot be nil.')
+      end
+
       invalid_properties
     end
 
@@ -162,6 +181,7 @@ module Volcano::Generated
       return false if @stdout_truncated.nil?
       return false if @stderr_truncated.nil?
       return false if @timed_out.nil?
+      return false if @output_kept.nil?
       true
     end
 
@@ -225,6 +245,16 @@ module Volcano::Generated
       @timed_out = timed_out
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] output_kept Value to be assigned
+    def output_kept=(output_kept)
+      if output_kept.nil?
+        fail ArgumentError, 'output_kept cannot be nil'
+      end
+
+      @output_kept = output_kept
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -235,7 +265,8 @@ module Volcano::Generated
           exit_code == o.exit_code &&
           stdout_truncated == o.stdout_truncated &&
           stderr_truncated == o.stderr_truncated &&
-          timed_out == o.timed_out
+          timed_out == o.timed_out &&
+          output_kept == o.output_kept
     end
 
     # @see the `==` method
@@ -247,7 +278,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [stdout, stderr, exit_code, stdout_truncated, stderr_truncated, timed_out].hash
+      [stdout, stderr, exit_code, stdout_truncated, stderr_truncated, timed_out, output_kept].hash
     end
 
     # Builds the object from hash

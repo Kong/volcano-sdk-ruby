@@ -16,7 +16,7 @@ require 'time'
 module Volcano::Generated
   # Request to create a new project
   class CreateProjectRequest < ApiModelBase
-    # Project name (must be unique). Can only contain letters, numbers, underscores, and hyphens. 
+    # Project name. A name you already use is not refused: the project is created with a short random suffix added to it. Can only contain letters, numbers, underscores, and hyphens. 
     attr_accessor :name
 
     # Optional trusted starter template identifier. The server resolves immutable source and database initialization artifacts. Callers cannot supply artifact locations or database credentials. Creation accepts an asynchronous installation; poll the individual project until template_installation.status is ready before using the app. Use pixel-board, trellini, or collab-pad for the configured starter bundles. The official-starter legacy identifier has environment-specific availability. Cannot be combined with initialPrompt.

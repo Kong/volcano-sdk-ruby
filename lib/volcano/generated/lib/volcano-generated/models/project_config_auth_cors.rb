@@ -23,13 +23,17 @@ module Volcano::Generated
 
     attr_accessor :max_age
 
+    # Allow the origins of the project's own live frontend previews.
+    attr_accessor :allow_frontend_previews
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'enabled' => :'enabled',
         :'allowed_origins' => :'allowed_origins',
         :'allow_credentials' => :'allow_credentials',
-        :'max_age' => :'max_age'
+        :'max_age' => :'max_age',
+        :'allow_frontend_previews' => :'allow_frontend_previews'
       }
     end
 
@@ -49,7 +53,8 @@ module Volcano::Generated
         :'enabled' => :'Boolean',
         :'allowed_origins' => :'Array<String>',
         :'allow_credentials' => :'Boolean',
-        :'max_age' => :'Integer'
+        :'max_age' => :'Integer',
+        :'allow_frontend_previews' => :'Boolean'
       }
     end
 
@@ -92,6 +97,10 @@ module Volcano::Generated
       if attributes.key?(:'max_age')
         self.max_age = attributes[:'max_age']
       end
+
+      if attributes.key?(:'allow_frontend_previews')
+        self.allow_frontend_previews = attributes[:'allow_frontend_previews']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -117,7 +126,8 @@ module Volcano::Generated
           enabled == o.enabled &&
           allowed_origins == o.allowed_origins &&
           allow_credentials == o.allow_credentials &&
-          max_age == o.max_age
+          max_age == o.max_age &&
+          allow_frontend_previews == o.allow_frontend_previews
     end
 
     # @see the `==` method
@@ -129,7 +139,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [enabled, allowed_origins, allow_credentials, max_age].hash
+      [enabled, allowed_origins, allow_credentials, max_age, allow_frontend_previews].hash
     end
 
     # Builds the object from hash

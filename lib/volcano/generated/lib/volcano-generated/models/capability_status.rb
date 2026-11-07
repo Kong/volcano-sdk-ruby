@@ -17,9 +17,10 @@ module Volcano::Generated
   class CapabilityStatus
     AVAILABLE = "available".freeze
     UNAVAILABLE = "unavailable".freeze
+    READ_ONLY = "read_only".freeze
 
     def self.all_vars
-      @all_vars ||= [AVAILABLE, UNAVAILABLE].freeze
+      @all_vars ||= [AVAILABLE, UNAVAILABLE, READ_ONLY].freeze
     end
 
     # Builds the enum from string

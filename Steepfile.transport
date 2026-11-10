@@ -23,6 +23,7 @@ target :client_transport do
   check 'lib/volcano/generated_transport_upload_session_api.rb'
   check 'lib/volcano/generated_transport_upload_sessions.rb'
   library 'cgi'
+  library 'date'
   library 'json'
   library 'securerandom'
   library 'tempfile'

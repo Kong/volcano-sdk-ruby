@@ -98,6 +98,172 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Extract a tar archive into a session's workspace
+    # Extracts a tar archive into a directory of a session's workspace. Send `multipart/form-data` with `project_id`, `session_id` and `path`, in any order, then the archive as the file part `archive`. The archive may be gzip-compressed; Volcano detects compression from its first bytes. The request streams to the session, so the archive is never held whole in memory.  Each call accepts at most 32 MiB of archive, 10,000 files and directories, and 256 MiB of uncompressed archive, counting tar headers, and has 2 minutes to send its archive; a slower call fails and writes nothing. Split larger trees into several archives and create one after another. For a single file larger than 8 MiB, use `POST /sandbox-file-parts`.  `path` must name a directory below the workspace root; a path that resolves to the root or to `/`, such as `.`, `./`, `/`, `/workspace` or `/workspace/.`, is refused with `sandbox_archive_invalid`. The archive may contain only regular files and directories. Entry names are relative to `path`, which is created when missing; an absolute name, a `..` component, a symbolic link, a hard link, a sparse file, or a device refuses the whole archive. File and directory modes keep their permission bits; setuid, setgid and sticky bits are dropped. A file replaces an existing file or symbolic link at its path. Existing directories keep their modes. A symbolic link in the destination is never followed.  The archive is checked and staged before the workspace changes, so a refused archive writes nothing, and one that fails part way is undone. If a session process moves or removes a directory while the archive is written, the call answers `409`, a file the archive replaced there is kept in a `.sandbox-archive-*` directory at the workspace root, and files the archive already placed can stay. Read-only directories the session user owns still take new entries and keep their modes. Code `sandbox_archive_invalid` (400) means the archive or form is malformed or holds an entry that is not allowed. Code `sandbox_archive_too_large` (413) means it exceeds a limit above. Code `sandbox_path_conflict` (409) means the destination has a symbolic link or a file where the archive needs a directory, a directory where it has a file, or a directory the session user cannot write. Code `sandbox_disk_full` (409) means the session's disk has no room for it; free space and retry. Code `sandbox_image_outdated` (409) means the session started from an image that predates archive writes; start a new session from a current preset, or redeploy the template. A session outside `project_id`, or a project the caller cannot reach, answers 404 like an unknown session. 
+    # @param project_id [String] 
+    # @param session_id [String] 
+    # @param path [String] Workspace directory to extract into, relative to &#x60;/workspace&#x60;. It must name a directory below the workspace root; a path that resolves to the root or to &#x60;/&#x60;, such as &#x60;.&#x60;, &#x60;./&#x60;, &#x60;/&#x60;, &#x60;/workspace&#x60; or &#x60;/workspace/.&#x60;, is refused.
+    # @param archive [File] A tar archive, optionally gzip-compressed.
+    # @param [Hash] opts the optional parameters
+    # @return [SandboxFileArchive]
+    def create_sandbox_file_archive(project_id, session_id, path, archive, opts = {})
+      data, _status_code, _headers = create_sandbox_file_archive_with_http_info(project_id, session_id, path, archive, opts)
+      data
+    end
+
+    # Extract a tar archive into a session&#39;s workspace
+    # Extracts a tar archive into a directory of a session&#39;s workspace. Send &#x60;multipart/form-data&#x60; with &#x60;project_id&#x60;, &#x60;session_id&#x60; and &#x60;path&#x60;, in any order, then the archive as the file part &#x60;archive&#x60;. The archive may be gzip-compressed; Volcano detects compression from its first bytes. The request streams to the session, so the archive is never held whole in memory.  Each call accepts at most 32 MiB of archive, 10,000 files and directories, and 256 MiB of uncompressed archive, counting tar headers, and has 2 minutes to send its archive; a slower call fails and writes nothing. Split larger trees into several archives and create one after another. For a single file larger than 8 MiB, use &#x60;POST /sandbox-file-parts&#x60;.  &#x60;path&#x60; must name a directory below the workspace root; a path that resolves to the root or to &#x60;/&#x60;, such as &#x60;.&#x60;, &#x60;./&#x60;, &#x60;/&#x60;, &#x60;/workspace&#x60; or &#x60;/workspace/.&#x60;, is refused with &#x60;sandbox_archive_invalid&#x60;. The archive may contain only regular files and directories. Entry names are relative to &#x60;path&#x60;, which is created when missing; an absolute name, a &#x60;..&#x60; component, a symbolic link, a hard link, a sparse file, or a device refuses the whole archive. File and directory modes keep their permission bits; setuid, setgid and sticky bits are dropped. A file replaces an existing file or symbolic link at its path. Existing directories keep their modes. A symbolic link in the destination is never followed.  The archive is checked and staged before the workspace changes, so a refused archive writes nothing, and one that fails part way is undone. If a session process moves or removes a directory while the archive is written, the call answers &#x60;409&#x60;, a file the archive replaced there is kept in a &#x60;.sandbox-archive-*&#x60; directory at the workspace root, and files the archive already placed can stay. Read-only directories the session user owns still take new entries and keep their modes. Code &#x60;sandbox_archive_invalid&#x60; (400) means the archive or form is malformed or holds an entry that is not allowed. Code &#x60;sandbox_archive_too_large&#x60; (413) means it exceeds a limit above. Code &#x60;sandbox_path_conflict&#x60; (409) means the destination has a symbolic link or a file where the archive needs a directory, a directory where it has a file, or a directory the session user cannot write. Code &#x60;sandbox_disk_full&#x60; (409) means the session&#39;s disk has no room for it; free space and retry. Code &#x60;sandbox_image_outdated&#x60; (409) means the session started from an image that predates archive writes; start a new session from a current preset, or redeploy the template. A session outside &#x60;project_id&#x60;, or a project the caller cannot reach, answers 404 like an unknown session. 
+    # @param project_id [String] 
+    # @param session_id [String] 
+    # @param path [String] Workspace directory to extract into, relative to &#x60;/workspace&#x60;. It must name a directory below the workspace root; a path that resolves to the root or to &#x60;/&#x60;, such as &#x60;.&#x60;, &#x60;./&#x60;, &#x60;/&#x60;, &#x60;/workspace&#x60; or &#x60;/workspace/.&#x60;, is refused.
+    # @param archive [File] A tar archive, optionally gzip-compressed.
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(SandboxFileArchive, Integer, Hash)>] SandboxFileArchive data, response status code and response headers
+    def create_sandbox_file_archive_with_http_info(project_id, session_id, path, archive, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.create_sandbox_file_archive ...'
+      end
+      # verify the required parameter 'project_id' is set
+      if @api_client.config.client_side_validation && project_id.nil?
+        fail ArgumentError, "Missing the required parameter 'project_id' when calling SandboxesApi.create_sandbox_file_archive"
+      end
+      # verify the required parameter 'session_id' is set
+      if @api_client.config.client_side_validation && session_id.nil?
+        fail ArgumentError, "Missing the required parameter 'session_id' when calling SandboxesApi.create_sandbox_file_archive"
+      end
+      # verify the required parameter 'path' is set
+      if @api_client.config.client_side_validation && path.nil?
+        fail ArgumentError, "Missing the required parameter 'path' when calling SandboxesApi.create_sandbox_file_archive"
+      end
+      if @api_client.config.client_side_validation && path.to_s.length > 4096
+        fail ArgumentError, 'invalid value for "path" when calling SandboxesApi.create_sandbox_file_archive, the character length must be smaller than or equal to 4096.'
+      end
+
+      if @api_client.config.client_side_validation && path.to_s.length < 1
+        fail ArgumentError, 'invalid value for "path" when calling SandboxesApi.create_sandbox_file_archive, the character length must be greater than or equal to 1.'
+      end
+
+      # verify the required parameter 'archive' is set
+      if @api_client.config.client_side_validation && archive.nil?
+        fail ArgumentError, "Missing the required parameter 'archive' when calling SandboxesApi.create_sandbox_file_archive"
+      end
+      # resource path
+      local_var_path = '/sandbox-file-archives'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['project_id'] = project_id
+      form_params['session_id'] = session_id
+      form_params['path'] = path
+      form_params['archive'] = archive
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxFileArchive'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.create_sandbox_file_archive",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#create_sandbox_file_archive\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Write one part of a large workspace file
+    # Writes a file of up to 1 GiB into a session's workspace in parts of at most 8 MiB. Each part names its `offset` in the file, the whole file's `size`, and the whole file's lowercase hex `sha256`. Parts collect in a hidden staging file beside `path`; nothing appears at `path` until the part that ends at `size` arrives. That part checks the whole file's size and SHA-256, then moves the file into place in one step, so a partial file is never visible at `path`. The response's `complete` says which part finished the file. Missing parent directories are created, and a symbolic link among them is never followed. The finished file is readable and writable only by the session user.  A part may start anywhere up to the bytes already received, so a failed part can be resent. A part at offset 0 starts the file again. Resending the part that finished the file answers the same completion while the file at `path` still matches `size` and `sha256`. Code `sandbox_file_part_out_of_order` (409) means the part starts past the bytes received; resend from the last part that succeeded. Code `sandbox_file_part_mismatch` (409) means the finished file differs from `size` or `sha256`; its parts are discarded, so start again at offset 0. Code `sandbox_path_conflict` (409) means a directory is at `path`, a file or symbolic link is where a parent directory belongs, or the session user cannot write the parent directory, or, when parents are missing, the nearest one that exists. Read-only directories the session user owns still take new entries and keep their modes. Code `sandbox_disk_full` (409) means the session's disk has no room; free space and retry. Code `sandbox_image_outdated` (409) means the session started from an image that predates parted writes. A staging file stays until its file completes, a part at offset 0 restarts it, or the session ends. A session outside `project_id`, or a project the caller cannot reach, answers 404 like an unknown session. 
+    # @param sandbox_file_part_request [SandboxFilePartRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [SandboxFilePart]
+    def create_sandbox_file_part(sandbox_file_part_request, opts = {})
+      data, _status_code, _headers = create_sandbox_file_part_with_http_info(sandbox_file_part_request, opts)
+      data
+    end
+
+    # Write one part of a large workspace file
+    # Writes a file of up to 1 GiB into a session&#39;s workspace in parts of at most 8 MiB. Each part names its &#x60;offset&#x60; in the file, the whole file&#39;s &#x60;size&#x60;, and the whole file&#39;s lowercase hex &#x60;sha256&#x60;. Parts collect in a hidden staging file beside &#x60;path&#x60;; nothing appears at &#x60;path&#x60; until the part that ends at &#x60;size&#x60; arrives. That part checks the whole file&#39;s size and SHA-256, then moves the file into place in one step, so a partial file is never visible at &#x60;path&#x60;. The response&#39;s &#x60;complete&#x60; says which part finished the file. Missing parent directories are created, and a symbolic link among them is never followed. The finished file is readable and writable only by the session user.  A part may start anywhere up to the bytes already received, so a failed part can be resent. A part at offset 0 starts the file again. Resending the part that finished the file answers the same completion while the file at &#x60;path&#x60; still matches &#x60;size&#x60; and &#x60;sha256&#x60;. Code &#x60;sandbox_file_part_out_of_order&#x60; (409) means the part starts past the bytes received; resend from the last part that succeeded. Code &#x60;sandbox_file_part_mismatch&#x60; (409) means the finished file differs from &#x60;size&#x60; or &#x60;sha256&#x60;; its parts are discarded, so start again at offset 0. Code &#x60;sandbox_path_conflict&#x60; (409) means a directory is at &#x60;path&#x60;, a file or symbolic link is where a parent directory belongs, or the session user cannot write the parent directory, or, when parents are missing, the nearest one that exists. Read-only directories the session user owns still take new entries and keep their modes. Code &#x60;sandbox_disk_full&#x60; (409) means the session&#39;s disk has no room; free space and retry. Code &#x60;sandbox_image_outdated&#x60; (409) means the session started from an image that predates parted writes. A staging file stays until its file completes, a part at offset 0 restarts it, or the session ends. A session outside &#x60;project_id&#x60;, or a project the caller cannot reach, answers 404 like an unknown session. 
+    # @param sandbox_file_part_request [SandboxFilePartRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(SandboxFilePart, Integer, Hash)>] SandboxFilePart data, response status code and response headers
+    def create_sandbox_file_part_with_http_info(sandbox_file_part_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.create_sandbox_file_part ...'
+      end
+      # verify the required parameter 'sandbox_file_part_request' is set
+      if @api_client.config.client_side_validation && sandbox_file_part_request.nil?
+        fail ArgumentError, "Missing the required parameter 'sandbox_file_part_request' when calling SandboxesApi.create_sandbox_file_part"
+      end
+      # resource path
+      local_var_path = '/sandbox-file-parts'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(sandbox_file_part_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxFilePart'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.create_sandbox_file_part",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#create_sandbox_file_part\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Start a sandbox session
     # @param id [String] 
     # @param idempotency_key [String] 
@@ -1163,6 +1329,116 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: SandboxesApi#list_sandbox_presets\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List workspace files
+    # Lists a directory in a Sandbox session's workspace, one page at a time. The listing never follows a symlink and never leaves the workspace. It is not a snapshot: a file that changes while it runs can appear before or after the change. Sessions started on an image built before file listing answer 409 with code `sandbox_image_outdated`; start a new session, after redeploying a custom template.
+    # @param project_id [String] The project to read. A project the caller can&#39;t read answers like one that doesn&#39;t exist.
+    # @param session_id [String] The session to list. A session outside &#x60;project_id&#x60; answers like one that doesn&#39;t exist.
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :path Workspace directory to list, such as &#x60;src&#x60; or &#x60;/workspace/src&#x60;. Omit it, or pass &#x60;.&#x60; or &#x60;/workspace&#x60;, to list the workspace root. The path must be a directory; it is never reached through a symlink.
+    # @option opts [Boolean] :recursive List every entry below the directory. When false, list only its direct entries. (default to true)
+    # @option opts [Boolean] :include_sha256 Add the SHA-256 digest of each regular file&#39;s content. A call reads at most 256 MiB to hash; a page ends early, with &#x60;next_cursor&#x60;, before a file that would pass that budget. A file without a digest says why in &#x60;sha256_skipped&#x60;. (default to false)
+    # @option opts [Integer] :limit Most entries to return. A page can hold fewer, so continue while &#x60;next_cursor&#x60; is present. (default to 10000)
+    # @option opts [String] :cursor Opaque cursor from the previous page&#39;s &#x60;next_cursor&#x60;. It is valid only for the same project and session; send the same &#x60;path&#x60; and &#x60;recursive&#x60; with it.
+    # @return [SandboxFileListResult]
+    def list_sandbox_session_files(project_id, session_id, opts = {})
+      data, _status_code, _headers = list_sandbox_session_files_with_http_info(project_id, session_id, opts)
+      data
+    end
+
+    # List workspace files
+    # Lists a directory in a Sandbox session&#39;s workspace, one page at a time. The listing never follows a symlink and never leaves the workspace. It is not a snapshot: a file that changes while it runs can appear before or after the change. Sessions started on an image built before file listing answer 409 with code &#x60;sandbox_image_outdated&#x60;; start a new session, after redeploying a custom template.
+    # @param project_id [String] The project to read. A project the caller can&#39;t read answers like one that doesn&#39;t exist.
+    # @param session_id [String] The session to list. A session outside &#x60;project_id&#x60; answers like one that doesn&#39;t exist.
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :path Workspace directory to list, such as &#x60;src&#x60; or &#x60;/workspace/src&#x60;. Omit it, or pass &#x60;.&#x60; or &#x60;/workspace&#x60;, to list the workspace root. The path must be a directory; it is never reached through a symlink.
+    # @option opts [Boolean] :recursive List every entry below the directory. When false, list only its direct entries. (default to true)
+    # @option opts [Boolean] :include_sha256 Add the SHA-256 digest of each regular file&#39;s content. A call reads at most 256 MiB to hash; a page ends early, with &#x60;next_cursor&#x60;, before a file that would pass that budget. A file without a digest says why in &#x60;sha256_skipped&#x60;. (default to false)
+    # @option opts [Integer] :limit Most entries to return. A page can hold fewer, so continue while &#x60;next_cursor&#x60; is present. (default to 10000)
+    # @option opts [String] :cursor Opaque cursor from the previous page&#39;s &#x60;next_cursor&#x60;. It is valid only for the same project and session; send the same &#x60;path&#x60; and &#x60;recursive&#x60; with it.
+    # @return [Array<(SandboxFileListResult, Integer, Hash)>] SandboxFileListResult data, response status code and response headers
+    def list_sandbox_session_files_with_http_info(project_id, session_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: SandboxesApi.list_sandbox_session_files ...'
+      end
+      # verify the required parameter 'project_id' is set
+      if @api_client.config.client_side_validation && project_id.nil?
+        fail ArgumentError, "Missing the required parameter 'project_id' when calling SandboxesApi.list_sandbox_session_files"
+      end
+      # verify the required parameter 'session_id' is set
+      if @api_client.config.client_side_validation && session_id.nil?
+        fail ArgumentError, "Missing the required parameter 'session_id' when calling SandboxesApi.list_sandbox_session_files"
+      end
+      if @api_client.config.client_side_validation && !opts[:'path'].nil? && opts[:'path'].to_s.length > 4096
+        fail ArgumentError, 'invalid value for "opts[:"path"]" when calling SandboxesApi.list_sandbox_session_files, the character length must be smaller than or equal to 4096.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'path'].nil? && opts[:'path'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"path"]" when calling SandboxesApi.list_sandbox_session_files, the character length must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] > 10000
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling SandboxesApi.list_sandbox_session_files, must be smaller than or equal to 10000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'limit'].nil? && opts[:'limit'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"limit"]" when calling SandboxesApi.list_sandbox_session_files, must be greater than or equal to 1.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'cursor'].nil? && opts[:'cursor'].to_s.length > 8192
+        fail ArgumentError, 'invalid value for "opts[:"cursor"]" when calling SandboxesApi.list_sandbox_session_files, the character length must be smaller than or equal to 8192.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'cursor'].nil? && opts[:'cursor'].to_s.length < 1
+        fail ArgumentError, 'invalid value for "opts[:"cursor"]" when calling SandboxesApi.list_sandbox_session_files, the character length must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/sandbox-session-files'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+      query_params[:'project_id'] = project_id
+      query_params[:'session_id'] = session_id
+      query_params[:'path'] = opts[:'path'] if !opts[:'path'].nil?
+      query_params[:'recursive'] = opts[:'recursive'] if !opts[:'recursive'].nil?
+      query_params[:'include_sha256'] = opts[:'include_sha256'] if !opts[:'include_sha256'].nil?
+      query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'SandboxFileListResult'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey', 'AuthUserAccessToken', 'UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"SandboxesApi.list_sandbox_session_files",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: SandboxesApi#list_sandbox_session_files\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

@@ -49,6 +49,21 @@ module Volcano::Generated
     # Total number of times this scheduler has executed. 0 for a scheduler that has never run.
     attr_accessor :run_count
 
+    # `failing` while `consecutive_failures` is above 0; `healthy` otherwise, including before its first run in the region the scheduler runs in now. A run from a region it moved away from does not count. For a durable function a run finishes when its execution does, so a run that starts but then fails counts as failed.
+    attr_accessor :health
+
+    # How many runs in a row have failed in the region the scheduler runs in now. Resets to 0 when a run succeeds, and starts at 0 in a region it moves to.
+    attr_accessor :consecutive_failures
+
+    # Outcome of the most recent finished run. Absent before the first.
+    attr_accessor :last_run_status
+
+    # When the most recent successful run finished.
+    attr_accessor :last_success_at
+
+    # When the most recent failed run finished.
+    attr_accessor :last_failure_at
+
     attr_accessor :created_at
 
     attr_accessor :updated_at
@@ -94,6 +109,11 @@ module Volcano::Generated
         :'last_completed_at' => :'last_completed_at',
         :'last_error' => :'last_error',
         :'run_count' => :'run_count',
+        :'health' => :'health',
+        :'consecutive_failures' => :'consecutive_failures',
+        :'last_run_status' => :'last_run_status',
+        :'last_success_at' => :'last_success_at',
+        :'last_failure_at' => :'last_failure_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -128,6 +148,11 @@ module Volcano::Generated
         :'last_completed_at' => :'Time',
         :'last_error' => :'String',
         :'run_count' => :'Integer',
+        :'health' => :'String',
+        :'consecutive_failures' => :'Integer',
+        :'last_run_status' => :'String',
+        :'last_success_at' => :'Time',
+        :'last_failure_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -223,6 +248,26 @@ module Volcano::Generated
         self.run_count = attributes[:'run_count']
       end
 
+      if attributes.key?(:'health')
+        self.health = attributes[:'health']
+      end
+
+      if attributes.key?(:'consecutive_failures')
+        self.consecutive_failures = attributes[:'consecutive_failures']
+      end
+
+      if attributes.key?(:'last_run_status')
+        self.last_run_status = attributes[:'last_run_status']
+      end
+
+      if attributes.key?(:'last_success_at')
+        self.last_success_at = attributes[:'last_success_at']
+      end
+
+      if attributes.key?(:'last_failure_at')
+        self.last_failure_at = attributes[:'last_failure_at']
+      end
+
       if attributes.key?(:'created_at')
         self.created_at = attributes[:'created_at']
       end
@@ -237,6 +282,10 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
+      if !@consecutive_failures.nil? && @consecutive_failures < 0
+        invalid_properties.push('invalid value for "consecutive_failures", must be greater than or equal to 0.')
+      end
+
       invalid_properties
     end
 
@@ -246,6 +295,11 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       schedule_kind_validator = EnumAttributeValidator.new('String', ["cron"])
       return false unless schedule_kind_validator.valid?(@schedule_kind)
+      health_validator = EnumAttributeValidator.new('String', ["healthy", "failing"])
+      return false unless health_validator.valid?(@health)
+      return false if !@consecutive_failures.nil? && @consecutive_failures < 0
+      last_run_status_validator = EnumAttributeValidator.new('String', ["succeeded", "failed"])
+      return false unless last_run_status_validator.valid?(@last_run_status)
       true
     end
 
@@ -257,6 +311,40 @@ module Volcano::Generated
         fail ArgumentError, "invalid value for \"schedule_kind\", must be one of #{validator.allowable_values}."
       end
       @schedule_kind = schedule_kind
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] health Object to be assigned
+    def health=(health)
+      validator = EnumAttributeValidator.new('String', ["healthy", "failing"])
+      unless validator.valid?(health)
+        fail ArgumentError, "invalid value for \"health\", must be one of #{validator.allowable_values}."
+      end
+      @health = health
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] consecutive_failures Value to be assigned
+    def consecutive_failures=(consecutive_failures)
+      if consecutive_failures.nil?
+        fail ArgumentError, 'consecutive_failures cannot be nil'
+      end
+
+      if consecutive_failures < 0
+        fail ArgumentError, 'invalid value for "consecutive_failures", must be greater than or equal to 0.'
+      end
+
+      @consecutive_failures = consecutive_failures
+    end
+
+    # Custom attribute writer method checking allowed values (enum).
+    # @param [Object] last_run_status Object to be assigned
+    def last_run_status=(last_run_status)
+      validator = EnumAttributeValidator.new('String', ["succeeded", "failed"])
+      unless validator.valid?(last_run_status)
+        fail ArgumentError, "invalid value for \"last_run_status\", must be one of #{validator.allowable_values}."
+      end
+      @last_run_status = last_run_status
     end
 
     # Checks equality by comparing each attribute.
@@ -280,6 +368,11 @@ module Volcano::Generated
           last_completed_at == o.last_completed_at &&
           last_error == o.last_error &&
           run_count == o.run_count &&
+          health == o.health &&
+          consecutive_failures == o.consecutive_failures &&
+          last_run_status == o.last_run_status &&
+          last_success_at == o.last_success_at &&
+          last_failure_at == o.last_failure_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -293,7 +386,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, function_id, function_kind, name, enabled, schedule_kind, cron_expression, payload, regions, regions_explicit, next_run_at, last_started_at, last_completed_at, last_error, run_count, created_at, updated_at].hash
+      [id, project_id, function_id, function_kind, name, enabled, schedule_kind, cron_expression, payload, regions, regions_explicit, next_run_at, last_started_at, last_completed_at, last_error, run_count, health, consecutive_failures, last_run_status, last_success_at, last_failure_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

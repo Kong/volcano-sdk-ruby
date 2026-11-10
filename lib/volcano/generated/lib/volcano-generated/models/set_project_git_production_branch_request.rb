@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class SetProjectGitProductionBranchRequest < ApiModelBase
-    # The branch a push must land on to deploy. Validated as a Git branch name only — it does not have to exist yet.
+    # The branch a push must land on to deploy. Validated as a Git branch name only — it does not have to exist yet. An empty string follows the repository's default branch, including later renames.
     attr_accessor :production_branch
 
     # Attribute mapping from ruby-style variable name to JSON key.
@@ -84,10 +84,6 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "production_branch", the character length must be smaller than or equal to 255.')
       end
 
-      if @production_branch.to_s.length < 1
-        invalid_properties.push('invalid value for "production_branch", the character length must be greater than or equal to 1.')
-      end
-
       invalid_properties
     end
 
@@ -97,7 +93,6 @@ module Volcano::Generated
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @production_branch.nil?
       return false if @production_branch.to_s.length > 255
-      return false if @production_branch.to_s.length < 1
       true
     end
 
@@ -110,10 +105,6 @@ module Volcano::Generated
 
       if production_branch.to_s.length > 255
         fail ArgumentError, 'invalid value for "production_branch", the character length must be smaller than or equal to 255.'
-      end
-
-      if production_branch.to_s.length < 1
-        fail ArgumentError, 'invalid value for "production_branch", the character length must be greater than or equal to 1.'
       end
 
       @production_branch = production_branch

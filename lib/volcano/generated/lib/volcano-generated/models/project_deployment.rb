@@ -35,6 +35,8 @@ module Volcano::Generated
 
     attr_accessor :progress
 
+    attr_accessor :commit
+
     attr_accessor :created_at
 
     attr_accessor :updated_at
@@ -73,6 +75,7 @@ module Volcano::Generated
         :'error_message' => :'error_message',
         :'completed_at' => :'completed_at',
         :'progress' => :'progress',
+        :'commit' => :'commit',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
       }
@@ -100,6 +103,7 @@ module Volcano::Generated
         :'error_message' => :'String',
         :'completed_at' => :'Time',
         :'progress' => :'DeploymentProgress',
+        :'commit' => :'DeploymentCommit',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -173,6 +177,10 @@ module Volcano::Generated
 
       if attributes.key?(:'progress')
         self.progress = attributes[:'progress']
+      end
+
+      if attributes.key?(:'commit')
+        self.commit = attributes[:'commit']
       end
 
       if attributes.key?(:'created_at')
@@ -343,6 +351,7 @@ module Volcano::Generated
           error_message == o.error_message &&
           completed_at == o.completed_at &&
           progress == o.progress &&
+          commit == o.commit &&
           created_at == o.created_at &&
           updated_at == o.updated_at
     end
@@ -356,7 +365,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, resource, operation, status, deploy_source, error_message, completed_at, progress, created_at, updated_at].hash
+      [id, project_id, resource, operation, status, deploy_source, error_message, completed_at, progress, commit, created_at, updated_at].hash
     end
 
     # Builds the object from hash

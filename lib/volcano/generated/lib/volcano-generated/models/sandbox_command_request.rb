@@ -22,12 +22,16 @@ module Volcano::Generated
 
     attr_accessor :environment
 
+    # Set false to keep no output. stdout and stderr are returned once in this response, and Volcano's control plane never stores them in the execution journal, database, logs or traces. This does not cover the Sandbox's memory or a suspended session's snapshot. A retry with the same Idempotency-Key returns the exit code with `output_kept` false and empty streams, without running the command again. Omit it to use the session's `executions.keep_output`. True in a session that keeps no output is refused with 400 and code `sandbox_session_keeps_no_output`. False is refused with 400 and code `feature_unavailable` while the `sandboxes.output_not_kept` capability is unavailable.
+    attr_accessor :keep_output
+
     # Attribute mapping from ruby-style variable name to JSON key.
     def self.attribute_map
       {
         :'command' => :'command',
         :'timeout_seconds' => :'timeout_seconds',
-        :'environment' => :'environment'
+        :'environment' => :'environment',
+        :'keep_output' => :'keep_output'
       }
     end
 
@@ -46,7 +50,8 @@ module Volcano::Generated
       {
         :'command' => :'String',
         :'timeout_seconds' => :'Integer',
-        :'environment' => :'Hash<String, String>'
+        :'environment' => :'Hash<String, String>',
+        :'keep_output' => :'Boolean'
       }
     end
 
@@ -86,6 +91,10 @@ module Volcano::Generated
         if (value = attributes[:'environment']).is_a?(Hash)
           self.environment = value
         end
+      end
+
+      if attributes.key?(:'keep_output')
+        self.keep_output = attributes[:'keep_output']
       end
     end
 
@@ -191,7 +200,8 @@ module Volcano::Generated
       self.class == o.class &&
           command == o.command &&
           timeout_seconds == o.timeout_seconds &&
-          environment == o.environment
+          environment == o.environment &&
+          keep_output == o.keep_output
     end
 
     # @see the `==` method
@@ -203,7 +213,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [command, timeout_seconds, environment].hash
+      [command, timeout_seconds, environment, keep_output].hash
     end
 
     # Builds the object from hash

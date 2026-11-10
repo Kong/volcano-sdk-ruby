@@ -15,6 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class ProjectConfigEmailTemplate < ApiModelBase
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 422. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :subject
 
     # HTML body. Max 256 KiB. SUPERAGENT plan required for custom bodies.

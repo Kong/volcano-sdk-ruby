@@ -29,6 +29,7 @@ module Volcano::Generated
 
     attr_accessor :status
 
+    # Set when `status` is `failed`: `import.deployment_skipped` when the import's deployment was skipped, otherwise the error code of the Git deployment run the import started (see `GitDeploymentRunError.code`), such as `source_invalid`, `deploy_refused`, `child_deploy_failed`, `child_deploy_not_started`, or `deploy_failed`. Treat a code you do not know as a failure.
     attr_accessor :error_code
 
     attr_accessor :error_message

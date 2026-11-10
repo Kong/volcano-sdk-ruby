@@ -15,11 +15,11 @@ require 'time'
 
 module Volcano::Generated
   class DurableMessageDirection
-    IN = "in".freeze
-    OUT = "out".freeze
+    DurableMessageDirectionIn = "in".freeze
+    DurableMessageDirectionOut = "out".freeze
 
     def self.all_vars
-      @all_vars ||= [IN, OUT].freeze
+      @all_vars ||= [DurableMessageDirectionIn, DurableMessageDirectionOut].freeze
     end
 
     # Builds the enum from string

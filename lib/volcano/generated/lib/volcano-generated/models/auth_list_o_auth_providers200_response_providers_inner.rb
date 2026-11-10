@@ -17,6 +17,12 @@ module Volcano::Generated
   class AuthListOAuthProviders200ResponseProvidersInner < ApiModelBase
     attr_accessor :provider
 
+    # The user's account ID at the provider, as a string. It stays the same when the user renames the account. 
+    attr_accessor :provider_user_id
+
+    # The account's login at the provider when it was linked, such as a GitHub username. It isn't updated when the user renames the account. Omitted for providers without logins. 
+    attr_accessor :provider_login
+
     attr_accessor :linked_at
 
     attr_accessor :updated_at
@@ -25,6 +31,8 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'provider' => :'provider',
+        :'provider_user_id' => :'provider_user_id',
+        :'provider_login' => :'provider_login',
         :'linked_at' => :'linked_at',
         :'updated_at' => :'updated_at'
       }
@@ -44,6 +52,8 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'provider' => :'String',
+        :'provider_user_id' => :'String',
+        :'provider_login' => :'String',
         :'linked_at' => :'Time',
         :'updated_at' => :'Time'
       }
@@ -73,14 +83,30 @@ module Volcano::Generated
 
       if attributes.key?(:'provider')
         self.provider = attributes[:'provider']
+      else
+        self.provider = nil
+      end
+
+      if attributes.key?(:'provider_user_id')
+        self.provider_user_id = attributes[:'provider_user_id']
+      else
+        self.provider_user_id = nil
+      end
+
+      if attributes.key?(:'provider_login')
+        self.provider_login = attributes[:'provider_login']
       end
 
       if attributes.key?(:'linked_at')
         self.linked_at = attributes[:'linked_at']
+      else
+        self.linked_at = nil
       end
 
       if attributes.key?(:'updated_at')
         self.updated_at = attributes[:'updated_at']
+      else
+        self.updated_at = nil
       end
     end
 
@@ -89,6 +115,22 @@ module Volcano::Generated
     def list_invalid_properties
       warn '[DEPRECATED] the `list_invalid_properties` method is obsolete'
       invalid_properties = Array.new
+      if @provider.nil?
+        invalid_properties.push('invalid value for "provider", provider cannot be nil.')
+      end
+
+      if @provider_user_id.nil?
+        invalid_properties.push('invalid value for "provider_user_id", provider_user_id cannot be nil.')
+      end
+
+      if @linked_at.nil?
+        invalid_properties.push('invalid value for "linked_at", linked_at cannot be nil.')
+      end
+
+      if @updated_at.nil?
+        invalid_properties.push('invalid value for "updated_at", updated_at cannot be nil.')
+      end
+
       invalid_properties
     end
 
@@ -96,7 +138,51 @@ module Volcano::Generated
     # @return true if the model is valid
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
+      return false if @provider.nil?
+      return false if @provider_user_id.nil?
+      return false if @linked_at.nil?
+      return false if @updated_at.nil?
       true
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] provider Value to be assigned
+    def provider=(provider)
+      if provider.nil?
+        fail ArgumentError, 'provider cannot be nil'
+      end
+
+      @provider = provider
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] provider_user_id Value to be assigned
+    def provider_user_id=(provider_user_id)
+      if provider_user_id.nil?
+        fail ArgumentError, 'provider_user_id cannot be nil'
+      end
+
+      @provider_user_id = provider_user_id
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] linked_at Value to be assigned
+    def linked_at=(linked_at)
+      if linked_at.nil?
+        fail ArgumentError, 'linked_at cannot be nil'
+      end
+
+      @linked_at = linked_at
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] updated_at Value to be assigned
+    def updated_at=(updated_at)
+      if updated_at.nil?
+        fail ArgumentError, 'updated_at cannot be nil'
+      end
+
+      @updated_at = updated_at
     end
 
     # Checks equality by comparing each attribute.
@@ -105,6 +191,8 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           provider == o.provider &&
+          provider_user_id == o.provider_user_id &&
+          provider_login == o.provider_login &&
           linked_at == o.linked_at &&
           updated_at == o.updated_at
     end
@@ -118,7 +206,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [provider, linked_at, updated_at].hash
+      [provider, provider_user_id, provider_login, linked_at, updated_at].hash
     end
 
     # Builds the object from hash

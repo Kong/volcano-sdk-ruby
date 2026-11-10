@@ -15,17 +15,24 @@ require 'time'
 
 module Volcano::Generated
   class SandboxExecutionResult < ApiModelBase
+    # The first 1 MiB (1,048,576 bytes) the command wrote to stdout. Empty in a replay of a command that kept no output.
     attr_accessor :stdout
 
+    # The first 1 MiB (1,048,576 bytes) the command wrote to stderr. Empty in a replay of a command that kept no output.
     attr_accessor :stderr
 
     attr_accessor :exit_code
 
+    # True when the command wrote more than 1 MiB to stdout. False in a replay of a command that kept no output.
     attr_accessor :stdout_truncated
 
+    # True when the command wrote more than 1 MiB to stderr. False in a replay of a command that kept no output.
     attr_accessor :stderr_truncated
 
     attr_accessor :timed_out
+
+    # False when the command kept no output. Its streams appear only in the response to the request that ran it, and Volcano's control plane never stores them in the execution journal, database, logs or traces. This does not cover the Sandbox's memory or a suspended session's snapshot. A retry with the same Idempotency-Key returns them empty.
+    attr_accessor :output_kept
 
     attr_accessor :session_id
 
@@ -42,6 +49,7 @@ module Volcano::Generated
         :'stdout_truncated' => :'stdout_truncated',
         :'stderr_truncated' => :'stderr_truncated',
         :'timed_out' => :'timed_out',
+        :'output_kept' => :'output_kept',
         :'session_id' => :'session_id',
         :'region' => :'region',
         :'duration_ms' => :'duration_ms'
@@ -67,6 +75,7 @@ module Volcano::Generated
         :'stdout_truncated' => :'Boolean',
         :'stderr_truncated' => :'Boolean',
         :'timed_out' => :'Boolean',
+        :'output_kept' => :'Boolean',
         :'session_id' => :'String',
         :'region' => :'String',
         :'duration_ms' => :'Integer'
@@ -131,6 +140,12 @@ module Volcano::Generated
         self.timed_out = nil
       end
 
+      if attributes.key?(:'output_kept')
+        self.output_kept = attributes[:'output_kept']
+      else
+        self.output_kept = nil
+      end
+
       if attributes.key?(:'session_id')
         self.session_id = attributes[:'session_id']
       else
@@ -179,6 +194,10 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "timed_out", timed_out cannot be nil.')
       end
 
+      if @output_kept.nil?
+        invalid_properties.push('invalid value for "output_kept", output_kept cannot be nil.')
+      end
+
       if @session_id.nil?
         invalid_properties.push('invalid value for "session_id", session_id cannot be nil.')
       end
@@ -208,6 +227,7 @@ module Volcano::Generated
       return false if @stdout_truncated.nil?
       return false if @stderr_truncated.nil?
       return false if @timed_out.nil?
+      return false if @output_kept.nil?
       return false if @session_id.nil?
       return false if @region.nil?
       return false if @duration_ms.nil?
@@ -276,6 +296,16 @@ module Volcano::Generated
     end
 
     # Custom attribute writer method with validation
+    # @param [Object] output_kept Value to be assigned
+    def output_kept=(output_kept)
+      if output_kept.nil?
+        fail ArgumentError, 'output_kept cannot be nil'
+      end
+
+      @output_kept = output_kept
+    end
+
+    # Custom attribute writer method with validation
     # @param [Object] session_id Value to be assigned
     def session_id=(session_id)
       if session_id.nil?
@@ -320,6 +350,7 @@ module Volcano::Generated
           stdout_truncated == o.stdout_truncated &&
           stderr_truncated == o.stderr_truncated &&
           timed_out == o.timed_out &&
+          output_kept == o.output_kept &&
           session_id == o.session_id &&
           region == o.region &&
           duration_ms == o.duration_ms
@@ -334,7 +365,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [stdout, stderr, exit_code, stdout_truncated, stderr_truncated, timed_out, session_id, region, duration_ms].hash
+      [stdout, stderr, exit_code, stdout_truncated, stderr_truncated, timed_out, output_kept, session_id, region, duration_ms].hash
     end
 
     # Builds the object from hash

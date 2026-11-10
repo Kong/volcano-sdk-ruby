@@ -77,11 +77,12 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  invalid_timestamps = %w[2026-02-30T12:00:00Z 2026-02-29T12:00:00Z 2026-13-01T12:00:00Z
+                          2026-09-01T12:00:00 2026-09-01 2026-09-01T12:00:00+24:00
+                          2026-09-01T12:00:00+05:60 2026-09-01T12:00:00-24:00
+                          2026-09-01T12:00:00-05:60 2026-09-01T24:00:00Z 2026-09-01T12:00:60Z]
   %w[linked_at updated_at].each do |field|
-    %w[2026-02-30T12:00:00Z 2026-02-29T12:00:00Z 2026-13-01T12:00:00Z
-       2026-09-01T12:00:00 2026-09-01 2026-09-01T12:00:00+24:00
-       2026-09-01T12:00:00+05:60 2026-09-01T12:00:00-24:00
-       2026-09-01T12:00:00-05:60 2026-09-01T24:00:00Z 2026-09-01T12:00:60Z].each do |value|
+    invalid_timestamps.each do |value|
       context "with invalid wire timestamp #{field}: #{value}" do
         let(:wire) { { 'providers' => [provider_payload.merge(field => value)] } }
 
@@ -93,8 +94,9 @@ RSpec.describe Volcano::Client do
     end
   end
 
+  invalid_values = [nil, false, 42, [], {}, '', " \t"]
   %w[provider linked_at updated_at].each do |field|
-    [nil, false, 42, [], {}, '', " \t"].each do |value|
+    invalid_values.each do |value|
       context "with invalid #{field}: #{value.inspect}" do
         let(:wire) { { 'providers' => [provider_payload.merge(field => value)] } }
 

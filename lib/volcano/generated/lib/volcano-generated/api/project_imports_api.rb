@@ -438,8 +438,8 @@ module Volcano::Generated
     # Starts a first-party dashboard user's provider connection flow. The response sets a short-lived HttpOnly browser-binding cookie for the public provider callback. 
     # @param [Hash] opts the optional parameters
     # @option opts [ImportProvider] :provider Import provider to connect. Defaults to Vercel. (default to 'vercel')
-    # @option opts [String] :redirect Validated application URL used after the provider callback.
-    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
+    # @option opts [String] :redirect Application URL used after the provider callback. It must be on the Volcano dashboard&#39;s origin, or &#x60;http&#x60; to &#x60;127.0.0.1&#x60; or &#x60;[::1]&#x60; with a port.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection. It must be on the Volcano dashboard&#39;s origin, or &#x60;http&#x60; to &#x60;127.0.0.1&#x60; or &#x60;[::1]&#x60; with a port.
     # @return [ImportConnectStartResponse]
     def start_import_connect(opts = {})
       data, _status_code, _headers = start_import_connect_with_http_info(opts)
@@ -450,8 +450,8 @@ module Volcano::Generated
     # Starts a first-party dashboard user&#39;s provider connection flow. The response sets a short-lived HttpOnly browser-binding cookie for the public provider callback. 
     # @param [Hash] opts the optional parameters
     # @option opts [ImportProvider] :provider Import provider to connect. Defaults to Vercel. (default to 'vercel')
-    # @option opts [String] :redirect Validated application URL used after the provider callback.
-    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection.
+    # @option opts [String] :redirect Application URL used after the provider callback. It must be on the Volcano dashboard&#39;s origin, or &#x60;http&#x60; to &#x60;127.0.0.1&#x60; or &#x60;[::1]&#x60; with a port.
+    # @option opts [String] :callback_url Same-origin browser callback used to relay provider parameters before completing the connection. It must be on the Volcano dashboard&#39;s origin, or &#x60;http&#x60; to &#x60;127.0.0.1&#x60; or &#x60;[::1]&#x60; with a port.
     # @return [Array<(ImportConnectStartResponse, Integer, Hash)>] ImportConnectStartResponse data, response status code and response headers
     def start_import_connect_with_http_info(opts = {})
       if @api_client.config.debugging

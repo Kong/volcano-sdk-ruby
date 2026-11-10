@@ -488,7 +488,7 @@ RSpec.describe Volcano::Client do
   it 'lists linked OAuth providers through the generated operation' do
     response = transport.auth_list_oauth_providers(authorization: 'access-token')
 
-    expect(apis.oauth.list_calls).to eq([{}])
+    expect(apis.oauth.list_calls).to eq([{ debug_return_type: 'String' }])
     expect(response.body).to eq(
       'providers' => [
         {

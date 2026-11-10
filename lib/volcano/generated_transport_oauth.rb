@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'date'
+
 module Volcano
   # OAuth operations for the internal generated transport.
   class GeneratedTransport
@@ -33,9 +35,11 @@ module Volcano
     def auth_list_oauth_providers(authorization:)
       invoke do
         apis = @api_factory.call(authorization)
-        data, status, headers = apis.oauth.auth_list_o_auth_providers_with_http_info
-        response(data, status, headers)
+        body, status, headers = apis.oauth.auth_list_o_auth_providers_with_http_info(debug_return_type: 'String')
+        response(linked_oauth_providers_body(body), status, headers)
       end
+    rescue JSON::ParserError, KeyError, ArgumentError, TypeError => e
+      raise TypeError, 'Expected complete linked OAuth providers', cause: e
     end
 
     def auth_unlink_oauth_provider(authorization:, provider:)
@@ -69,6 +73,41 @@ module Volcano
         data, status, headers = apis.oauth.call_o_auth_provider_api_with_http_info(provider, request)
         response(data, status, headers)
       end
+    end
+
+    private
+
+    # Provider IDs were added later; the stable facade still consumes three fields.
+    def linked_oauth_providers_body(body)
+      raise TypeError unless body.is_a?(String)
+
+      payload = JSON.parse(body)
+      raise TypeError unless payload.is_a?(Hash)
+
+      providers = payload.fetch('providers')
+      raise TypeError unless providers.is_a?(Array)
+
+      payload.merge('providers' => providers.map { |item| linked_oauth_provider_body(item) })
+    end
+
+    def linked_oauth_provider_body(provider)
+      raise TypeError unless provider.is_a?(Hash)
+
+      provider.merge(
+        'linked_at' => linked_oauth_provider_time(provider.fetch('linked_at')),
+        'updated_at' => linked_oauth_provider_time(provider.fetch('updated_at'))
+      )
+    end
+
+    def linked_oauth_provider_time(value)
+      raise TypeError unless value.is_a?(String)
+      raise TypeError unless value.match?(/\A
+        \d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d
+        (?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)
+      \z/x)
+
+      # Reject malformed offsets before DateTime can normalize them to UTC.
+      DateTime.rfc3339(value, Date::GREGORIAN).to_time
     end
   end
 end

@@ -94,6 +94,12 @@ module Volcano::Generated
     # CORS preflight cache duration (seconds)
     attr_accessor :cors_max_age
 
+    # Allow the exact origins of the project's own live frontend previews in its CORS checks, in addition to `cors_allowed_origins`. A preview's origin stops being allowed within seconds of the preview being deleted or expiring, with no configuration change.
+    attr_accessor :cors_allow_frontend_previews
+
+    # Origins of the project's live frontend previews that its CORS checks currently allow. Empty unless `cors_allow_frontend_previews` is true. Omitted when the live previews could not be read; the rest of the response, and any update it answers, is unaffected.
+    attr_accessor :frontend_preview_origins
+
     # Require users to confirm email before sign-in. Can only be true when email_enabled is true.
     attr_accessor :require_email_confirmation
 
@@ -106,8 +112,10 @@ module Volcano::Generated
     # Enable transactional email sending (confirmation, reset, change notifications). Must be true when require_email_confirmation is true.
     attr_accessor :email_enabled
 
+    # Sender email address. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is trimmed in responses and exports, and ignored when sending.
     attr_accessor :email_from_address
 
+    # Sender display name; supports punctuation and Unicode. New or changed values containing carriage returns or newlines return 400. Unchanged stored or exported values are preserved. Leading and trailing whitespace in previously saved settings is trimmed in responses and exports, and ignored when sending.
     attr_accessor :email_from_name
 
     attr_accessor :smtp_host
@@ -200,6 +208,8 @@ module Volcano::Generated
         :'max_password_history' => :'max_password_history',
         :'cors_allow_credentials' => :'cors_allow_credentials',
         :'cors_max_age' => :'cors_max_age',
+        :'cors_allow_frontend_previews' => :'cors_allow_frontend_previews',
+        :'frontend_preview_origins' => :'frontend_preview_origins',
         :'require_email_confirmation' => :'require_email_confirmation',
         :'email_confirmation_timeout' => :'email_confirmation_timeout',
         :'auto_link_verified_oauth' => :'auto_link_verified_oauth',
@@ -266,6 +276,8 @@ module Volcano::Generated
         :'max_password_history' => :'Integer',
         :'cors_allow_credentials' => :'Boolean',
         :'cors_max_age' => :'Integer',
+        :'cors_allow_frontend_previews' => :'Boolean',
+        :'frontend_preview_origins' => :'Array<String>',
         :'require_email_confirmation' => :'Boolean',
         :'email_confirmation_timeout' => :'Integer',
         :'auto_link_verified_oauth' => :'Boolean',
@@ -484,6 +496,18 @@ module Volcano::Generated
         self.cors_max_age = 86400
       end
 
+      if attributes.key?(:'cors_allow_frontend_previews')
+        self.cors_allow_frontend_previews = attributes[:'cors_allow_frontend_previews']
+      else
+        self.cors_allow_frontend_previews = false
+      end
+
+      if attributes.key?(:'frontend_preview_origins')
+        if (value = attributes[:'frontend_preview_origins']).is_a?(Array)
+          self.frontend_preview_origins = value
+        end
+      end
+
       if attributes.key?(:'require_email_confirmation')
         self.require_email_confirmation = attributes[:'require_email_confirmation']
       else
@@ -691,6 +715,8 @@ module Volcano::Generated
           max_password_history == o.max_password_history &&
           cors_allow_credentials == o.cors_allow_credentials &&
           cors_max_age == o.cors_max_age &&
+          cors_allow_frontend_previews == o.cors_allow_frontend_previews &&
+          frontend_preview_origins == o.frontend_preview_origins &&
           require_email_confirmation == o.require_email_confirmation &&
           email_confirmation_timeout == o.email_confirmation_timeout &&
           auto_link_verified_oauth == o.auto_link_verified_oauth &&
@@ -723,7 +749,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [project_id, access_token_lifetime, refresh_token_lifetime, refresh_token_reuse_interval, inactivity_timeout, max_session_duration, min_password_length, password_policy, require_uppercase, require_lowercase, require_numbers, require_special_chars, enable_signup, enable_email_password, rate_limit_signup, rate_limit_signin, rate_limit_token_refresh, rate_limit_password_reset, cors_enabled, cors_allowed_origins, enable_anonymous_signins, allowed_email_domains, allowed_email_domains_mode, platform_token_ttl, allow_password_reset, password_reset_timeout, max_password_history, cors_allow_credentials, cors_max_age, require_email_confirmation, email_confirmation_timeout, auto_link_verified_oauth, email_enabled, email_from_address, email_from_name, smtp_host, smtp_port, smtp_username, smtp_password_configured, smtp_use_tls, email_confirmation_subject, email_password_reset_subject, email_password_changed_subject, managed_auth_enabled, post_auth_redirect_url, allowed_redirect_urls, post_logout_redirect_url, device_verification_url, created_at, updated_at].hash
+      [project_id, access_token_lifetime, refresh_token_lifetime, refresh_token_reuse_interval, inactivity_timeout, max_session_duration, min_password_length, password_policy, require_uppercase, require_lowercase, require_numbers, require_special_chars, enable_signup, enable_email_password, rate_limit_signup, rate_limit_signin, rate_limit_token_refresh, rate_limit_password_reset, cors_enabled, cors_allowed_origins, enable_anonymous_signins, allowed_email_domains, allowed_email_domains_mode, platform_token_ttl, allow_password_reset, password_reset_timeout, max_password_history, cors_allow_credentials, cors_max_age, cors_allow_frontend_previews, frontend_preview_origins, require_email_confirmation, email_confirmation_timeout, auto_link_verified_oauth, email_enabled, email_from_address, email_from_name, smtp_host, smtp_port, smtp_username, smtp_password_configured, smtp_use_tls, email_confirmation_subject, email_password_reset_subject, email_password_changed_subject, managed_auth_enabled, post_auth_redirect_url, allowed_redirect_urls, post_logout_redirect_url, device_verification_url, created_at, updated_at].hash
     end
 
     # Builds the object from hash

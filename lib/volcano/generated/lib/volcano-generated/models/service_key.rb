@@ -23,7 +23,7 @@ module Volcano::Generated
     # Descriptive name for the key
     attr_accessor :name
 
-    # Full JWT token for Authorization header. Returned on create, get, and list (decrypted from storage). **Store securely - NEVER expose in frontend code!** 
+    # Full JWT token for Authorization header. Returned on create, get, and list (decrypted from storage). List responses leave it out for a key that holds `ai.invoke`. **Store securely - NEVER expose in frontend code!** 
     attr_accessor :key_value
 
     # First 12 characters of the key for display/identification

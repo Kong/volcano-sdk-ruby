@@ -219,6 +219,10 @@ module Volcano
 
     def auth_list_oauth_providers: (authorization: String) -> Transport::Response
 
+    private def linked_oauth_providers_body: (Object? body) -> Hash[String, Object?]
+    private def linked_oauth_provider_body: (Object? provider) -> Hash[String, Object?]
+    private def linked_oauth_provider_time: (Object? value) -> Time
+
     def auth_unlink_oauth_provider: (authorization: String, provider: String) -> Transport::Response
 
     def auth_get_oauth_provider_token: (authorization: String, provider: String) -> Transport::Response

@@ -38,12 +38,12 @@ module SpecSupport
           providers: [
             {
               provider: 'google',
-              linked_at: Time.iso8601('2026-08-30T12:00:00Z'),
-              updated_at: Time.iso8601('2026-09-01T12:00:00Z')
+              linked_at: '2026-08-30T12:00:00Z',
+              updated_at: '2026-09-01T12:00:00Z'
             }
           ]
         }
-        [FakeGeneratedModel.new(providers), 200, {}]
+        [JSON.generate(providers), 200, {}]
       end
 
       def auth_unlink_o_auth_provider_with_http_info(provider)

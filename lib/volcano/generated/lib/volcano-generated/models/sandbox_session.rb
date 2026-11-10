@@ -19,6 +19,9 @@ module Volcano::Generated
 
     attr_accessor :project_id
 
+    # Last recorded lifecycle reason, such as sandbox_run_hook_timeout or sandbox_authority_or_expiry. Historical information, not a current error; use state for the current session state. Retained when later observations supply no reason, including after termination or recovery. Omitted when no reason is known. Values may be added; this field does not imply whether a command ran or whether it can be retried.
+    attr_accessor :last_error_code
+
     # Explicit template used to create the session. Null when created directly from a preset.
     attr_accessor :sandbox_id
 
@@ -36,6 +39,12 @@ module Volcano::Generated
 
     # Absolute VM expiry. Null means unlimited in local mode.
     attr_accessor :expires_at
+
+    attr_accessor :network
+
+    attr_accessor :executions
+
+    attr_accessor :limits
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -64,6 +73,7 @@ module Volcano::Generated
       {
         :'id' => :'id',
         :'project_id' => :'project_id',
+        :'last_error_code' => :'last_error_code',
         :'sandbox_id' => :'sandbox_id',
         :'state' => :'state',
         :'desired_state' => :'desired_state',
@@ -71,7 +81,10 @@ module Volcano::Generated
         :'memory_mb' => :'memory_mb',
         :'created_at' => :'created_at',
         :'started_at' => :'started_at',
-        :'expires_at' => :'expires_at'
+        :'expires_at' => :'expires_at',
+        :'network' => :'network',
+        :'executions' => :'executions',
+        :'limits' => :'limits'
       }
     end
 
@@ -90,6 +103,7 @@ module Volcano::Generated
       {
         :'id' => :'String',
         :'project_id' => :'String',
+        :'last_error_code' => :'String',
         :'sandbox_id' => :'String',
         :'state' => :'String',
         :'desired_state' => :'String',
@@ -97,7 +111,10 @@ module Volcano::Generated
         :'memory_mb' => :'Integer',
         :'created_at' => :'Time',
         :'started_at' => :'Time',
-        :'expires_at' => :'Time'
+        :'expires_at' => :'Time',
+        :'network' => :'SandboxSessionNetwork',
+        :'executions' => :'SandboxSessionExecutions',
+        :'limits' => :'SandboxSessionAppliedLimits'
       }
     end
 
@@ -105,7 +122,7 @@ module Volcano::Generated
     def self.openapi_nullable
       Set.new([
         :'sandbox_id',
-        :'expires_at'
+        :'expires_at',
       ])
     end
 
@@ -135,6 +152,10 @@ module Volcano::Generated
         self.project_id = attributes[:'project_id']
       else
         self.project_id = nil
+      end
+
+      if attributes.key?(:'last_error_code')
+        self.last_error_code = attributes[:'last_error_code']
       end
 
       if attributes.key?(:'sandbox_id')
@@ -182,6 +203,22 @@ module Volcano::Generated
       else
         self.expires_at = nil
       end
+
+      if attributes.key?(:'network')
+        self.network = attributes[:'network']
+      else
+        self.network = nil
+      end
+
+      if attributes.key?(:'executions')
+        self.executions = attributes[:'executions']
+      else
+        self.executions = nil
+      end
+
+      if attributes.key?(:'limits')
+        self.limits = attributes[:'limits']
+      end
     end
 
     # Show invalid properties with the reasons. Usually used together with valid?
@@ -217,6 +254,14 @@ module Volcano::Generated
         invalid_properties.push('invalid value for "created_at", created_at cannot be nil.')
       end
 
+      if @network.nil?
+        invalid_properties.push('invalid value for "network", network cannot be nil.')
+      end
+
+      if @executions.nil?
+        invalid_properties.push('invalid value for "executions", executions cannot be nil.')
+      end
+
       invalid_properties
     end
 
@@ -235,6 +280,8 @@ module Volcano::Generated
       return false if @region.nil?
       return false if @memory_mb.nil?
       return false if @created_at.nil?
+      return false if @network.nil?
+      return false if @executions.nil?
       true
     end
 
@@ -308,6 +355,26 @@ module Volcano::Generated
       @created_at = created_at
     end
 
+    # Custom attribute writer method with validation
+    # @param [Object] network Value to be assigned
+    def network=(network)
+      if network.nil?
+        fail ArgumentError, 'network cannot be nil'
+      end
+
+      @network = network
+    end
+
+    # Custom attribute writer method with validation
+    # @param [Object] executions Value to be assigned
+    def executions=(executions)
+      if executions.nil?
+        fail ArgumentError, 'executions cannot be nil'
+      end
+
+      @executions = executions
+    end
+
     # Checks equality by comparing each attribute.
     # @param [Object] Object to be compared
     def ==(o)
@@ -315,6 +382,7 @@ module Volcano::Generated
       self.class == o.class &&
           id == o.id &&
           project_id == o.project_id &&
+          last_error_code == o.last_error_code &&
           sandbox_id == o.sandbox_id &&
           state == o.state &&
           desired_state == o.desired_state &&
@@ -322,7 +390,10 @@ module Volcano::Generated
           memory_mb == o.memory_mb &&
           created_at == o.created_at &&
           started_at == o.started_at &&
-          expires_at == o.expires_at
+          expires_at == o.expires_at &&
+          network == o.network &&
+          executions == o.executions &&
+          limits == o.limits
     end
 
     # @see the `==` method
@@ -334,7 +405,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, sandbox_id, state, desired_state, region, memory_mb, created_at, started_at, expires_at].hash
+      [id, project_id, last_error_code, sandbox_id, state, desired_state, region, memory_mb, created_at, started_at, expires_at, network, executions, limits].hash
     end
 
     # Builds the object from hash

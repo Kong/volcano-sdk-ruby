@@ -32,6 +32,11 @@ module Volcano::Generated
     # Platform user that triggered a request-initiated deployment; absent for git and system deployments.
     attr_accessor :initiated_by
 
+    attr_accessor :commit
+
+    # The deployment whose build this deployment published instead of compiling its own source. Absent when the deployment compiled.
+    attr_accessor :source_deployment_id
+
     attr_accessor :site_url
 
     # Total build time recorded for this deployment, in seconds.
@@ -83,6 +88,8 @@ module Volcano::Generated
         :'status' => :'status',
         :'deploy_source' => :'deploy_source',
         :'initiated_by' => :'initiated_by',
+        :'commit' => :'commit',
+        :'source_deployment_id' => :'source_deployment_id',
         :'site_url' => :'site_url',
         :'build_duration_seconds' => :'build_duration_seconds',
         :'build_count' => :'build_count',
@@ -114,6 +121,8 @@ module Volcano::Generated
         :'status' => :'String',
         :'deploy_source' => :'String',
         :'initiated_by' => :'String',
+        :'commit' => :'DeploymentCommit',
+        :'source_deployment_id' => :'String',
         :'site_url' => :'String',
         :'build_duration_seconds' => :'Integer',
         :'build_count' => :'Integer',
@@ -185,6 +194,14 @@ module Volcano::Generated
 
       if attributes.key?(:'initiated_by')
         self.initiated_by = attributes[:'initiated_by']
+      end
+
+      if attributes.key?(:'commit')
+        self.commit = attributes[:'commit']
+      end
+
+      if attributes.key?(:'source_deployment_id')
+        self.source_deployment_id = attributes[:'source_deployment_id']
       end
 
       if attributes.key?(:'site_url')
@@ -377,6 +394,8 @@ module Volcano::Generated
           status == o.status &&
           deploy_source == o.deploy_source &&
           initiated_by == o.initiated_by &&
+          commit == o.commit &&
+          source_deployment_id == o.source_deployment_id &&
           site_url == o.site_url &&
           build_duration_seconds == o.build_duration_seconds &&
           build_count == o.build_count &&
@@ -396,7 +415,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, frontend_id, project_id, operation, status, deploy_source, initiated_by, site_url, build_duration_seconds, build_count, build_duration_recorded_at, progress, error_message, created_at, updated_at].hash
+      [id, frontend_id, project_id, operation, status, deploy_source, initiated_by, commit, source_deployment_id, site_url, build_duration_seconds, build_count, build_duration_recorded_at, progress, error_message, created_at, updated_at].hash
     end
 
     # Builds the object from hash

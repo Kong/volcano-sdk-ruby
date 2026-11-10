@@ -7,7 +7,7 @@ require 'tmpdir'
 
 RSpec.describe Volcano do
   let(:root) { File.expand_path('..', __dir__) }
-  let(:openapi_sha256) { '168cf780648fdb7878275bd8e596091341a90bed137e7871e546fbf11b1bf340' }
+  let(:openapi_sha256) { '8bc109d5034348f37d1ab4d5a968db51b376c85ebf8e6386ea49c4ddcc6b0f23' }
 
   it 'accepts current and legacy plan names in project responses' do
     project = described_class.const_get(:Generated).const_get(:Project)

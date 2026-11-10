@@ -15,8 +15,10 @@ require 'time'
 
 module Volcano::Generated
   class ProjectConfigAuthEmailFrom < ApiModelBase
+    # Sender email address. New or changed values containing carriage returns or newlines return 422. Unchanged exported values are preserved.
     attr_accessor :address
 
+    # Sender display name; supports punctuation and Unicode. New or changed values containing carriage returns or newlines return 422. Unchanged exported values are preserved.
     attr_accessor :name
 
     # Attribute mapping from ruby-style variable name to JSON key.

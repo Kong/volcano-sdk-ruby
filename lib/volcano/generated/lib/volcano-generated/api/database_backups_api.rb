@@ -544,7 +544,7 @@ module Volcano::Generated
     end
 
     # List a database's backups
-    # Returns every backup of the database, newest first, together with the window a point-in-time restore may target.  Both backups you took and backups the schedule produced are listed; `source` tells them apart. Only manual backups count against the plan's backup allowance. 
+    # Returns every backup of the database, newest first, together with the window a point-in-time restore may target.  Backups you took, backups the schedule produced, and backups taken before migrations are all listed; `source` tells them apart. Only manual backups count against the plan's backup allowance. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters
@@ -555,7 +555,7 @@ module Volcano::Generated
     end
 
     # List a database&#39;s backups
-    # Returns every backup of the database, newest first, together with the window a point-in-time restore may target.  Both backups you took and backups the schedule produced are listed; &#x60;source&#x60; tells them apart. Only manual backups count against the plan&#39;s backup allowance. 
+    # Returns every backup of the database, newest first, together with the window a point-in-time restore may target.  Backups you took, backups the schedule produced, and backups taken before migrations are all listed; &#x60;source&#x60; tells them apart. Only manual backups count against the plan&#39;s backup allowance. 
     # @param id [String] Project ID
     # @param database_name [String] Database name (unique within project, lowercase letters, numbers, and underscores only)
     # @param [Hash] opts the optional parameters

@@ -270,8 +270,11 @@ end
 ```
 
 The method returns a frozen array of immutable `Volcano::LinkedOAuthProvider`
-values. It raises `Volcano::Error::SessionChangedError` if the active session
-changes while the request is in flight.
+values containing `provider`, `linked_at`, and `updated_at`; both timestamps are
+`Time` values. It accepts older responses with those three fields and current
+responses that also include provider identity fields. Malformed provider names
+or timestamps raise `TypeError`. It raises `Volcano::Error::SessionChangedError`
+if the active session changes while the request is in flight.
 
 ### Link an OAuth provider
 
@@ -1036,9 +1039,9 @@ durable executions rather than writing them. See
 ## Generated boundary
 
 The internal REST transport is generated from `openapi/openapi.yaml`, which
-matches the public bundle from [Hosting #991](https://github.com/Kong/volcano-hosting/pull/991)
-at commit `ef03f689e`.
-Its SHA-256 is `076d97809c95f50567d8b100f4188c1fe2b74e73a388e335c79850e66edfc0e4`.
+matches the public bundle from [Hosting #3213](https://github.com/Kong/volcano-hosting/pull/3213)
+at commit `134dfb1196d944b20d6fb9f0ddf4e9984af6287d`.
+Its SHA-256 is `8bc109d5034348f37d1ab4d5a968db51b376c85ebf8e6386ea49c4ddcc6b0f23`.
 Generation uses `@openapitools/openapi-generator-cli` 2.41.0 with OpenAPI
 Generator 7.17.0. Node is used only to regenerate the committed client and is
 not a gem runtime dependency.

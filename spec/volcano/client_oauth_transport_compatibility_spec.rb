@@ -79,11 +79,13 @@ RSpec.describe Volcano::Client do
 
   %w[linked_at updated_at].each do |field|
     %w[2026-02-30T12:00:00Z 2026-02-29T12:00:00Z 2026-13-01T12:00:00Z
-       2026-09-01T12:00:00 2026-09-01].each do |value|
+       2026-09-01T12:00:00 2026-09-01 2026-09-01T12:00:00+24:00
+       2026-09-01T12:00:00+05:60 2026-09-01T12:00:00-24:00
+       2026-09-01T12:00:00-05:60 2026-09-01T24:00:00Z 2026-09-01T12:00:60Z].each do |value|
       context "with invalid wire timestamp #{field}: #{value}" do
         let(:wire) { { 'providers' => [provider_payload.merge(field => value)] } }
 
-        it 'rejects impossible dates and timestamps without an explicit offset' do
+        it 'rejects impossible dates, times and offsets' do
           expect { client.auth.list_linked_oauth_providers }
             .to raise_error(TypeError, 'Expected complete linked OAuth providers')
         end

@@ -101,8 +101,12 @@ module Volcano
 
     def linked_oauth_provider_time(value)
       raise TypeError unless value.is_a?(String)
+      raise TypeError unless value.match?(/\A
+        \d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d
+        (?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)
+      \z/x)
 
-      # Wire timestamps need an explicit offset and a valid Gregorian date.
+      # Reject malformed offsets before DateTime can normalize them to UTC.
       DateTime.rfc3339(value, Date::GREGORIAN).to_time
     end
   end

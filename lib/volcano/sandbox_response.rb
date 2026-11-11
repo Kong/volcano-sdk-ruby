@@ -18,6 +18,11 @@ module Volcano
       raise TypeError, 'Invalid Sandbox timestamp'
     end
 
+    # A session with no lifetime limit, such as a local-mode session, has no expiry.
+    def self.nullable_timestamp(value)
+      value.nil? ? nil : timestamp(value)
+    end
+
     def self.integer(value)
       return value if value.is_a?(Integer)
 

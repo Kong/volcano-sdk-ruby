@@ -70,7 +70,7 @@ module Volcano
 
     def assign_state(data)
       next_state = SandboxResponse.state(data['state'])
-      expiry = SandboxResponse.timestamp(data['expires_at'])
+      expiry = SandboxResponse.nullable_timestamp(data['expires_at'])
       @state = next_state
       @expires_at = expiry
     end

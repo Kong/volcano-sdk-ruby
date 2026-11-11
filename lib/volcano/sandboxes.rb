@@ -18,12 +18,11 @@ module Volcano
 
     def create( # rubocop:disable Metrics/ParameterLists -- Preserve explicit typed facade keywords.
       project_id, region:, preset: nil, sandbox_id: nil, memory_mb: nil,
-      max_duration_seconds: nil, idle_timeout_seconds: nil, request_id: nil
+      max_duration_seconds: nil, request_id: nil
     )
       options = { region: region, preset: preset, sandbox_id: sandbox_id, memory_mb: memory_mb,
-                  max_duration_seconds: max_duration_seconds, idle_timeout_seconds: idle_timeout_seconds,
-                  request_id: request_id }.compact
-      body = SandboxRequests.selector(options).merge(options.slice(:max_duration_seconds, :idle_timeout_seconds))
+                  max_duration_seconds: max_duration_seconds, request_id: request_id }.compact
+      body = SandboxRequests.selector(options).merge(options.slice(:max_duration_seconds))
       request = SandboxRequest.new(operation: :create_sandbox_session,
                                    resource_id: SandboxRequests.identifier(project_id), body: body,
                                    request_id: SandboxRequests.request_id(options))

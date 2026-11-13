@@ -82,8 +82,9 @@ actual live results separately from discovery or package checks.
 
 ### Documentation and release boundaries
 
-`docs/` is published to the developer documentation site. Put user-facing
-examples there and maintainer instructions in this file or beside the code.
+Public guides live in `Kong/volcano-docs` under `content/sdk/ruby` and publish
+to https://docs.volcano.dev/sdk/ruby. Put user-facing examples there in a
+companion PR, and maintainer instructions in this file or beside the code.
 Keep equivalent language examples current in the same coordinated change.
 Package checks validate artifacts; they do not authorize publication. Treat
 registry-installed quickstarts and release approval as separate release work.

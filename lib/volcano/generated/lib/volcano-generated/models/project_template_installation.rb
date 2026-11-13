@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,6 +19,11 @@ module Volcano::Generated
     attr_accessor :status
 
     attr_accessor :phase
+
+    attr_accessor :source
+
+    # Why the installation failed. Present only when `status` is `failed`, and absent for installations that failed before Volcano recorded a reason. New codes can be added, so treat an unknown one as a generic failure. `source_withdrawn`: the deploy link was switched off or deleted, or its project is being deleted. `source_invalid`: the source failed Volcano's checks, such as a release archive whose digest, size or contents are wrong. `source_access_lost`: Volcano can no longer read the source repository. `invalid_source_configuration`: the source's `volcano-config.yaml` is invalid, or it declares a variable the new project does not have. `nothing_to_deploy`: the source has no function or frontend. `database_not_supported`: the source ships database SQL. `function_deploy_refused`: a function in the source cannot be deployed as defined. `function_quota_exceeded`, `durable_function_quota_exceeded`, `frontend_quota_exceeded`, `frontend_deploy_limit` and `build_minutes_exceeded`: the project reached a plan limit. `build_failed`: a function or frontend from the source failed to build or deploy; its deployment's build logs say why. `retry_budget_exhausted`: the installation kept failing and Volcano stopped retrying. `internal_error`: Volcano failed for a reason of its own. 
+    attr_accessor :failure_code
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -46,7 +51,9 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'status' => :'status',
-        :'phase' => :'phase'
+        :'phase' => :'phase',
+        :'source' => :'source',
+        :'failure_code' => :'failure_code'
       }
     end
 
@@ -64,7 +71,9 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'status' => :'String',
-        :'phase' => :'String'
+        :'phase' => :'String',
+        :'source' => :'ProjectTemplateInstallationSource',
+        :'failure_code' => :'String'
       }
     end
 
@@ -100,6 +109,14 @@ module Volcano::Generated
         self.phase = attributes[:'phase']
       else
         self.phase = nil
+      end
+
+      if attributes.key?(:'source')
+        self.source = attributes[:'source']
+      end
+
+      if attributes.key?(:'failure_code')
+        self.failure_code = attributes[:'failure_code']
       end
     end
 
@@ -158,7 +175,9 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           status == o.status &&
-          phase == o.phase
+          phase == o.phase &&
+          source == o.source &&
+          failure_code == o.failure_code
     end
 
     # @see the `==` method
@@ -170,7 +189,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [status, phase].hash
+      [status, phase, source, failure_code].hash
     end
 
     # Builds the object from hash

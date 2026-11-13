@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -21,7 +21,7 @@ module Volcano::Generated
     # Canonical function ID used for invocation routing
     attr_accessor :function_id
 
-    # Canonical HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development; invoke through POST /functions/{functionId}/invoke instead.
+    # Canonical HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted in local development and when the deployment serves no public invocation domain; invoke through POST /functions/{functionId}/invoke instead.
     attr_accessor :invoke_url
 
     # Suggested SDK cache TTL for this name-to-ID mapping

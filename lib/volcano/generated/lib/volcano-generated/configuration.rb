@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -283,6 +283,13 @@ module Volcano::Generated
             format: 'opaque',
             key: 'Authorization',
             value: "Bearer #{access_token_with_refresh}"
+          },
+        'AIRunToken' =>
+          {
+            type: 'api_key',
+            in: 'header',
+            key: 'x-api-key',
+            value: api_key_with_prefix('x-api-key')
           },
       }
     end

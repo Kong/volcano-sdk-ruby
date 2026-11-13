@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -16,14 +16,11 @@ require 'time'
 module Volcano::Generated
   # Request to create a new project
   class CreateProjectRequest < ApiModelBase
-    # Project name (must be unique). Can only contain letters, numbers, underscores, and hyphens. 
+    # Project name. A name you already use is not refused: the project is created with a short random suffix added to it. Can only contain letters, numbers, underscores, and hyphens. 
     attr_accessor :name
 
-    # Optional trusted starter template identifier. The server resolves immutable source and database initialization artifacts. Callers cannot supply artifact locations or database credentials. Creation accepts an asynchronous installation; poll the individual project until template_installation.status is ready before using the app. Use pixel-board, trellini, or collab-pad for the configured starter bundles. The official-starter legacy identifier has environment-specific availability. Cannot be combined with initialPrompt.
+    # Optional trusted starter template identifier. The server resolves immutable source and database initialization artifacts. Callers cannot supply artifact locations or database credentials. Creation accepts an asynchronous installation; poll the individual project until template_installation.status is ready before using the app. Use pixel-board, trellini, or collab-pad for the configured starter bundles. The official-starter legacy identifier has environment-specific availability.
     attr_accessor :template_id
-
-    # Optional initial builder prompt. Cannot be combined with template_id.
-    attr_accessor :initial_prompt
 
     # Optional region policy. - `true` (default): project functions deploy to all configured regions - `false`: project deploys only to `selected_regions` 
     attr_accessor :all_regions
@@ -58,7 +55,6 @@ module Volcano::Generated
       {
         :'name' => :'name',
         :'template_id' => :'template_id',
-        :'initial_prompt' => :'initialPrompt',
         :'all_regions' => :'all_regions',
         :'selected_regions' => :'selected_regions'
       }
@@ -79,7 +75,6 @@ module Volcano::Generated
       {
         :'name' => :'String',
         :'template_id' => :'String',
-        :'initial_prompt' => :'String',
         :'all_regions' => :'Boolean',
         :'selected_regions' => :'Array<String>'
       }
@@ -115,10 +110,6 @@ module Volcano::Generated
 
       if attributes.key?(:'template_id')
         self.template_id = attributes[:'template_id']
-      end
-
-      if attributes.key?(:'initial_prompt')
-        self.initial_prompt = attributes[:'initial_prompt']
       end
 
       if attributes.key?(:'all_regions')
@@ -212,7 +203,6 @@ module Volcano::Generated
       self.class == o.class &&
           name == o.name &&
           template_id == o.template_id &&
-          initial_prompt == o.initial_prompt &&
           all_regions == o.all_regions &&
           selected_regions == o.selected_regions
     end
@@ -226,7 +216,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [name, template_id, initial_prompt, all_regions, selected_regions].hash
+      [name, template_id, all_regions, selected_regions].hash
     end
 
     # Builds the object from hash

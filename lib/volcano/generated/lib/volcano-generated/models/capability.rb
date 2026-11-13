@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -16,10 +16,13 @@ require 'time'
 module Volcano::Generated
   # A product capability and whether it accepts new work in this environment.
   class Capability < ApiModelBase
-    # Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, `sandboxes.custom_templates`, `issues`, or `autofix`. New IDs may appear at any time.
+    # Stable capability ID, such as `sandboxes`, `sandboxes.sessions`, `sandboxes.custom_templates`, or `issues`. New IDs may appear at any time.
     attr_accessor :id
 
     attr_accessor :status
+
+    # Why an `unavailable` capability refuses new work, named like the error code its requests answer with, such as `plan_required`. Absent on any other status, and when requests answer `feature_unavailable`. Treat an unknown code as absent.
+    attr_accessor :code
 
     class EnumAttributeValidator
       attr_reader :datatype
@@ -47,7 +50,8 @@ module Volcano::Generated
     def self.attribute_map
       {
         :'id' => :'id',
-        :'status' => :'status'
+        :'status' => :'status',
+        :'code' => :'code'
       }
     end
 
@@ -65,7 +69,8 @@ module Volcano::Generated
     def self.openapi_types
       {
         :'id' => :'String',
-        :'status' => :'CapabilityStatus'
+        :'status' => :'CapabilityStatus',
+        :'code' => :'String'
       }
     end
 
@@ -101,6 +106,10 @@ module Volcano::Generated
         self.status = attributes[:'status']
       else
         self.status = nil
+      end
+
+      if attributes.key?(:'code')
+        self.code = attributes[:'code']
       end
     end
 
@@ -155,7 +164,8 @@ module Volcano::Generated
       return true if self.equal?(o)
       self.class == o.class &&
           id == o.id &&
-          status == o.status
+          status == o.status &&
+          code == o.code
     end
 
     # @see the `==` method
@@ -167,7 +177,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, status].hash
+      [id, status, code].hash
     end
 
     # Builds the object from hash

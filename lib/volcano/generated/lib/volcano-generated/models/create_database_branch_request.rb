@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,7 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class CreateDatabaseBranchRequest < ApiModelBase
-    # Branch name (must be unique within the parent database)
+    # Branch name, unique within the parent database. Names beginning with `migration_rehearsal_` are reserved for the branches migration runs rehearse on. 
     attr_accessor :name
 
     # How long the branch should live, between one hour and 30 days. Defaults to 7 days when omitted. 

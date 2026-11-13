@@ -2,9 +2,9 @@
 
 Official Ruby SDK for Volcano. Requires Ruby 3.3 or later.
 
-Start with the [Ruby quickstart](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md).
+Start with the [Ruby quickstart](https://docs.volcano.dev/sdk/ruby).
 
-See [Authentication](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/authentication.md) for account, session, email, and OAuth workflows.
+See [Authentication](https://docs.volcano.dev/sdk/ruby/authentication) for account, session, email, and OAuth workflows.
 
 ## Install
 
@@ -393,7 +393,7 @@ without changing credentials. Without a refresh token, `refresh_session` raises
 `Volcano::Error::AuthenticationError`. `sign_out` clears local state and revokes the server
 session when the access JWT contains a readable UUID `session_id`. Supplied credentials require both a refresh token and an access JWT with a readable UUID
 `session_id` to enable refresh.
-See the [token bootstrap example](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/README.md#use-a-supplied-access-token).
+See the [token bootstrap example](https://docs.volcano.dev/sdk/ruby#use-a-supplied-access-token).
 
 ### Adopt an existing session
 
@@ -493,7 +493,7 @@ prevents replay under another identity. The call preserves its original payload 
 A function's own response, HTTP 403, or a network failure never triggers this retry.
 Anonymous and service keys do not refresh.
 
-See the [functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md).
+See the [functions guide](https://docs.volcano.dev/sdk/ruby/functions).
 
 ### Start and follow a durable execution
 
@@ -680,7 +680,7 @@ they started; the anon key, or another user, passes the execution's
 `client_token:`, which only the creating start returns. Pass `project_id:` to
 `send_message`, `list`, or `subscribe` to use the owner's route with a platform
 user token or a project access token; `subscribe` reads back over it. See the
-[functions guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/functions.md#message-a-durable-execution).
+[functions guide](https://docs.volcano.dev/sdk/ruby/functions#message-a-durable-execution).
 
 ### Read project logs
 
@@ -708,7 +708,7 @@ events. Pass `next_cursor` back as `cursor` to continue a search. `activity`
 returns immutable time buckets using the same resource selector and query
 syntax. Both methods require a platform user token or a project access token.
 A `read_only` project token is sufficient; end-user sessions cannot read project logs.
-See the [logs guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/logs.md).
+See the [logs guide](https://docs.volcano.dev/sdk/ruby/logs).
 
 ### Query a database
 
@@ -890,7 +890,7 @@ Acquisition accepts caller-owned UUID `token` and `request_id` values and retrie
 an ambiguous transport failure or HTTP 503 once with the same request and credential.
 Retain those IDs to recover an uncertain acquisition. Other lock methods accept
 `request_id`; block-scoped helpers forward initial IDs only to acquisition.
-See the [lock guide](https://github.com/Kong/volcano-sdk-ruby/blob/main/docs/locks.md)
+See the [lock guide](https://docs.volcano.dev/sdk/ruby/locks)
 for examples and fencing requirements.
 
 `locks.get` returns immutable lock availability, expiry, and fencing-token

@@ -56,7 +56,7 @@ This does not replace registry installation or approved live platform acceptance
 
 ## Recover from a bad release
 
-For an application regression, first restore its previously tested application revision and dependency lock using [the public guide](../docs/versions.md).
+For an application regression, first restore its previously tested application revision and dependency lock using [the public guide](https://docs.volcano.dev/sdk/ruby/versions).
 Confirm compatibility with current server configuration and data; an SDK downgrade does not roll either back.
 
 Record the affected versions, symptom, safe previous version, artifact digests and any required data/server remediation in the incident or release issue.

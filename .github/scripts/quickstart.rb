@@ -4,8 +4,31 @@ require 'stringio'
 require 'timeout'
 require_relative '../../spec/support/recording_server'
 
-# Executes the unchanged public example with the isolated gem selected by smoke-gem.sh.
+# Executes the public quickstart with the isolated gem selected by smoke-gem.sh.
 class PackageQuickstart
+  # The public quickstart, as published in Kong/volcano-docs
+  # content/sdk/ruby/index.md ("Sign in and read a profile"). Change both together.
+  EXAMPLE = <<~'RUBY'
+    require "volcano"
+
+    client = Volcano::Client.new(
+      anon_key: ENV.fetch("VOLCANO_ANON_KEY"),
+      api_url: ENV.fetch("VOLCANO_API_URL", "https://api.volcano.dev")
+    )
+    session = client.auth.sign_in(
+      email: ENV.fetch("VOLCANO_USER_EMAIL"),
+      password: ENV.fetch("VOLCANO_USER_PASSWORD")
+    )
+    begin
+      user = client.auth.user
+      raise "Unexpected user" unless user.id == session.user_id
+
+      puts "Signed in as #{user.email}"
+    ensure
+      client.auth.sign_out
+    end
+  RUBY
+
   USER = {
     id: '22222222-2222-4222-8222-222222222222',
     project_id: '11111111-1111-4111-8111-111111111111',
@@ -45,18 +68,9 @@ class PackageQuickstart
     )
   end
 
-  def example
-    document = File.read(File.expand_path('../../docs/README.md', __dir__))
-    section = document.split("## Sign in and read a profile\n").fetch(1).split("\n## ").first
-    examples = section.scan(/```ruby\n(.*?)\n```/m).flatten
-    raise 'Expected one complete documented quickstart' unless examples.length == 1
-
-    examples.first
-  end
-
   def execute
     previous_stdout = $stdout
-    File.write('quickstart.rb', example)
+    File.write('quickstart.rb', EXAMPLE)
     output = StringIO.new
     $stdout = output
     Timeout.timeout(30) { load File.expand_path('quickstart.rb') }

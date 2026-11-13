@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.36.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.1...v0.36.0) (2026-11-13)
+
+
+### Features
+
+* **durable:** read and stop executions with application credentials ([#366](https://github.com/Kong/volcano-sdk-ruby/issues/366)) ([e3082cc](https://github.com/Kong/volcano-sdk-ruby/commit/e3082ccaf707baa64a6db7c700123fe6a2129c86))
+
+
+### Bug Fixes
+
+* **deps:** bump rack from 3.2.7 to 3.2.8 ([#371](https://github.com/Kong/volcano-sdk-ruby/issues/371)) ([483df9e](https://github.com/Kong/volcano-sdk-ruby/commit/483df9e3c24a1aa4dabb74434902b75f965ad2b9))
+
 ## [0.35.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.0...v0.35.1) (2026-10-28)
 
 

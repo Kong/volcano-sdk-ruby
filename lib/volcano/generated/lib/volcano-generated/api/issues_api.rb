@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,6 +19,74 @@ module Volcano::Generated
     def initialize(api_client = ApiClient.default)
       @api_client = api_client
     end
+    # Create an issue
+    # Records an issue you write on the project `project_id` names: a description of what to fix, in your words, and optionally a title. The issue has `source` `request`, the project as its resource, and status `open`. With LavaFlow on, LavaFlow starts a run on it by itself, as on a new error: the run follows the project's LavaFlow settings and counts toward the run limits. Follow it with `GET /lavaflow/runs?project_id=…&issue_id=…`. Where none starts, as with LavaFlow off, start one with `POST /lavaflow/runs`.  The issue counts toward the project's 1,000 open issues, with runtime, build and reported issues; at that limit it is refused with code `open_issue_limit_reached`. Resolve or ignore issues to make room.  Only the project's owner can create an issue, as a person: with `volcano login`, a live Volcano dashboard sign-in, or a platform token that expires. A full-scope project access token, MCP and a never-expiring platform token are refused with code `person_required`, as starting a run is, and a read-only project access token or account with an uncoded `403`, because creating one starts a run, which sends the description to an AI service with the project's source. A project access token is refused before its `project_id` is looked up. List, read and update the issue under `/projects/{id}/issues`. 
+    # @param create_issue_request [CreateIssueRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Issue]
+    def create_issue(create_issue_request, opts = {})
+      data, _status_code, _headers = create_issue_with_http_info(create_issue_request, opts)
+      data
+    end
+
+    # Create an issue
+    # Records an issue you write on the project &#x60;project_id&#x60; names: a description of what to fix, in your words, and optionally a title. The issue has &#x60;source&#x60; &#x60;request&#x60;, the project as its resource, and status &#x60;open&#x60;. With LavaFlow on, LavaFlow starts a run on it by itself, as on a new error: the run follows the project&#39;s LavaFlow settings and counts toward the run limits. Follow it with &#x60;GET /lavaflow/runs?project_id&#x3D;…&amp;issue_id&#x3D;…&#x60;. Where none starts, as with LavaFlow off, start one with &#x60;POST /lavaflow/runs&#x60;.  The issue counts toward the project&#39;s 1,000 open issues, with runtime, build and reported issues; at that limit it is refused with code &#x60;open_issue_limit_reached&#x60;. Resolve or ignore issues to make room.  Only the project&#39;s owner can create an issue, as a person: with &#x60;volcano login&#x60;, a live Volcano dashboard sign-in, or a platform token that expires. A full-scope project access token, MCP and a never-expiring platform token are refused with code &#x60;person_required&#x60;, as starting a run is, and a read-only project access token or account with an uncoded &#x60;403&#x60;, because creating one starts a run, which sends the description to an AI service with the project&#39;s source. A project access token is refused before its &#x60;project_id&#x60; is looked up. List, read and update the issue under &#x60;/projects/{id}/issues&#x60;. 
+    # @param create_issue_request [CreateIssueRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(Issue, Integer, Hash)>] Issue data, response status code and response headers
+    def create_issue_with_http_info(create_issue_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: IssuesApi.create_issue ...'
+      end
+      # verify the required parameter 'create_issue_request' is set
+      if @api_client.config.client_side_validation && create_issue_request.nil?
+        fail ArgumentError, "Missing the required parameter 'create_issue_request' when calling IssuesApi.create_issue"
+      end
+      # resource path
+      local_var_path = '/issues'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(create_issue_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'Issue'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['AuthUserAccessToken', 'UserToken']
+
+      new_options = opts.merge(
+        :operation => :"IssuesApi.create_issue",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: IssuesApi#create_issue\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get an issue
     # Returns one issue: the resource that raised it, how often and when it was seen, and its status.  Project access tokens can read issues, including read-only ones. 
     # @param id [String] Project ID
@@ -89,13 +157,14 @@ module Volcano::Generated
     end
 
     # List issues
-    # Lists the project's issues, most recently seen first. An issue groups the runtime errors one function or frontend raised with the same error type and stack, or the same message when there is no stack.  Project access tokens can list issues, including read-only ones. 
+    # Lists the project's issues, most recently seen first. An issue groups the runtime errors one function or frontend raised with the same error type and stack, or the same message when there is no stack; the deploys of one function or frontend whose own build failed with the same first error (`source` `build`); or one Code Quality finding or reported problem, or one issue a person wrote (`source` `request`).  Project access tokens can list issues, including read-only ones. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
     # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
     # @option opts [IssueStatus] :status Return only issues in this status.
     # @option opts [String] :resource_id Return only issues raised by this function or frontend.
+    # @option opts [IssueSource] :source Return only issues from this source, such as &#x60;build&#x60; for failed builds.
     # @return [PaginatedIssues]
     def list_issues(id, opts = {})
       data, _status_code, _headers = list_issues_with_http_info(id, opts)
@@ -103,13 +172,14 @@ module Volcano::Generated
     end
 
     # List issues
-    # Lists the project&#39;s issues, most recently seen first. An issue groups the runtime errors one function or frontend raised with the same error type and stack, or the same message when there is no stack.  Project access tokens can list issues, including read-only ones. 
+    # Lists the project&#39;s issues, most recently seen first. An issue groups the runtime errors one function or frontend raised with the same error type and stack, or the same message when there is no stack; the deploys of one function or frontend whose own build failed with the same first error (&#x60;source&#x60; &#x60;build&#x60;); or one Code Quality finding or reported problem, or one issue a person wrote (&#x60;source&#x60; &#x60;request&#x60;).  Project access tokens can list issues, including read-only ones. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
     # @option opts [String] :cursor Opaque cursor from a previous response&#39;s &#x60;next_cursor&#x60;. Pages forward; keep the same filters while paging. 
     # @option opts [IssueStatus] :status Return only issues in this status.
     # @option opts [String] :resource_id Return only issues raised by this function or frontend.
+    # @option opts [IssueSource] :source Return only issues from this source, such as &#x60;build&#x60; for failed builds.
     # @return [Array<(PaginatedIssues, Integer, Hash)>] PaginatedIssues data, response status code and response headers
     def list_issues_with_http_info(id, opts = {})
       if @api_client.config.debugging
@@ -136,6 +206,7 @@ module Volcano::Generated
       query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
       query_params[:'status'] = opts[:'status'] if !opts[:'status'].nil?
       query_params[:'resource_id'] = opts[:'resource_id'] if !opts[:'resource_id'].nil?
+      query_params[:'source'] = opts[:'source'] if !opts[:'source'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}

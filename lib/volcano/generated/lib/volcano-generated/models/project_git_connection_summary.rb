@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -25,6 +25,7 @@ module Volcano::Generated
 
     attr_accessor :production_branch
 
+    # When the connection last changed: its repository, root directory or production branch. Naming the branch it already uses, and other changes to the project, leave it alone. A connection that has not changed since Volcano began tracking this reports the project's last change before then.
     attr_accessor :updated_at
 
     # Attribute mapping from ruby-style variable name to JSON key.

@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -164,6 +164,8 @@ module Volcano::Generated
 
       # header parameters
       header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
 
       # form parameters
       form_params = opts[:form_params] || {}

@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -29,6 +29,7 @@ module Volcano::Generated
 
     attr_accessor :status
 
+    # Set when `status` is `failed`: `import.deployment_skipped` when the import's deployment was skipped, otherwise the error code of the Git deployment run the import started (see `GitDeploymentRunError.code`), such as `source_invalid`, `deploy_refused`, `child_deploy_failed`, `child_deploy_not_started`, or `deploy_failed`. Treat a code you do not know as a failure.
     attr_accessor :error_code
 
     attr_accessor :error_message

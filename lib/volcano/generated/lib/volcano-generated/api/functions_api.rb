@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -24,9 +24,9 @@ module Volcano::Generated
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz source archive.
-    # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0 
+    # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0  python3.10 is deprecated: it still deploys, and Volcano will remove it before 2027-08-31. 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
+    # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js, index.mjs or index.cjs, or in TypeScript in index.ts, index.mts, index.cts or index.tsx, which the build compiles without type-checking) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
     # @option opts [FunctionVisibility] :visibility Who can invoke the function. Omit it to keep the function&#39;s current visibility; a new function starts &#x60;private&#x60;. 
     # @option opts [Boolean] :is_public Deprecated alias for &#x60;visibility&#x60;: &#x60;true&#x60; means &#x60;public&#x60; and &#x60;false&#x60; means &#x60;authenticated&#x60;. Sending both with different meanings returns 400. 
     # @option opts [FunctionInvocationMode] :invocation_mode 
@@ -34,6 +34,7 @@ module Volcano::Generated
     # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
     # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it only project variables marked &#x60;shared: true&#x60;; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
     # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
+    # @option opts [String] :commit JSON-encoded commit the uploaded source came from: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false}&#x60;. &#x60;repository&#x60; is &#x60;owner/name&#x60; or a github.com remote URL (&#x60;https://github.com/acme/app.git&#x60;, &#x60;git@github.com:acme/app.git&#x60;, or &#x60;ssh://git@github.com/acme/app.git&#x60;); Volcano drops any credentials in the URL and records &#x60;owner/name&#x60;. &#x60;dirty&#x60; is &#x60;true&#x60; when the uploaded files differ from the commit. All three fields are required, and fields Volcano does not know are ignored. An empty value, &#x60;null&#x60;, or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. A malformed commit, or a repository not on GitHub, returns 400 before anything is deployed. Volcano records a function&#39;s commit with &#x60;commit.verified: false&#x60;; a clean commit of the project&#39;s connected repository that its production branch holds gets &#x60;commit.verification: repository&#x60;. 
     # @return [Function]
     def create_function(id, name, code, runtime, opts = {})
       data, _status_code, _headers = create_function_with_http_info(id, name, code, runtime, opts)
@@ -45,9 +46,9 @@ module Volcano::Generated
     # @param id [String] Project ID
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param code [File] ZIP or tar.gz archive containing function source code plus dependency manifests/lockfiles. The API enforces SOURCE_ARCHIVE_SIZE_LIMIT_MB and stores a normalized tar.gz source archive.
-    # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0 
+    # @param runtime [String] Runtime environment. Required. - Node.js: nodejs22.x, nodejs24.x - Python: python3.10, python3.11, python3.12, python3.13, python3.14 - Ruby: ruby3.3, ruby3.4, ruby4.0  python3.10 is deprecated: it still deploys, and Volcano will remove it before 2027-08-31. 
     # @param [Hash] opts the optional parameters
-    # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
+    # @option opts [String] :handler The name of the function to invoke. Defaults to \\\&quot;handler\\\&quot; if not specified. Your code must export/define a function with this name: - Node.js: exports.handler (in index.js, index.mjs or index.cjs, or in TypeScript in index.ts, index.mts, index.cts or index.tsx, which the build compiles without type-checking) - Python: def handler() (in main.py) - Ruby: def handler() (in main.rb)  (default to 'handler')
     # @option opts [FunctionVisibility] :visibility Who can invoke the function. Omit it to keep the function&#39;s current visibility; a new function starts &#x60;private&#x60;. 
     # @option opts [Boolean] :is_public Deprecated alias for &#x60;visibility&#x60;: &#x60;true&#x60; means &#x60;public&#x60; and &#x60;false&#x60; means &#x60;authenticated&#x60;. Sending both with different meanings returns 400. 
     # @option opts [FunctionInvocationMode] :invocation_mode 
@@ -55,6 +56,7 @@ module Volcano::Generated
     # @option opts [String] :openapi_spec JSON-encoded OpenAPI 3.0 or 3.1 metadata for an HTTP-mode function.
     # @option opts [String] :variable_scope Which project variables this function receives. &#x60;all&#x60; (the default) gives it only project variables marked &#x60;shared: true&#x60;; &#x60;scoped&#x60; gives it only the variables it selects. Omitting this leaves an existing function&#39;s scope unchanged. 
     # @option opts [String] :variables JSON-encoded array of project variable names this function requires, on top of the ones detected in its source. A declared name the project does not define is rejected with 400; a detected name it does not define is ignored. Only used when &#x60;variable_scope&#x60; is &#x60;scoped&#x60;. Omitting this leaves an existing function&#39;s declared names unchanged. 
+    # @option opts [String] :commit JSON-encoded commit the uploaded source came from: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false}&#x60;. &#x60;repository&#x60; is &#x60;owner/name&#x60; or a github.com remote URL (&#x60;https://github.com/acme/app.git&#x60;, &#x60;git@github.com:acme/app.git&#x60;, or &#x60;ssh://git@github.com/acme/app.git&#x60;); Volcano drops any credentials in the URL and records &#x60;owner/name&#x60;. &#x60;dirty&#x60; is &#x60;true&#x60; when the uploaded files differ from the commit. All three fields are required, and fields Volcano does not know are ignored. An empty value, &#x60;null&#x60;, or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. A malformed commit, or a repository not on GitHub, returns 400 before anything is deployed. Volcano records a function&#39;s commit with &#x60;commit.verified: false&#x60;; a clean commit of the project&#39;s connected repository that its production branch holds gets &#x60;commit.verification: repository&#x60;. 
     # @return [Array<(Function, Integer, Hash)>] Function data, response status code and response headers
     def create_function_with_http_info(id, name, code, runtime, opts = {})
       if @api_client.config.debugging
@@ -123,6 +125,7 @@ module Volcano::Generated
       form_params['openapi_spec'] = opts[:'openapi_spec'] if !opts[:'openapi_spec'].nil?
       form_params['variable_scope'] = opts[:'variable_scope'] if !opts[:'variable_scope'].nil?
       form_params['variables'] = opts[:'variables'] if !opts[:'variables'].nil?
+      form_params['commit'] = opts[:'commit'] if !opts[:'commit'].nil?
 
       # http body (model)
       post_body = opts[:debug_body]
@@ -146,6 +149,113 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FunctionsApi#create_function\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Create a function preview
+    # Builds the uploaded source with the function's runtime, handler and variables, and deploys it to a runtime of its own in every region the function deploys to. The preview is invoked at `https://<preview id>.<functions domain>` and is always private, whatever the function's own visibility: only the project's service key, with `functions.invoke`, can invoke it, and signed-in users, anon keys and access tokens are refused. It gets none of the function's schedules or warmers. The response is `202` while the first deployment runs; read the preview for its `status` and `url`.  While the `functions.candidates` capability is unavailable, including on the local development server, it answers `404` with code `feature_unavailable`. Reading and deleting existing previews, and rolling the function back to its own build, keep working.  A preview builds like any deploy and spends the project's build minutes. A function has at most 20 live previews, and each name is unique within the function. Without `ttl_seconds` a preview is kept until it is deleted. Durable functions have no previews. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param name [String] Names the preview within the function. Cannot be &#x60;production&#x60;.
+    # @param code [File] The function&#39;s source archive, as for deploying the function. Built with the function&#39;s runtime and handler.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :ttl_seconds Deletes the preview this many seconds after it is created, at most 30 days. Omit to keep it until deleted.
+    # @return [FunctionCandidate]
+    def create_function_candidate(id, function_id, name, code, opts = {})
+      data, _status_code, _headers = create_function_candidate_with_http_info(id, function_id, name, code, opts)
+      data
+    end
+
+    # Create a function preview
+    # Builds the uploaded source with the function&#39;s runtime, handler and variables, and deploys it to a runtime of its own in every region the function deploys to. The preview is invoked at &#x60;https://&lt;preview id&gt;.&lt;functions domain&gt;&#x60; and is always private, whatever the function&#39;s own visibility: only the project&#39;s service key, with &#x60;functions.invoke&#x60;, can invoke it, and signed-in users, anon keys and access tokens are refused. It gets none of the function&#39;s schedules or warmers. The response is &#x60;202&#x60; while the first deployment runs; read the preview for its &#x60;status&#x60; and &#x60;url&#x60;.  While the &#x60;functions.candidates&#x60; capability is unavailable, including on the local development server, it answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. Reading and deleting existing previews, and rolling the function back to its own build, keep working.  A preview builds like any deploy and spends the project&#39;s build minutes. A function has at most 20 live previews, and each name is unique within the function. Without &#x60;ttl_seconds&#x60; a preview is kept until it is deleted. Durable functions have no previews. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param name [String] Names the preview within the function. Cannot be &#x60;production&#x60;.
+    # @param code [File] The function&#39;s source archive, as for deploying the function. Built with the function&#39;s runtime and handler.
+    # @param [Hash] opts the optional parameters
+    # @option opts [Integer] :ttl_seconds Deletes the preview this many seconds after it is created, at most 30 days. Omit to keep it until deleted.
+    # @return [Array<(FunctionCandidate, Integer, Hash)>] FunctionCandidate data, response status code and response headers
+    def create_function_candidate_with_http_info(id, function_id, name, code, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.create_function_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.create_function_candidate"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.create_function_candidate"
+      end
+      # verify the required parameter 'name' is set
+      if @api_client.config.client_side_validation && name.nil?
+        fail ArgumentError, "Missing the required parameter 'name' when calling FunctionsApi.create_function_candidate"
+      end
+      if @api_client.config.client_side_validation && name.to_s.length > 128
+        fail ArgumentError, 'invalid value for "name" when calling FunctionsApi.create_function_candidate, the character length must be smaller than or equal to 128.'
+      end
+
+      if @api_client.config.client_side_validation && name.to_s.length < 1
+        fail ArgumentError, 'invalid value for "name" when calling FunctionsApi.create_function_candidate, the character length must be greater than or equal to 1.'
+      end
+
+      # verify the required parameter 'code' is set
+      if @api_client.config.client_side_validation && code.nil?
+        fail ArgumentError, "Missing the required parameter 'code' when calling FunctionsApi.create_function_candidate"
+      end
+      if @api_client.config.client_side_validation && !opts[:'ttl_seconds'].nil? && opts[:'ttl_seconds'] > 2592000
+        fail ArgumentError, 'invalid value for "opts[:"ttl_seconds"]" when calling FunctionsApi.create_function_candidate, must be smaller than or equal to 2592000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'ttl_seconds'].nil? && opts[:'ttl_seconds'] < 1
+        fail ArgumentError, 'invalid value for "opts[:"ttl_seconds"]" when calling FunctionsApi.create_function_candidate, must be greater than or equal to 1.'
+      end
+
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['name'] = name
+      form_params['code'] = code
+      form_params['ttl_seconds'] = opts[:'ttl_seconds'] if !opts[:'ttl_seconds'].nil?
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCandidate'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.create_function_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#create_function_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -233,7 +343,7 @@ module Volcano::Generated
     # Deploy multiple functions in one request
     # Upload multiple function source archives in one multipart request. Each archive should contain source files plus dependency manifests/lockfiles, not installed dependency directories. ZIP and tar.gz uploads are accepted and normalized to tar.gz before storage. The API enforces `SOURCE_ARCHIVE_SIZE_LIMIT_MB` for each uploaded and normalized source archive. The server records a shared deployment batch ID for the resulting function deployments. Each function deployment runs its own compile/publish workflow concurrently, and each publish build enforces `LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB` for the final container image. One batch request can include up to 100 functions. Submit multiple batch requests for larger projects. If one function fails before its workflow starts, already-started function deployments are left running and the failed function is reported in the `failed` array. Failed new functions are deleted; failed updates are rolled back to their previous metadata/status where possible. 
     # @param id [String] Project ID
-    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes. 
+    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes.  Each entry may also carry &#x60;commit&#x60;, the commit its source came from, as an object: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false}&#x60;. It takes the same values as the &#x60;commit&#x60; field of a single function upload; &#x60;null&#x60; or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. The request is rejected with 400 before anything is deployed if an entry&#39;s commit is malformed or names a repository not on GitHub. 
     # @param [Hash] opts the optional parameters
     # @option opts [File] :code_0 Function ZIP or tar.gz archive referenced by the first manifest entry&#39;s &#x60;file_field&#x60;; additional code_N file fields may be included. Each archive is subject to SOURCE_ARCHIVE_SIZE_LIMIT_MB.
     # @return [BatchFunctionDeployResponse]
@@ -245,7 +355,7 @@ module Volcano::Generated
     # Deploy multiple functions in one request
     # Upload multiple function source archives in one multipart request. Each archive should contain source files plus dependency manifests/lockfiles, not installed dependency directories. ZIP and tar.gz uploads are accepted and normalized to tar.gz before storage. The API enforces &#x60;SOURCE_ARCHIVE_SIZE_LIMIT_MB&#x60; for each uploaded and normalized source archive. The server records a shared deployment batch ID for the resulting function deployments. Each function deployment runs its own compile/publish workflow concurrently, and each publish build enforces &#x60;LAMBDA_TARGET_CONTAINER_SIZE_LIMIT_MB&#x60; for the final container image. One batch request can include up to 100 functions. Submit multiple batch requests for larger projects. If one function fails before its workflow starts, already-started function deployments are left running and the failed function is reported in the &#x60;failed&#x60; array. Failed new functions are deleted; failed updates are rolled back to their previous metadata/status where possible. 
     # @param id [String] Project ID
-    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes. 
+    # @param functions [String] JSON array of functions with &#x60;name&#x60;, &#x60;runtime&#x60;, optional &#x60;handler&#x60;, and &#x60;file_field&#x60;. Each &#x60;file_field&#x60; must name a multipart file field containing that function&#39;s ZIP or tar.gz source bundle.  Each entry may also declare &#x60;variable_scope&#x60; (&#x60;all&#x60; or &#x60;scoped&#x60;) and &#x60;variables&#x60; (an array of project variable names). Omitting them leaves the function&#39;s stored declaration unchanged. Volcano detects direct environment references in the uploaded source code and keeps them separate from the declared names: detected names are not written back to the declaration and do not appear in a config export. A scoped function receives its declared names plus the detected ones the project defines; a detected name the project does not define is ignored, since such a reference is often optional. Detection reads code only, so a name appearing solely in a comment or in an unrelated string is not a reference. Declare a name when the function reads it through a computed key, or when it must not deploy without the variable. The request is rejected with 400 before anything is deployed if a scoped function declares a variable the project does not define, or if the resulting environment exceeds 4096 bytes.  Each entry may also carry &#x60;commit&#x60;, the commit its source came from, as an object: &#x60;{\\\&quot;repository\\\&quot;: \\\&quot;acme/app\\\&quot;, \\\&quot;sha\\\&quot;: \\\&quot;&lt;40-character commit ID&gt;\\\&quot;, \\\&quot;dirty\\\&quot;: false}&#x60;. It takes the same values as the &#x60;commit&#x60; field of a single function upload; &#x60;null&#x60; or &#x60;\\\&quot;\\\&quot;&#x60; reports no commit. The request is rejected with 400 before anything is deployed if an entry&#39;s commit is malformed or names a repository not on GitHub. 
     # @param [Hash] opts the optional parameters
     # @option opts [File] :code_0 Function ZIP or tar.gz archive referenced by the first manifest entry&#39;s &#x60;file_field&#x60;; additional code_N file fields may be included. Each archive is subject to SOURCE_ARCHIVE_SIZE_LIMIT_MB.
     # @return [Array<(BatchFunctionDeployResponse, Integer, Hash)>] BatchFunctionDeployResponse data, response status code and response headers
@@ -373,6 +483,81 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FunctionsApi#delete_function\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Delete a function preview
+    # Starts removing the preview's runtime, URL, builds and stored source once any running deployment finishes; the preview reads `deleting` until that is done, and answers `404` once it is gone. Asking again for a preview that is already being deleted is the same request.  A preview the function runs cannot be deleted: roll back first. Deleting one the function only keeps for a rollback gives that rollback up; the function's own build stays one `to_production` rollback away. Never depends on the `functions.candidates` capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_function_candidate(id, function_id, candidate_id, opts = {})
+      delete_function_candidate_with_http_info(id, function_id, candidate_id, opts)
+      nil
+    end
+
+    # Delete a function preview
+    # Starts removing the preview&#39;s runtime, URL, builds and stored source once any running deployment finishes; the preview reads &#x60;deleting&#x60; until that is done, and answers &#x60;404&#x60; once it is gone. Asking again for a preview that is already being deleted is the same request.  A preview the function runs cannot be deleted: roll back first. Deleting one the function only keeps for a rollback gives that rollback up; the function&#39;s own build stays one &#x60;to_production&#x60; rollback away. Never depends on the &#x60;functions.candidates&#x60; capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Integer, Hash)>] nil, response status code and response headers
+    def delete_function_candidate_with_http_info(id, function_id, candidate_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.delete_function_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.delete_function_candidate"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.delete_function_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FunctionsApi.delete_function_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates/{candidateId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type]
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.delete_function_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#delete_function_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -517,6 +702,81 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Get a function preview
+    # Returns the preview with its latest deployment. Never depends on the `functions.candidates` capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCandidate]
+    def get_function_candidate(id, function_id, candidate_id, opts = {})
+      data, _status_code, _headers = get_function_candidate_with_http_info(id, function_id, candidate_id, opts)
+      data
+    end
+
+    # Get a function preview
+    # Returns the preview with its latest deployment. Never depends on the &#x60;functions.candidates&#x60; capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCandidate, Integer, Hash)>] FunctionCandidate data, response status code and response headers
+    def get_function_candidate_with_http_info(id, function_id, candidate_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.get_function_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.get_function_candidate"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.get_function_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FunctionsApi.get_function_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates/{candidateId}'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCandidate'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.get_function_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#get_function_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Get a function scheduler
     # @param id [String] Project ID
     # @param function_id [String] Function ID
@@ -590,8 +850,77 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Get what a function runs
+    # Returns whether the function runs its own build or a promoted preview's, what a rollback returns to, and its latest promotion or rollback. Never depends on the `functions.candidates` capability. A durable function always runs its own build. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionServing]
+    def get_function_serving(id, function_id, opts = {})
+      data, _status_code, _headers = get_function_serving_with_http_info(id, function_id, opts)
+      data
+    end
+
+    # Get what a function runs
+    # Returns whether the function runs its own build or a promoted preview&#39;s, what a rollback returns to, and its latest promotion or rollback. Never depends on the &#x60;functions.candidates&#x60; capability. A durable function always runs its own build. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionServing, Integer, Hash)>] FunctionServing data, response status code and response headers
+    def get_function_serving_with_http_info(id, function_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.get_function_serving ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.get_function_serving"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.get_function_serving"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/serving'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.get_function_serving",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#get_function_serving\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Invoke a function
-    # Invoke a function. The function's `visibility` decides which credentials may call it, and the function does not run for any other. A `private` function answers every credential but a service key exactly as a missing one, with 404, so its name and id cannot be discovered; an anon key on an `authenticated` function gets 403. An SDK calling by name resolves it first through `GET /functions/resolve`, which answers that anon key with 404 instead.  **With Service Key** (admin/background operations, every visibility): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing, `authenticated` or `public` functions): - Use for user-initiated actions - Includes users from anonymous sign-ins - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (`public` functions only): - Requires anon key permission: `functions.invoke` - Function must have `visibility: public` - Function receives payload only (no `__volcano_auth`)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function's `invoke_url`. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
+    # Invoke a function. The function's `visibility` decides which credentials may call it, and the function does not run for any other. A `private` function answers every credential but a service key exactly as a missing one, with 404, so its name and id cannot be discovered; an anon key on an `authenticated` function gets 403. An SDK calling by name resolves it first through `GET /functions/resolve`, which answers that anon key with 404 instead.  **With Service Key** (admin/background operations, every visibility): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing, `authenticated` or `public` functions): - Use for user-initiated actions - Includes users from anonymous sign-ins - Function receives payload + `__volcano_auth` context:   ```javascript   {     user_id: \"uuid\",     email: \"user@example.com\",     project_id: \"uuid\",     role: \"authenticated\" or \"anonymous\"   }   ``` - Database queries enforce RLS (user-scoped data)  **With Anon Key** (`public` functions only): - Requires anon key permission: `functions.invoke` - Function must have `visibility: public` - Function receives payload only (no `__volcano_auth`)  **Reserved payload keys:** the top-level `__volcano_auth` and `__volcano_http` keys are reserved. Volcano removes caller-supplied values for both before the function runs; only an auth user token adds a server-built `__volcano_auth`, and only HTTP-mode ingress sets `__volcano_http: true`.  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST `{payload: ...}` contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function's `invoke_url`. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at `/`. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at `/` and nested paths. - Direct and RPC-mode CORS preflight advertises `POST, OPTIONS`. HTTP-mode DNS   preflight advertises `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`. - `http_auth_mode: none` applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function's id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with `POST /durable-functions/{functionId}/executions`. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -602,7 +931,7 @@ module Volcano::Generated
     end
 
     # Invoke a function
-    # Invoke a function. The function&#39;s &#x60;visibility&#x60; decides which credentials may call it, and the function does not run for any other. A &#x60;private&#x60; function answers every credential but a service key exactly as a missing one, with 404, so its name and id cannot be discovered; an anon key on an &#x60;authenticated&#x60; function gets 403. An SDK calling by name resolves it first through &#x60;GET /functions/resolve&#x60;, which answers that anon key with 404 instead.  **With Service Key** (admin/background operations, every visibility): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing, &#x60;authenticated&#x60; or &#x60;public&#x60; functions): - Use for user-initiated actions - Includes users from anonymous sign-ins - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (&#x60;public&#x60; functions only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;visibility: public&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function&#39;s &#x60;invoke_url&#x60;. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
+    # Invoke a function. The function&#39;s &#x60;visibility&#x60; decides which credentials may call it, and the function does not run for any other. A &#x60;private&#x60; function answers every credential but a service key exactly as a missing one, with 404, so its name and id cannot be discovered; an anon key on an &#x60;authenticated&#x60; function gets 403. An SDK calling by name resolves it first through &#x60;GET /functions/resolve&#x60;, which answers that anon key with 404 instead.  **With Service Key** (admin/background operations, every visibility): - Use for background jobs, webhooks, cron, admin operations - Function receives payload only (no user context) - Database queries bypass RLS (admin access)  **With Auth User Token** (user-facing, &#x60;authenticated&#x60; or &#x60;public&#x60; functions): - Use for user-initiated actions - Includes users from anonymous sign-ins - Function receives payload + &#x60;__volcano_auth&#x60; context:   &#x60;&#x60;&#x60;javascript   {     user_id: \&quot;uuid\&quot;,     email: \&quot;user@example.com\&quot;,     project_id: \&quot;uuid\&quot;,     role: \&quot;authenticated\&quot; or \&quot;anonymous\&quot;   }   &#x60;&#x60;&#x60; - Database queries enforce RLS (user-scoped data)  **With Anon Key** (&#x60;public&#x60; functions only): - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;visibility: public&#x60; - Function receives payload only (no &#x60;__volcano_auth&#x60;)  **Reserved payload keys:** the top-level &#x60;__volcano_auth&#x60; and &#x60;__volcano_http&#x60; keys are reserved. Volcano removes caller-supplied values for both before the function runs; only an auth user token adds a server-built &#x60;__volcano_auth&#x60;, and only HTTP-mode ingress sets &#x60;__volcano_http: true&#x60;.  **Transport and CORS:** - This operation is the authenticated direct RPC endpoint and always uses the   POST &#x60;{payload: ...}&#x60; contract, including for functions whose DNS ingress is   configured in HTTP mode. - The geo-routed DNS ingress is the function&#39;s &#x60;invoke_url&#x60;. It is on a   different domain from this API, so it cannot be derived from the API host. - RPC-mode DNS ingress accepts POST at &#x60;/&#x60;. HTTP-mode DNS ingress accepts GET,   HEAD, POST, PUT, PATCH, and DELETE at &#x60;/&#x60; and nested paths. - Direct and RPC-mode CORS preflight advertises &#x60;POST, OPTIONS&#x60;. HTTP-mode DNS   preflight advertises &#x60;GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS&#x60;. - &#x60;http_auth_mode: none&#x60; applies only to public HTTP-mode DNS ingress; this   direct operation always requires a Volcano credential.  **Durable functions are not invocable here.** A durable function&#39;s id answers 404, whatever its visibility, because a synchronous call would run it with no execution record, no idempotency and no concurrency accounting. Start one with &#x60;POST /durable-functions/{functionId}/executions&#x60;. 
     # @param function_id [String] Function ID
     # @param function_invocation_request [FunctionInvocationRequest] 
     # @param [Hash] opts the optional parameters
@@ -660,6 +989,150 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FunctionsApi#invoke_function\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a function preview's deployments
+    # Returns the preview's deployments, newest first, at most 100. Never depends on the `functions.candidates` capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCandidateDeploymentList]
+    def list_function_candidate_deployments(id, function_id, candidate_id, opts = {})
+      data, _status_code, _headers = list_function_candidate_deployments_with_http_info(id, function_id, candidate_id, opts)
+      data
+    end
+
+    # List a function preview&#39;s deployments
+    # Returns the preview&#39;s deployments, newest first, at most 100. Never depends on the &#x60;functions.candidates&#x60; capability. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCandidateDeploymentList, Integer, Hash)>] FunctionCandidateDeploymentList data, response status code and response headers
+    def list_function_candidate_deployments_with_http_info(id, function_id, candidate_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.list_function_candidate_deployments ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.list_function_candidate_deployments"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.list_function_candidate_deployments"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FunctionsApi.list_function_candidate_deployments"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates/{candidateId}/deployments'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCandidateDeploymentList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.list_function_candidate_deployments",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#list_function_candidate_deployments\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # List a function's previews
+    # Returns the function's previews, oldest first, each with its latest deployment. A function has at most 20 live previews. Reading never depends on the `functions.candidates` capability. A durable function has no previews: reading its previews answers an empty list, and reading its serving state answers its own build. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCandidateList]
+    def list_function_candidates(id, function_id, opts = {})
+      data, _status_code, _headers = list_function_candidates_with_http_info(id, function_id, opts)
+      data
+    end
+
+    # List a function&#39;s previews
+    # Returns the function&#39;s previews, oldest first, each with its latest deployment. A function has at most 20 live previews. Reading never depends on the &#x60;functions.candidates&#x60; capability. A durable function has no previews: reading its previews answers an empty list, and reading its serving state answers its own build. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCandidateList, Integer, Hash)>] FunctionCandidateList data, response status code and response headers
+    def list_function_candidates_with_http_info(id, function_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.list_function_candidates ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.list_function_candidates"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.list_function_candidates"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCandidateList'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.list_function_candidates",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#list_function_candidates\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1135,8 +1608,181 @@ module Volcano::Generated
       return data, status_code, headers
     end
 
+    # Promote a function preview
+    # Points the function's traffic at the preview's runtime. Nothing is deployed or rebuilt, so it takes effect at once: every call to the function, through its own URL, the invoke route, a schedule or a frontend route, runs the preview's code, while the function keeps its ID, URL, visibility, schedules, metering and logs. The function's own build is kept as it is for a rollback, and what the function ran becomes what a rollback returns to.  The preview must be serving a successful deployment built with the variables, runtime and handler the function has now, in every region the function deploys to, and the function must have a successful deployment of its own. It is refused while a deployment of the function, or a synchronization of its variables, runs. Promotion names the `revision` the caller read from `serving`; a competing promotion or rollback makes it fail with `409`. Once the project's repository is the source of truth, promotion is refused with `409`, as a direct deploy is. While the `functions.candidates` capability is unavailable, including on the local development server, it answers `404` with code `feature_unavailable`. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param function_promotion_request [FunctionPromotionRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionServing]
+    def promote_function_candidate(id, function_id, candidate_id, function_promotion_request, opts = {})
+      data, _status_code, _headers = promote_function_candidate_with_http_info(id, function_id, candidate_id, function_promotion_request, opts)
+      data
+    end
+
+    # Promote a function preview
+    # Points the function&#39;s traffic at the preview&#39;s runtime. Nothing is deployed or rebuilt, so it takes effect at once: every call to the function, through its own URL, the invoke route, a schedule or a frontend route, runs the preview&#39;s code, while the function keeps its ID, URL, visibility, schedules, metering and logs. The function&#39;s own build is kept as it is for a rollback, and what the function ran becomes what a rollback returns to.  The preview must be serving a successful deployment built with the variables, runtime and handler the function has now, in every region the function deploys to, and the function must have a successful deployment of its own. It is refused while a deployment of the function, or a synchronization of its variables, runs. Promotion names the &#x60;revision&#x60; the caller read from &#x60;serving&#x60;; a competing promotion or rollback makes it fail with &#x60;409&#x60;. Once the project&#39;s repository is the source of truth, promotion is refused with &#x60;409&#x60;, as a direct deploy is. While the &#x60;functions.candidates&#x60; capability is unavailable, including on the local development server, it answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param function_promotion_request [FunctionPromotionRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionServing, Integer, Hash)>] FunctionServing data, response status code and response headers
+    def promote_function_candidate_with_http_info(id, function_id, candidate_id, function_promotion_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.promote_function_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.promote_function_candidate"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.promote_function_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FunctionsApi.promote_function_candidate"
+      end
+      # verify the required parameter 'function_promotion_request' is set
+      if @api_client.config.client_side_validation && function_promotion_request.nil?
+        fail ArgumentError, "Missing the required parameter 'function_promotion_request' when calling FunctionsApi.promote_function_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates/{candidateId}/promote'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(function_promotion_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.promote_function_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#promote_function_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Deploy new source to a function preview
+    # Builds the uploaded source and deploys it to the preview, which keeps serving its previous deployment until this one succeeds. A preview takes one deployment at a time, and one the function runs, or keeps for a rollback, takes none. While the `functions.candidates` capability is unavailable, including on the local development server, it answers `404` with code `feature_unavailable`.  A deployment builds like any deploy and spends the project's build minutes. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param code [File] The function&#39;s source archive, as for deploying the function. Built with the function&#39;s runtime and handler.
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionCandidateDeployment]
+    def redeploy_function_candidate(id, function_id, candidate_id, code, opts = {})
+      data, _status_code, _headers = redeploy_function_candidate_with_http_info(id, function_id, candidate_id, code, opts)
+      data
+    end
+
+    # Deploy new source to a function preview
+    # Builds the uploaded source and deploys it to the preview, which keeps serving its previous deployment until this one succeeds. A preview takes one deployment at a time, and one the function runs, or keeps for a rollback, takes none. While the &#x60;functions.candidates&#x60; capability is unavailable, including on the local development server, it answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;.  A deployment builds like any deploy and spends the project&#39;s build minutes. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param candidate_id [String] Function preview (Candidate) ID
+    # @param code [File] The function&#39;s source archive, as for deploying the function. Built with the function&#39;s runtime and handler.
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionCandidateDeployment, Integer, Hash)>] FunctionCandidateDeployment data, response status code and response headers
+    def redeploy_function_candidate_with_http_info(id, function_id, candidate_id, code, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.redeploy_function_candidate ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.redeploy_function_candidate"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.redeploy_function_candidate"
+      end
+      # verify the required parameter 'candidate_id' is set
+      if @api_client.config.client_side_validation && candidate_id.nil?
+        fail ArgumentError, "Missing the required parameter 'candidate_id' when calling FunctionsApi.redeploy_function_candidate"
+      end
+      # verify the required parameter 'code' is set
+      if @api_client.config.client_side_validation && code.nil?
+        fail ArgumentError, "Missing the required parameter 'code' when calling FunctionsApi.redeploy_function_candidate"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/candidates/{candidateId}/deployments'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s)).sub('{' + 'candidateId' + '}', CGI.escape(candidate_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['multipart/form-data'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+      form_params['code'] = code
+
+      # http body (model)
+      post_body = opts[:debug_body]
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionCandidateDeployment'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.redeploy_function_candidate",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#redeploy_function_candidate\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned `invoke_url` as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, `invoke_url` is omitted and callers invoke through `POST /functions/{functionId}/invoke`.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed for `authenticated` and `public` functions - A `private` function answers 404, exactly as a missing one  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `visibility: public`; any other answers 404 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller's project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned `invoke_url` as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. In local development, and when the deployment serves no public invocation domain, `invoke_url` is omitted and callers invoke through `POST /functions/{functionId}/invoke`. A local function's own `invoke_url`, for webhook testing, is on the function resource.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed for `authenticated` and `public` functions - A `private` function answers 404, exactly as a missing one  **With Anon Key**: - Requires anon key permission: `functions.invoke` - Function must have `visibility: public`; any other answers 404 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [ResolveFunctionResponse]
@@ -1146,7 +1792,7 @@ module Volcano::Generated
     end
 
     # Resolve function name for invocation
-    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned &#x60;invoke_url&#x60; as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. When the deployment serves no public invocation domain, as in local development, &#x60;invoke_url&#x60; is omitted and callers invoke through &#x60;POST /functions/{functionId}/invoke&#x60;.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed for &#x60;authenticated&#x60; and &#x60;public&#x60; functions - A &#x60;private&#x60; function answers 404, exactly as a missing one  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;visibility: public&#x60;; any other answers 404 
+    # Resolves a DNS-safe function name to its function ID and invocation URL within the caller&#39;s project.  SDKs use this endpoint internally to invoke by function name while routing by function ID. Invoke the returned &#x60;invoke_url&#x60; as-is. It does not share a domain with the API, so a host built from the API URL will not reach the function. In local development, and when the deployment serves no public invocation domain, &#x60;invoke_url&#x60; is omitted and callers invoke through &#x60;POST /functions/{functionId}/invoke&#x60;. A local function&#39;s own &#x60;invoke_url&#x60;, for webhook testing, is on the function resource.  **With Service Key**: - Allowed  **With Auth User Token**: - Allowed for &#x60;authenticated&#x60; and &#x60;public&#x60; functions - A &#x60;private&#x60; function answers 404, exactly as a missing one  **With Anon Key**: - Requires anon key permission: &#x60;functions.invoke&#x60; - Function must have &#x60;visibility: public&#x60;; any other answers 404 
     # @param name [String] DNS-safe function name (lowercase letters, numbers, hyphens; cannot start or end with hyphen)
     # @param [Hash] opts the optional parameters
     # @return [Array<(ResolveFunctionResponse, Integer, Hash)>] ResolveFunctionResponse data, response status code and response headers
@@ -1204,6 +1850,86 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: FunctionsApi#resolve_function_for_invocation\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Roll back what a function runs
+    # Points the function's traffic back at what served it before its last promotion or rollback, or at its own build with `to_production`. A rollback is a new activation, so what it leaves becomes what a further rollback returns to, and it can itself be undone. Nothing is deployed, so it takes effect at once. It names the `revision` the caller read; a competing activation makes it fail with `409`.  Rolling back to a preview promotes it again and is refused with `409` when promoting it would be, and with `404` code `feature_unavailable` while the capability is unavailable. Rolling back to the function's own build is not: it never depends on the capability, the project's source mode, or a running deployment of the function. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param function_rollback_request [FunctionRollbackRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [FunctionServing]
+    def rollback_function_serving(id, function_id, function_rollback_request, opts = {})
+      data, _status_code, _headers = rollback_function_serving_with_http_info(id, function_id, function_rollback_request, opts)
+      data
+    end
+
+    # Roll back what a function runs
+    # Points the function&#39;s traffic back at what served it before its last promotion or rollback, or at its own build with &#x60;to_production&#x60;. A rollback is a new activation, so what it leaves becomes what a further rollback returns to, and it can itself be undone. Nothing is deployed, so it takes effect at once. It names the &#x60;revision&#x60; the caller read; a competing activation makes it fail with &#x60;409&#x60;.  Rolling back to a preview promotes it again and is refused with &#x60;409&#x60; when promoting it would be, and with &#x60;404&#x60; code &#x60;feature_unavailable&#x60; while the capability is unavailable. Rolling back to the function&#39;s own build is not: it never depends on the capability, the project&#39;s source mode, or a running deployment of the function. 
+    # @param id [String] Project ID
+    # @param function_id [String] Function ID
+    # @param function_rollback_request [FunctionRollbackRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(FunctionServing, Integer, Hash)>] FunctionServing data, response status code and response headers
+    def rollback_function_serving_with_http_info(id, function_id, function_rollback_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: FunctionsApi.rollback_function_serving ...'
+      end
+      # verify the required parameter 'id' is set
+      if @api_client.config.client_side_validation && id.nil?
+        fail ArgumentError, "Missing the required parameter 'id' when calling FunctionsApi.rollback_function_serving"
+      end
+      # verify the required parameter 'function_id' is set
+      if @api_client.config.client_side_validation && function_id.nil?
+        fail ArgumentError, "Missing the required parameter 'function_id' when calling FunctionsApi.rollback_function_serving"
+      end
+      # verify the required parameter 'function_rollback_request' is set
+      if @api_client.config.client_side_validation && function_rollback_request.nil?
+        fail ArgumentError, "Missing the required parameter 'function_rollback_request' when calling FunctionsApi.rollback_function_serving"
+      end
+      # resource path
+      local_var_path = '/projects/{id}/functions/{functionId}/serving/rollback'.sub('{' + 'id' + '}', CGI.escape(id.to_s)).sub('{' + 'functionId' + '}', CGI.escape(function_id.to_s))
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(function_rollback_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'FunctionServing'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['UserToken', 'ProjectAccessToken']
+
+      new_options = opts.merge(
+        :operation => :"FunctionsApi.rollback_function_serving",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: FunctionsApi#rollback_function_serving\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

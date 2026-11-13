@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Create service key
-    # Create a new service role key for admin operations.  **WARNING:** Service keys bypass all RLS policies! Store securely and NEVER expose in frontend code. 
+    # Create a new service role key for admin operations.  **WARNING:** Service keys bypass all RLS policies! Store securely and NEVER expose in frontend code.  A key that holds `ai.invoke` is an AI key for the Volcano AI gateway, which calls models on the project's behalf. Volcano pays the model provider for those calls; the project is not billed for them. It holds `ai.invoke` and nothing else, and is marked as created by a person, so the gateway can tell it from every other key: a key that holds `\"*\"`, and a key created before AI keys existed, never count. Only a person creates one: signed in to the dashboard, or with a `volcano login` token whose sign-in is live. A project access token, a request made through MCP, a platform token created through the token API, and a sign-in that ended get `403` with code `person_required`. On a local server, the local platform token counts as the person. Reading or regenerating an AI key takes the same person as creating it, and lists leave its value out. An AI key only mints run tokens: the database API and realtime refuse it, whether or not service key scopes apply to them yet. While the `ai_gateway` capability is unavailable, asking for `ai.invoke` answers `404` with code `feature_unavailable`; existing keys keep working with the other service key routes. 
     # @param id [String] Project ID
     # @param create_service_key_request [CreateServiceKeyRequest] 
     # @param [Hash] opts the optional parameters
@@ -31,7 +31,7 @@ module Volcano::Generated
     end
 
     # Create service key
-    # Create a new service role key for admin operations.  **WARNING:** Service keys bypass all RLS policies! Store securely and NEVER expose in frontend code. 
+    # Create a new service role key for admin operations.  **WARNING:** Service keys bypass all RLS policies! Store securely and NEVER expose in frontend code.  A key that holds &#x60;ai.invoke&#x60; is an AI key for the Volcano AI gateway, which calls models on the project&#39;s behalf. Volcano pays the model provider for those calls; the project is not billed for them. It holds &#x60;ai.invoke&#x60; and nothing else, and is marked as created by a person, so the gateway can tell it from every other key: a key that holds &#x60;\&quot;*\&quot;&#x60;, and a key created before AI keys existed, never count. Only a person creates one: signed in to the dashboard, or with a &#x60;volcano login&#x60; token whose sign-in is live. A project access token, a request made through MCP, a platform token created through the token API, and a sign-in that ended get &#x60;403&#x60; with code &#x60;person_required&#x60;. On a local server, the local platform token counts as the person. Reading or regenerating an AI key takes the same person as creating it, and lists leave its value out. An AI key only mints run tokens: the database API and realtime refuse it, whether or not service key scopes apply to them yet. While the &#x60;ai_gateway&#x60; capability is unavailable, asking for &#x60;ai.invoke&#x60; answers &#x60;404&#x60; with code &#x60;feature_unavailable&#x60;; existing keys keep working with the other service key routes. 
     # @param id [String] Project ID
     # @param create_service_key_request [CreateServiceKeyRequest] 
     # @param [Hash] opts the optional parameters

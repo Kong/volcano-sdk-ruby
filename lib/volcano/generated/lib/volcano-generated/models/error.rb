@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -17,7 +17,7 @@ module Volcano::Generated
   class Error < ApiModelBase
     attr_accessor :error
 
-    # Stable machine-readable error code when a specific recovery path is available.
+    # Stable machine-readable error code when a specific recovery path is available. `plan_required` (403) means the project owner's plan does not include the requested feature or option; upgrading the plan unlocks it. `person_required` (403) means a project access token tried to change LavaFlow settings, which only the project's owner changes, with a platform token, or that the change needs the owner's own credential that expires, a project repository, and an owner whose GitHub account can push to it; `error` says which. A 403 without a code leaves the reason unspecified: it can be an access refusal, a reached limit, or a plan check that could not read the owner's plan. Match on the code, not the message text.
     attr_accessor :code
 
     # Attribute mapping from ruby-style variable name to JSON key.

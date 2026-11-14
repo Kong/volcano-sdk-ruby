@@ -7,6 +7,8 @@ RSpec.describe Volcano::Error do
   let(:transport) { instance_double(Volcano.const_get(:GeneratedTransport)) }
   let(:client) { Volcano::Client.new(anon_key: 'anon-key', _transport: transport) }
 
+  let(:retryable_statuses) { [429, 503] }
+
   {
     400 => 'Volcano::Error::ValidationError',
     422 => 'Volcano::Error::ValidationError',
@@ -31,11 +33,12 @@ RSpec.describe Volcano::Error do
       expect do
         client.auth.sign_in(email: 'user@example.com', password: 'wrong')
       end.to raise_error(Object.const_get(error_name)) { |error|
-        expect(error.message).to eq('contract failure')
-        expect(error.status).to eq(status)
-        expect(error.code).to eq('contract_code')
-        expect(error.retry_after).to eq(status == 429 ? 17 : nil)
+        expect(error).to have_attributes(
+          message: 'contract failure', status: status, code: 'contract_code',
+          retry_after: retryable_statuses.include?(status) ? 17 : nil
+        )
       }
+      expect(transport).to have_received(:auth_signin).once
     end
   end
 

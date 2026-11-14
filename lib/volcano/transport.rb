@@ -35,7 +35,7 @@ module Volcano
     def self.response_error(response)
       # @type var payload: Hash[String, Object?]
       payload = response.body.is_a?(Hash) ? response.body : {}
-      retry_after = integer_header(response.headers, 'Retry-After') if response.status == 429
+      retry_after = integer_header(response.headers, 'Retry-After') if [429, 503].include?(response.status)
       error_type(response.status).new(
         error_message(payload),
         status: response.status,

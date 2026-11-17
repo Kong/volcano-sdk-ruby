@@ -2180,6 +2180,23 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to eq(calls_after_sign_in)
   end
 
+  it 'rejects storage paths with dot or empty segments before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+    bucket = client.storage.from('assets')
+    message = 'storage paths cannot contain empty, ".", or ".." segments'
+    attempts = [
+      -> { bucket.download('users/1/../../users/2/x') },
+      -> { bucket.upload('a/../../../auth/user/sessions', 'x') },
+      -> { bucket.remove(['ok.txt', 'a//b']) },
+      -> { bucket.move('a.txt', '..') },
+      -> { bucket.update_visibility('./a.txt', public: true) }
+    ]
+
+    attempts.each { |attempt| expect(&attempt).to raise_error(ArgumentError, message) }
+    expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
   it 'moves an object and returns its destination metadata' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 

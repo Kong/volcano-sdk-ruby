@@ -59,12 +59,17 @@ module Volcano
     def storage_paths(paths)
       path_list = paths.is_a?(String) ? [paths] : paths.to_a
       raise ArgumentError, 'storage paths must be non-empty strings' unless valid_storage_paths?(path_list)
+      raise ArgumentError, "storage paths #{PathSegments::UNSAFE_SEGMENTS}" if unsafe_storage_paths?(path_list)
 
       path_list.map { |path| path.dup.freeze }.freeze
     end
 
     def valid_storage_paths?(paths)
       !paths.empty? && paths.all? { |path| path.is_a?(String) && !path.empty? }
+    end
+
+    def unsafe_storage_paths?(paths)
+      paths.any? { |path| PathSegments.unsafe_storage_path?(path) }
     end
 
     def delete_path(path, binding)

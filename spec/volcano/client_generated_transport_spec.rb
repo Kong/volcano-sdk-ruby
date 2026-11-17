@@ -1063,6 +1063,75 @@ RSpec.describe Volcano::Client do
     )
   end
 
+  it 'refuses object paths a URL parser would move outside the storage route' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = transport_class::StorageApi.new(api_client)
+
+    ['../../projects/abc', 'a/../../../auth/user/sessions', '.', 'a/./b', 'a//b', 'a/', '/'].each do |path|
+      expect { storage.download_storage_object_with_http_info('assets', path) }
+        .to raise_error(ArgumentError, 'path cannot contain empty, ".", or ".." segments')
+    end
+    expect(calls).to be_empty
+  end
+
+  it 'refuses bucket names outside the bucket name pattern' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = transport_class::StorageApi.new(api_client)
+
+    ['..', '.', '', 'a/b', "assets\n..", 'a.b'].each do |bucket|
+      expect { storage.delete_storage_object_with_http_info(bucket, 'payload.txt') }
+        .to raise_error(ArgumentError, %(invalid value for 'bucket_name': use only letters, numbers, "_", and "-"))
+    end
+    expect(calls).to be_empty
+  end
+
+  it 'sends a leading-slash object path as the same bucket-relative object' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, options]
+      [nil, 200, {}]
+    end
+    storage = transport_class::StorageApi.new(api_client)
+
+    storage.download_storage_object_with_http_info('assets', '/folder/a..b.txt')
+
+    expect(calls.fetch(0).first(2)).to eq([:GET, '/storage/assets/folder/a..b.txt'])
+  end
+
+  it 'refuses request paths with dot, empty, or encoded slash segments before building a URL' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+
+    ['/locks/../lease', '/locks/./lease', '/locks/%2E%2e/lease', '/locks/.%2e', '/auth/user/sessions/',
+     '/databases//query/select', '/durable/functions/a%2Fb/executions', '/locks/a%2f..%2f..'].each do |path|
+      expect { api_client.build_request(:get, path, auth_names: []) }
+        .to raise_error(ArgumentError, 'Request path cannot contain empty, ".", "..", or encoded "/" segments')
+    end
+  end
+
+  it 'refuses dot segments in generated operations that only check for presence' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    durable = generated_namespace::DurableFunctionsApi.new(api_client)
+    sessions = generated_namespace::AuthenticationApi.new(api_client)
+
+    expect { sessions.auth_delete_my_session_with_http_info('..') }
+      .to raise_error(ArgumentError, /Request path cannot contain/)
+    expect { sessions.auth_delete_my_session_with_http_info('a/b') }
+      .to raise_error(ArgumentError, /Request path cannot contain/)
+    expect { durable.get_durable_execution_with_http_info('project', '..', 'execution') }
+      .to raise_error(ArgumentError, /Request path cannot contain/)
+  end
+
   it 'deserializes internal models while the generated namespace is private' do
     configuration = generated_namespace::Configuration.new
     api_client = transport_class::ApiClient.new(configuration)

@@ -296,6 +296,8 @@ module Volcano
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
       DOWNLOAD_HEADERS: Hash[String, String]
+      BUCKET_NAME: Regexp
+      BUCKET_NAME_RULE: String
       UPLOAD_OPTIONS: generated_storage_options
 
       DOWNLOAD_OPTIONS: generated_storage_options
@@ -315,6 +317,10 @@ module Volcano
       private
 
       def call_storage_api: (Symbol method, String? bucket_name, String? path, Generated::api_options options, ?suffix: String) -> Generated::api_result
+
+      def storage_bucket_segment: (String bucket_name) -> String
+
+      def storage_object_segments: (String path) -> String
     end
 
     # Normalizes values returned by the generated client.

@@ -31,6 +31,7 @@ module Volcano
     # Corrects generated content negotiation and private model lookup.
     class ApiClient < Generated::ApiClient
       def build_request(http_method, path, options = {})
+        PathSegments.check_request_path!(path)
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)
         request.options[:params_encoding] = options.fetch(:params_encoding, request.options[:params_encoding])
@@ -66,6 +67,8 @@ module Volcano
     # Implements storage endpoints omitted by the generated API surface.
     class StorageApi < Generated::StorageObjectsApi
       DOWNLOAD_HEADERS = { 'Accept' => 'application/octet-stream, application/json' }.freeze
+      BUCKET_NAME = /\A[a-zA-Z0-9_-]+\z/
+      BUCKET_NAME_RULE = 'use only letters, numbers, "_", and "-"'
       UPLOAD_OPTIONS = {
         operation: :'StorageObjectsApi.upload_storage_object',
         header_params: { 'Accept' => 'application/json', 'Content-Type' => 'multipart/form-data' }.freeze,
@@ -126,9 +129,23 @@ module Volcano
         raise ArgumentError, 'bucket_name is required' if bucket_name.nil?
         raise ArgumentError, 'path is required' if path.nil?
 
-        bucket = CGI.escapeURIComponent(bucket_name.to_s)
-        object_path = CGI.escapeURIComponent(path.to_s).gsub('%2F', '/')
+        bucket = storage_bucket_segment(bucket_name.to_s)
+        object_path = storage_object_segments(path.to_s)
         api_client.call_api(method, "/storage/#{bucket}/#{object_path}#{suffix}", options)
+      end
+
+      # These requests bypass the generated operations, so repeat their bucket pattern.
+      def storage_bucket_segment(bucket_name)
+        return bucket_name if BUCKET_NAME.match?(bucket_name)
+
+        raise ArgumentError, "invalid value for 'bucket_name': #{BUCKET_NAME_RULE}"
+      end
+
+      # Separators stay literal so the object path keeps its folders.
+      def storage_object_segments(path)
+        raise ArgumentError, "path #{PathSegments::UNSAFE_SEGMENTS}" if PathSegments.unsafe_storage_path?(path)
+
+        CGI.escapeURIComponent(PathSegments.bucket_relative_path(path)).gsub('%2F', '/')
       end
     end
 

@@ -82,6 +82,7 @@ module Volcano
     private def upload_bytes: (String | _StorageReadable value) -> String
     private def storage_paths: (String | Array[String] paths) -> Array[String]
     private def valid_storage_paths?: (Array[Object?] paths) -> bool
+    private def unsafe_storage_paths?: (Array[String] paths) -> bool
     private def delete_path: (String path, session_binding binding) -> Object?
     private def visibility_value: (Object? value) -> bool
 

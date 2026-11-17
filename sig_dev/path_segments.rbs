@@ -1,0 +1,14 @@
+module Volcano
+  module PathSegments
+    UNSAFE_SEGMENTS: String
+    UNSAFE_REQUEST_PATH: String
+    DOT_SEGMENTS: Array[String]
+    ENCODED_DOT: Regexp
+    ENCODED_SLASH: Regexp
+
+    def self.bucket_relative_path: (String path) -> String
+    def self.unsafe_storage_path?: (String path) -> bool
+    def self.check_request_path!: (String path) -> String
+    def self.unsafe_request_segment?: (String segment) -> bool
+  end
+end

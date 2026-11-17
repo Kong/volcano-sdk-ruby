@@ -16,11 +16,9 @@ RSpec.describe Volcano::Realtime do
   it 'uses HTTP/1.1 WebSocket upgrades and redacts connection failures' do
     addresses = []
     protocols = []
-    headers = []
-    allow(Async::WebSocket::Client).to receive(:connect) do |endpoint, **options|
+    allow(Async::WebSocket::Client).to receive(:connect) do |endpoint|
       addresses << endpoint.to_url.to_s
       protocols << endpoint.alpn_protocols
-      headers << options[:headers]
       raise IOError, 'connection refused for access-token'
     end
 
@@ -29,6 +27,16 @@ RSpec.describe Volcano::Realtime do
     end
     expect(addresses).to eq(['wss://api.test/base/realtime/v1/websocket?apikey=anon%20key'])
     expect(protocols).to eq([['http/1.1']])
+  end
+
+  it 'identifies the SDK version on the WebSocket upgrade' do
+    headers = []
+    allow(Async::WebSocket::Client).to receive(:connect) do |_endpoint, **options|
+      headers << options[:headers]
+      raise IOError, 'connection refused'
+    end
+
+    expect { client.realtime.channel('room').subscribe }.to raise_error(Volcano::Error::TransportError)
     user_agent = %r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o
     expect(headers).to match([[['user-agent', user_agent]]])
   end

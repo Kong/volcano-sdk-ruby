@@ -16,9 +16,11 @@ RSpec.describe Volcano::Realtime do
   it 'uses HTTP/1.1 WebSocket upgrades and redacts connection failures' do
     addresses = []
     protocols = []
-    allow(Async::WebSocket::Client).to receive(:connect) do |endpoint|
+    headers = []
+    allow(Async::WebSocket::Client).to receive(:connect) do |endpoint, **options|
       addresses << endpoint.to_url.to_s
       protocols << endpoint.alpn_protocols
+      headers << options[:headers]
       raise IOError, 'connection refused for access-token'
     end
 
@@ -27,6 +29,8 @@ RSpec.describe Volcano::Realtime do
     end
     expect(addresses).to eq(['wss://api.test/base/realtime/v1/websocket?apikey=anon%20key'])
     expect(protocols).to eq([['http/1.1']])
+    expect(headers).to eq([[['user-agent', "volcano-sdk-ruby/#{Volcano::VERSION} (#{RUBY_ENGINE}/#{RUBY_VERSION}; " \
+                                           "#{RbConfig::CONFIG['host_os'][/\A[a-z]+/]}/#{RbConfig::CONFIG['host_cpu']})"]]])
   end
 
   it 'delivers later error callbacks when an earlier callback raises' do

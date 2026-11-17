@@ -1,0 +1,5 @@
+module Volcano
+  module UserAgent
+    VALUE: String
+  end
+end

@@ -101,7 +101,7 @@ module Volcano
         require 'async/websocket/client'
         # Use the HTTP/1.1 upgrade supported by the public API.
         endpoint = Async::HTTP::Endpoint.parse(address, protocol: Async::HTTP::Protocol::HTTP11)
-        Async::WebSocket::Client.connect(endpoint)
+        Async::WebSocket::Client.connect(endpoint, headers: [['user-agent', UserAgent::VALUE]])
       end
 
       def realtime_secrets = [@client.anon_token, @client.current_session&.access_token]

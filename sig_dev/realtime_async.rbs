@@ -71,7 +71,7 @@ module Async
 
   module WebSocket
     module Client
-      def self.connect: (HTTP::Endpoint endpoint) -> _RealtimeSocket
+      def self.connect: (HTTP::Endpoint endpoint, ?headers: Array[[String, String]]) -> _RealtimeSocket
     end
   end
 end

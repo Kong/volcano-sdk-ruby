@@ -51,6 +51,23 @@ RSpec.describe Volcano::Functions do
     end
   end
 
+  it 'identifies the SDK version on API and resolved function requests', :aggregate_failures do
+    api = api_server({
+                       'name' => 'send-welcome', 'function_id' => function_id,
+                       'invoke_url' => "#{functions_server.url}/", 'cache_ttl_seconds' => 300
+                     })
+    begin
+      client(api.url).functions.invoke('send-welcome')
+      user_agent = %r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o
+
+      expect(api.requests.map(&:user_agent)).to all(match(user_agent))
+      expect(functions_server.requests.map(&:user_agent)).to all(match(user_agent))
+      expect(api.requests.size + functions_server.requests.size).to eq(2)
+    ensure
+      api.close
+    end
+  end
+
   it 'falls back to the API path without a resolved endpoint', :aggregate_failures do
     api = api_server({ 'name' => 'send-welcome', 'function_id' => function_id, 'cache_ttl_seconds' => 300 })
     begin

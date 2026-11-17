@@ -28,8 +28,13 @@ module Volcano
 
     Generated::ApiModelBase.singleton_class.prepend(ModelDeserialization)
 
-    # Corrects generated content negotiation and private model lookup.
+    # Corrects generated content negotiation, private model lookup, and the user agent.
     class ApiClient < Generated::ApiClient
+      def initialize(...)
+        super
+        self.user_agent = UserAgent::VALUE
+      end
+
       def build_request(http_method, path, options = {})
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)

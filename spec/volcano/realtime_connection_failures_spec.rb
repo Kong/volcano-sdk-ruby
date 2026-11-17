@@ -29,8 +29,8 @@ RSpec.describe Volcano::Realtime do
     end
     expect(addresses).to eq(['wss://api.test/base/realtime/v1/websocket?apikey=anon%20key'])
     expect(protocols).to eq([['http/1.1']])
-    expect(headers).to eq([[['user-agent', "volcano-sdk-ruby/#{Volcano::VERSION} (#{RUBY_ENGINE}/#{RUBY_VERSION}; " \
-                                           "#{RbConfig::CONFIG['host_os'][/\A[a-z]+/]}/#{RbConfig::CONFIG['host_cpu']})"]]])
+    user_agent = %r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o
+    expect(headers).to match([[['user-agent', user_agent]]])
   end
 
   it 'delivers later error callbacks when an earlier callback raises' do

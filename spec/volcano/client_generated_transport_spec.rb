@@ -900,7 +900,7 @@ RSpec.describe Volcano::Client do
     request = api_client.build_request(:get, '/health', auth_names: [])
 
     expect(request.options.fetch(:headers).fetch('User-Agent'))
-      .to start_with("volcano-sdk-ruby/#{Volcano::VERSION} (#{RUBY_ENGINE}/#{RUBY_VERSION}; ")
+      .to match(%r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o)
   end
 
   it 'keeps a multipart encoding override local to one request' do

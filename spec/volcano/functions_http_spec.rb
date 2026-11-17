@@ -60,9 +60,9 @@ RSpec.describe Volcano::Functions do
       client(api.url).functions.invoke('send-welcome')
       user_agent = %r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o
 
-      expect(api.requests.map(&:user_agent)).to all(match(user_agent))
-      expect(functions_server.requests.map(&:user_agent)).to all(match(user_agent))
-      expect(api.requests.size + functions_server.requests.size).to eq(2)
+      expect(api.targets).to eq(['/functions/resolve?name=send-welcome'])
+      expect(functions_server.targets).to eq(['/'])
+      expect([*api.requests, *functions_server.requests].map(&:user_agent)).to all(match(user_agent))
     ensure
       api.close
     end

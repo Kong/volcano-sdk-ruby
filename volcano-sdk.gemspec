@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
   spec.add_dependency 'async', '2.46.0'
   spec.add_dependency 'async-http', '0.105.0'
-  spec.add_dependency 'async-websocket', '0.30.1'
+  spec.add_dependency 'async-websocket', '0.30.2'
   spec.add_dependency 'base64', '~> 0.2'
   # Ethon 0.19 URL-encodes the [filename, type, path] form value that uploads
   # with an explicit content type send instead of building a multipart part.

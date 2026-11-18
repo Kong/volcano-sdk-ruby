@@ -28,6 +28,12 @@ and update the versions in the README's "Generated boundary" section. If the
 generated client changed, edit the squash commit title to `fix(deps): ...` when
 merging, because the gem ships it.
 
+`package.json` overrides `proxy-agent` to 8.0.3 because the generator CLI
+2.42.2 pins 8.0.2, which keeps older `get-uri` and `basic-ftp` releases in the
+lockfile. Remove the override once a CLI release requires 8.0.3 or later, and
+check `npm ls proxy-agent` after each CLI update so the override does not hold
+it back.
+
 Dependabot stops rebasing a pull request once someone else pushes to it, so
 merge it soon after. `@dependabot recreate` starts over and drops those commits.
 

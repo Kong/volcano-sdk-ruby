@@ -6,12 +6,12 @@ PATH
       async-http (= 0.105.0)
       async-websocket (= 0.30.2)
       base64 (~> 0.2)
-      ethon (< 0.19)
+      ethon (< 0.20)
       io-event (~> 1.16)
       json (~> 2.17)
       logger (~> 1.7)
       protocol-rack (= 0.23.0)
-      typhoeus (>= 1.4, < 1.7)
+      typhoeus (>= 1.4, < 1.8)
 
 GEM
   remote: https://rubygems.org/
@@ -49,7 +49,7 @@ GEM
       json
     csv (3.3.7)
     diff-lcs (1.6.2)
-    ethon (0.18.0)
+    ethon (0.19.2)
       ffi (>= 1.15.0)
       logger
     ffi (1.17.4)
@@ -179,8 +179,8 @@ GEM
       unicode-display_width (>= 1.1.1, < 4)
     thor (1.5.0)
     tsort (0.2.0)
-    typhoeus (1.6.0)
-      ethon (>= 0.18.0)
+    typhoeus (1.7.1)
+      ethon (>= 0.19.1, < 0.20.0)
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)

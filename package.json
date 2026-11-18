@@ -6,6 +6,9 @@
     "check:openapi": "bin/check-openapi"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "2.41.0"
+    "@openapitools/openapi-generator-cli": "2.42.2"
+  },
+  "overrides": {
+    "proxy-agent": "8.0.3"
   }
 }

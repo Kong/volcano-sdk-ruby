@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.36.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.1...v0.36.0) (2026-11-19)
+
+
+### Features
+
+* **durable:** read and stop executions with application credentials ([#366](https://github.com/Kong/volcano-sdk-ruby/issues/366)) ([e3082cc](https://github.com/Kong/volcano-sdk-ruby/commit/e3082ccaf707baa64a6db7c700123fe6a2129c86))
+* **telemetry:** identify the SDK version in the user agent ([#381](https://github.com/Kong/volcano-sdk-ruby/issues/381)) ([a688814](https://github.com/Kong/volcano-sdk-ruby/commit/a688814ca90a26a5a20730fe907ceb2a8c5f5e78))
+
+
+### Bug Fixes
+
+* **deps:** bump rack from 3.2.7 to 3.2.8 ([#371](https://github.com/Kong/volcano-sdk-ruby/issues/371)) ([483df9e](https://github.com/Kong/volcano-sdk-ruby/commit/483df9e3c24a1aa4dabb74434902b75f965ad2b9))
+* **deps:** update gems, npm tooling and GitHub Actions ([#383](https://github.com/Kong/volcano-sdk-ruby/issues/383)) ([d194ad9](https://github.com/Kong/volcano-sdk-ruby/commit/d194ad90a218ff0e6723eb1bf8e11591c69c9e50))
+* **storage:** validate path segments and bucket names before building URLs ([#385](https://github.com/Kong/volcano-sdk-ruby/issues/385)) ([3799d40](https://github.com/Kong/volcano-sdk-ruby/commit/3799d40debd31e37bb98f5c2de010584bd41d59d))
+
 ## [0.35.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.0...v0.35.1) (2026-10-28)
 
 

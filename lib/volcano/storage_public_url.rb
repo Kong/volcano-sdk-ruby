@@ -8,13 +8,13 @@ module Volcano
   # Local public URL construction for one storage bucket.
   class StorageBucket
     INVALID_PUBLIC_URL_ANON_KEY = 'Anon key must contain a project ID'
-    INVALID_PUBLIC_URL_PATH = 'Public URL paths cannot contain dot segments'
     INVALID_STORAGE_PATH = 'storage path must be a non-empty string'
-    private_constant :INVALID_PUBLIC_URL_ANON_KEY, :INVALID_PUBLIC_URL_PATH, :INVALID_STORAGE_PATH
+    private_constant :INVALID_PUBLIC_URL_ANON_KEY, :INVALID_STORAGE_PATH
 
     def get_public_url(path)
       object_path = public_url_path(path)
-      segments = [project_id, @name, *public_url_path_segments(object_path)]
+      bucket = PathSegments.check_bucket_name!(@name)
+      segments = [project_id, bucket, *PathSegments.bucket_relative_path(object_path).split('/')]
       "#{@api_url}/public/#{segments.map { |segment| encode_segment(segment) }.join('/')}".freeze
     end
 
@@ -22,7 +22,10 @@ module Volcano
 
     def project_id
       value = anon_key_payload['project_id']
-      return value if value.is_a?(String) && !value.strip.empty?
+      if value.is_a?(String) && !value.strip.empty?
+        return PathSegments.check_identifier!(value,
+                                              'Project ID in anon key')
+      end
 
       raise ArgumentError, INVALID_PUBLIC_URL_ANON_KEY
     end
@@ -44,17 +47,11 @@ module Volcano
       encoded + ('=' * (-encoded.length % 4))
     end
 
-    def public_url_path_segments(path)
-      segments = path.split('/', -1)
-      raise ArgumentError, INVALID_PUBLIC_URL_PATH if segments.intersect?(%w[. ..])
-
-      segments
-    end
-
     def public_url_path(path)
-      return path if path.is_a?(String) && !path.empty?
+      raise ArgumentError, INVALID_STORAGE_PATH unless path.is_a?(String) && !path.empty?
+      raise ArgumentError, "storage path #{PathSegments::INVALID_SEGMENTS}" if PathSegments.invalid_storage_path?(path)
 
-      raise ArgumentError, INVALID_STORAGE_PATH
+      path
     end
 
     def encode_segment(segment)

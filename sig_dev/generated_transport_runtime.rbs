@@ -317,6 +317,8 @@ module Volcano
       private
 
       def call_storage_api: (Symbol method, String? bucket_name, String? path, Generated::api_options options, ?suffix: String) -> Generated::api_result
+
+      def storage_object_segments: (String path) -> String
     end
 
     # Normalizes values returned by the generated client.

@@ -36,6 +36,7 @@ module Volcano
       end
 
       def build_request(http_method, path, options = {})
+        PathSegments.check_request_path!(path)
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)
         request.options[:params_encoding] = options.fetch(:params_encoding, request.options[:params_encoding])
@@ -131,9 +132,18 @@ module Volcano
         raise ArgumentError, 'bucket_name is required' if bucket_name.nil?
         raise ArgumentError, 'path is required' if path.nil?
 
-        bucket = CGI.escapeURIComponent(bucket_name.to_s)
-        object_path = CGI.escapeURIComponent(path.to_s).gsub('%2F', '/')
+        # Storage object requests are built outside the generated operations, so
+        # they check the bucket name here.
+        bucket = PathSegments.check_bucket_name!(bucket_name.to_s)
+        object_path = storage_object_segments(path.to_s)
         api_client.call_api(method, "/storage/#{bucket}/#{object_path}#{suffix}", options)
+      end
+
+      # Separators stay literal so the object path keeps its folders.
+      def storage_object_segments(path)
+        raise ArgumentError, "path #{PathSegments::INVALID_SEGMENTS}" if PathSegments.invalid_storage_path?(path)
+
+        CGI.escapeURIComponent(PathSegments.bucket_relative_path(path)).gsub('%2F', '/')
       end
     end
 

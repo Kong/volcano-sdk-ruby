@@ -8,7 +8,10 @@ RSpec.describe Volcano::Auth do
 
   it 'round-trips arbitrary reserved characters through hosted-auth URLs' do
     text = PropCheck::Generators.printable_ascii_string(max: 32)
-    generator = PropCheck::Generators.tuple(text.map { |value| "p#{value}" }, text.map { |value| "s#{value}" })
+    # "/" is refused in a project ID, so it stays out of the generated ones.
+    generator = PropCheck::Generators.tuple(
+      text.map { |value| "p#{value.delete('/')}" }, text.map { |value| "s#{value}" }
+    )
     check_property(generator) do |project, state|
       url = URI.parse(client.auth.get_hosted_auth_url(project_id: project, state:))
       encoded_project = url.path.split('/').fetch(2)

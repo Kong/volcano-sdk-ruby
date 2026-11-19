@@ -39,6 +39,7 @@ target :core_facades do
   check 'lib/volcano/function_auth.rb'
   check 'lib/volcano/functions.rb'
   check 'lib/volcano/immutable_request_value.rb'
+  check 'lib/volcano/path_segments.rb'
   check 'lib/volcano/logs.rb'
   check 'lib/volcano/models.rb'
   check 'lib/volcano/session.rb'

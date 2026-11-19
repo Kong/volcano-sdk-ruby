@@ -10,7 +10,7 @@ module Volcano
     private_constant :HOSTED_AUTH_ACTIONS
 
     def get_hosted_auth_url(project_id:, state:, action: 'login')
-      project = hosted_auth_parameter(project_id).strip
+      project = PathSegments.check_identifier!(hosted_auth_parameter(project_id).strip, 'project_id')
       auth_state = hosted_auth_parameter(state)
       raise ArgumentError, 'Unsupported hosted auth action' unless HOSTED_AUTH_ACTIONS.include?(action)
 

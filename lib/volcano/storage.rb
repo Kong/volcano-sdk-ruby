@@ -39,6 +39,7 @@ module Volcano
     def upload(path, value, content_type: nil)
       mime_type = upload_content_type(content_type)
       path = storage_paths(path).fetch(0)
+      PathSegments.check_bucket_name!(@name)
       binding = @client.capture_session_binding
       @client.session_token
       content = upload_bytes(value).freeze
@@ -92,6 +93,7 @@ module Volcano
     private
 
     def storage_request(binding: @client.capture_session_binding)
+      PathSegments.check_bucket_name!(@name)
       @client.session_request(binding: binding) { |token| Transport.invoke { yield(token) } }
     end
 

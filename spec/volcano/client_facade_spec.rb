@@ -2191,11 +2191,11 @@ RSpec.describe Volcano::Client do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     calls_after_sign_in = transport.calls.dup
     bucket = client.storage.from('assets')
-    message = 'storage paths cannot contain empty, ".", or ".." segments'
+    message = 'storage paths cannot be empty, start with "//", or contain "." or ".." segments'
     attempts = [
       -> { bucket.download('docs/../a.txt') },
       -> { bucket.upload('docs/./b.txt', 'x') },
-      -> { bucket.remove(['ok.txt', 'a//b']) },
+      -> { bucket.remove(['ok.txt', 'a/../b']) },
       -> { bucket.move('a.txt', '..') },
       -> { bucket.update_visibility('./a.txt', public: true) }
     ]
@@ -2208,11 +2208,11 @@ RSpec.describe Volcano::Client do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
     calls_after_sign_in = transport.calls.dup
     bucket = client.storage.from('assets')
-    message = 'storage paths cannot contain empty, ".", or ".." segments'
+    message = 'storage paths cannot be empty, start with "//", or contain "." or ".." segments'
     attempts = [
       -> { bucket.create_upload_session('../x', total_size: 1) },
-      -> { bucket.upload_part('a//x', session_id: 's', part_number: 1, data: 'x') },
-      -> { bucket.complete_upload_session('x/', session_id: 's') },
+      -> { bucket.upload_part('a/./x', session_id: 's', part_number: 1, data: 'x') },
+      -> { bucket.complete_upload_session('x/..', session_id: 's') },
       -> { bucket.get_upload_session('./x', session_id: 's') },
       -> { bucket.abort_upload_session('//x', session_id: 's') }
     ]
@@ -2232,6 +2232,37 @@ RSpec.describe Volcano::Client do
       end
     end
     expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'reaches and migrates object keys with a trailing separator or repeated separators' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    bucket = client.storage.from('assets')
+
+    bucket.download('folder/')
+    bucket.move('a//b.txt', 'a/b.txt')
+    bucket.remove('folder/')
+
+    sent = transport.calls.last(3)
+    expect(sent.map { |name, arguments| [name, arguments.slice(:path, :from_path, :to_path)] }).to eq(
+      [
+        [:download_storage_object, { path: 'folder/' }],
+        [:move_storage_object, { from_path: 'a//b.txt', to_path: 'a/b.txt' }],
+        [:delete_storage_object, { path: 'folder/' }]
+      ]
+    )
+  end
+
+  it 'keeps a trailing separator and repeated separators in a public URL' do
+    local_client = described_class.new(
+      api_url: 'https://api.test.volcano.dev',
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+    bucket = local_client.storage.from('assets')
+
+    expect([bucket.get_public_url('folder/'), bucket.get_public_url('a//b.txt')]).to eq(
+      %w[folder/ a//b.txt].map { |key| "https://api.test.volcano.dev/public/project-123/assets/#{key}" }
+    )
   end
 
   it 'moves an object and returns its destination metadata' do
@@ -2337,9 +2368,9 @@ RSpec.describe Volcano::Client do
       _transport: transport
     )
 
-    ['.', 'avatars/../b.txt', 'folder/', 'a//b', '//a.txt'].each do |path|
+    ['.', 'avatars/../b.txt', '//a.txt', ''].each do |path|
       expect { local_client.storage.from('assets').get_public_url(path) }
-        .to raise_error(ArgumentError, 'storage path cannot contain empty, ".", or ".." segments')
+        .to raise_error(ArgumentError, /\Astorage path (cannot be empty|must be a non-empty string)/)
     end
     expect(transport.calls).to be_empty
   end

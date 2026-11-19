@@ -1072,7 +1072,7 @@ RSpec.describe Volcano::Client do
     )
   end
 
-  it 'rejects object paths with dot or empty segments' do
+  it 'rejects object paths that are empty, start with "//", or have dot segments' do
     api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     calls = []
     api_client.define_singleton_method(:call_api) do |method, path, options|
@@ -1081,9 +1081,9 @@ RSpec.describe Volcano::Client do
     end
     storage = transport_class::StorageApi.new(api_client)
 
-    ['../a.txt', 'docs/../b.txt', '.', 'a/./b', 'a//b', 'a/', '/'].each do |path|
+    ['../a.txt', 'docs/../b.txt', '.', 'a/./b', 'a/..', '/', '//a.txt'].each do |path|
       expect { storage.download_storage_object_with_http_info('assets', path) }
-        .to raise_error(ArgumentError, 'path cannot contain empty, ".", or ".." segments')
+        .to raise_error(ArgumentError, 'path cannot be empty, start with "//", or contain "." or ".." segments')
     end
     expect(calls).to be_empty
   end
@@ -1116,6 +1116,35 @@ RSpec.describe Volcano::Client do
     storage.download_storage_object_with_http_info('assets', 'a%2Fb%2e.txt')
 
     expect(calls.fetch(0).first(2)).to eq([:GET, '/storage/assets/a%252Fb%252e.txt'])
+  end
+
+  it 'keeps object keys with a trailing separator or repeated separators' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+    calls = []
+    api_client.define_singleton_method(:call_api) do |method, path, options|
+      calls << [method, path, build_request(method, path, options).url]
+      [nil, 200, {}]
+    end
+    storage = transport_class::StorageApi.new(api_client)
+
+    storage.download_storage_object_with_http_info('assets', 'folder/')
+    storage.delete_storage_object_with_http_info('assets', 'folder/')
+    storage.download_storage_object_with_http_info('assets', 'a//b.txt')
+
+    expect(calls.map { |call| call.first(2) }).to eq(
+      [[:GET, '/storage/assets/folder/'], [:DELETE, '/storage/assets/folder/'], [:GET, '/storage/assets/a//b.txt']]
+    )
+    expect(calls.map(&:last)).to eq(
+      %w[folder/ folder/ a//b.txt].map { |key| "https://api.volcano.dev/storage/assets/#{key}" }
+    )
+  end
+
+  it 'keeps empty segments out of every other generated route' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+
+    expect { api_client.build_request(:get, '/locks/a//lease', auth_names: []) }
+      .to raise_error(ArgumentError, /Request path cannot contain/)
+    expect(api_client.build_request(:get, '/locks/a/lease', auth_names: []).url).to eq('https://api.volcano.dev/locks/a/lease')
   end
 
   it 'sends a leading-slash object path as the same bucket-relative object' do
@@ -1182,7 +1211,7 @@ RSpec.describe Volcano::Client do
       -> { storage.abort_upload_session_with_http_info('assets', '../x', 'session') }
     ]
 
-    attempts.each { |attempt| expect(&attempt).to raise_error(ArgumentError, /path cannot contain/) }
+    attempts.each { |attempt| expect(&attempt).to raise_error(ArgumentError, /path cannot be empty/) }
     expect(calls).to be_empty
   end
 

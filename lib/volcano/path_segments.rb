@@ -3,10 +3,11 @@
 module Volcano
   # Path segment rules for generated request paths and storage object paths.
   # libcurl and Hosting treat ".", "..", "%2e", and an encoded "/" as path
-  # structure, and an empty segment changes which route matches, so these
-  # values are rejected before a URL is built.
+  # structure, so these values are rejected before a URL is built. An empty
+  # segment changes which generated route matches; storage object keys may
+  # contain them, as in "folder/" or "a//b", so object paths keep them.
   module PathSegments
-    INVALID_SEGMENTS = 'cannot contain empty, ".", or ".." segments'
+    INVALID_SEGMENTS = 'cannot be empty, start with "//", or contain "." or ".." segments'
     INVALID_REQUEST_PATH = 'Request path cannot contain empty, ".", "..", or encoded "/" segments'
     INVALID_BUCKET_NAME = 'bucket name must be 1-64 letters, numbers, "_", or "-"'
     BUCKET_NAME = /\A[a-zA-Z0-9_-]{1,64}\z/
@@ -37,20 +38,24 @@ module Volcano
 
     def self.invalid_storage_path?(path)
       relative = bucket_relative_path(path)
-      relative.empty? || relative.split('/', -1).any? { |segment| segment.empty? || DOT_SEGMENTS.include?(segment) }
+      relative.empty? || relative.start_with?('/') || relative.split('/', -1).intersect?(DOT_SEGMENTS)
     end
 
     # Checks a generated route after its parameters are encoded into it and
     # before a URL is built from it, so every operation shares one guard.
-    def self.check_request_path!(path)
+    # Storage object routes end in an object key, which may hold empty segments.
+    def self.check_request_path!(path, object_key: false)
       segments = path.delete_prefix('/').split('/', -1)
-      raise ArgumentError, INVALID_REQUEST_PATH if segments.any? { |segment| invalid_request_segment?(segment) }
+      invalid = segments.any? { |segment| invalid_request_segment?(segment, allow_empty: object_key) }
+      raise ArgumentError, INVALID_REQUEST_PATH if invalid
 
       path
     end
 
-    def self.invalid_request_segment?(segment)
-      segment.empty? || DOT_SEGMENTS.include?(segment.gsub(ENCODED_DOT, '.')) || ENCODED_SLASH.match?(segment)
+    def self.invalid_request_segment?(segment, allow_empty: false)
+      return !allow_empty if segment.empty?
+
+      DOT_SEGMENTS.include?(segment.gsub(ENCODED_DOT, '.')) || ENCODED_SLASH.match?(segment)
     end
   end
   private_constant :PathSegments

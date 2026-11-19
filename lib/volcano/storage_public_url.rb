@@ -14,7 +14,7 @@ module Volcano
     def get_public_url(path)
       object_path = public_url_path(path)
       bucket = PathSegments.check_bucket_name!(@name)
-      segments = [project_id, bucket, *PathSegments.bucket_relative_path(object_path).split('/')]
+      segments = [project_id, bucket, *PathSegments.bucket_relative_path(object_path).split('/', -1)]
       "#{@api_url}/public/#{segments.map { |segment| encode_segment(segment) }.join('/')}".freeze
     end
 

@@ -21,12 +21,14 @@ module Volcano
       attr_accessor access_token: String?
       attr_accessor timeout: Integer
       def initialize: () -> void
+      def base_url: (?Symbol? operation) -> String
     end
 
     class ApiClient
       def initialize: (?Configuration config) -> void
       def self.default: () -> ApiClient
       def user_agent=: (String user_agent) -> void
+      attr_reader config: Configuration
       def call_api: (Symbol http_method, String path, ?api_options opts) -> api_result
       def build_request: (Symbol http_method, String path, ?api_options opts) -> Typhoeus::Request
       def select_header_content_type: (Array[String] content_types) -> String?

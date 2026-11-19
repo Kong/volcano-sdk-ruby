@@ -285,6 +285,8 @@ module Volcano
 
       def build_request: (Symbol http_method, String path, ?Generated::api_options options) -> Typhoeus::Request
 
+      def build_request_url: (String path, ?Generated::api_options opts) -> String
+
       def select_header_content_type: (Array[String] content_types) -> String?
 
       def convert_to_type: (Object? data, String return_type) -> Object?

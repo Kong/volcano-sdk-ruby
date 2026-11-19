@@ -10,7 +10,7 @@ module Volcano
       part_size: nil
     )
       request = UploadSessionRequest.new(
-        path: path,
+        path: storage_paths(path).fetch(0),
         content_type: content_type,
         total_size: total_size,
         part_size: part_size
@@ -27,7 +27,7 @@ module Volcano
 
     def upload_part(path, session_id:, part_number:, data:)
       request = UploadPartRequest.new(
-        path: path,
+        path: storage_paths(path).fetch(0),
         session_id: session_id,
         part_number: part_number,
         data: upload_bytes(data)
@@ -43,7 +43,7 @@ module Volcano
     end
 
     def complete_upload_session(path, session_id:)
-      request = UploadSessionReference.new(path: path, session_id: session_id)
+      request = UploadSessionReference.new(path: storage_paths(path).fetch(0), session_id: session_id)
       response = storage_request do |token|
         @transport.complete_upload_session(
           authorization: token,
@@ -55,7 +55,7 @@ module Volcano
     end
 
     def get_upload_session(path, session_id:)
-      request = UploadSessionReference.new(path: path, session_id: session_id)
+      request = UploadSessionReference.new(path: storage_paths(path).fetch(0), session_id: session_id)
       response = storage_request do |token|
         @transport.get_upload_session(
           authorization: token,
@@ -67,7 +67,7 @@ module Volcano
     end
 
     def abort_upload_session(path, session_id:)
-      request = UploadSessionReference.new(path: path, session_id: session_id)
+      request = UploadSessionReference.new(path: storage_paths(path).fetch(0), session_id: session_id)
       response = storage_request do |token|
         @transport.abort_upload_session(
           authorization: token,

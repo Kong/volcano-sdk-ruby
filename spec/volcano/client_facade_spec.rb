@@ -774,17 +774,24 @@ RSpec.describe Volcano::Client do
   end
 
   describe '#get_hosted_auth_url' do
+    it 'rejects a project ID that would not stay one path segment' do
+      ['..', '.', 'a/b'].each do |project_id|
+        expect { client.auth.get_hosted_auth_url(project_id: project_id, state: 'state-value') }
+          .to raise_error(ArgumentError, 'project_id cannot contain "/" or be "." or ".."')
+      end
+    end
+
     it 'builds the unified hosted-auth URL for every supported action' do
       urls = %w[login signup forgot-password].to_h do |action|
         [action, client.auth.get_hosted_auth_url(
-          project_id: 'project/id', state: 'state value', action: action
+          project_id: 'project id?', state: 'state value', action: action
         )]
       end
 
       expect(urls).to eq(
-        'login' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=login&anon_key=anon-key&state=state+value',
-        'signup' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=signup&anon_key=anon-key&state=state+value',
-        'forgot-password' => 'https://api.test.volcano.dev/projects/project%2Fid/auth/hosted?action=forgot-password&anon_key=anon-key&state=state+value'
+        'login' => 'https://api.test.volcano.dev/projects/project%20id%3F/auth/hosted?action=login&anon_key=anon-key&state=state+value',
+        'signup' => 'https://api.test.volcano.dev/projects/project%20id%3F/auth/hosted?action=signup&anon_key=anon-key&state=state+value',
+        'forgot-password' => 'https://api.test.volcano.dev/projects/project%20id%3F/auth/hosted?action=forgot-password&anon_key=anon-key&state=state+value'
       )
     end
 
@@ -2180,6 +2187,84 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to eq(calls_after_sign_in)
   end
 
+  it 'rejects storage paths with dot or empty segments before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+    bucket = client.storage.from('assets')
+    message = 'storage paths cannot be empty, start with "//", or contain "." or ".." segments'
+    attempts = [
+      -> { bucket.download('docs/../a.txt') },
+      -> { bucket.upload('docs/./b.txt', 'x') },
+      -> { bucket.remove(['ok.txt', 'a/../b']) },
+      -> { bucket.move('a.txt', '..') },
+      -> { bucket.update_visibility('./a.txt', public: true) }
+    ]
+
+    attempts.each { |attempt| expect(&attempt).to raise_error(ArgumentError, message) }
+    expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'rejects upload session paths with dot or empty segments before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+    bucket = client.storage.from('assets')
+    message = 'storage paths cannot be empty, start with "//", or contain "." or ".." segments'
+    attempts = [
+      -> { bucket.create_upload_session('../x', total_size: 1) },
+      -> { bucket.upload_part('a/./x', session_id: 's', part_number: 1, data: 'x') },
+      -> { bucket.complete_upload_session('x/..', session_id: 's') },
+      -> { bucket.get_upload_session('./x', session_id: 's') },
+      -> { bucket.abort_upload_session('//x', session_id: 's') }
+    ]
+
+    attempts.each { |attempt| expect(&attempt).to raise_error(ArgumentError, message) }
+    expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'rejects invalid bucket names before transport' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    calls_after_sign_in = transport.calls.dup
+
+    ['..', 'a/b', "assets\n.."].each do |name|
+      bucket = client.storage.from(name)
+      [-> { bucket.download('a.txt') }, -> { bucket.upload('a.txt', 'x') }].each do |attempt|
+        expect(&attempt).to raise_error(ArgumentError, 'bucket name must be 1-64 letters, numbers, "_", or "-"')
+      end
+    end
+    expect(transport.calls).to eq(calls_after_sign_in)
+  end
+
+  it 'reaches and migrates object keys with a trailing separator or repeated separators' do
+    client.auth.sign_in(email: 'user@example.com', password: 'secret')
+    bucket = client.storage.from('assets')
+
+    bucket.download('folder/')
+    bucket.move('a//b.txt', 'a/b.txt')
+    bucket.remove('folder/')
+
+    sent = transport.calls.last(3)
+    expect(sent.map { |name, arguments| [name, arguments.slice(:path, :from_path, :to_path)] }).to eq(
+      [
+        [:download_storage_object, { path: 'folder/' }],
+        [:move_storage_object, { from_path: 'a//b.txt', to_path: 'a/b.txt' }],
+        [:delete_storage_object, { path: 'folder/' }]
+      ]
+    )
+  end
+
+  it 'keeps a trailing separator and repeated separators in a public URL' do
+    local_client = described_class.new(
+      api_url: 'https://api.test.volcano.dev',
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+    bucket = local_client.storage.from('assets')
+
+    expect([bucket.get_public_url('folder/'), bucket.get_public_url('a//b.txt')]).to eq(
+      %w[folder/ a//b.txt].map { |key| "https://api.test.volcano.dev/public/project-123/assets/#{key}" }
+    )
+  end
+
   it 'moves an object and returns its destination metadata' do
     client.auth.sign_in(email: 'user@example.com', password: 'secret')
 
@@ -2277,29 +2362,50 @@ RSpec.describe Volcano::Client do
     expect(transport.calls).to be_empty
   end
 
-  it 'preserves a trailing separator in a public URL path' do
+  it 'rejects public URL paths with dot or empty segments' do
     local_client = described_class.new(
       anon_key: anon_key_with_project_id('project-123'),
       _transport: transport
     )
 
-    public_url = local_client.storage.from('assets').get_public_url('folder/')
-
-    expect(public_url).to end_with('/public/project-123/assets/folder/')
+    ['.', 'avatars/../b.txt', '//a.txt', ''].each do |path|
+      expect { local_client.storage.from('assets').get_public_url(path) }
+        .to raise_error(ArgumentError, /\Astorage path (cannot be empty|must be a non-empty string)/)
+    end
     expect(transport.calls).to be_empty
   end
 
-  it 'rejects dot segments in a public URL path' do
+  it 'drops one leading separator from a public URL path' do
+    local_client = described_class.new(
+      api_url: 'https://api.test.volcano.dev',
+      anon_key: anon_key_with_project_id('project-123'),
+      _transport: transport
+    )
+
+    expect(local_client.storage.from('assets').get_public_url('/avatars/a.png'))
+      .to eq('https://api.test.volcano.dev/public/project-123/assets/avatars/a.png')
+  end
+
+  it 'rejects invalid bucket names before building a public URL' do
     local_client = described_class.new(
       anon_key: anon_key_with_project_id('project-123'),
       _transport: transport
     )
 
-    ['.', 'avatars/../secret.txt'].each do |path|
-      expect { local_client.storage.from('assets').get_public_url(path) }
-        .to raise_error(ArgumentError, /dot segments/)
+    ['..', 'a/b', ''].each do |bucket|
+      expect { local_client.storage.from(bucket).get_public_url('a.txt') }
+        .to raise_error(ArgumentError, 'bucket name must be 1-64 letters, numbers, "_", or "-"')
     end
     expect(transport.calls).to be_empty
+  end
+
+  it 'rejects an anon key project ID that would not stay one path segment' do
+    ['..', 'a/b'].each do |project_id|
+      local_client = described_class.new(anon_key: anon_key_with_project_id(project_id), _transport: transport)
+
+      expect { local_client.storage.from('assets').get_public_url('a.txt') }
+        .to raise_error(ArgumentError, 'Project ID in anon key cannot contain "/" or be "." or ".."')
+    end
   end
 
   it 'rejects multiple public URL paths' do

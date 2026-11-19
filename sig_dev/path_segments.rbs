@@ -1,0 +1,18 @@
+module Volcano
+  module PathSegments
+    INVALID_SEGMENTS: String
+    INVALID_REQUEST_PATH: String
+    INVALID_BUCKET_NAME: String
+    BUCKET_NAME: Regexp
+    DOT_SEGMENTS: Array[String]
+    ENCODED_DOT: Regexp
+    ENCODED_SLASH: Regexp
+
+    def self.check_identifier!: (String value, String field) -> String
+    def self.check_bucket_name!: (Object? name) -> String
+    def self.bucket_relative_path: (String path) -> String
+    def self.invalid_storage_path?: (String path) -> bool
+    def self.check_request_path!: (String path, ?object_key: bool) -> String
+    def self.invalid_request_segment?: (String segment, ?allow_empty: bool) -> bool
+  end
+end

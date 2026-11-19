@@ -36,10 +36,19 @@ module Volcano
       end
 
       def build_request(http_method, path, options = {})
+        PathSegments.check_request_path!(path, object_key: options[:object_key_route] == true)
         request = super
         request.options[:followlocation] = options.fetch(:follow_location, true)
         request.options[:params_encoding] = options.fetch(:params_encoding, request.options[:params_encoding])
         request
+      end
+
+      # The generated client merges repeated "/", which would send "a//b" as a
+      # different object key; every other route has already been checked for
+      # empty segments.
+      def build_request_url(path, opts = {})
+        operation = opts[:operation]
+        "#{config.base_url(operation.is_a?(Symbol) ? operation : nil)}/#{path.delete_prefix('/')}"
       end
 
       def select_header_content_type(content_types)
@@ -131,9 +140,18 @@ module Volcano
         raise ArgumentError, 'bucket_name is required' if bucket_name.nil?
         raise ArgumentError, 'path is required' if path.nil?
 
-        bucket = CGI.escapeURIComponent(bucket_name.to_s)
-        object_path = CGI.escapeURIComponent(path.to_s).gsub('%2F', '/')
-        api_client.call_api(method, "/storage/#{bucket}/#{object_path}#{suffix}", options)
+        # Storage object requests are built outside the generated operations, so
+        # they check the bucket name here.
+        bucket = PathSegments.check_bucket_name!(bucket_name.to_s)
+        object_path = storage_object_segments(path.to_s)
+        api_client.call_api(method, "/storage/#{bucket}/#{object_path}#{suffix}", options.merge(object_key_route: true))
+      end
+
+      # Separators stay literal so the object path keeps its folders.
+      def storage_object_segments(path)
+        raise ArgumentError, "path #{PathSegments::INVALID_SEGMENTS}" if PathSegments.invalid_storage_path?(path)
+
+        CGI.escapeURIComponent(PathSegments.bucket_relative_path(path)).gsub('%2F', '/')
       end
     end
 

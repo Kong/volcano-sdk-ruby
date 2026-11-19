@@ -52,7 +52,8 @@ module Volcano
         headers: {
           'Authorization' => "Bearer #{authorization}",
           'Content-Type' => 'application/json',
-          'Accept' => 'application/json'
+          'Accept' => 'application/json',
+          'User-Agent' => UserAgent::VALUE
         },
         timeout: @timeout,
         followlocation: false

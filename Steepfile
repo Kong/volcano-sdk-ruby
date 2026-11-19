@@ -46,6 +46,7 @@ target :core_facades do
   check 'lib/volcano/transport_json.rb'
   check 'lib/volcano/user.rb'
   check 'lib/volcano/version.rb'
+  check 'lib/volcano/user_agent.rb'
   library 'json'
   library 'securerandom'
   library 'socket'

@@ -894,6 +894,15 @@ RSpec.describe Volcano::Client do
     expect(request.options.fetch(:followlocation)).to be(false)
   end
 
+  it 'identifies the SDK version instead of the generator on every generated request' do
+    api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
+
+    request = api_client.build_request(:get, '/health', auth_names: [])
+
+    expect(request.options.fetch(:headers).fetch('User-Agent'))
+      .to match(%r{\Avolcano-sdk-ruby/#{Regexp.escape(Volcano::VERSION)} \(\w+/[\d.]+; \w+/\w+\)\z}o)
+  end
+
   it 'keeps a multipart encoding override local to one request' do
     api_client = transport_class::ApiClient.new(generated_namespace::Configuration.new)
     original = api_client.config.params_encoding

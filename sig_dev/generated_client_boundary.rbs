@@ -26,6 +26,7 @@ module Volcano
     class ApiClient
       def initialize: (?Configuration config) -> void
       def self.default: () -> ApiClient
+      def user_agent=: (String user_agent) -> void
       def call_api: (Symbol http_method, String path, ?api_options opts) -> api_result
       def build_request: (Symbol http_method, String path, ?api_options opts) -> Typhoeus::Request
       def select_header_content_type: (Array[String] content_types) -> String?

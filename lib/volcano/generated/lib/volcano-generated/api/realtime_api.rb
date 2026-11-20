@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -141,6 +141,74 @@ module Volcano::Generated
       data, status_code, headers = @api_client.call_api(:GET, local_var_path, new_options)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: RealtimeApi#get_realtime_stats\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+
+    # Publish a message to a Realtime channel
+    # Sends one message to a broadcast or grant channel of the project embedded in the service-role key, for a backend that holds no WebSocket, such as a function. The key needs `realtime.publish`.  `channel` is a client channel: `broadcast:<name>`, or `grant:<name>` for a channel only Realtime grant holders watch. Every subscriber receives `{\"type\": <event>, \"payload\": <payload>}` as the message data, the shape `channel.on(<event>, ...)` matches.  The publish is metered like any server publish: the publish plus one per subscriber it reaches. Messages are not stored; a subscriber that was not connected misses it. A project's publishes share the rate a WebSocket client publishes at; over it the answer is 429 `realtime_publish_rate_limited`. 
+    # @param realtime_publish_request [RealtimePublishRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [RealtimePublishResult]
+    def publish_realtime_message(realtime_publish_request, opts = {})
+      data, _status_code, _headers = publish_realtime_message_with_http_info(realtime_publish_request, opts)
+      data
+    end
+
+    # Publish a message to a Realtime channel
+    # Sends one message to a broadcast or grant channel of the project embedded in the service-role key, for a backend that holds no WebSocket, such as a function. The key needs &#x60;realtime.publish&#x60;.  &#x60;channel&#x60; is a client channel: &#x60;broadcast:&lt;name&gt;&#x60;, or &#x60;grant:&lt;name&gt;&#x60; for a channel only Realtime grant holders watch. Every subscriber receives &#x60;{\&quot;type\&quot;: &lt;event&gt;, \&quot;payload\&quot;: &lt;payload&gt;}&#x60; as the message data, the shape &#x60;channel.on(&lt;event&gt;, ...)&#x60; matches.  The publish is metered like any server publish: the publish plus one per subscriber it reaches. Messages are not stored; a subscriber that was not connected misses it. A project&#39;s publishes share the rate a WebSocket client publishes at; over it the answer is 429 &#x60;realtime_publish_rate_limited&#x60;. 
+    # @param realtime_publish_request [RealtimePublishRequest] 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(RealtimePublishResult, Integer, Hash)>] RealtimePublishResult data, response status code and response headers
+    def publish_realtime_message_with_http_info(realtime_publish_request, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: RealtimeApi.publish_realtime_message ...'
+      end
+      # verify the required parameter 'realtime_publish_request' is set
+      if @api_client.config.client_side_validation && realtime_publish_request.nil?
+        fail ArgumentError, "Missing the required parameter 'realtime_publish_request' when calling RealtimeApi.publish_realtime_message"
+      end
+      # resource path
+      local_var_path = '/realtime/v1/publish'
+
+      # query parameters
+      query_params = opts[:query_params] || {}
+
+      # header parameters
+      header_params = opts[:header_params] || {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json']) unless header_params['Accept']
+      # HTTP header 'Content-Type'
+      content_type = @api_client.select_header_content_type(['application/json'])
+      if !content_type.nil?
+          header_params['Content-Type'] = content_type
+      end
+
+      # form parameters
+      form_params = opts[:form_params] || {}
+
+      # http body (model)
+      post_body = opts[:debug_body] || @api_client.object_to_http_body(realtime_publish_request)
+
+      # return_type
+      return_type = opts[:debug_return_type] || 'RealtimePublishResult'
+
+      # auth_names
+      auth_names = opts[:debug_auth_names] || ['ServiceRoleKey']
+
+      new_options = opts.merge(
+        :operation => :"RealtimeApi.publish_realtime_message",
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => return_type
+      )
+
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path, new_options)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: RealtimeApi#publish_realtime_message\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

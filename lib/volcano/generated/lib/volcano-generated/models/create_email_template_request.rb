@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -18,7 +18,7 @@ module Volcano::Generated
     # Type of email template
     attr_accessor :template_type
 
-    # Email subject line
+    # Subject template. After Go template whitespace trimming, literal interior carriage returns or newlines return 400. Outer whitespace and trailing block-scalar newlines are allowed.
     attr_accessor :subject
 
     # HTML template body. Available placeholders: - {{.Token}} - The confirmation/reset token - {{.ProjectName}} - The project name - {{.Email}} - User's email address 

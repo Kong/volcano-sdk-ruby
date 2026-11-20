@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,8 +15,10 @@ require 'time'
 
 module Volcano::Generated
   class ProjectConfigAuthEmailFrom < ApiModelBase
+    # Sender email address. New or changed values containing carriage returns or newlines return 422. Unchanged exported values are preserved.
     attr_accessor :address
 
+    # Sender display name; supports punctuation and Unicode. New or changed values containing carriage returns or newlines return 422. Unchanged exported values are preserved.
     attr_accessor :name
 
     # Attribute mapping from ruby-style variable name to JSON key.

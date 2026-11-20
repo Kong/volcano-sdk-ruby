@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,9 +15,10 @@ require 'time'
 
 module Volcano::Generated
   class GitRepository < ApiModelBase
-    # Stable GitHub repository id (repository.id), unchanged by renames.
+    # GitHub's repository id. It stays the same through a rename or a transfer.
     attr_accessor :id
 
+    # The repository's owner and name, such as `acme/shop`.
     attr_accessor :full_name
 
     attr_accessor :default_branch
@@ -63,6 +64,13 @@ module Volcano::Generated
     def self.openapi_nullable
       Set.new([
       ])
+    end
+
+    # List of class defined in allOf (OpenAPI v3)
+    def self.openapi_all_of
+      [
+      :'GitRepositoryReference'
+      ]
     end
 
     # Initializes the object

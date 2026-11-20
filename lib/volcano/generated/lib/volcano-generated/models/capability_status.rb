@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,11 +15,12 @@ require 'time'
 
 module Volcano::Generated
   class CapabilityStatus
-    AVAILABLE = "available".freeze
-    UNAVAILABLE = "unavailable".freeze
+    CapabilityStatusAvailable = "available".freeze
+    CapabilityStatusUnavailable = "unavailable".freeze
+    CapabilityStatusReadOnly = "read_only".freeze
 
     def self.all_vars
-      @all_vars ||= [AVAILABLE, UNAVAILABLE].freeze
+      @all_vars ||= [CapabilityStatusAvailable, CapabilityStatusUnavailable, CapabilityStatusReadOnly].freeze
     end
 
     # Builds the enum from string

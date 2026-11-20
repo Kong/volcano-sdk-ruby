@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -40,7 +40,7 @@ module Volcano::Generated
     # Present once the execution has reached a terminal status.
     attr_accessor :completed_at
 
-    # Lets a browser read the execution, stop it, and read and send its messages, and a service key scoped to a list without `*` read and stop it. Returned only by the start whose input the execution runs, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
+    # Lets a browser read the execution, stop it, and read and send its messages, and a service key scoped to a list without `*` do the same. Returned only by the start whose input the execution runs, never by a repeat under the same name or by a read. Send it as `X-Volcano-Client-Token`. 
     attr_accessor :client_token
 
     class EnumAttributeValidator

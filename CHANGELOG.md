@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.1](https://github.com/Kong/volcano-sdk-ruby/compare/v0.36.0...v0.36.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **transport:** preserve retry delay on service unavailable responses ([#378](https://github.com/Kong/volcano-sdk-ruby/issues/378)) ([d342e60](https://github.com/Kong/volcano-sdk-ruby/commit/d342e606ad46b39e60a647be85717670f4ff926c))
+
 ## [0.36.0](https://github.com/Kong/volcano-sdk-ruby/compare/v0.35.1...v0.36.0) (2026-11-19)
 
 

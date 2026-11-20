@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,11 +15,11 @@ require 'time'
 
 module Volcano::Generated
   class DurableMessageDirection
-    IN = "in".freeze
-    OUT = "out".freeze
+    DurableMessageDirectionIn = "in".freeze
+    DurableMessageDirectionOut = "out".freeze
 
     def self.all_vars
-      @all_vars ||= [IN, OUT].freeze
+      @all_vars ||= [DurableMessageDirectionIn, DurableMessageDirectionOut].freeze
     end
 
     # Builds the enum from string

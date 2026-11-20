@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -41,7 +41,7 @@ module Volcano::Generated
     # Whether OpenAPI metadata is configured; list responses omit the document itself.
     attr_accessor :has_openapi_spec
 
-    # Canonical geo-routed HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. Omitted when the deployment serves no public invocation domain, as in local development, so a client testing for an empty string never matches.
+    # Canonical geo-routed HTTPS endpoint for invoking this function. Use it as-is: it does not share a domain with the API, so a host derived from the API URL will not reach the function. In local development it is `http://{id}.functions.localhost:8000/`, served by the local API. Omitted when the deployment serves no function invocation domain, so a client testing for an empty string never matches.
     attr_accessor :invoke_url
 
     # Regions where this function is currently deployed
@@ -56,6 +56,9 @@ module Volcano::Generated
 
     # Newest queued deployment that will run after the current operation
     attr_accessor :pending_deployment_id
+
+    # The promoted preview whose runtime receives this function's traffic, the same as `candidate_id` in `serving`. Null when the function runs its own build. While it is set, `current_deployment_id` and `status` describe the function's own build, which receives no traffic until the function is rolled back. 
+    attr_accessor :serving_candidate_id
 
     # Most recent successful invocation timestamp
     attr_accessor :last_invoked_at
@@ -106,6 +109,7 @@ module Volcano::Generated
         :'handler' => :'handler',
         :'current_deployment_id' => :'current_deployment_id',
         :'pending_deployment_id' => :'pending_deployment_id',
+        :'serving_candidate_id' => :'serving_candidate_id',
         :'last_invoked_at' => :'last_invoked_at',
         :'created_at' => :'created_at',
         :'updated_at' => :'updated_at'
@@ -142,6 +146,7 @@ module Volcano::Generated
         :'handler' => :'String',
         :'current_deployment_id' => :'String',
         :'pending_deployment_id' => :'String',
+        :'serving_candidate_id' => :'String',
         :'last_invoked_at' => :'Time',
         :'created_at' => :'Time',
         :'updated_at' => :'Time'
@@ -152,6 +157,7 @@ module Volcano::Generated
     def self.openapi_nullable
       Set.new([
         :'openapi_spec',
+        :'serving_candidate_id',
       ])
     end
 
@@ -263,6 +269,12 @@ module Volcano::Generated
 
       if attributes.key?(:'pending_deployment_id')
         self.pending_deployment_id = attributes[:'pending_deployment_id']
+      end
+
+      if attributes.key?(:'serving_candidate_id')
+        self.serving_candidate_id = attributes[:'serving_candidate_id']
+      else
+        self.serving_candidate_id = nil
       end
 
       if attributes.key?(:'last_invoked_at')
@@ -521,6 +533,7 @@ module Volcano::Generated
           handler == o.handler &&
           current_deployment_id == o.current_deployment_id &&
           pending_deployment_id == o.pending_deployment_id &&
+          serving_candidate_id == o.serving_candidate_id &&
           last_invoked_at == o.last_invoked_at &&
           created_at == o.created_at &&
           updated_at == o.updated_at
@@ -535,7 +548,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [id, project_id, name, status, provisioning_started_at, visibility, is_public, invocation_mode, http_auth_mode, openapi_spec, has_openapi_spec, invoke_url, deployed_regions, runtime, handler, current_deployment_id, pending_deployment_id, last_invoked_at, created_at, updated_at].hash
+      [id, project_id, name, status, provisioning_started_at, visibility, is_public, invocation_mode, http_auth_mode, openapi_spec, has_openapi_spec, invoke_url, deployed_regions, runtime, handler, current_deployment_id, pending_deployment_id, serving_candidate_id, last_invoked_at, created_at, updated_at].hash
     end
 
     # Builds the object from hash

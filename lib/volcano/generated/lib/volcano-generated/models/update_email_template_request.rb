@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,6 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class UpdateEmailTemplateRequest < ApiModelBase
+    # Subject template. For new or changed values, literal interior carriage returns or newlines after Go template whitespace trimming return 400. Outer whitespace and trailing block-scalar newlines are allowed. Unchanged stored subjects are preserved.
     attr_accessor :subject
 
     attr_accessor :html_body

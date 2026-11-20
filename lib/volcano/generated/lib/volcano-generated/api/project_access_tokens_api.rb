@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -243,13 +243,14 @@ module Volcano::Generated
     end
 
     # List a project's access tokens
-    # Lists the project's access tokens, newest first. Secrets are never returned: only a hash is stored, so a token's value exists solely in the response to the create call.  Only tokens that can still authenticate are returned by default, so revoked and expired ones are hidden. Pass `include_revoked=true` to see them, which is how you find out what a key did before it stopped working.  Requires a platform token. A project access token cannot manage project access tokens, so a leaked credential cannot enumerate or replace itself. 
+    # Lists the project's access tokens, newest first. Secrets are never returned: only a hash is stored, so a token's value exists solely in the response to the create call.  Only tokens that can still authenticate are returned by default, so revoked and expired ones are hidden. Pass `include_revoked=true` to see them, which is how you find out what a key did before it stopped working.  Delegated grants are hidden by default too. A first-party app you have allowed to act on this project mints one every few minutes, and you revoke the app's access as a whole rather than grant by grant. Pass `include_delegated=true` to list them; they have scope `delegated`. They never count toward the project's limit of 100 live tokens.  Requires a platform token. A project access token cannot manage project access tokens, so a leaked credential cannot enumerate or replace itself. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
     # @option opts [Boolean] :include_revoked Include tokens that can no longer authenticate — both revoked and expired ones.  (default to false)
+    # @option opts [Boolean] :include_delegated Include delegated grants: short tokens a first-party app mints for one run from the access you allowed it.  (default to false)
     # @return [PaginatedProjectAccessTokens]
     def list_project_access_tokens(id, opts = {})
       data, _status_code, _headers = list_project_access_tokens_with_http_info(id, opts)
@@ -257,13 +258,14 @@ module Volcano::Generated
     end
 
     # List a project&#39;s access tokens
-    # Lists the project&#39;s access tokens, newest first. Secrets are never returned: only a hash is stored, so a token&#39;s value exists solely in the response to the create call.  Only tokens that can still authenticate are returned by default, so revoked and expired ones are hidden. Pass &#x60;include_revoked&#x3D;true&#x60; to see them, which is how you find out what a key did before it stopped working.  Requires a platform token. A project access token cannot manage project access tokens, so a leaked credential cannot enumerate or replace itself. 
+    # Lists the project&#39;s access tokens, newest first. Secrets are never returned: only a hash is stored, so a token&#39;s value exists solely in the response to the create call.  Only tokens that can still authenticate are returned by default, so revoked and expired ones are hidden. Pass &#x60;include_revoked&#x3D;true&#x60; to see them, which is how you find out what a key did before it stopped working.  Delegated grants are hidden by default too. A first-party app you have allowed to act on this project mints one every few minutes, and you revoke the app&#39;s access as a whole rather than grant by grant. Pass &#x60;include_delegated&#x3D;true&#x60; to list them; they have scope &#x60;delegated&#x60;. They never count toward the project&#39;s limit of 100 live tokens.  Requires a platform token. A project access token cannot manage project access tokens, so a leaked credential cannot enumerate or replace itself. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :page Page number (1-indexed) for offset pagination. Declares no schema default so the request validator does not inject one: handlers that omit &#x60;page&#x60; see it unset (nil) and default to 1 in code, while cursor-first endpoints (e.g. the project deployments feed) can detect its absence to stay in keyset/search mode. Supplying &#x60;page&#x60; selects offset pagination. 
     # @option opts [Integer] :limit Number of items per page (max 100) (default to 10)
     # @option opts [String] :search Case-insensitive substring match on the resource &#x60;name&#x60;. See the endpoint description for supported pagination modes. 
     # @option opts [Boolean] :include_revoked Include tokens that can no longer authenticate — both revoked and expired ones.  (default to false)
+    # @option opts [Boolean] :include_delegated Include delegated grants: short tokens a first-party app mints for one run from the access you allowed it.  (default to false)
     # @return [Array<(PaginatedProjectAccessTokens, Integer, Hash)>] PaginatedProjectAccessTokens data, response status code and response headers
     def list_project_access_tokens_with_http_info(id, opts = {})
       if @api_client.config.debugging
@@ -298,6 +300,7 @@ module Volcano::Generated
       query_params[:'limit'] = opts[:'limit'] if !opts[:'limit'].nil?
       query_params[:'search'] = opts[:'search'] if !opts[:'search'].nil?
       query_params[:'include_revoked'] = opts[:'include_revoked'] if !opts[:'include_revoked'].nil?
+      query_params[:'include_delegated'] = opts[:'include_delegated'] if !opts[:'include_delegated'].nil?
 
       # header parameters
       header_params = opts[:header_params] || {}
@@ -334,7 +337,7 @@ module Volcano::Generated
     end
 
     # Per-day request counts for every access token in a project
-    # Returns a zero-filled daily series of request counts for each of the project's access tokens, oldest first. Every day in the window is present, so a gap reads as zero rather than missing.  Revoked tokens are included, because the traffic they made before revocation is usually the reason you are looking.  `days` defaults to 30 and is capped at 60, which is also how long per-day counts are retained — a longer window cannot be answered.  A platform token sees every token in the project. A project access token sees only its own row, so it can watch its own traffic without being able to enumerate the project's other credentials by name. 
+    # Returns a zero-filled daily series of request counts for each of the project's access tokens, oldest first. Every day in the window is present, so a gap reads as zero rather than missing.  Revoked tokens are included, because the traffic they made before revocation is usually the reason you are looking. Delegated grants are not, as the token list hides them by default; read one grant's usage by its ID.  `days` defaults to 30 and is capped at 60, which is also how long per-day counts are retained — a longer window cannot be answered.  A platform token sees every token in the project. A project access token sees only its own row, so it can watch its own traffic without being able to enumerate the project's other credentials by name. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :days Number of trailing days to return (1-60, default 30). (default to 30)
@@ -345,7 +348,7 @@ module Volcano::Generated
     end
 
     # Per-day request counts for every access token in a project
-    # Returns a zero-filled daily series of request counts for each of the project&#39;s access tokens, oldest first. Every day in the window is present, so a gap reads as zero rather than missing.  Revoked tokens are included, because the traffic they made before revocation is usually the reason you are looking.  &#x60;days&#x60; defaults to 30 and is capped at 60, which is also how long per-day counts are retained — a longer window cannot be answered.  A platform token sees every token in the project. A project access token sees only its own row, so it can watch its own traffic without being able to enumerate the project&#39;s other credentials by name. 
+    # Returns a zero-filled daily series of request counts for each of the project&#39;s access tokens, oldest first. Every day in the window is present, so a gap reads as zero rather than missing.  Revoked tokens are included, because the traffic they made before revocation is usually the reason you are looking. Delegated grants are not, as the token list hides them by default; read one grant&#39;s usage by its ID.  &#x60;days&#x60; defaults to 30 and is capped at 60, which is also how long per-day counts are retained — a longer window cannot be answered.  A platform token sees every token in the project. A project access token sees only its own row, so it can watch its own traffic without being able to enumerate the project&#39;s other credentials by name. 
     # @param id [String] Project ID
     # @param [Hash] opts the optional parameters
     # @option opts [Integer] :days Number of trailing days to return (1-60, default 30). (default to 30)

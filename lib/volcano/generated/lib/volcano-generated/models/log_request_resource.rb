@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,6 +20,7 @@ module Volcano::Generated
       # List of class defined in oneOf (OpenAPI v3)
       def openapi_one_of
         [
+          :'LogAppRequestResource',
           :'LogDatabaseRequestResource',
           :'LogFrontendRequestResource',
           :'LogFunctionRequestResource'
@@ -34,6 +35,7 @@ module Volcano::Generated
       # Discriminator's mapping (OpenAPI v3)
       def openapi_discriminator_mapping
         {
+          :'app' => :'LogAppRequestResource',
           :'database' => :'LogDatabaseRequestResource',
           :'frontend' => :'LogFrontendRequestResource',
           :'function' => :'LogFunctionRequestResource'

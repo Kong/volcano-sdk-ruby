@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -15,6 +15,7 @@ require 'time'
 
 module Volcano::Generated
   class ProjectConfigAuthEmailSMTP < ApiModelBase
+    # SMTP server host name or IP address. Outside local mode, Volcano connects only to public internet addresses, and a host that is, or resolves to, a loopback, private, link-local, or other non-public address fails delivery.
     attr_accessor :host
 
     attr_accessor :port

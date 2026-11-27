@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,7 +19,7 @@ module Volcano::Generated
     # How long a whole execution may run, including time suspended in a wait. This is not a limit on one attempt: an execution outlives any single attempt by checkpointing and resuming, and the per-attempt timeout is the plan's own, smaller number. 
     attr_accessor :execution_timeout_seconds
 
-    # How long a finished execution's result and history are retained, for as long as the function exists. Deleting the function, or its project, ends retention early and takes the history with it. 
+    # How long a finished execution's result and history are retained, for as long as the function exists. Deleting the function, or its project, ends retention early and takes the history with it. A result or error Volcano has just read is kept in memory for up to five minutes, so a read can still return it for up to five minutes after retention ends. 
     attr_accessor :retention_days
 
     # Attribute mapping from ruby-style variable name to JSON key.

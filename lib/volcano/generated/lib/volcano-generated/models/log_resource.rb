@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -19,10 +19,10 @@ module Volcano::Generated
     # Resource type that owns the log event.
     attr_accessor :type
 
-    # Resource ID that owns the log event.
+    # Resource ID that owns the log event. For type `app`, the ID is UUIDv5(`7374f5e9-35ff-4e46-ac13-a4717bae00e1`, slug), with the app's slug as UTF-8 bytes; the Builder (`builder`) is `b52fc8fa-8656-5141-adef-99d698ce6f3c`. 
     attr_accessor :id
 
-    # Resource name associated with the log event, when available.
+    # Resource name associated with the log event, when available. For type `app`, the app's slug, such as `builder`.
     attr_accessor :name
 
     class EnumAttributeValidator
@@ -135,7 +135,7 @@ module Volcano::Generated
     def valid?
       warn '[DEPRECATED] the `valid?` method is obsolete'
       return false if @type.nil?
-      type_validator = EnumAttributeValidator.new('String', ["function", "frontend", "database"])
+      type_validator = EnumAttributeValidator.new('String', ["function", "frontend", "database", "app"])
       return false unless type_validator.valid?(@type)
       return false if @id.nil?
       true
@@ -144,7 +144,7 @@ module Volcano::Generated
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] type Object to be assigned
     def type=(type)
-      validator = EnumAttributeValidator.new('String', ["function", "frontend", "database"])
+      validator = EnumAttributeValidator.new('String', ["function", "frontend", "database", "app"])
       unless validator.valid?(type)
         fail ArgumentError, "invalid value for \"type\", must be one of #{validator.allowable_values}."
       end

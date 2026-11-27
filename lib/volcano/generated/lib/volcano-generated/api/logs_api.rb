@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -20,7 +20,7 @@ module Volcano::Generated
       @api_client = api_client
     end
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT feature; `resource.type=database` from a HOBBY project owner returns 403. The activity window is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window `[start_time, end_time)`. 
+    # Retrieve bucketed log counts for one resource type in the project. Set `resource.type` to `function`, `frontend`, `database`, or `app`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases or apps. `app` counts the entries a first-party app, such as the Builder, wrote into the project; an app's ID is UUIDv5 of its slug (see `LogResource.id`). With no entries it answers 200 with none; an unknown app in `resource.ids` answers 404 `app not found`. The `app_logs` release gate controls new writes only: entries already written stay readable when it closes. Database logs are a SUPERAGENT feature; `resource.type=database` from a HOBBY project owner returns 403. The activity window is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window `[start_time, end_time)`. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -31,7 +31,7 @@ module Volcano::Generated
     end
 
     # Get project log activity
-    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT feature; &#x60;resource.type&#x3D;database&#x60; from a HOBBY project owner returns 403. The activity window is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window &#x60;[start_time, end_time)&#x60;. 
+    # Retrieve bucketed log counts for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, &#x60;database&#x60;, or &#x60;app&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to count deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases or apps. &#x60;app&#x60; counts the entries a first-party app, such as the Builder, wrote into the project; an app&#39;s ID is UUIDv5 of its slug (see &#x60;LogResource.id&#x60;). With no entries it answers 200 with none; an unknown app in &#x60;resource.ids&#x60; answers 404 &#x60;app not found&#x60;. The &#x60;app_logs&#x60; release gate controls new writes only: entries already written stay readable when it closes. Database logs are a SUPERAGENT feature; &#x60;resource.type&#x3D;database&#x60; from a HOBBY project owner returns 403. The activity window is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older start times are clamped to that window. Buckets are aligned to UTC clock intervals and count events in the half-open window &#x60;[start_time, end_time)&#x60;. 
     # @param id [String] Project ID
     # @param log_activity_request [LogActivityRequest] 
     # @param [Hash] opts the optional parameters
@@ -94,7 +94,7 @@ module Volcano::Generated
     end
 
     # Search project logs
-    # Search or filter logs for one resource type in the project. Set `resource.type` to `function`, `frontend`, or `database`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT feature; requests for `resource.type=database` from a HOBBY project owner return 403. Log history (runtime and deployment) is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
+    # Search or filter logs for one resource type in the project. Set `resource.type` to `function`, `frontend`, `database`, or `app`. Add `resource.ids` to filter to one or more resources, and add `resource.deployments.ids` to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases or apps. `app` reads the entries a first-party app, such as the Builder, wrote into the project; an app's ID is UUIDv5 of its slug (see `LogResource.id`). With no entries it answers 200 with none; an unknown app in `resource.ids` answers 404 `app not found`. The `app_logs` release gate controls new writes only: entries already written stay readable when it closes. Database logs are a SUPERAGENT feature; requests for `resource.type=database` from a HOBBY project owner return 403. Log history (runtime and deployment) is limited to the plan's retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
     # @param id [String] Project ID
     # @param log_search_request [LogSearchRequest] 
     # @param [Hash] opts the optional parameters
@@ -105,7 +105,7 @@ module Volcano::Generated
     end
 
     # Search project logs
-    # Search or filter logs for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, or &#x60;database&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases. Database logs are a SUPERAGENT feature; requests for &#x60;resource.type&#x3D;database&#x60; from a HOBBY project owner return 403. Log history (runtime and deployment) is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
+    # Search or filter logs for one resource type in the project. Set &#x60;resource.type&#x60; to &#x60;function&#x60;, &#x60;frontend&#x60;, &#x60;database&#x60;, or &#x60;app&#x60;. Add &#x60;resource.ids&#x60; to filter to one or more resources, and add &#x60;resource.deployments.ids&#x60; to read deployment logs instead of runtime logs for functions and frontends. Deployment logs are not supported for databases or apps. &#x60;app&#x60; reads the entries a first-party app, such as the Builder, wrote into the project; an app&#39;s ID is UUIDv5 of its slug (see &#x60;LogResource.id&#x60;). With no entries it answers 200 with none; an unknown app in &#x60;resource.ids&#x60; answers 404 &#x60;app not found&#x60;. The &#x60;app_logs&#x60; release gate controls new writes only: entries already written stay readable when it closes. Database logs are a SUPERAGENT feature; requests for &#x60;resource.type&#x3D;database&#x60; from a HOBBY project owner return 403. Log history (runtime and deployment) is limited to the plan&#39;s retention window (HOBBY: 1 day, SUPERAGENT: 30 days); older time ranges are clamped to that window. 
     # @param id [String] Project ID
     # @param log_search_request [LogSearchRequest] 
     # @param [Hash] opts the optional parameters

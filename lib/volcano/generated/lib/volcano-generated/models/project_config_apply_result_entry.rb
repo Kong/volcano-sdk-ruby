@@ -1,7 +1,7 @@
 =begin
 #Volcano API
 
-#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal and Builder operations.
+#Public API for Volcano clients, SDKs, and CLI tooling (Port 8000).  This specification intentionally excludes first-party/internal APIs. See api/openapi-internal.yaml for non-public internal operations.
 
 The version of the OpenAPI document: 3.0.0
 Contact: support@volcano.dev
@@ -25,6 +25,9 @@ module Volcano::Generated
 
     # Error detail when action is `error`.
     attr_accessor :error
+
+    # Machine-readable reason for a `notice`, when it has one. Clients must accept codes not listed here. `function_served_by_candidate` - a promoted preview serves the function and keeps the variables it was built with, so the apply did not synchronize the function's variables; the entry's action is `unchanged`, and the rest of the apply succeeded. 
+    attr_accessor :code
 
     # Optional operational note (e.g. disabling realtime drops active connections).
     attr_accessor :notice
@@ -58,6 +61,7 @@ module Volcano::Generated
         :'name' => :'name',
         :'action' => :'action',
         :'error' => :'error',
+        :'code' => :'code',
         :'notice' => :'notice'
       }
     end
@@ -79,6 +83,7 @@ module Volcano::Generated
         :'name' => :'String',
         :'action' => :'String',
         :'error' => :'String',
+        :'code' => :'String',
         :'notice' => :'String'
       }
     end
@@ -123,6 +128,10 @@ module Volcano::Generated
 
       if attributes.key?(:'error')
         self.error = attributes[:'error']
+      end
+
+      if attributes.key?(:'code')
+        self.code = attributes[:'code']
       end
 
       if attributes.key?(:'notice')
@@ -186,6 +195,7 @@ module Volcano::Generated
           name == o.name &&
           action == o.action &&
           error == o.error &&
+          code == o.code &&
           notice == o.notice
     end
 
@@ -198,7 +208,7 @@ module Volcano::Generated
     # Calculates hash code according to all attributes.
     # @return [Integer] Hash code
     def hash
-      [section, name, action, error, notice].hash
+      [section, name, action, error, code, notice].hash
     end
 
     # Builds the object from hash
